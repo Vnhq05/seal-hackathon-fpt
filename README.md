@@ -7,12 +7,12 @@ SEAL Hackathon Management System is a modern web-based platform developed to str
 
 Team Member:
 
- Phạm Mạnh Quỳnh - Frontend Developer - HTML, CSS
+ Phạm Mạnh Quỳnh - Frontend Developer - HTML, CSS, JS
  
- Nguyễn Trường Vinh Frontend Developer - HTML, CSS, ReactJS
+ Nguyễn Trường Vinh - Frontend Developer - HTML, CSS, JS
  
- Trần Trúc Vỹ  Backend Developer - .NET, Java
+ Trần Trúc Vỹ - Backend Developer - .NET, Java
  
- Phan Nguyễn Đình Khôi Backend Developer - Spring Boot, Java
+ Phan Nguyễn Đình Khôi - Backend Developer - Spring Boot, Java
  
-Phan Lại Phong  Backend Developer - Spring Boot, Java
+ Phan Lại Phong - Backend Developer - Spring Boot, Java
