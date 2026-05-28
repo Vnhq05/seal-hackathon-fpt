@@ -1,8 +1,14 @@
 backend/HELP.md
+
 target/
-.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
+
+### IntelliJ IDEA ###
+.idea/
+*.iws
+*.iml
+*.ipr
 
 ### STS ###
 .apt_generated
@@ -12,12 +18,6 @@ target/
 .settings
 .springBeans
 .sts4-cache
-
-### IntelliJ IDEA ###
-.idea/
-*.iws
-*.iml
-*.ipr
 
 ### NetBeans ###
 /nbproject/private/
@@ -35,6 +35,5 @@ build/
 ### MacOS ###
 .DS_Store
 
-.idea/
-target/
-*.iml
+### Env ###
+.env
