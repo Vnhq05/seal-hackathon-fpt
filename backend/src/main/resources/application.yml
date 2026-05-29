@@ -6,8 +6,11 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: validate
-    show-sql: true
+      ddl-auto: none  # RẤT QUAN TRỌNG: Để Flyway làm việc, đừng để hibernate tự sửa bảng
+      show-sql: true
+      properties:
+        hibernate:
+          dialect: org.hibernate.dialect.SQLServerDialect
 
   flyway:
     enabled: true

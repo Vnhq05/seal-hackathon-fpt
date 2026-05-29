@@ -25,14 +25,14 @@ public class NotificationController {
         );
     }
 
-    @GetMapping("/{userId}")
-    public ResponseEntity<List<Notification>>
-    getNotifications(
-            @PathVariable Long userId
-    ) {
-
+    // [SỬA ĐỔI - Tính năng: Xem thông báo của tài khoản đang đăng nhập]
+    // Đã xóa: @GetMapping("/{userId}")
+    // Đã thêm: @GetMapping("/me") và mock userId hiện tại là 1L (Sẽ thay thế khi có JWT)
+    @GetMapping("/me")
+    public ResponseEntity<List<Notification>> getMyNotifications() {
+        Long currentUserId = 1L; // TODO: Lấy từ Spring Security Context
         return ResponseEntity.ok(
-                notificationService.getMyNotifications(userId)
+                notificationService.getMyNotifications(currentUserId)
         );
     }
 }

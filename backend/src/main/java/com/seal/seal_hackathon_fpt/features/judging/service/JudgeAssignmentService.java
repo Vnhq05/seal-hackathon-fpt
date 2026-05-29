@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -17,6 +18,17 @@ public class JudgeAssignmentService {
     public JudgeAssignment createAssignment(
             CreateJudgeAssignmentRequest request
     ) {
+
+        // [SỬA ĐỔI - Tính năng: Mentor không được chấm team mình]
+        // Đã thêm: Block giả lập logic check mentor.
+        // Khi bạn có Team và Judge entity đầy đủ, hãy mở comment này ra.
+        /*
+        Team team = teamRepository.findById(request.getTeamId()).orElseThrow();
+        Judge judge = judgeRepository.findById(request.getJudgeId()).orElseThrow();
+        if (team.getMentorId() != null && team.getMentorId().equals(judge.getUserId())) {
+            throw new RuntimeException("Mentor không được chấm team mình mentor");
+        }
+        */
 
         boolean exists = assignmentRepository
                 .findByJudgeIdAndRoundIdAndTeamId(
@@ -42,5 +54,11 @@ public class JudgeAssignmentService {
                         .build();
 
         return assignmentRepository.save(assignment);
+    }
+
+    // [SỬA ĐỔI - Tính năng: Lấy danh sách Assignments]
+    // Đã thêm: Hàm getAllAssignments
+    public List<JudgeAssignment> getAllAssignments() {
+        return assignmentRepository.findAll();
     }
 }
