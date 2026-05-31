@@ -56,7 +56,6 @@ CREATE TABLE users (
         CONSTRAINT CK_users_status CHECK (status IN ('pending','active','suspended')),
                        student_id    NVARCHAR(20)  NULL,
                        school        NVARCHAR(150) NULL,
-                       cccd          NVARCHAR(20)  NULL,
                        created_at    DATETIME2 NOT NULL CONSTRAINT DF_users_created DEFAULT SYSUTCDATETIME(),
                        updated_at    DATETIME2 NOT NULL CONSTRAINT DF_users_updated DEFAULT SYSUTCDATETIME(),
                        CONSTRAINT UQ_users_email UNIQUE (email)
