@@ -14,8 +14,7 @@ import java.util.List;
 
 @Entity
 @Table(name = "users")
-@Getter
-@Setter
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -59,6 +58,16 @@ public class User implements UserDetails {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+
+    // ==========================================
+    // CÁC CỘT DÀNH CHO TÍNH NĂNG QUÊN MẬT KHẨU
+    // ==========================================
+    @Column(name = "reset_otp", length = 6)
+    private String resetOtp;
+
+    @Column(name = "reset_otp_expiry")
+    private LocalDateTime resetOtpExpiry;
+
     // ==========================================
     // CÁC HÀM BẮT BUỘC CỦA SPRING SECURITY
     // ==========================================
@@ -94,4 +103,6 @@ public class User implements UserDetails {
         // Cho phép hoạt động nếu là ACTIVE (hoặc PENDING tùy yêu cầu nghiệp vụ của team bạn)
         return status == UserStatus.active || status == UserStatus.pending;
     }
+
+
 }
