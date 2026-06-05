@@ -50,6 +50,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         // Mở khóa cho các API công khai (Đăng ký, Đăng nhập)
                         .requestMatchers("/api/auth/register", "/api/auth/login").permitAll()
+                        // Mở khóa cho API quên mật khẩu
+                        .requestMatchers("/api/auth/forgot-password").permitAll()
 
                         // Mở khóa cho giao diện tài liệu Swagger
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
