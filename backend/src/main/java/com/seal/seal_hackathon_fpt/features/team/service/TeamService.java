@@ -24,12 +24,12 @@ public class TeamService {
     public TeamMember addMemberToTeam(Long teamId, Long userId, boolean isLeader) {
         // [BUSINESS RULE: User không được join nhiều lần trong cùng 1 team]
         if (memberRepository.existsByTeamIdAndUserId(teamId, userId)) {
-            throw new RuntimeException("User đã ở trong team này rồi!");
+            throw new RuntimeException("User is already in this team!");
         }
 
         // [BUSINESS RULE: 1 Leader / Team]
         if (isLeader && memberRepository.existsByTeamIdAndIsLeaderTrue(teamId)) {
-            throw new RuntimeException("Team này đã có Leader! Không thể thêm Leader khác.");
+            throw new RuntimeException("This team already has a Leader! Cannot add another Leader.");
         }
 
         TeamMember member = TeamMember.builder()
@@ -45,7 +45,7 @@ public class TeamService {
                 .orElseThrow(() -> new RuntimeException("Member not found"));
 
         if (member.getIsLeader()) {
-            throw new RuntimeException("Không thể xóa Leader. Vui lòng chuyển quyền trước.");
+            throw new RuntimeException("Cannot remove the Leader. Please transfer leadership first.");
         }
         memberRepository.delete(member);
     }

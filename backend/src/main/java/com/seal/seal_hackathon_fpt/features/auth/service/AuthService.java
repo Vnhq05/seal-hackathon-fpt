@@ -37,24 +37,23 @@ public class AuthService {
         }
 
         // 2. Khởi tạo User mới với quyền mặc định an toàn
+        //    status = pending: Participant tự đăng ký PHẢI được Admin/Coordinator
+        //    duyệt (Account Approval) thì mới đăng nhập được.
         var user = User.builder()
                 .full_name(request.getName()) // Ánh xạ đúng tên biến trong Entity
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role(Role.Participant) // ÉP CỨNG: Bảo mật hệ thống, tránh tự phong Admin
-                .status(UserStatus.active)
+                .status(UserStatus.pending)
+                .studentId(request.getStudentId())
+                .school(request.getSchool())
                 .build();
 
         userRepository.save(user);
 
-        // 3. Sinh bộ đôi Token
-        var jwtToken = jwtService.generateToken(user);
-        var refreshToken = jwtService.generateRefreshToken(user);
-
-        return AuthResponse.builder()
-                .accessToken(jwtToken)
-                .refreshToken(refreshToken)
-                .build();
+        // 3. KHÔNG cấp token: tài khoản đang chờ duyệt, chưa được phép đăng nhập.
+        //    Trả về AuthResponse rỗng (token null) để Frontend hiểu là "chờ duyệt".
+        return AuthResponse.builder().build();
     }
 
     // ==========================================
@@ -73,6 +72,11 @@ public class AuthService {
         // 2. Sau khi qua cửa an ninh, lôi thông tin User từ kho lên
         var user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("System error: Unable to extract account information."));
+
+        // 2b. Chặn tài khoản chưa được duyệt (Participant tự đăng ký).
+        if (user.getStatus() == UserStatus.pending) {
+            throw new RuntimeException("Your account is awaiting Admin approval. Please sign in again once approved.");
+        }
 
         // 3. Sinh bộ đôi Token cấp quyền
         var jwtToken = jwtService.generateToken(user);

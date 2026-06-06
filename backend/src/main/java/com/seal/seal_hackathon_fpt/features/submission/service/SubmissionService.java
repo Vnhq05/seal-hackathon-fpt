@@ -19,10 +19,10 @@ public class SubmissionService {
 
         // [BUSINESS RULE: Chỉ Leader được Submit]
         TeamMember member = teamMemberRepository.findByTeamIdAndUserId(teamId, currentUserId)
-                .orElseThrow(() -> new RuntimeException("Bạn không thuộc team này!"));
+                .orElseThrow(() -> new RuntimeException("You are not a member of this team!"));
 
         if (!member.getIsLeader()) {
-            throw new RuntimeException("LỖI: Chỉ có Nhóm trưởng (Leader) mới có quyền nộp bài!");
+            throw new RuntimeException("ERROR: Only the team Leader can submit work!");
         }
 
         Submission submission = Submission.builder()
