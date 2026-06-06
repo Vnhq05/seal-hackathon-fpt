@@ -40,7 +40,7 @@ public class TeamController {
     @DeleteMapping("/{teamId}/members/{userId}")
     public ResponseEntity<?> removeMember(@PathVariable Long teamId, @PathVariable Long userId) {
         teamService.removeMember(teamId, userId);
-        return ResponseEntity.ok("Xóa thành viên thành công");
+        return ResponseEntity.ok("Member removed successfully");
     }
 
     // --- TEAM INVITE API ---
@@ -54,6 +54,6 @@ public class TeamController {
     public ResponseEntity<?> acceptInvite(@PathVariable Long inviteId) {
         Long currentUserId = 2L; // Mock ID người được mời
         inviteService.acceptInvite(inviteId, currentUserId);
-        return ResponseEntity.ok("Chấp nhận lời mời và gia nhập team thành công");
+        return ResponseEntity.ok("Invitation accepted and joined the team successfully");
     }
 }

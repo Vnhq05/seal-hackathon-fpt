@@ -13,4 +13,6 @@ public class RegisterRequest {
     private String name;
     private String email;
     private String password;
+    private String studentId; // mã số sinh viên (Participant) — để Admin xem khi duyệt
+    private String school;     // trường (nếu không phải FPT)
 }

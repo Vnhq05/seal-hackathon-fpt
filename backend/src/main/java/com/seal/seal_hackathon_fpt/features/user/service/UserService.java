@@ -1,6 +1,8 @@
 package com.seal.seal_hackathon_fpt.features.user.service;
 
 import com.seal.seal_hackathon_fpt.features.auth.dto.RegisterRequest;
+import com.seal.seal_hackathon_fpt.features.user.dto.CreateStaffRequest;
+import com.seal.seal_hackathon_fpt.features.user.dto.UserResponse;
 import com.seal.seal_hackathon_fpt.features.user.entity.Role;
 import com.seal.seal_hackathon_fpt.features.user.entity.User;
 import com.seal.seal_hackathon_fpt.features.user.entity.UserStatus;
@@ -26,12 +28,65 @@ public class UserService {
     }
 
     // ==========================================
+    // 1b. LẤY DANH SÁCH USER DẠNG DTO (đã cắt mật khẩu) — dùng cho Frontend
+    // ==========================================
+    public List<UserResponse> listUsers() {
+        return userRepository.findAll().stream()
+                .map(UserResponse::from)
+                .toList();
+    }
+
+    // ==========================================
+    // 1c. ĐỔI TRẠNG THÁI TÀI KHOẢN (duyệt / khóa / mở lại)
+    //     status: "pending" | "active" | "suspended"
+    // ==========================================
+    public UserResponse updateStatus(Long id, String status) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found, id: " + id));
+        UserStatus newStatus;
+        try {
+            newStatus = UserStatus.valueOf(status);
+        } catch (IllegalArgumentException e) {
+            throw new RuntimeException("Invalid status: " + status);
+        }
+        user.setStatus(newStatus);
+        return UserResponse.from(userRepository.save(user));
+    }
+
+    // ==========================================
+    // 1d. TẠO TÀI KHOẢN NHÂN SỰ (Admin tạo Mentor/Judge/Lecturer/Coordinator)
+    // ==========================================
+    public UserResponse createStaff(CreateStaffRequest request) {
+        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+            throw new RuntimeException("Email already exists in the system!");
+        }
+        Role role;
+        try {
+            role = Role.valueOf(request.getRole());
+        } catch (IllegalArgumentException e) {
+            throw new RuntimeException("Invalid role: " + request.getRole());
+        }
+        // Chốt chặn: chỉ cho tạo nhân sự, không cho tạo Admin hay Participant qua đây.
+        if (role == Role.Admin || role == Role.Participant) {
+            throw new RuntimeException("Only Mentor / Judge / Lecturer / Coordinator accounts can be created.");
+        }
+        User user = User.builder()
+                .full_name(request.getName())
+                .email(request.getEmail())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .role(role)
+                .status(UserStatus.active)
+                .build();
+        return UserResponse.from(userRepository.save(user));
+    }
+
+    // ==========================================
     // 2. TẠO ADMIN (Chốt chặn bảo mật: Chỉ cho phép 1 Admin)
     // ==========================================
     public User createAdminAccount(RegisterRequest request) {
         // Kiểm tra xem đã có trùm cuối nào tồn tại chưa
         if (userRepository.countByRole(Role.Admin) >= 1) {
-            throw new RuntimeException("CẢNH BÁO: Hệ thống SEAL chỉ cho phép tồn tại duy nhất 1 tài khoản Admin!");
+            throw new RuntimeException("WARNING: The SEAL system allows only one Admin account!");
         }
 
         var admin = User.builder()
@@ -51,7 +106,7 @@ public class UserService {
     public void transferAdminOwnership(String currentAdminEmail, String newEmail, String newPassword) {
         // Tìm Admin cũ
         User currentAdmin = userRepository.findByEmail(currentAdminEmail)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy Admin hiện hành!"));
+                .orElseThrow(() -> new RuntimeException("Current Admin not found!"));
 
         // Đổi thông tin sang người mới
         currentAdmin.setEmail(newEmail);

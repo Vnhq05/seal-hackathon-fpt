@@ -25,7 +25,7 @@ public class TeamInviteService {
         TeamInvite invite = inviteRepository.findById(inviteId).orElseThrow();
 
         if (!invite.getInviteeId().equals(currentUserId)) {
-            throw new RuntimeException("Bạn không có quyền chấp nhận lời mời này.");
+            throw new RuntimeException("You are not allowed to accept this invitation.");
         }
 
         invite.setStatus("ACCEPTED");
