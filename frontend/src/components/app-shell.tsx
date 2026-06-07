@@ -20,7 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Toaster } from "@/components/ui/sonner";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
-import { useJudgingStore } from "@/lib/judging-store";
+import { listMyNotifications, type BackendNotification } from "@/lib/notifications-api";
 
 interface NavItem { label: string; path: string; icon: React.ComponentType<{ className?: string }>; roles: Role[]; }
 interface NavGroup { label: string; items: NavItem[]; }
@@ -88,7 +88,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname(); // đường dẫn hiện tại, vd "/app/dashboard"
   const [viewMode, setViewMode] = useViewMode();
   const effectiveRole = useEffectiveRole(user?.role);
-  const { notifications } = useJudgingStore(); // dữ liệu thông báo cho chuông
+  // Thông báo cho chuông — lấy từ BACKEND THẬT (GET /api/notifications/me).
+  const [notifications, setNotifications] = React.useState<BackendNotification[]>([]);
+  React.useEffect(() => {
+    listMyNotifications().then(setNotifications).catch(() => setNotifications([]));
+  }, []);
 
   if (!user) return null;
   const initials = user.name.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase();
@@ -202,7 +206,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                         <div className="flex-1 min-w-0">
                           <div className="font-medium text-xs">{n.title}</div>
                           <div className="text-[11px] text-muted-foreground">{n.body}</div>
-                          <div className="text-[10px] text-muted-foreground/70 mt-0.5">{new Date(n.at).toLocaleString()}</div>
+                          <div className="text-[10px] text-muted-foreground/70 mt-0.5">{n.createdAt ? new Date(n.createdAt).toLocaleString() : ""}</div>
                         </div>
                       </div>
                     ))
