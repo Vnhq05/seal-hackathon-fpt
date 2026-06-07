@@ -104,7 +104,7 @@ interface AuthCtx {
   loading: boolean;
   login: (email: string, password: string) => Promise<User>;
   logout: () => void;
-  register: (input: RegisterInput) => Promise<User>;
+  register: (input: RegisterInput) => Promise<void>;
   approveUser: (userId: string) => void;
   suspendUser: (userId: string) => void;
   reactivateUser: (userId: string) => void;
@@ -149,7 +149,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const res = await apiPost<TokenResponse | string>("/api/auth/login", { email, password });
       // Sai mật khẩu: Back-end trả chữ "Bad credentials" (không phải JSON) -> báo lỗi.
       if (typeof res === "string" || !res?.accessToken) {
-        throw new Error("Email hoặc mật khẩu không đúng.");
+        throw new Error("Incorrect email or password.");
       }
       setToken(res.accessToken);
       const me = await apiGet<MeResponse>("/api/auth/me");
@@ -159,28 +159,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return u;
     },
     logout: () => persistSession(null),
-    // Logic: /register (tạo + trả token ngay) -> /me -> lưu session (tự đăng nhập).
+    // Logic MỚI: Participant đăng ký -> backend tạo tài khoản status "pending"
+    // (KHÔNG cấp token). Tài khoản phải được Admin/Coordinator duyệt mới đăng
+    // nhập được -> ở đây KHÔNG tự đăng nhập, chỉ gọi API tạo rồi để trang
+    // register chuyển về /login kèm thông báo "chờ duyệt".
     register: async (input) => {
-      const res = await apiPost<TokenResponse | string>("/api/auth/register", {
+      await apiPost("/api/auth/register", {
         email: input.email,
         username: input.email,             // Back-end định danh bằng email -> username = email.
         password: input.password,
         name: input.email.split("@")[0],   // Form không có "Full name" -> tạm lấy phần trước @.
+        studentId: input.studentId,
+        school: input.isFPT ? "FPT University" : input.school,
       });
-      if (typeof res === "string" || !res?.accessToken) {
-        throw new Error(typeof res === "string" && res ? res : "Đăng ký thất bại — email có thể đã tồn tại.");
-      }
-      setToken(res.accessToken);
-      const me = await apiGet<MeResponse>("/api/auth/me");
-      const u: User = {
-        id: String(me.id),
-        name: me.name,
-        email: me.email,
-        role: me.role,
-        status: "active",
-      };
-      persistSession(u);
-      return u;
     },
     approveUser: (userId) => {
       const users = loadUsers();

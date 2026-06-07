@@ -8,6 +8,7 @@ import {
   useCompetitionStore, addYear, addSeason, createCompetition, useGlobalRules,
   type CompetitionFull, type PrizeTier, type ScoringCriterionDef, type CompetitionRound,
 } from "@/lib/competition-store";
+import { createCompetitionApi } from "@/lib/competitions-api";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -77,7 +78,9 @@ export default function Wizard() {
     return null;
   };
 
-  const publish = (status: "Draft" | "Open") => {
+  const [saving, setSaving] = React.useState(false);
+
+  const publish = async (status: "Draft" | "Open") => {
     if (!user) return;
     if (status === "Open") {
       const err = validateTimeline();
@@ -85,12 +88,25 @@ export default function Wizard() {
       const total = s.scoring.reduce((a, c) => a + c.weightPct, 0);
       if (total !== 100) { toast.error(`Scoring weights must total 100% (currently ${total}%). Use "Rebalance" in step 6.`); return; }
     }
+    setSaving(true);
     try {
-      createCompetition({ ...s, status, createdBy: user.id });
-      toast.success(`Competition ${status === "Open" ? "published" : "saved as draft"}.`);
+      // 1) Ghi 5 trường lõi xuống BACKEND THẬT (Spring Boot + SQL Server).
+      const saved = await createCompetitionApi({
+        name: s.name,
+        description: s.description,
+        status,
+        startDate: s.startDate,
+        seasonId: null, // backend chưa map seasonId dạng chuỗi của frontend
+      });
+      // 2) Giữ đầy đủ dữ liệu (rounds/prizes/scoring...) ở local để các trang
+      //    khác vẫn chạy, đồng thời gắn backendId để biết nó đã có trên server.
+      createCompetition({ ...s, status, createdBy: user.id, backendId: saved.id });
+      toast.success(`Saved to backend (id #${saved.id}) — ${status === "Open" ? "published" : "draft"}.`);
       router.push("/app/event-control");
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(`Backend error: ${(e as Error).message}. Make sure the backend is running at http://localhost:8080.`);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -115,7 +131,7 @@ export default function Wizard() {
         {step === 3 && <RulesStep s={s} update={update} />}
         {step === 4 && <PrizesStep s={s} update={update} />}
         {step === 5 && <ScoringStep s={s} update={update} />}
-        {step === 6 && <ReviewStep s={s} onDraft={() => publish("Draft")} onPublish={() => publish("Open")} />}
+        {step === 6 && <ReviewStep s={s} saving={saving} onDraft={() => publish("Draft")} onPublish={() => publish("Open")} />}
       </div>
 
       <div className="mt-4 flex justify-between">
@@ -245,14 +261,14 @@ function RulesStep({ s, update }: any) {
       </div>
       <div className="rounded-md border bg-muted/30 p-4">
         <div className="flex items-center justify-between mb-1">
-          <Label>Quy chế cuộc thi</Label>
+          <Label>Competition rules</Label>
           {user?.role === "Admin" && (
             <Link href="/app/system-settings" className="text-xs text-primary inline-flex items-center gap-1 hover:underline">
-              Sửa rules tại System Settings <ExternalLink className="h-3 w-3" />
+              Edit rules in System Settings <ExternalLink className="h-3 w-3" />
             </Link>
           )}
         </div>
-        <p className="text-xs text-muted-foreground mb-2">Theo chuẩn hệ thống — Admin quản lý tại System Settings.</p>
+        <p className="text-xs text-muted-foreground mb-2">System-wide standard — managed by Admin in System Settings.</p>
         <ol className="list-decimal pl-5 space-y-1 text-sm text-muted-foreground">
           {activeRules.map((r) => <li key={r.id}>{r.text}</li>)}
         </ol>
@@ -371,7 +387,7 @@ function ScoringStep({ s, update }: any) {
   );
 }
 
-function ReviewStep({ s, onDraft, onPublish }: any) {
+function ReviewStep({ s, saving, onDraft, onPublish }: any) {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3"><Trophy className="h-5 w-5 text-primary" /><h3 className="text-lg font-semibold">{s.name || "Untitled competition"}</h3></div>
@@ -387,8 +403,8 @@ function ReviewStep({ s, onDraft, onPublish }: any) {
         <Field label="Prizes" value={String(s.prizes.length)} />
       </div>
       <div className="flex gap-2 pt-2 border-t">
-        <button onClick={onDraft} className="rounded-md border px-4 py-2 text-sm">Save as draft</button>
-        <button onClick={onPublish} className="rounded-md btn-gradient text-primary-foreground px-4 py-2 text-sm inline-flex items-center gap-1"><Check className="h-4 w-4" />Publish (Open)</button>
+        <button disabled={saving} onClick={onDraft} className="rounded-md border px-4 py-2 text-sm disabled:opacity-50">Save as draft</button>
+        <button disabled={saving} onClick={onPublish} className="rounded-md btn-gradient text-primary-foreground px-4 py-2 text-sm inline-flex items-center gap-1 disabled:opacity-50"><Check className="h-4 w-4" />{saving ? "Saving…" : "Publish (Open)"}</button>
       </div>
     </div>
   );

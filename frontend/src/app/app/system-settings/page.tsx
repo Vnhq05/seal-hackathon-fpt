@@ -56,7 +56,7 @@ export default function SystemSettings() {
 
   return (
     <div className="max-w-4xl">
-      <PageHeader title="System Settings" subtitle="Quy chế chung — áp dụng cho mọi cuộc thi" />
+      <PageHeader title="System Settings" subtitle="Global rules — applied to every competition" />
 
       <Card>
         <CardHeader>
@@ -66,18 +66,18 @@ export default function SystemSettings() {
           <div className="flex items-start gap-2 text-xs text-amber-500 bg-amber-500/10 border border-amber-500/30 rounded-md p-3">
             <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
             <span>
-              Thay đổi tại đây ảnh hưởng đến <b>TẤT CẢ</b> competition (bao gồm cuộc thi đang diễn ra). Mỗi lần save sẽ ghi audit log.
+              Changes here affect <b>ALL</b> competitions (including ongoing ones). Each save writes an audit log entry.
             </span>
           </div>
 
           <div className="text-xs text-muted-foreground">
-            Phiên bản <b>v{meta.version}</b> · Sửa lần cuối bởi <b>{meta.lastEditedByName}</b> lúc{" "}
+            Version <b>v{meta.version}</b> · Last edited by <b>{meta.lastEditedByName}</b> at{" "}
             {new Date(meta.lastEditedAt).toLocaleString()}
           </div>
 
           {draft.length === 0 ? (
             <div className="text-sm text-muted-foreground border border-dashed rounded-md p-6 text-center">
-              Chưa có rule nào. Bấm <b>Add rule</b> để thêm.
+              No rules yet. Click <b>Add rule</b> to add one.
             </div>
           ) : (
             <div className="space-y-2">

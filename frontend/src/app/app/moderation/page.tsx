@@ -36,7 +36,7 @@ export default function ScoreViewer() {
     <div>
       <PageHeader
         title="Score viewer"
-        subtitle="Xem điểm theo từng vòng · cảnh báo khi đội có điểm thấp dưới trung bình"
+        subtitle="View scores per round · warns when a team scores below average"
       />
 
       <div className="flex flex-wrap gap-2 mb-4">

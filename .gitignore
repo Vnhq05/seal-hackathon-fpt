@@ -32,11 +32,11 @@ build/
 ### VS Code ###
 .vscode/
 
-frontend/node_modules/
-frontend/.next/
-
 ### MacOS ###
 .DS_Store
 
 ### Env ###
 .env
+
+frontend/node_modules/
+frontend/.next/

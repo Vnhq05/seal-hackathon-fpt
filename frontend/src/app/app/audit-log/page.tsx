@@ -34,7 +34,7 @@ export default function AuditLog() {
 
   return (
     <div>
-      <PageHeader title="Audit log" subtitle="Immutable trail of every mutation · điều chỉnh điểm phải có lý do" />
+      <PageHeader title="Audit log" subtitle="Immutable trail of every mutation · score adjustments require a reason" />
       <div className={`grid gap-6 ${isAdmin ? "lg:grid-cols-[360px_1fr]" : "grid-cols-1"}`}>
         {isAdmin && (
           <AdjustPanel
@@ -70,7 +70,7 @@ export default function AuditLog() {
                   {a.flagged && (
                     <div className="bg-warning/15 text-warning px-4 py-2 text-xs flex items-center gap-2 border-b border-warning/30">
                       <AlertTriangle className="h-3.5 w-3.5" />
-                      <span>⚠ Chênh lệch điểm lớn — đã gắn cờ để xem xét{!hasReason && " · thiếu lý do"}</span>
+                      <span>⚠ Large score gap — flagged for review{!hasReason && " · missing reason"}</span>
                     </div>
                   )}
                   <div className="p-4 space-y-1.5">
@@ -79,9 +79,9 @@ export default function AuditLog() {
                       {a.teamName && <Badge variant="outline" className="text-[10px]">{a.teamName}</Badge>}
                       <Badge variant="secondary" className="text-[10px]">{a.entityType}</Badge>
                       {isAdjust && (hasReason ? (
-                        <Badge className="text-[10px] bg-success text-success-foreground gap-1"><CheckCircle2 className="h-3 w-3" />có lý do</Badge>
+                        <Badge className="text-[10px] bg-success text-success-foreground gap-1"><CheckCircle2 className="h-3 w-3" />has reason</Badge>
                       ) : (
-                        <Badge className="text-[10px] bg-destructive text-destructive-foreground gap-1"><XCircle className="h-3 w-3" />thiếu lý do</Badge>
+                        <Badge className="text-[10px] bg-destructive text-destructive-foreground gap-1"><XCircle className="h-3 w-3" />missing reason</Badge>
                       ))}
                     </div>
                     <div className="text-xs text-muted-foreground">
@@ -136,16 +136,16 @@ function AdjustPanel({
       oldScore: current, newScore: newNum, reason, actor,
     });
     if (!res.ok) { toast.error(res.error); return; }
-    if (res.flagged) toast.warning("Đã lưu — gắn cờ vì chênh lệch lớn.");
-    else toast.success("Đã lưu điều chỉnh.");
+    if (res.flagged) toast.warning("Saved — flagged due to a large gap.");
+    else toast.success("Adjustment saved.");
     setNewScore(""); setReason(""); setReasonTouched(false);
   };
 
   return (
     <div className="rounded-xl border bg-card p-4 space-y-3 h-fit sticky top-20">
       <div>
-        <div className="text-sm font-semibold">Chỉnh điểm thủ công</div>
-        <div className="text-xs text-muted-foreground">Admin · mọi thay đổi đều ghi vào audit log.</div>
+        <div className="text-sm font-semibold">Manual score adjustment</div>
+        <div className="text-xs text-muted-foreground">Admin · every change is written to the audit log.</div>
       </div>
 
       <div>
@@ -186,17 +186,17 @@ function AdjustPanel({
           onBlur={() => setReasonTouched(true)}
           aria-invalid={reasonMissing}
           className={`mt-1 ${reasonMissing ? "border-destructive" : ""}`}
-          placeholder="Bắt buộc — vì sao điều chỉnh điểm này?"
+          placeholder="Required — why adjust this score?"
         />
         {reasonMissing && (
-          <div className="text-xs text-destructive mt-1">Vui lòng nhập lý do trước khi lưu.</div>
+          <div className="text-xs text-destructive mt-1">Please enter a reason before saving.</div>
         )}
       </div>
 
       {willFlag && (
         <div className="rounded-md bg-warning/15 text-warning text-xs px-3 py-2 flex items-start gap-2 border border-warning/30">
           <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-          <span>Chênh lệch {diff.toFixed(1)} điểm &gt; {SCORE_ANOMALY_THRESHOLD} — sẽ gắn cờ.</span>
+          <span>Gap of {diff.toFixed(1)} pts &gt; {SCORE_ANOMALY_THRESHOLD} — will be flagged.</span>
         </div>
       )}
 

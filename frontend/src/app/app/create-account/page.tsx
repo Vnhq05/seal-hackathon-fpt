@@ -1,8 +1,13 @@
 "use client";
+/* ----------------------------------------------------------------------------
+ * create-account — Admin tạo tài khoản nhân sự (Mentor/Judge/Lecturer/Coordinator).
+ * Gọi BACKEND THẬT (POST /api/users). Mật khẩu tạm sinh ở client, gửi lên để
+ * backend mã hóa & lưu. Không còn dùng mock (createStaffAccount) nữa.
+ * -------------------------------------------------------------------------- */
 import { useRequireRole } from "@/lib/role-guard";
 import * as React from "react";
 import { PageHeader } from "@/components/app-shell";
-import { useAuth } from "@/lib/auth";
+import { createStaffApi, type CreateStaffInput } from "@/lib/users-api";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
@@ -10,19 +15,24 @@ import { toast } from "sonner";
 import { Copy } from "lucide-react";
 
 export default function CreateAccount() {
-  useRequireRole(["Admin"]); // thay cho beforeLoad: requireRole(["Admin"])
-  const { createStaffAccount } = useAuth();
+  useRequireRole(["Admin"]);
   const [name, setName] = React.useState("");
   const [email, setEmail] = React.useState("");
-  const [role, setRole] = React.useState<"Mentor" | "Judge" | "Lecturer" | "Coordinator">("Judge");
+  const [role, setRole] = React.useState<CreateStaffInput["role"]>("Judge");
   const [temp, setTemp] = React.useState(() => Math.random().toString(36).slice(2, 10));
+  const [saving, setSaving] = React.useState(false);
 
-  const submit = () => {
+  const submit = async () => {
+    setSaving(true);
     try {
-      createStaffAccount({ name, email, role, tempPassword: temp });
-      toast.success(`${role} account created — share temp password: ${temp}`);
+      await createStaffApi({ name, email, role, password: temp });
+      toast.success(`Created ${role} account — share the temporary password: ${temp}`);
       setName(""); setEmail(""); setTemp(Math.random().toString(36).slice(2, 10));
-    } catch (e) { toast.error((e as Error).message); }
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -49,7 +59,7 @@ export default function CreateAccount() {
             <button onClick={() => setTemp(Math.random().toString(36).slice(2, 10))} className="rounded-md border px-3 text-xs">Regen</button>
           </div>
         </div>
-        <button onClick={submit} className="w-full rounded-md btn-gradient text-primary-foreground py-2 text-sm">Create account</button>
+        <button disabled={saving} onClick={() => void submit()} className="w-full rounded-md btn-gradient text-primary-foreground py-2 text-sm disabled:opacity-60">{saving ? "Creating…" : "Create account"}</button>
       </div>
     </div>
   );

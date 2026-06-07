@@ -4,9 +4,6 @@
  * domain ngoài, rewrites, proxy API sang backend... thì thêm vào object này.
  * @type {import('next').NextConfig}
  */
-/** @type {import('next').NextConfig} */
-const nextConfig = {
-    allowedDevOrigins: ['192.168.1.5']
-};
+const nextConfig = {};
 
 export default nextConfig;

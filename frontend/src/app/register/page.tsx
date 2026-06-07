@@ -1,10 +1,9 @@
 "use client";
 /* ----------------------------------------------------------------------------
  * app/register/page.tsx — TRANG ĐĂNG KÝ "/register".
- * Logic submit: chặn reload -> kiểm tra dữ liệu nhập -> register(...) -> ok thì
- *               sang /app/dashboard (Back-end cho dùng ngay), lỗi thì toast.
- * Lưu ý: Student ID / FPT / School thu cho đúng thiết kế nhưng CHƯA gửi sang
- *        Back-end (Back-end mới nhận email/password/name).
+ * Logic submit: chặn reload -> kiểm tra dữ liệu nhập -> register(...) -> tài khoản
+ *               tạo ở trạng thái CHỜ DUYỆT -> báo "chờ Admin duyệt" và về /login.
+ * Lưu ý: Student ID / School được gửi sang Back-end để Admin xem khi duyệt.
  * -------------------------------------------------------------------------- */
 import * as React from "react";
 import Link from "next/link";
@@ -35,8 +34,9 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       await register({ email, password, studentId, isFPT, school: isFPT ? undefined : school });
-      toast.success("Account created — welcome to SEAL!");
-      router.push("/app/dashboard");
+      // Tài khoản Participant tạo ra ở trạng thái "chờ duyệt" — KHÔNG tự đăng nhập.
+      toast.success("Registration successful! Your account is awaiting Admin approval — you'll be able to sign in once approved.");
+      router.push("/login");
     } catch (err) {
       toast.error((err as Error).message);
     } finally {

@@ -51,6 +51,7 @@ export interface CompetitionFull {
   rankingPublished?: boolean;
   createdBy: string;
   createdAt: string;
+  backendId?: number; // id thật trên backend nếu cuộc thi này đã được lưu xuống DB
 }
 
 export interface MentorMessage {
