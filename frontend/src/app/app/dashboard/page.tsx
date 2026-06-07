@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/app-shell";
 import { useAuth } from "@/lib/auth";
 import { useCompetitionStore, useGlobalRules } from "@/lib/competition-store";
 import { useJudgingStore } from "@/lib/judging-store";
+import { listMyNotifications, type BackendNotification } from "@/lib/notifications-api";
 import { useEffectiveRole } from "@/lib/view-mode";
 import { Trophy, Users, Upload, BarChart3, Calendar, MapPin, Clock, Sparkles, Gavel, HeartHandshake } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -35,7 +36,12 @@ function Stat({ icon: Icon, label, value, tint }: { icon: React.ComponentType<{ 
 export default function Dashboard() {
   const { user } = useAuth();
   const { competitions, seasons, pastResults, seasonMetrics } = useCompetitionStore();
-  const { notifications, teams, assignments } = useJudgingStore();
+  const { teams, assignments } = useJudgingStore();
+  // Thông báo lấy từ BACKEND THẬT (GET /api/notifications/me); lỗi thì để rỗng.
+  const [notifications, setNotifications] = React.useState<BackendNotification[]>([]);
+  React.useEffect(() => {
+    listMyNotifications().then(setNotifications).catch(() => setNotifications([]));
+  }, []);
   const isCoord = user?.role === "Coordinator" || user?.role === "Admin";
   const effectiveRole = useEffectiveRole(user?.role);
   const showMyTeams = effectiveRole === "Judge" || effectiveRole === "Mentor";

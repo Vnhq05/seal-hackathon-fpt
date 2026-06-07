@@ -79,7 +79,6 @@ const K = {
   scores: "seal_scores",
   audit: "seal_audit_v2",
   overrides: "seal_score_overrides",
-  notifications: "seal_notifications",
 };
 
 const SEED_ROUNDS: Round[] = [
@@ -165,12 +164,6 @@ function makeScores(criteria: ScoringCriterion[]): JudgeScore[] {
   return out;
 }
 
-const SEED_NOTIFICATIONS = [
-  { id: "n1", title: "Welcome to SEAL Summer 2026", body: "Registration is now open until July 25.", type: "info" as const, at: "2026-06-01T08:00" },
-  { id: "n2", title: "Round 1 deadline approaching", body: "Submit your MVP before Aug 2, 12:00.", type: "warning" as const, at: "2026-08-01T20:00" },
-  { id: "n3", title: "Calibration completed", body: "All judges have passed calibration. Scoring is now unlocked.", type: "success" as const, at: "2026-08-02T07:30" },
-];
-
 const SEED_AUDIT: AuditEntry[] = [
   {
     id: "au-seed-1", userId: "u5", userName: "Admin Root",
@@ -248,7 +241,6 @@ export function getScores() {
 }
 export function getAudit() { return read<AuditEntry[]>(K.audit, SEED_AUDIT); }
 export function getScoreOverrides() { return read<ScoreOverride[]>(K.overrides, []); }
-export function getNotifications() { return read<typeof SEED_NOTIFICATIONS>(K.notifications, SEED_NOTIFICATIONS); }
 
 export function setTeamMentor(teamId: string, mentorId: string | undefined) {
   const all = getTeams();
@@ -512,7 +504,6 @@ export function useJudgingStore() {
     scores: getScores(),
     audit: getAudit(),
     overrides: getScoreOverrides(),
-    notifications: getNotifications(),
     tick,
   }), [tick]);
 }
