@@ -90,12 +90,12 @@ public class ScoreService {
         );
 
         return score;
-    } // <-- LỖI Ở ĐÂY: Bạn đã quên đóng ngoặc nhọn của hàm createScore! Mình đã thêm vào.
+    }
 
 
     // [THÊM MỚI - Tính năng: Ghi đè điểm (Override Score)]
-    // Đã sửa: Tách hàm này ra khỏi hàm createScore để chuẩn cú pháp Java
-    public ScoreOverride overrideScore(Long teamId, Long roundId, BigDecimal newScore, String reason) {
+    // Đã sửa: Nhận thêm judgeId và judgeName từ Controller truyền xuống thay vì hardcode Admin
+    public ScoreOverride overrideScore(Long teamId, Long roundId, BigDecimal newScore, String reason, Long judgeId, String judgeName) {
 
         // Kiểm tra xem đã có override chưa
         ScoreOverride override = overrideRepository.findByTeamIdAndRoundId(teamId, roundId)
@@ -107,18 +107,20 @@ public class ScoreService {
         override.setReason(reason);
         override.setCreatedAt(LocalDateTime.now());
 
-        // Giả lập admin thực hiện override
-        override.setCreatedBy(1L);
-        override.setCreatedByName("Admin");
+        // Đã sửa: Gán đúng thông tin người thực hiện hành động
+        override.setCreatedBy(judgeId);
+        override.setCreatedByName(judgeName);
 
         override = overrideRepository.save(override);
 
-        // [Tính năng: Audit Log] Tự động log hành động override
+        // [SỬA ĐỔI - Tính năng: Audit Log]
+        // Đã sửa: Truyền đúng judgeId, judgeName thực tế.
+        // Đã sửa: Đổi "ScoreOverride" thành "Score" để khớp chính xác với Constraint CK_audit_entity dưới DB
         auditService.log(
-                1L,
-                "Admin",
+                judgeId,
+                judgeName,
                 "OVERRIDE_SCORE",
-                "ScoreOverride",
+                "Score", // Khớp với Constraint DB để tránh lỗi 400
                 override.getId().toString()
         );
 
