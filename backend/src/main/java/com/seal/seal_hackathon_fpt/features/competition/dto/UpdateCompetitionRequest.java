@@ -1,5 +1,6 @@
 package com.seal.seal_hackathon_fpt.features.competition.dto;
 
+import com.seal.seal_hackathon_fpt.features.competition.entity.Competition;
 import lombok.Data;
 import java.time.LocalDateTime;
 
@@ -7,6 +8,9 @@ import java.time.LocalDateTime;
 public class UpdateCompetitionRequest {
     private String name;
     private String description;
-    private String status;
+    //Đổi thành danh sách status
+    //private String status;
     private LocalDateTime startDate;
+    private Competition.Status status;
+    private Competition.Format format;
 }

@@ -25,6 +25,7 @@ public class CompetitionService {
                 .name(request.getName())
                 .description(request.getDescription())
                 .status(request.getStatus())
+                .format(request.getFormat())
                 .startDate(request.getStartDate())
                 .build();
         return competitionRepository.save(comp);
@@ -51,6 +52,7 @@ public class CompetitionService {
         existing.setName(request.getName());
         existing.setDescription(request.getDescription());
         existing.setStatus(request.getStatus());
+        existing.setFormat(request.getFormat());
         existing.setStartDate(request.getStartDate());
         return competitionRepository.save(existing);
     }
