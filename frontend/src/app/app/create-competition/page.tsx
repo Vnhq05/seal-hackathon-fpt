@@ -5,9 +5,14 @@ import * as React from "react";
 import { PageHeader } from "@/components/app-shell";
 import { useAuth } from "@/lib/auth";
 import {
-  useCompetitionStore, addYear, addSeason, createCompetition, useGlobalRules,
+  useCompetitionStore, addYear, addSeason, useGlobalRules,
   type CompetitionFull, type PrizeTier, type ScoringCriterionDef, type CompetitionRound,
 } from "@/lib/competition-store";
+
+import {
+  buildCreateCompetitionPayload,
+  createCompetitionApi,
+} from "@/lib/competition";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -77,7 +82,7 @@ export default function Wizard() {
     return null;
   };
 
-  const publish = (status: "Draft" | "Open") => {
+  const publish = async (status: "Draft" | "Open") => {
     if (!user) return;
     if (status === "Open") {
       const err = validateTimeline();
@@ -86,7 +91,17 @@ export default function Wizard() {
       if (total !== 100) { toast.error(`Scoring weights must total 100% (currently ${total}%). Use "Rebalance" in step 6.`); return; }
     }
     try {
-      createCompetition({ ...s, status, createdBy: user.id });
+      const payload = buildCreateCompetitionPayload({
+        seasonId: 1,
+        name: s.name,
+        description: s.description,
+        status,
+        format: s.format,
+        startDate: s.startDate,
+      });
+
+      await createCompetitionApi(payload);
+
       toast.success(`Competition ${status === "Open" ? "published" : "saved as draft"}.`);
       router.push("/app/event-control");
     } catch (e) {

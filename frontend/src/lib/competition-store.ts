@@ -17,6 +17,7 @@
  * Phân cấp dữ liệu: Year (năm) → Season (mùa: Spring/Summer) → Competition (cuộc thi).
  * ========================================================================== */
 import * as React from "react";
+import { apiGet, apiPost, apiPut, apiDelete } from "@/lib/api";
 
 // ----- Các "hình dạng" dữ liệu (chỉ là kiểu TypeScript, không phải dữ liệu thật) -----
 export interface Year { id: string; label: string; }                                  // năm, vd "2026"
