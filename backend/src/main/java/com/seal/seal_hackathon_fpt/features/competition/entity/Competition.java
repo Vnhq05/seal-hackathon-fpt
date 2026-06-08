@@ -1,5 +1,6 @@
 package com.seal.seal_hackathon_fpt.features.competition.entity;
 
+import com.seal.seal_hackathon_fpt.features.competition.dto.UpdateCompetitionRequest;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
@@ -35,6 +36,9 @@ public class Competition {
     @Column(nullable = false)
     private Format format;
 
+    public void getRegistrationDeadline(UpdateCompetitionRequest request) {
+    }
+
     public enum Format {
         Offline,
         Online,
@@ -49,5 +53,8 @@ public class Competition {
         Closed,
         Cancelled
     }
+
+    @Column(name = "registration_deadline")
+    private LocalDateTime registrationDeadline;
 }
 

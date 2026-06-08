@@ -6,4 +6,5 @@ import lombok.Data;
 public class CreateTeamRequest {
     private Long competitionId;
     private String name;
+    private Long creatorUserId;
 }

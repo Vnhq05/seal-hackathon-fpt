@@ -2,6 +2,8 @@ package com.seal.seal_hackathon_fpt.features.team.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 
 @Entity
 @Table(name = "teams")
@@ -20,4 +22,10 @@ public class Team {
     private Long competitionId;
 
     private String name;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private TeamStatus status = TeamStatus.INCOMPLETE;
+
+
 }

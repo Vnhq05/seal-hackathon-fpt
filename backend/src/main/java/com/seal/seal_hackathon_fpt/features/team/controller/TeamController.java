@@ -2,12 +2,17 @@ package com.seal.seal_hackathon_fpt.features.team.controller;
 
 import com.seal.seal_hackathon_fpt.features.team.dto.AddMemberRequest;
 import com.seal.seal_hackathon_fpt.features.team.dto.CreateTeamRequest;
+import com.seal.seal_hackathon_fpt.features.team.dto.MyTeamResponse;
 import com.seal.seal_hackathon_fpt.features.team.dto.SendInviteRequest;
 import com.seal.seal_hackathon_fpt.features.team.entity.Team;
+import com.seal.seal_hackathon_fpt.features.team.entity.TeamMember;
 import com.seal.seal_hackathon_fpt.features.team.service.TeamInviteService;
 import com.seal.seal_hackathon_fpt.features.team.service.TeamService;
+import com.seal.seal_hackathon_fpt.features.user.entity.User;
+import com.seal.seal_hackathon_fpt.features.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -17,17 +22,44 @@ public class TeamController {
 
     private final TeamService teamService;
     private final TeamInviteService inviteService;
+    private final UserRepository userRepository;
+
+    private Long getCurrentUserId(Authentication authentication) {
+        if (authentication == null || authentication.getName() == null) {
+            throw new RuntimeException("Unauthorized");
+        }
+
+        String email = authentication.getName();
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        return user.getId();
+    }
+
+    private String getCurrentUserEmail(Authentication authentication) {
+        if (authentication == null || authentication.getName() == null) {
+            throw new RuntimeException("Unauthorized");
+        }
+
+        return authentication.getName();
+    }
 
     @PostMapping
-    public ResponseEntity<?> createTeam(@RequestBody CreateTeamRequest request) {
-        Long currentUserId = 1L;
+    public ResponseEntity<?> createTeam(
+            @RequestBody CreateTeamRequest request,
+            Authentication authentication
+    ) {
+        Long currentUserId = getCurrentUserId(authentication);
 
         Team team = Team.builder()
                 .competitionId(request.getCompetitionId())
                 .name(request.getName())
                 .build();
 
-        return ResponseEntity.ok(teamService.createTeam(team, currentUserId));
+        return ResponseEntity.ok(
+                teamService.createTeam(team, currentUserId)
+        );
     }
 
     @GetMapping
@@ -46,31 +78,37 @@ public class TeamController {
     }
 
     @PostMapping("/{teamId}/members")
-    public ResponseEntity<?> addMember(
+    public TeamMember addMember(
             @PathVariable Long teamId,
-            @RequestBody AddMemberRequest request) {
-
-        return ResponseEntity.ok(
-                teamService.addMemberToTeam(teamId, request.getUserId(), false)
+            @RequestBody AddMemberRequest request
+    ) {
+        return teamService.addMemberToTeam(
+                teamId,
+                request.getUserId(),
+                Boolean.TRUE.equals(request.getIsLeader())
         );
     }
 
     @DeleteMapping("/{teamId}/members/{userId}")
     public ResponseEntity<?> removeMember(
             @PathVariable Long teamId,
-            @PathVariable Long userId) {
-
+            @PathVariable Long userId
+    ) {
         teamService.removeMember(teamId, userId);
         return ResponseEntity.ok("Member removed successfully");
     }
 
-    @PostMapping("/invites")
-    public ResponseEntity<?> sendInvite(@RequestBody SendInviteRequest request) {
-        Long currentUserId = 1L;
+    @PostMapping("/{teamId}/invites")
+    public ResponseEntity<?> sendInvite(
+            @PathVariable Long teamId,
+            @RequestBody SendInviteRequest request,
+            Authentication authentication
+    ) {
+        Long currentUserId = getCurrentUserId(authentication);
 
         return ResponseEntity.ok(
                 inviteService.sendInvite(
-                        request.getTeamId(),
+                        teamId,
                         currentUserId,
                         request.getEmail()
                 )
@@ -78,12 +116,22 @@ public class TeamController {
     }
 
     @PostMapping("/invites/{inviteId}/accept")
-    public ResponseEntity<?> acceptInvite(@PathVariable Long inviteId) {
-        Long currentUserId = 2L;
-        String currentUserEmail = "member@gmail.com";
+    public ResponseEntity<?> acceptInvite(
+            @PathVariable Long inviteId,
+            Authentication authentication
+    ) {
+        Long currentUserId = getCurrentUserId(authentication);
+        String currentUserEmail = getCurrentUserEmail(authentication);
 
         inviteService.acceptInvite(inviteId, currentUserId, currentUserEmail);
 
         return ResponseEntity.ok("Invitation accepted and joined the team successfully");
+    }
+
+    @GetMapping("/my-team")
+    public MyTeamResponse getMyTeam(Authentication authentication) {
+        Long currentUserId = getCurrentUserId(authentication);
+
+        return teamService.getMyTeam(currentUserId);
     }
 }

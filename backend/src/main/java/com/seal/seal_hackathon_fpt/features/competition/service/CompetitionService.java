@@ -27,6 +27,7 @@ public class CompetitionService {
                 .status(request.getStatus())
                 .format(request.getFormat())
                 .startDate(request.getStartDate())
+                .registrationDeadline(request.getRegistrationDeadline())
                 .build();
         return competitionRepository.save(comp);
     }
@@ -54,6 +55,7 @@ public class CompetitionService {
         existing.setStatus(request.getStatus());
         existing.setFormat(request.getFormat());
         existing.setStartDate(request.getStartDate());
+        existing.setRegistrationDeadline(request.getRegistrationDeadline());
         return competitionRepository.save(existing);
     }
 }

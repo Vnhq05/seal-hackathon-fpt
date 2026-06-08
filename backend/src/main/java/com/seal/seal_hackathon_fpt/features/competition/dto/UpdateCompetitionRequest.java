@@ -13,4 +13,5 @@ public class UpdateCompetitionRequest {
     private LocalDateTime startDate;
     private Competition.Status status;
     private Competition.Format format;
+    private LocalDateTime registrationDeadline;
 }
