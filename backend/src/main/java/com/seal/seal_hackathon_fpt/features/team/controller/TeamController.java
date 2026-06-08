@@ -134,4 +134,9 @@ public class TeamController {
 
         return teamService.getMyTeam(currentUserId);
     }
+
+    @GetMapping("/invites/token/{token}")
+    public ResponseEntity<?> getInviteInfo(@PathVariable String token) {
+        return ResponseEntity.ok(inviteService.getInviteCompetitionInfo(token));
+    }
 }

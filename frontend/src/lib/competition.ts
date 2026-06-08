@@ -3,7 +3,7 @@
 import { apiDelete, apiGet, apiPost, apiPut } from "@/lib/api";
 
 /**
- * Enum phải khớp với DB + Backend hiện tại:
+ * Enum phải khớp với Backend:
  * format: Offline / Online / Hybrid
  * status: Draft / Open / Active / Scoring / Closed / Cancelled
  */
@@ -19,7 +19,6 @@ export type CompetitionStatus =
 
 /**
  * Dữ liệu backend trả về từ bảng competitions.
- * Các field optional vì hiện tại Entity/DTO backend có thể chưa map đủ hết.
  */
 export interface Competition {
     id: number;
@@ -31,6 +30,7 @@ export interface Competition {
     format: CompetitionFormat;
     startDate?: string | null;
     durationDays?: number | null;
+    registrationDeadline?: string | null;
     registrationOpen?: string | null;
     registrationClose?: string | null;
     minTeams?: number | null;
@@ -46,7 +46,7 @@ export interface Competition {
 
 /**
  * Request tạo cuộc thi.
- * Chỉ gửi các field mà API backend hiện tại đang nhận.
+ * Chỉ gửi các field backend đang nhận.
  */
 export interface CreateCompetitionRequest {
     seasonId?: number | null;
@@ -55,10 +55,12 @@ export interface CreateCompetitionRequest {
     status: CompetitionStatus;
     format: CompetitionFormat;
     startDate?: string | null;
+    registrationDeadline?: string | null;
 }
 
 /**
  * Request cập nhật cuộc thi.
+ * Optional để tránh lỗi set null khi update status/start.
  */
 export interface UpdateCompetitionRequest {
     name?: string;
@@ -66,11 +68,11 @@ export interface UpdateCompetitionRequest {
     status?: CompetitionStatus;
     format?: CompetitionFormat;
     startDate?: string | null;
+    registrationDeadline?: string | null;
 }
 
 /**
  * GET /api/competitions
- * Lấy danh sách cuộc thi từ backend thật.
  */
 export function getCompetitionsApi() {
     return apiGet<Competition[]>("/api/competitions");
@@ -78,7 +80,6 @@ export function getCompetitionsApi() {
 
 /**
  * GET /api/competitions/{id}
- * Lấy chi tiết 1 cuộc thi.
  */
 export function getCompetitionByIdApi(id: number) {
     return apiGet<Competition>(`/api/competitions/${id}`);
@@ -86,7 +87,6 @@ export function getCompetitionByIdApi(id: number) {
 
 /**
  * POST /api/competitions
- * Tạo cuộc thi mới.
  */
 export function createCompetitionApi(data: CreateCompetitionRequest) {
     return apiPost<Competition>("/api/competitions", data);
@@ -94,7 +94,6 @@ export function createCompetitionApi(data: CreateCompetitionRequest) {
 
 /**
  * PUT /api/competitions/{id}
- * Cập nhật cuộc thi.
  */
 export function updateCompetitionApi(id: number, data: UpdateCompetitionRequest) {
     return apiPut<Competition>(`/api/competitions/${id}`, data);
@@ -102,16 +101,14 @@ export function updateCompetitionApi(id: number, data: UpdateCompetitionRequest)
 
 /**
  * DELETE /api/competitions/{id}
- * Xóa cuộc thi.
  */
 export function deleteCompetitionApi(id: number) {
     return apiDelete<void>(`/api/competitions/${id}`);
 }
 
 /**
- * Helper chuyển ngày từ input datetime-local sang LocalDateTime backend.
- * HTML input thường trả: 2026-06-10T08:00
- * Backend LocalDateTime nhận tốt hơn nếu có giây: 2026-06-10T08:00:00
+ * HTML datetime-local thường trả: 2026-06-10T08:00
+ * Backend LocalDateTime nên nhận: 2026-06-10T08:00:00
  */
 export function normalizeDateTime(value?: string | null) {
     if (!value) return null;
@@ -124,7 +121,7 @@ export function normalizeDateTime(value?: string | null) {
 }
 
 /**
- * Helper tạo payload an toàn trước khi gửi API.
+ * Payload tạo competition an toàn.
  */
 export function buildCreateCompetitionPayload(input: {
     seasonId?: number | string | null;
@@ -133,10 +130,13 @@ export function buildCreateCompetitionPayload(input: {
     status?: CompetitionStatus;
     format?: CompetitionFormat;
     startDate?: string | null;
+    registrationDeadline?: string | null;
 }): CreateCompetitionRequest {
     return {
         seasonId:
-            input.seasonId === undefined || input.seasonId === null || input.seasonId === ""
+            input.seasonId === undefined ||
+            input.seasonId === null ||
+            input.seasonId === ""
                 ? null
                 : Number(input.seasonId),
         name: input.name.trim(),
@@ -144,5 +144,47 @@ export function buildCreateCompetitionPayload(input: {
         status: input.status ?? "Draft",
         format: input.format ?? "Offline",
         startDate: normalizeDateTime(input.startDate),
+        registrationDeadline: normalizeDateTime(input.registrationDeadline),
     };
+}
+
+/**
+ * Payload update an toàn.
+ * Không tự ép field null nếu không cần.
+ */
+export function buildUpdateCompetitionPayload(input: {
+    name?: string;
+    description?: string;
+    status?: CompetitionStatus;
+    format?: CompetitionFormat;
+    startDate?: string | null;
+    registrationDeadline?: string | null;
+}): UpdateCompetitionRequest {
+    const payload: UpdateCompetitionRequest = {};
+
+    if (input.name !== undefined) {
+        payload.name = input.name.trim();
+    }
+
+    if (input.description !== undefined) {
+        payload.description = input.description?.trim() ?? "";
+    }
+
+    if (input.status !== undefined) {
+        payload.status = input.status;
+    }
+
+    if (input.format !== undefined) {
+        payload.format = input.format;
+    }
+
+    if (input.startDate !== undefined) {
+        payload.startDate = normalizeDateTime(input.startDate);
+    }
+
+    if (input.registrationDeadline !== undefined) {
+        payload.registrationDeadline = normalizeDateTime(input.registrationDeadline);
+    }
+
+    return payload;
 }

@@ -50,9 +50,35 @@ export async function getMyTeamApi(): Promise<MyTeamResponse> {
     return apiGet<MyTeamResponse>("/api/teams/my-team");
 }
 
+
+
 export async function createTeamInviteApi(
     teamId: number,
     email: string
 ): Promise<TeamInvite> {
     return apiPost<TeamInvite>(`/api/teams/${teamId}/invites`, { email });
+}
+
+
+export type InviteCompetitionInfoResponse = {
+    team: Team;
+    competition: {
+        id: number;
+        name: string;
+        description?: string;
+        format?: string;
+        status?: string;
+        startDate?: string;
+        registrationDeadline?: string;
+    };
+    inviteEmail: string;
+    inviteStatus: string;
+};
+
+export async function getInviteInfoApi(
+    token: string
+): Promise<InviteCompetitionInfoResponse> {
+    return apiGet<InviteCompetitionInfoResponse>(
+        `/api/teams/invites/token/${token}`
+    );
 }
