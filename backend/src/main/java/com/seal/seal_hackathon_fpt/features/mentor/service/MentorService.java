@@ -22,7 +22,7 @@ public class MentorService { // 🌟 Viết thẳng Class, không qua Interface
 
         Mentor mentor = Mentor.builder()
                 .userId(user.getId())
-                .fullName(user.getFull_name()) // Tên tự động bốc từ bảng users sang
+                .fullName(user.getFull_name())
                 .specialty(specialty)
                 .organization(organization)
                 .build();
