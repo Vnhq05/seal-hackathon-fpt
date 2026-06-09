@@ -8,4 +8,5 @@ import java.util.Optional;
 public interface MentorRequestRepository extends JpaRepository<MentorRequest, Long> {
     List<MentorRequest> findByMentorIdAndStatus(Long mentorId, String status);
     Optional<MentorRequest> findByTeamIdAndMentorId(Long teamId, Long mentorId);
+    List<MentorRequest> findByTeamIdOrderByCreatedAtDesc(Long teamId);
 }

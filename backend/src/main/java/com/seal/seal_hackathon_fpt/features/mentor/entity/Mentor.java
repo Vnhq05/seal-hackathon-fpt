@@ -26,4 +26,8 @@ public class Mentor {
 
     @Column(name = "organization")
     private String organization;
+
+    // Không lưu DB — trả kèm email (lấy từ bảng users) để Participant mời mentor bằng email.
+    @Transient
+    private String email;
 }

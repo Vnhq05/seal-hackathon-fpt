@@ -17,11 +17,24 @@ public class Submission {
     @Column(name = "round_id")
     private Long roundId;
 
-    @Column(name = "submitter_id")
-    private Long submitterId;
+    @Column(name = "github_url")
+    private String githubUrl;
 
-    private String fileUrl; // Hoặc repo link
+    @Column(name = "video_url")
+    private String videoUrl;
+
+    @Column(name = "pdf_url")
+    private String pdfUrl;
+
+    @Column(name = "notes", columnDefinition = "NVARCHAR(MAX)")
+    private String notes;
+
+    @Column(name = "status")
+    private String status; // Draft / Under Review / Submitted
 
     @Column(name = "submitted_at")
     private LocalDateTime submittedAt;
+
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 }

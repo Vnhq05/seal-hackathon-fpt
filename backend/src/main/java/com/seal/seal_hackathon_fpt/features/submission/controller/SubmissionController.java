@@ -7,8 +7,10 @@ package com.seal.seal_hackathon_fpt.features.submission.controller;
 import com.seal.seal_hackathon_fpt.features.submission.dto.SubmitWorkRequest;
 import com.seal.seal_hackathon_fpt.features.submission.entity.Submission;
 import com.seal.seal_hackathon_fpt.features.submission.service.SubmissionService;
+import com.seal.seal_hackathon_fpt.features.user.entity.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,13 +23,18 @@ public class SubmissionController {
     private final SubmissionService submissionService;
 
     @PostMapping
-    public ResponseEntity<Submission> submit(@RequestBody SubmitWorkRequest request) {
-        Long currentUserId = 1L; // Mock userId của Leader. Sẽ lấy từ JWT sau.
+    public ResponseEntity<Submission> submit(
+            @RequestBody SubmitWorkRequest request,
+            @AuthenticationPrincipal User currentUser // Leader thật từ JWT
+    ) {
         return ResponseEntity.ok(submissionService.submitWork(
                 request.getTeamId(),
                 request.getRoundId(),
-                request.getFileUrl(),
-                currentUserId
+                request.getGithubUrl(),
+                request.getVideoUrl(),
+                request.getPdfUrl(),
+                request.getNotes(),
+                currentUser.getId()
         ));
     }
 
