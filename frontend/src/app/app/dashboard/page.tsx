@@ -7,7 +7,8 @@ import { useAuth } from "@/lib/auth";
 import { useCompetitionStore, useGlobalRules } from "@/lib/competition-store";
 import { useJudgingStore } from "@/lib/judging-store";
 import { listMyNotifications, type BackendNotification } from "@/lib/notifications-api";
-import { createTeamApi, createTeamInviteApi, getMyTeamApi } from "@/lib/team-api";
+import { createTeamApi, createTeamInviteApi, getMyTeamApi, getTeamsApi } from "@/lib/team-api";
+import { listMentorsApi, getActiveRoomsApi, type MentorRoom } from "@/lib/mentor-api";
 import { useEffectiveRole } from "@/lib/view-mode";
 import {
   Trophy,
@@ -140,9 +141,13 @@ export default function Dashboard() {
           <Stat icon={BarChart3} label="Avg score" value="78.2" tint="text-chart-5" />
         </div>
 
-        {showMyTeams && user && (
+        {showMyTeams && user && effectiveRole === "Mentor" && (
+            <MentorTeamsWidget userId={user.id} />
+        )}
+
+        {showMyTeams && user && effectiveRole === "Judge" && (
             <MyTeamsWidget
-                mode={effectiveRole as "Judge" | "Mentor"}
+                mode="Judge"
                 userId={user.id}
                 teams={teams}
                 assignments={assignments}
@@ -1007,6 +1012,67 @@ function MyTeamsWidget({
                         <span className={trackBadgeClass(t.track)}>{t.track}</span>
                         <span>· {t.members.length} members</span>
                       </div>
+                    </div>
+                  </div>
+              ))}
+            </div>
+        )}
+      </div>
+  );
+}
+
+// Teams I mentor — DỮ LIỆU THẬT: lấy các phòng chat (room) mentor đang dẫn dắt.
+function MentorTeamsWidget({ userId }: { userId: string }) {
+  const [rooms, setRooms] = React.useState<MentorRoom[]>([]);
+  const [teamNames, setTeamNames] = React.useState<Record<number, string>>({});
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    let ok = true;
+    (async () => {
+      try {
+        const mentors = await listMentorsApi();
+        const mine = mentors.find((m) => Number(m.userId) === Number(userId));
+        if (!mine) { if (ok) setRooms([]); return; }
+        const [rs, ts] = await Promise.all([getActiveRoomsApi(mine.id), getTeamsApi()]);
+        if (!ok) return;
+        const map: Record<number, string> = {};
+        ts.forEach((t) => { map[t.id] = t.name; });
+        setTeamNames(map);
+        setRooms(rs);
+      } catch {
+        if (ok) setRooms([]);
+      } finally {
+        if (ok) setLoading(false);
+      }
+    })();
+    return () => { ok = false; };
+  }, [userId]);
+
+  return (
+      <div className="mt-6 rounded-xl border bg-card card-gradient overflow-hidden">
+        <div className="p-5 border-b flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <HeartHandshake className="h-4 w-4 text-primary" />
+            <h3 className="font-semibold">Teams I mentor</h3>
+            <Badge variant="outline">{rooms.length}</Badge>
+          </div>
+          <Link href="/app/mentor-chat" className="text-xs text-primary hover:underline">
+            Open chat →
+          </Link>
+        </div>
+
+        {loading ? (
+            <div className="p-6 text-center text-sm text-muted-foreground">Loading…</div>
+        ) : rooms.length === 0 ? (
+            <div className="p-6 text-center text-sm text-muted-foreground">No teams yet.</div>
+        ) : (
+            <div className="divide-y">
+              {rooms.map((r) => (
+                  <div key={r.id} className="p-4 flex items-center gap-3">
+                    <div className="flex-1">
+                      <div className="font-medium text-sm">{teamNames[r.teamId] ?? `Team #${r.teamId}`}</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">Room #{r.id}</div>
                     </div>
                   </div>
               ))}

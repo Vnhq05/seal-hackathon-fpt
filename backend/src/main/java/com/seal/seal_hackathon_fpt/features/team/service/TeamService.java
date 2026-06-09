@@ -131,4 +131,55 @@
                     Boolean.TRUE.equals(myMember.getIsLeader())
             );
         }
+
+        /**
+         * Tất cả các team mà user tham gia — mỗi cuộc thi 1 team.
+         * Dùng cho trang "My team": liệt kê mọi cuộc thi user đã đăng ký.
+         */
+        public List<MyTeamResponse> getMyTeams(Long userId) {
+            return memberRepository.findByUserId(userId).stream()
+                    .map(myMember -> {
+                        Team team = teamRepository.findById(myMember.getTeamId())
+                                .orElse(null);
+                        if (team == null) return null;
+                        List<TeamMember> members = memberRepository.findByTeamId(team.getId());
+                        return new MyTeamResponse(
+                                team,
+                                members,
+                                Boolean.TRUE.equals(myMember.getIsLeader())
+                        );
+                    })
+                    .filter(java.util.Objects::nonNull)
+                    .toList();
+        }
+
+        /**
+         * Leader đổi tên team — chỉ cho phép TRƯỚC khi cuộc thi bắt đầu (startDate).
+         */
+        public Team renameTeam(Long teamId, Long userId, String newName) {
+            if (newName == null || newName.trim().isEmpty()) {
+                throw new RuntimeException("Team name must not be empty.");
+            }
+
+            Team team = teamRepository.findById(teamId)
+                    .orElseThrow(() -> new RuntimeException("Team not found"));
+
+            TeamMember member = memberRepository.findByTeamIdAndUserId(teamId, userId)
+                    .orElseThrow(() -> new RuntimeException("You are not a member of this team."));
+
+            if (!Boolean.TRUE.equals(member.getIsLeader())) {
+                throw new RuntimeException("Only the team leader can rename the team.");
+            }
+
+            Competition competition = competitionRepository.findById(team.getCompetitionId())
+                    .orElseThrow(() -> new RuntimeException("Competition not found"));
+
+            if (competition.getStartDate() != null &&
+                    LocalDateTime.now().isAfter(competition.getStartDate())) {
+                throw new RuntimeException("Competition has already started. Team name can no longer be changed.");
+            }
+
+            team.setName(newName.trim());
+            return teamRepository.save(team);
+        }
     }

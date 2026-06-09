@@ -1,4 +1,4 @@
-import { apiGet, apiPost } from "@/lib/api";
+import { apiGet, apiPost, apiPut } from "@/lib/api";
 
 export type TeamStatus =
     | "INCOMPLETE"
@@ -84,6 +84,14 @@ export async function getMyTeamApi(): Promise<MyTeamResponse> {
 }
 
 /**
+ * GET /api/teams/my-teams
+ * Lấy TẤT CẢ team của user đang đăng nhập (mỗi cuộc thi 1 team).
+ */
+export async function getMyTeamsApi(): Promise<MyTeamResponse[]> {
+    return apiGet<MyTeamResponse[]>("/api/teams/my-teams");
+}
+
+/**
  * POST /api/teams
  * Tạo team mới.
  * Backend tự lấy creator/currentUser từ JWT.
@@ -92,6 +100,17 @@ export async function createTeamApi(
     data: CreateTeamRequest
 ): Promise<Team> {
     return apiPost<Team>("/api/teams", data);
+}
+
+/**
+ * PUT /api/teams/{teamId}
+ * Leader đổi tên team (chỉ trước khi cuộc thi bắt đầu — backend chặn).
+ */
+export async function updateTeamNameApi(
+    teamId: number,
+    name: string
+): Promise<Team> {
+    return apiPut<Team>(`/api/teams/${teamId}`, { name });
 }
 
 /**

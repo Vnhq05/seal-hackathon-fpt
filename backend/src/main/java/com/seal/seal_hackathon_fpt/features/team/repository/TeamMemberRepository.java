@@ -19,4 +19,7 @@ public interface TeamMemberRepository extends JpaRepository<TeamMember, Long> {
     List<TeamMember> findByTeamId(Long teamId);
 
     Optional<TeamMember> findFirstByUserId(Long userId);
+
+    // Tất cả các bản ghi thành viên của 1 user → suy ra mọi team (mọi cuộc thi) mà user tham gia.
+    List<TeamMember> findByUserId(Long userId);
 }

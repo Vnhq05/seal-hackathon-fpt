@@ -4,6 +4,9 @@ import com.seal.seal_hackathon_fpt.features.team.dto.AddMemberRequest;
 import com.seal.seal_hackathon_fpt.features.team.dto.CreateTeamRequest;
 import com.seal.seal_hackathon_fpt.features.team.dto.MyTeamResponse;
 import com.seal.seal_hackathon_fpt.features.team.dto.SendInviteRequest;
+import com.seal.seal_hackathon_fpt.features.team.dto.UpdateTeamRequest;
+
+import java.util.List;
 import com.seal.seal_hackathon_fpt.features.team.entity.Team;
 import com.seal.seal_hackathon_fpt.features.team.entity.TeamMember;
 import com.seal.seal_hackathon_fpt.features.team.service.TeamInviteService;
@@ -135,5 +138,26 @@ public class TeamController {
         return teamService.getMyTeam(currentUserId);
     }
 
+    // Tất cả các team (mỗi cuộc thi 1 team) mà user đang đăng nhập tham gia.
+    @GetMapping("/my-teams")
+    public List<MyTeamResponse> getMyTeams(Authentication authentication) {
+        Long currentUserId = getCurrentUserId(authentication);
+
+        return teamService.getMyTeams(currentUserId);
+    }
+
+    // Leader đổi tên team (chỉ trước khi cuộc thi bắt đầu).
+    @PutMapping("/{teamId}")
+    public ResponseEntity<?> renameTeam(
+            @PathVariable Long teamId,
+            @RequestBody UpdateTeamRequest request,
+            Authentication authentication
+    ) {
+        Long currentUserId = getCurrentUserId(authentication);
+
+        return ResponseEntity.ok(
+                teamService.renameTeam(teamId, currentUserId, request.getName())
+        );
+    }
 
 }
