@@ -8,7 +8,7 @@ import {
   useCompetitionStore, addYear, addSeason, useGlobalRules,
   type CompetitionFull, type PrizeTier, type ScoringCriterionDef, type CompetitionRound,
 } from "@/lib/competition-store";
-import { buildCreateCompetitionPayload, createCompetitionApi } from "@/lib/competition";
+import { buildCreateCompetitionPayload, createCompetitionApi, createRoundApi, normalizeDateTime } from "@/lib/competition";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -160,6 +160,26 @@ export default function Wizard() {
         registrationDeadline: s.registrationClose,
       });
       const saved = await createCompetitionApi(payload);
+
+      // Lưu các VÒNG xuống backend thật (POST /api/competitions/{id}/rounds).
+      // Chỉ lưu vòng có tên; ngày để startAt + deadline = thời điểm đã chọn ở wizard.
+      const namedRounds = s.rounds.filter((r) => r.name.trim());
+      for (let i = 0; i < namedRounds.length; i++) {
+        const r = namedRounds[i];
+        const at = normalizeDateTime(r.start) ?? null;
+        try {
+          await createRoundApi(Number(saved.id), {
+            name: r.name.trim(),
+            sequence: i + 1,
+            startAt: at,
+            deadline: at,
+            question: r.question?.trim() || null,
+            guidelines: r.guidelines?.trim() || null,
+          });
+        } catch (err) {
+          console.error("Failed to save round", r.name, err);
+        }
+      }
 
       // Báo cho các trang đang nghe (dashboard / event-control) tải lại danh sách từ API.
       window.dispatchEvent(new CustomEvent("competition-store-changed"));

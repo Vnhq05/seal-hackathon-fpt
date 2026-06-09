@@ -20,6 +20,7 @@ export interface Mentor {
   fullName: string;
   specialty?: string | null;
   organization?: string | null;
+  email?: string | null; // email (từ bảng users) — để mời mentor bằng email
 }
 
 export interface MentorRequest {
@@ -56,6 +57,10 @@ export const sendMentorRequestApi = (teamId: number, mentorId: number) =>
 
 export const getPendingRequestsApi = (mentorId: number) =>
   apiGet<MentorRequest[]>(`/api/mentor-chat/requests/pending?mentorId=${mentorId}`);
+
+// Lời mời ĐÃ GỬI của 1 team (Sent invitations) — kèm trạng thái PENDING/ACCEPTED/DENIED.
+export const getTeamRequestsApi = (teamId: number) =>
+  apiGet<MentorRequest[]>(`/api/mentor-chat/requests/by-team/${teamId}`);
 
 export const respondMentorRequestApi = (requestId: number, decision: "ACCEPTED" | "DENIED") =>
   apiPut<MentorRequest>(`/api/mentor-chat/request/${requestId}/respond?decision=${decision}`);

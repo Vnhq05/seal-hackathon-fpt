@@ -13,7 +13,12 @@ import {
     updateCompetitionApi,
     deleteCompetitionApi,
     buildUpdateCompetitionPayload,
+    getRoundsApi,
+    createRoundApi,
+    deleteRoundApi,
+    normalizeDateTime,
     type Competition,
+    type Round,
 } from "@/lib/competition";
 import { CAMPUSES } from "@/lib/campuses";
 import { Badge } from "@/components/ui/badge";
@@ -28,7 +33,7 @@ import {
 import { statusBadgeClass } from "@/lib/utils";
 import { toast } from "sonner";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
-import { MoreVertical, Trash2, Pencil } from "lucide-react";
+import { MoreVertical, Trash2, Pencil, ListOrdered, Plus } from "lucide-react";
 import { useRequireRole } from "@/lib/role-guard";
 
 const STATUSES: Competition["status"][] = ["Draft", "Open", "Active", "Scoring", "Closed", "Cancelled"];
@@ -41,6 +46,7 @@ export default function EventControl() {
     const [loading, setLoading] = React.useState(true);
     const [error, setError] = React.useState<string | null>(null);
     const [editing, setEditing] = React.useState<Competition | null>(null);
+    const [managingRounds, setManagingRounds] = React.useState<Competition | null>(null);
 
     const load = React.useCallback(async () => {
         setLoading(true);
@@ -110,12 +116,18 @@ export default function EventControl() {
                                 {c.status === "Scoring" && (
                                     <button onClick={() => void changeStatus(c.id, "Closed")} className="rounded-md btn-gradient text-primary-foreground px-3 py-1 text-xs">Publish results</button>
                                 )}
+                                <button onClick={() => setManagingRounds(c)} className="rounded-md border px-3 py-1 text-xs inline-flex items-center gap-1">
+                                    <ListOrdered className="h-3.5 w-3.5" /> Rounds
+                                </button>
                                 <button onClick={() => setEditing(c)} className="rounded-md border px-3 py-1 text-xs inline-flex items-center gap-1">
                                     <Pencil className="h-3.5 w-3.5" /> Edit
                                 </button>
                                 <DropdownMenu>
                                     <DropdownMenuTrigger className="p-1"><MoreVertical className="h-4 w-4" /></DropdownMenuTrigger>
                                     <DropdownMenuContent>
+                                        <DropdownMenuItem onClick={() => setManagingRounds(c)}>
+                                            <ListOrdered className="h-3.5 w-3.5 mr-2" /> Manage rounds
+                                        </DropdownMenuItem>
                                         <DropdownMenuItem onClick={() => setEditing(c)}>
                                             <Pencil className="h-3.5 w-3.5 mr-2" /> Edit
                                         </DropdownMenuItem>
@@ -135,7 +147,127 @@ export default function EventControl() {
                 onClose={() => setEditing(null)}
                 onSaved={async () => { setEditing(null); await load(); }}
             />
+
+            <RoundsDialog
+                competition={managingRounds}
+                onClose={() => setManagingRounds(null)}
+            />
         </div>
+    );
+}
+
+function RoundsDialog({
+    competition, onClose,
+}: {
+    competition: Competition | null;
+    onClose: () => void;
+}) {
+    const [rounds, setRounds] = React.useState<Round[]>([]);
+    const [loading, setLoading] = React.useState(false);
+    const [name, setName] = React.useState("");
+    const [deadline, setDeadline] = React.useState("");
+    const [saving, setSaving] = React.useState(false);
+
+    const load = React.useCallback(async () => {
+        if (!competition) return;
+        setLoading(true);
+        try {
+            setRounds(await getRoundsApi(competition.id));
+        } catch {
+            setRounds([]);
+        } finally {
+            setLoading(false);
+        }
+    }, [competition]);
+
+    React.useEffect(() => { void load(); }, [load]);
+
+    const add = async () => {
+        if (!competition) return;
+        if (!name.trim()) { toast.error("Round name is required."); return; }
+        setSaving(true);
+        try {
+            const at = normalizeDateTime(deadline) ?? null;
+            await createRoundApi(competition.id, {
+                name: name.trim(),
+                startAt: at,
+                deadline: at,
+            });
+            toast.success(`Round "${name.trim()}" added`);
+            setName("");
+            setDeadline("");
+            await load();
+        } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Failed to add round");
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const remove = async (roundId: number) => {
+        if (!competition) return;
+        if (!window.confirm("Delete this round? Submissions/scores linked to it may be affected.")) return;
+        try {
+            await deleteRoundApi(competition.id, roundId);
+            toast.success("Round deleted");
+            await load();
+        } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Failed to delete round");
+        }
+    };
+
+    return (
+        <Dialog open={!!competition} onOpenChange={(v) => !v && onClose()}>
+            <DialogContent className="max-w-lg">
+                <DialogHeader>
+                    <DialogTitle>Rounds · {competition?.name}</DialogTitle>
+                </DialogHeader>
+
+                <div className="space-y-3">
+                    {loading ? (
+                        <div className="text-sm text-muted-foreground">Loading rounds…</div>
+                    ) : rounds.length === 0 ? (
+                        <div className="text-sm text-muted-foreground">No rounds yet. Add the first one below.</div>
+                    ) : (
+                        <div className="rounded-lg border divide-y">
+                            {rounds.map((r, i) => {
+                                const due = r.deadline ?? r.startAt;
+                                return (
+                                    <div key={r.id} className="flex items-center gap-3 p-3">
+                                        <span className="text-xs text-muted-foreground w-5 text-center">{r.sequence ?? i + 1}</span>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="font-medium text-sm truncate">{r.name}</div>
+                                            <div className="text-xs text-muted-foreground">
+                                                {due ? `Due ${due.replace("T", " ").slice(0, 16)}` : "No deadline set"}
+                                            </div>
+                                        </div>
+                                        <button onClick={() => void remove(r.id)} className="text-destructive p-1.5 hover:bg-destructive/10 rounded-md" title="Delete round">
+                                            <Trash2 className="h-4 w-4" />
+                                        </button>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+
+                    <div className="rounded-lg border bg-muted/20 p-3 space-y-2">
+                        <Label className="text-xs">Add a round</Label>
+                        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Round name (e.g. Qualifiers)" />
+                        <div className="flex gap-2">
+                            <Input type="datetime-local" value={deadline} onChange={(e) => setDeadline(e.target.value)} className="flex-1" />
+                            <Button onClick={() => void add()} disabled={saving} className="btn-gradient text-primary-foreground shrink-0">
+                                <Plus className="h-4 w-4 mr-1" /> {saving ? "Adding…" : "Add"}
+                            </Button>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground">The date is shown to teams as the round&apos;s deadline.</p>
+                    </div>
+                </div>
+
+                <DialogFooter>
+                    <Button variant="outline" onClick={onClose}>Done</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     );
 }
 

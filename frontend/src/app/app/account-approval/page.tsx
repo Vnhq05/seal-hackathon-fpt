@@ -34,6 +34,8 @@ export default function AccountApproval() {
     try {
       await updateUserStatusApi(id, "active");
       toast.success("Activated");
+      // Báo cho sidebar cập nhật badge số pending ngay lập tức.
+      window.dispatchEvent(new Event("accounts:changed"));
       void load();
     } catch (e) {
       toast.error((e as Error).message);

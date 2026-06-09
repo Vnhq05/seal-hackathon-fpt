@@ -7,7 +7,7 @@ import { useAuth } from "@/lib/auth";
 import { useCompetitionStore, useGlobalRules } from "@/lib/competition-store";
 import { useJudgingStore } from "@/lib/judging-store";
 import { listMyNotifications, type BackendNotification } from "@/lib/notifications-api";
-import { createTeamApi, createTeamInviteApi, getMyTeamApi, getTeamsApi } from "@/lib/team-api";
+import { createTeamApi, addTeamMemberByEmailApi, getMyTeamApi, getTeamsApi } from "@/lib/team-api";
 import { listMentorsApi, getActiveRoomsApi, type MentorRoom } from "@/lib/mentor-api";
 import { useEffectiveRole } from "@/lib/view-mode";
 import {
@@ -585,11 +585,23 @@ function RegisterDialog({
 
       console.log("DASHBOARD CREATED TEAM:", createdTeam);
 
+      // Add thẳng các thành viên vào team (không cần accept). Email chưa có tài khoản
+      // sẽ được tạo tài khoản tạm. Người nào add lỗi thì gom lại báo, không chặn cả team.
+      const failed: string[] = [];
       for (const email of emails) {
-        await createTeamInviteApi(createdTeam.id, email);
+        try {
+          await addTeamMemberByEmailApi(createdTeam.id, email);
+        } catch (err) {
+          console.error("Failed to add member", email, err);
+          failed.push(email);
+        }
       }
 
-      toast.success(`Team "${name}" registered for ${c.name}.`);
+      if (failed.length) {
+        toast.error(`Team "${name}" registered, but couldn't add: ${failed.join(", ")}`);
+      } else {
+        toast.success(`Team "${name}" registered for ${c.name}.`);
+      }
 
       onRegistered?.(); // cập nhật trạng thái "đã đăng ký" trên dashboard
       onOpenChange(false);

@@ -21,6 +21,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { listMyNotifications, type BackendNotification } from "@/lib/notifications-api";
+import { listUsers } from "@/lib/users-api";
 
 interface NavItem { label: string; path: string; icon: React.ComponentType<{ className?: string }>; roles: Role[]; }
 interface NavGroup { label: string; items: NavItem[]; }
@@ -94,6 +95,31 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     listMyNotifications().then(setNotifications).catch(() => setNotifications([]));
   }, []);
 
+  // Số tài khoản đang chờ duyệt → badge đỏ trên mục "Account Approval" (chỉ Coordinator/Admin).
+  const [pendingApprovals, setPendingApprovals] = React.useState(0);
+  const canApprove = effectiveRole === "Coordinator" || effectiveRole === "Admin";
+  React.useEffect(() => {
+    if (!canApprove) { setPendingApprovals(0); return; }
+    let active = true;
+    const refresh = () =>
+      listUsers()
+        .then((us) => { if (active) setPendingApprovals(us.filter((u) => u.status === "pending").length); })
+        .catch(() => { if (active) setPendingApprovals(0); });
+    void refresh();
+    // Cập nhật lại mỗi 30s và mỗi khi quay lại tab để badge luôn khớp số pending thực tế.
+    const timer = setInterval(refresh, 30_000);
+    const onFocus = () => void refresh();
+    const onChanged = () => void refresh();
+    window.addEventListener("focus", onFocus);
+    window.addEventListener("accounts:changed", onChanged);
+    return () => {
+      active = false;
+      clearInterval(timer);
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("accounts:changed", onChanged);
+    };
+  }, [canApprove, pathname]);
+
   if (!user) return null;
   const initials = user.name.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase();
   const isLecturer = user.role === "Lecturer";
@@ -126,6 +152,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   {visible.map((item) => {
                     const active = pathname === item.path;
                     const Icon = item.icon;
+                    const badge = item.path === "/app/account-approval" ? pendingApprovals : 0;
                     return (
                       <Link
                         key={item.path}
@@ -139,6 +166,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       >
                         <Icon className="h-4 w-4 shrink-0" />
                         <span className="flex-1 truncate">{item.label}</span>
+                        {badge > 0 && (
+                          <span className="shrink-0 grid place-items-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold leading-none shadow-sm">
+                            {badge > 99 ? "99+" : badge}
+                          </span>
+                        )}
                         {active && <ChevronRight className="h-3.5 w-3.5" />}
                       </Link>
                     );

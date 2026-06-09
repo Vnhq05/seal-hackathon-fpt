@@ -18,6 +18,7 @@ import {
   listMentorsApi,
   sendMentorRequestApi,
   getPendingRequestsApi,
+  getTeamRequestsApi,
   respondMentorRequestApi,
   getRoomByTeamApi,
   getActiveRoomsApi,
@@ -29,9 +30,10 @@ import {
   type ChatMessage,
 } from "@/lib/mentor-api";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Send, MessageCircleOff, Mail, Check, X, Clock, UserPlus } from "lucide-react";
+import { Send, MessageCircleOff, Mail, Check, X, Clock } from "lucide-react";
 import { toast } from "sonner";
 
 type Me = { id: string; name: string };
@@ -53,6 +55,7 @@ export default function MentorChat() {
 function ParticipantView({ me }: { me: Me }) {
   const { competitions } = useCompetitionStore();
   const [myTeams, setMyTeams] = React.useState<MyTeamResponse[]>([]);
+  const [mentors, setMentors] = React.useState<Mentor[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [selectedTeamId, setSelectedTeamId] = React.useState<number | null>(null);
 
@@ -62,6 +65,8 @@ function ParticipantView({ me }: { me: Me }) {
         .catch(() => setMyTeams([]))
         .finally(() => setLoading(false));
   }, []);
+
+  React.useEffect(() => { listMentorsApi().then(setMentors).catch(() => setMentors([])); }, []);
 
   React.useEffect(() => {
     if (myTeams.length === 0) { setSelectedTeamId(null); return; }
@@ -75,17 +80,20 @@ function ParticipantView({ me }: { me: Me }) {
 
   return (
       <div>
-        <PageHeader title="Mentor chat" subtitle="Pick a competition, invite a mentor, then chat" />
+        <PageHeader
+            title="Mentor chat"
+            subtitle={selected?.team ? `Team · ${selected.team.name}` : "Invite a mentor, then chat"}
+        />
 
         {loading && <div className="rounded-xl border bg-card p-6 text-sm text-muted-foreground">Loading…</div>}
 
         {!loading && myTeams.length === 0 && <EmptyCard message="You haven't joined a team yet." />}
 
         {!loading && myTeams.length > 0 && (
-            <div className="grid lg:grid-cols-[280px_1fr] gap-4 h-[calc(100vh-220px)]">
+            <div className="grid lg:grid-cols-[280px_1fr] gap-4 min-h-[calc(100vh-220px)]">
               <div className="rounded-xl border bg-card overflow-y-auto h-fit max-h-full">
                 <div className="px-4 py-3 border-b text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  Your competitions
+                  Your teams
                 </div>
                 {myTeams.map((mt) => {
                   const c = compById(mt.team!.competitionId);
@@ -96,24 +104,29 @@ function ParticipantView({ me }: { me: Me }) {
                           onClick={() => setSelectedTeamId(mt.team!.id)}
                           className={`w-full text-left px-4 py-3 border-b text-sm ${active ? "bg-accent" : "hover:bg-accent/50"}`}
                       >
-                        <div className="font-medium truncate">{c?.name ?? `Competition #${mt.team!.competitionId}`}</div>
-                        <div className="text-xs text-muted-foreground truncate">Team: {mt.team!.name}</div>
+                        <div className="font-medium truncate">{mt.team!.name}</div>
+                        <div className="text-xs text-muted-foreground truncate">
+                          {c?.name ?? `Competition #${mt.team!.competitionId}`}
+                        </div>
                       </button>
                   );
                 })}
               </div>
 
-              <div className="rounded-xl border bg-card flex flex-col min-h-0">
+              <div className="min-h-0">
                 {selected?.team ? (
                     <ParticipantTeamPanel
                         key={selected.team.id}
                         teamId={selected.team.id}
                         teamName={selected.team.name}
                         isLeader={Boolean(selected.isLeader ?? selected.leader)}
+                        mentors={mentors}
                         me={me}
                     />
                 ) : (
-                    <EmptyState message="Select a competition." />
+                    <div className="rounded-xl border bg-card flex flex-col h-full">
+                      <EmptyState message="Select a team." />
+                    </div>
                 )}
               </div>
             </div>
@@ -123,21 +136,19 @@ function ParticipantView({ me }: { me: Me }) {
 }
 
 function ParticipantTeamPanel({
-  teamId, teamName, isLeader, me,
+  teamId, teamName, isLeader, mentors, me,
 }: {
   teamId: number;
   teamName: string;
   isLeader: boolean;
+  mentors: Mentor[];
   me: Me;
 }) {
   const [room, setRoom] = React.useState<MentorRoom | null>(null);
   const [checking, setChecking] = React.useState(true);
-  const [mentors, setMentors] = React.useState<Mentor[]>([]);
-  const [sentToId, setSentToId] = React.useState<number | null>(null);
+  const [requests, setRequests] = React.useState<MentorRequest[]>([]);
 
-  React.useEffect(() => { listMentorsApi().then(setMentors).catch(() => setMentors([])); }, []);
-
-  // Poll phòng chat: khi mentor chấp nhận, room xuất hiện → tự chuyển sang khung chat.
+  // Poll phòng chat: khi mentor chấp nhận, room xuất hiện → tự chuyển sang khung chat (ảnh 7).
   React.useEffect(() => {
     let stop = false;
     const check = async () => {
@@ -149,75 +160,189 @@ function ParticipantTeamPanel({
     return () => { stop = true; clearInterval(t); };
   }, [teamId]);
 
-  if (checking) return <EmptyState message="Loading…" />;
+  // Poll danh sách lời mời đã gửi (Sent invitations) + trạng thái.
+  const reloadRequests = React.useCallback(() => {
+    getTeamRequestsApi(teamId).then(setRequests).catch(() => setRequests([]));
+  }, [teamId]);
+  React.useEffect(() => {
+    reloadRequests();
+    const t = setInterval(reloadRequests, 4000);
+    return () => clearInterval(t);
+  }, [reloadRequests]);
 
-  if (room) {
-    const mentor = mentors.find((m) => m.id === room.mentorId);
+  if (checking) {
     return (
-        <ChatRoom
-            roomId={room.id}
-            me={me}
-            peerName={mentor?.fullName ?? `Mentor #${room.mentorId}`}
-            pill={teamName}
-        />
+        <div className="rounded-xl border bg-card flex flex-col h-full">
+          <EmptyState message="Loading…" />
+        </div>
     );
   }
 
-  // Chưa có mentor → màn hình mời.
-  const invite = async (mentor: Mentor) => {
+  // Đã có mentor (mentor đã chấp nhận) → khung chat (ảnh 7).
+  if (room) {
+    const mentor = mentors.find((m) => m.id === room.mentorId);
+    return (
+        <div className="rounded-xl border bg-card flex flex-col h-[calc(100vh-220px)]">
+          <ChatRoom
+              roomId={room.id}
+              me={me}
+              peerName={mentor?.fullName ?? `Mentor #${room.mentorId}`}
+              pill={teamName}
+          />
+        </div>
+    );
+  }
+
+  // Chưa có mentor → giao diện mời bằng email + danh sách lời mời đã gửi (ảnh 6).
+  return (
+      <div className="grid md:grid-cols-2 gap-4">
+        <InvitePanel teamId={teamId} teamName={teamName} isLeader={isLeader} mentors={mentors} onSent={reloadRequests} />
+        <SentInvitations requests={requests} mentors={mentors} />
+      </div>
+  );
+}
+
+function InvitePanel({
+  teamId, teamName, isLeader, mentors, onSent,
+}: {
+  teamId: number;
+  teamName: string;
+  isLeader: boolean;
+  mentors: Mentor[];
+  onSent: () => void;
+}) {
+  const [email, setEmail] = React.useState("");
+  const [note, setNote] = React.useState("");
+  const [sending, setSending] = React.useState(false);
+
+  const submit = async () => {
     if (!isLeader) { toast.error("Only the team leader can invite a mentor."); return; }
+    const trimmed = email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      toast.error("Please enter a valid email address.");
+      return;
+    }
+    // Map email → mentor thật (backend mời theo mentorId).
+    const mentor = mentors.find((m) => (m.email ?? "").toLowerCase() === trimmed);
+    if (!mentor) {
+      toast.error("No mentor is registered with that email.");
+      return;
+    }
     try {
+      setSending(true);
       await sendMentorRequestApi(teamId, mentor.id);
-      setSentToId(mentor.id);
-      toast.success(`Invitation sent to ${mentor.fullName}. Waiting for them to accept.`);
+      toast.success(`Invitation sent to ${mentor.email ?? mentor.fullName}.`);
+      setEmail("");
+      setNote("");
+      onSent();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to send invitation");
+    } finally {
+      setSending(false);
     }
   };
 
   return (
-      <div className="p-5 overflow-y-auto">
+      <div className="rounded-xl border bg-card p-5 h-fit">
         <div className="flex items-center gap-2 mb-1">
-          <UserPlus className="h-4 w-4 text-primary" />
-          <h3 className="font-medium">Invite a mentor for "{teamName}"</h3>
+          <Mail className="h-4 w-4 text-primary" />
+          <h3 className="font-medium">Invite a mentor by email</h3>
         </div>
         <p className="text-sm text-muted-foreground mb-4">
-          Choose a mentor below. Once they accept, a chat window will appear here automatically.
+          Send an invitation to a mentor&apos;s Gmail. They&apos;ll see it in their Mentor Chat and can accept to join your team.
         </p>
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs text-muted-foreground">Mentor&apos;s Gmail</label>
+            <Input
+                type="email"
+                placeholder="mentor@gmail.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={!isLeader}
+                className="mt-1"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground">Personal note (optional)</label>
+            <Textarea
+                placeholder={`Hi! We're ${teamName} — would love your guidance.`}
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                disabled={!isLeader}
+                rows={3}
+                className="mt-1"
+            />
+          </div>
+          <Button
+              onClick={submit}
+              disabled={!isLeader || sending}
+              className="w-full btn-gradient text-primary-foreground"
+          >
+            <Send className="h-4 w-4 mr-2" /> {sending ? "Sending…" : "Send invitation"}
+          </Button>
+          {!isLeader && (
+              <p className="text-xs text-muted-foreground">Only the team leader can invite a mentor.</p>
+          )}
+        </div>
+      </div>
+  );
+}
 
-        {sentToId != null && (
-            <div className="mb-4 rounded-md border border-amber-500/30 bg-amber-500/10 text-amber-600 text-sm px-3 py-2 flex items-center gap-2">
-              <Clock className="h-4 w-4" /> Invitation sent — waiting for the mentor to accept…
-            </div>
-        )}
+function SentInvitations({
+  requests, mentors,
+}: {
+  requests: MentorRequest[];
+  mentors: Mentor[];
+}) {
+  const mentorLabel = (mentorId: number) => {
+    const m = mentors.find((x) => x.id === mentorId);
+    return m?.email ?? m?.fullName ?? `Mentor #${mentorId}`;
+  };
 
-        {mentors.length === 0 ? (
-            <div className="text-sm text-muted-foreground">No mentors available yet.</div>
+  return (
+      <div className="rounded-xl border bg-card p-5 h-fit">
+        <h3 className="font-medium mb-4">Sent invitations</h3>
+        {requests.length === 0 ? (
+            <div className="text-sm text-muted-foreground">No invitations sent yet.</div>
         ) : (
             <div className="space-y-2">
-              {mentors.map((m) => (
-                  <div key={m.id} className="rounded-lg border p-3 flex items-center gap-3">
-                    <div className="h-9 w-9 rounded-full btn-gradient grid place-items-center text-xs text-primary-foreground shrink-0">
-                      {m.fullName.slice(0, 1)}
-                    </div>
+              {requests.map((r) => (
+                  <div key={r.id} className="rounded-lg border p-3 flex items-center gap-3">
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium text-sm truncate">{m.fullName}</div>
-                      <div className="text-xs text-muted-foreground truncate">
-                        {[m.specialty, m.organization].filter(Boolean).join(" · ") || "Mentor"}
+                      <div className="font-medium text-sm truncate">{mentorLabel(r.mentorId)}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {r.createdAt ? new Date(r.createdAt).toLocaleString() : ""}
                       </div>
                     </div>
-                    <Button size="sm" disabled={!isLeader || sentToId === m.id} onClick={() => invite(m)}>
-                      {sentToId === m.id ? "Sent" : <><Mail className="h-3.5 w-3.5 mr-1" /> Invite</>}
-                    </Button>
+                    <StatusBadge status={r.status} />
                   </div>
               ))}
             </div>
         )}
-
-        {!isLeader && (
-            <p className="text-xs text-muted-foreground mt-4">Only the team leader can invite a mentor.</p>
-        )}
       </div>
+  );
+}
+
+function StatusBadge({ status }: { status: MentorRequest["status"] }) {
+  if (status === "ACCEPTED") {
+    return (
+        <span className="inline-flex items-center gap-1 text-xs rounded-full border border-green-500/30 bg-green-500/10 text-green-500 px-2.5 py-1">
+          <Check className="h-3.5 w-3.5" /> Accepted
+        </span>
+    );
+  }
+  if (status === "DENIED") {
+    return (
+        <span className="inline-flex items-center gap-1 text-xs rounded-full border border-red-500/30 bg-red-500/10 text-red-500 px-2.5 py-1">
+          <X className="h-3.5 w-3.5" /> Declined
+        </span>
+    );
+  }
+  return (
+      <span className="inline-flex items-center gap-1 text-xs rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-500 px-2.5 py-1">
+        <Clock className="h-3.5 w-3.5" /> Pending
+      </span>
   );
 }
 

@@ -87,6 +87,68 @@ export function getCompetitionByIdApi(id: number) {
     return apiGet<Competition>(`/api/competitions/${id}`);
 }
 
+/** Một vòng thi (bảng rounds). */
+export interface Round {
+    id: number;
+    competitionId: number;
+    name: string;
+    sequence: number | null;
+    startAt?: string | null;
+    deadline?: string | null;
+    question?: string | null;
+    guidelines?: string | null;
+    isLocked?: boolean | null;
+}
+
+/**
+ * GET /api/competitions/{id}/rounds
+ * Các vòng của cuộc thi, đã sắp theo sequence tăng dần.
+ */
+export function getRoundsApi(competitionId: number) {
+    return apiGet<Round[]>(`/api/competitions/${competitionId}/rounds`);
+}
+
+/** Body tạo/cập nhật một vòng. */
+export interface RoundInput {
+    name: string;
+    sequence?: number | null;
+    startAt?: string | null;
+    deadline?: string | null;
+    question?: string | null;
+    guidelines?: string | null;
+    isLocked?: boolean | null;
+}
+
+/** POST /api/competitions/{id}/rounds — tạo vòng mới (Coordinator/Admin). */
+export function createRoundApi(competitionId: number, input: RoundInput) {
+    return apiPost<Round>(`/api/competitions/${competitionId}/rounds`, input);
+}
+
+/** PUT /api/competitions/{id}/rounds/{roundId} — cập nhật vòng. */
+export function updateRoundApi(competitionId: number, roundId: number, input: RoundInput) {
+    return apiPut<Round>(`/api/competitions/${competitionId}/rounds/${roundId}`, input);
+}
+
+/** DELETE /api/competitions/{id}/rounds/{roundId} — xoá vòng. */
+export function deleteRoundApi(competitionId: number, roundId: number) {
+    return apiDelete<string>(`/api/competitions/${competitionId}/rounds/${roundId}`);
+}
+
+/** Một dòng bảng xếp hạng của 1 vòng. */
+export interface RankingRow {
+    teamId: number;
+    teamName: string;
+    finalScore: number | string;
+}
+
+/**
+ * GET /api/ranking/{roundId}
+ * Bảng xếp hạng 1 vòng — đã sort theo finalScore giảm dần (rank = vị trí trong list).
+ */
+export function getRankingApi(roundId: number) {
+    return apiGet<RankingRow[]>(`/api/ranking/${roundId}`);
+}
+
 /**
  * POST /api/competitions
  */

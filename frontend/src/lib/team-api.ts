@@ -19,6 +19,8 @@ export type TeamMember = {
     userId: number;
     isLeader: boolean;
     joinedAt?: string;
+    email?: string;
+    name?: string;
 };
 
 export type TeamInvite = {
@@ -122,6 +124,17 @@ export async function createTeamInviteApi(
     email: string
 ): Promise<TeamInvite> {
     return apiPost<TeamInvite>(`/api/teams/${teamId}/invites`, { email });
+}
+
+/**
+ * POST /api/teams/{teamId}/members/by-email
+ * Leader thêm thành viên TRỰC TIẾP bằng email — vào team luôn, không cần accept.
+ */
+export async function addTeamMemberByEmailApi(
+    teamId: number,
+    email: string
+): Promise<TeamMember> {
+    return apiPost<TeamMember>(`/api/teams/${teamId}/members/by-email`, { email });
 }
 
 /**
