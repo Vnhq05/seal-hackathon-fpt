@@ -50,6 +50,23 @@ public class User implements UserDetails {
     @Column(length = 150)
     private String school;
 
+    // Hồ sơ cá nhân
+    @Column(name = "phone", length = 20)
+    private String phone;
+
+    @Column(name = "date_of_birth")
+    private java.time.LocalDate dateOfBirth;
+
+    @Column(name = "gender", length = 10)
+    private String gender;
+
+    // Chống brute-force đăng nhập
+    @Column(name = "failed_attempts")
+    private Integer failedAttempts;
+
+    @Column(name = "lock_until")
+    private LocalDateTime lockUntil;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

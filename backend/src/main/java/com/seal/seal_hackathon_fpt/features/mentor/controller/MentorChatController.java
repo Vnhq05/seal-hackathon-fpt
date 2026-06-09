@@ -2,8 +2,10 @@ package com.seal.seal_hackathon_fpt.features.mentor.controller;
 
 import com.seal.seal_hackathon_fpt.features.mentor.entity.*;
 import com.seal.seal_hackathon_fpt.features.mentor.service.MentorChatService;
+import com.seal.seal_hackathon_fpt.features.user.entity.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -15,10 +17,16 @@ public class MentorChatController {
 
     private final MentorChatService chatService;
 
-    // 1. Team chủ động gửi lời mời tới Mentor đích danh
+    // 1. Team chủ động gửi lời mời tới Mentor đích danh (kèm lời nhắn tuỳ chọn).
     @PostMapping("/request/send")
-    public ResponseEntity<MentorRequest> sendRequest(@RequestParam Long teamId, @RequestParam Long mentorId) {
-        return ResponseEntity.ok(chatService.sendRequestToMentor(teamId, mentorId));
+    public ResponseEntity<MentorRequest> sendRequest(
+            @RequestParam Long teamId,
+            @RequestParam Long mentorId,
+            @RequestParam(required = false) String message,
+            @AuthenticationPrincipal User currentUser
+    ) {
+        String fromEmail = currentUser != null ? currentUser.getEmail() : null;
+        return ResponseEntity.ok(chatService.sendRequestToMentor(teamId, mentorId, message, fromEmail));
     }
 
     // 2. Mentor lấy danh sách các lời mời của các Team đang đợi mình duyệt

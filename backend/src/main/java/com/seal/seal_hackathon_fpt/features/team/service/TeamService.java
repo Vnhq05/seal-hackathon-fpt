@@ -38,6 +38,11 @@
             Competition competition = competitionRepository.findById(team.getCompetitionId())
                     .orElseThrow(() -> new RuntimeException("Competition not found"));
 
+            // Chỉ cho đăng ký khi cuộc thi đang ở trạng thái Open (cửa đăng ký đang mở).
+            if (competition.getStatus() != Competition.Status.Open) {
+                throw new RuntimeException("Registration is not open for this competition.");
+            }
+
             if (competition.getRegistrationDeadline() != null &&
                     LocalDateTime.now().isAfter(competition.getRegistrationDeadline())) {
                 throw new RuntimeException("Registration deadline has passed. Cannot create team.");

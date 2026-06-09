@@ -17,8 +17,8 @@ public class MentorChatService {
     private final MentorRoomRepository roomRepository;
     private final ChatMessageRepository messageRepository;
 
-    // QUY TRÌNH 1: Đội thi gửi lời mời đích danh cho Mentor
-    public MentorRequest sendRequestToMentor(Long teamId, Long mentorId) {
+    // QUY TRÌNH 1: Đội thi gửi lời mời đích danh cho Mentor (kèm lời nhắn + email người gửi)
+    public MentorRequest sendRequestToMentor(Long teamId, Long mentorId, String message, String fromEmail) {
         // Kiểm tra xem Team này đã có phòng chat/đã thuộc về Mentor nào chưa
         if (roomRepository.findByTeamId(teamId).isPresent()) {
             throw new RuntimeException("Your team already has a mentor and cannot invite another one.");
@@ -31,6 +31,8 @@ public class MentorChatService {
         request.setTeamId(teamId);
         request.setMentorId(mentorId);
         request.setStatus("PENDING");
+        request.setMessage(message);
+        request.setFromEmail(fromEmail);
         request.setCreatedAt(LocalDateTime.now());
         request.setUpdatedAt(LocalDateTime.now());
 

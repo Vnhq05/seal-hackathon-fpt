@@ -21,6 +21,12 @@ public class MentorRequest {
     @Column(name = "status")
     private String status; // PENDING, ACCEPTED, DENIED
 
+    @Column(name = "message", columnDefinition = "NVARCHAR(MAX)")
+    private String message; // lời nhắn của team khi mời
+
+    @Column(name = "from_email", length = 190)
+    private String fromEmail; // email người gửi lời mời (leader)
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 

@@ -128,6 +128,11 @@ public class CompetitionService {
         }
 
         if (request.getStatus() != null) {
+            // Một cuộc thi phải có >= 1 vòng trước khi mở đăng ký (Open).
+            if (request.getStatus() == Competition.Status.Open
+                    && roundRepository.findByCompetitionId(id).isEmpty()) {
+                throw new RuntimeException("Add at least one round before opening this competition.");
+            }
             existing.setStatus(request.getStatus());
         }
 

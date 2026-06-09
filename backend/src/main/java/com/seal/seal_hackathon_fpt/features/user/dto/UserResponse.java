@@ -25,6 +25,9 @@ public class UserResponse {
     private UserStatus status;
     private String studentId;
     private String school;
+    private String phone;
+    private java.time.LocalDate dateOfBirth;
+    private String gender;
 
     // Hàm tiện ích: biến 1 User (Entity) thành UserResponse (đã cắt password).
     public static UserResponse from(User u) {
@@ -36,6 +39,9 @@ public class UserResponse {
                 .status(u.getStatus())
                 .studentId(u.getStudentId())
                 .school(u.getSchool())
+                .phone(u.getPhone())
+                .dateOfBirth(u.getDateOfBirth())
+                .gender(u.getGender())
                 .build();
     }
 }

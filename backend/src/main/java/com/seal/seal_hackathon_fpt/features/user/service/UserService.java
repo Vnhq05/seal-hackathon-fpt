@@ -1,7 +1,9 @@
 package com.seal.seal_hackathon_fpt.features.user.service;
 
 import com.seal.seal_hackathon_fpt.features.auth.dto.RegisterRequest;
+import com.seal.seal_hackathon_fpt.features.user.dto.ChangePasswordRequest;
 import com.seal.seal_hackathon_fpt.features.user.dto.CreateStaffRequest;
+import com.seal.seal_hackathon_fpt.features.user.dto.UpdateProfileRequest;
 import com.seal.seal_hackathon_fpt.features.user.dto.UserResponse;
 import com.seal.seal_hackathon_fpt.features.user.entity.Role;
 import com.seal.seal_hackathon_fpt.features.user.entity.User;
@@ -51,6 +53,53 @@ public class UserService {
         }
         user.setStatus(newStatus);
         return UserResponse.from(userRepository.save(user));
+    }
+
+    // ==========================================
+    // 1e. HỒ SƠ CÁ NHÂN (của chính user đang đăng nhập)
+    // ==========================================
+    public UserResponse getProfile(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        return UserResponse.from(user);
+    }
+
+    public UserResponse updateProfile(Long userId, UpdateProfileRequest req) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (req.getName() != null && !req.getName().trim().isEmpty()) {
+            user.setFull_name(req.getName().trim());
+        }
+        if (req.getPhone() != null) user.setPhone(req.getPhone().trim());
+        if (req.getDateOfBirth() != null) user.setDateOfBirth(req.getDateOfBirth());
+        if (req.getGender() != null) user.setGender(req.getGender().trim());
+
+        // MSSV chỉ áp dụng cho Participant; nếu là FPT thì phải đúng SE + 6 số.
+        if (user.getRole() == Role.Participant && req.getStudentId() != null) {
+            String sid = req.getStudentId().trim();
+            boolean isFpt = "FPT University".equalsIgnoreCase(user.getSchool());
+            if (isFpt && !sid.isEmpty() && !sid.matches("(?i)^SE\\d{6}$")) {
+                throw new RuntimeException("FPT student ID must be SE followed by 6 digits (e.g. SE193799).");
+            }
+            user.setStudentId(sid);
+        }
+
+        return UserResponse.from(userRepository.save(user));
+    }
+
+    public void changePassword(Long userId, ChangePasswordRequest req) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (req.getNewPassword() == null || req.getNewPassword().length() < 6) {
+            throw new RuntimeException("New password must be at least 6 characters.");
+        }
+        if (!passwordEncoder.matches(req.getOldPassword() == null ? "" : req.getOldPassword(), user.getPassword())) {
+            throw new RuntimeException("Current password is incorrect.");
+        }
+        user.setPassword(passwordEncoder.encode(req.getNewPassword()));
+        userRepository.save(user);
     }
 
     // ==========================================
