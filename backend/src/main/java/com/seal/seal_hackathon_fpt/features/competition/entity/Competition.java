@@ -25,6 +25,9 @@ public class Competition {
 
     private String description;
 
+    @Column(name = "location")
+    private String location;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Status status;

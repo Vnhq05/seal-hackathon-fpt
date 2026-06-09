@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 public class UpdateCompetitionRequest {
     private String name;
     private String description;
+    private String location;
     //Đổi thành danh sách status
     //private String status;
     private LocalDateTime startDate;

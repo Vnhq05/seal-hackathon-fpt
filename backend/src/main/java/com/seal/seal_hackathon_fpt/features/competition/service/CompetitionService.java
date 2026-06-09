@@ -24,6 +24,7 @@ public class CompetitionService {
                 .seasonId(request.getSeasonId())
                 .name(request.getName())
                 .description(request.getDescription())
+                .location(request.getLocation())
                 .status(request.getStatus())
                 .format(request.getFormat())
                 .startDate(request.getStartDate())
@@ -57,6 +58,10 @@ public class CompetitionService {
 
         if (request.getDescription() != null) {
             existing.setDescription(request.getDescription());
+        }
+
+        if (request.getLocation() != null) {
+            existing.setLocation(request.getLocation());
         }
 
         if (request.getStatus() != null) {

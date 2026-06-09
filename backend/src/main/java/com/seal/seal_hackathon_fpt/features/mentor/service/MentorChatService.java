@@ -21,7 +21,7 @@ public class MentorChatService {
     public MentorRequest sendRequestToMentor(Long teamId, Long mentorId) {
         // Kiểm tra xem Team này đã có phòng chat/đã thuộc về Mentor nào chưa
         if (roomRepository.findByTeamId(teamId).isPresent()) {
-            throw new RuntimeException("Đội của bạn đã có Mentor hướng dẫn rồi, không thể mời thêm.");
+            throw new RuntimeException("Your team already has a mentor and cannot invite another one.");
         }
 
         // Tạo mới hoặc cập nhật lại lời mời PENDING cũ
@@ -46,10 +46,10 @@ public class MentorChatService {
     @Transactional
     public MentorRequest handleRequest(Long requestId, String decision) {
         MentorRequest request = requestRepository.findById(requestId)
-                .orElseThrow(() -> new RuntimeException("Yêu cầu này không tồn tại."));
+                .orElseThrow(() -> new RuntimeException("This request does not exist."));
 
         if (!"PENDING".equals(request.getStatus())) {
-            throw new RuntimeException("Yêu cầu này đã được xử lý từ trước.");
+            throw new RuntimeException("This request has already been processed.");
         }
 
         if ("DENIED".equals(decision)) {
@@ -62,7 +62,7 @@ public class MentorChatService {
             // LUẬT 1: Một Mentor chỉ dẫn dắt tối đa 5 Team
             long currentTeamsCount = roomRepository.countByMentorId(request.getMentorId());
             if (currentTeamsCount >= 5) {
-                throw new RuntimeException("Bạn đã đạt giới hạn hướng dẫn tối đa 5 đội thi!");
+                throw new RuntimeException("You have reached the maximum of 5 mentored teams.");
             }
 
             // LUẬT 2: Kiểm tra xem Team này có lỡ được Mentor khác nhận trước đó chưa
@@ -70,7 +70,7 @@ public class MentorChatService {
                 request.setStatus("DENIED"); // Chuyển thành từ chối luôn vì team đã có chủ
                 request.setUpdatedAt(LocalDateTime.now());
                 requestRepository.save(request);
-                throw new RuntimeException("Đội thi này đã được một Mentor khác nhận hướng dẫn.");
+                throw new RuntimeException("This team has already been accepted by another mentor.");
             }
 
             // Cập nhật trạng thái lời mời thành ACCEPTED
@@ -89,14 +89,14 @@ public class MentorChatService {
             return request;
         }
 
-        throw new RuntimeException("Quyết định không hợp lệ (Chỉ nhận ACCEPTED hoặc DENIED)");
+        throw new RuntimeException("Invalid decision (only ACCEPTED or DENIED are allowed).");
     }
 
     // --- LOGIC CHAT (ĂN THEO ROOM ID ĐÃ TỰ ĐỘNG TẠO Ở TRÊN) ---
 
     public ChatMessage sendMessage(Long roomId, Long senderId, String senderName, String content) {
         roomRepository.findById(roomId)
-                .orElseThrow(() -> new RuntimeException("Phòng chat không tồn tại hoặc bạn chưa được chấp nhận kết nối."));
+                .orElseThrow(() -> new RuntimeException("Chat room does not exist, or your connection has not been accepted yet."));
 
         ChatMessage message = ChatMessage.builder()
                 .roomId(roomId)
@@ -116,7 +116,7 @@ public class MentorChatService {
     // Tiện ích bổ sung: Giúp Frontend kiểm tra nhanh xem Team mình đã có Room Chat thật chưa
     public MentorRoom getActiveRoomByTeam(Long teamId) {
         return roomRepository.findByTeamId(teamId)
-                .orElseThrow(() -> new RuntimeException("Đội của bạn hiện chưa có phòng chat với Mentor nào."));
+                .orElseThrow(() -> new RuntimeException("Your team does not have a chat room with any mentor yet."));
     }
 
     public List<MentorRoom> getActiveRoomsForMentor(Long mentorId) {

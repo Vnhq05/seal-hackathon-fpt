@@ -334,7 +334,7 @@ function CompetitionRow({
           </div>
 
           {canRegister && registered && (
-              <Badge className="bg-success text-success-foreground">Đã đăng ký</Badge>
+              <Badge className="bg-success text-success-foreground">Registered</Badge>
           )}
 
           <Badge variant={c.status === "Open" ? "default" : "secondary"}>
@@ -473,7 +473,7 @@ function CompetitionRow({
             <DialogFooter>
               {canRegister && registered ? (
                   <span className="inline-flex items-center gap-1.5 rounded-md bg-success/15 text-success px-4 py-2 text-sm">
-                    <Check className="h-4 w-4" /> Đã đăng ký cuộc thi này
+                    <Check className="h-4 w-4" /> Already registered for this competition
                   </span>
               ) : (
                   canRegister && c.status === "Open" && (

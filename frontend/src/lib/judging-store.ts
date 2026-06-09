@@ -247,7 +247,7 @@ export function setTeamMentor(teamId: string, mentorId: string | undefined) {
   if (mentorId) {
     const count = all.filter((t) => t.mentorId === mentorId && t.id !== teamId).length;
     if (count >= MAX_TEAMS_PER_MENTOR) {
-      throw new Error(`Mentor đã đạt giới hạn ${MAX_TEAMS_PER_MENTOR} đội.`);
+      throw new Error(`Mentor has reached the limit of ${MAX_TEAMS_PER_MENTOR} teams.`);
     }
   }
   write(K.teams, all.map((t) => (t.id === teamId ? { ...t, mentorId } : t)));
@@ -358,10 +358,10 @@ export function adjustTeamScore(input: {
   actor: { id: string; name: string };
 }): { ok: true; flagged: boolean } | { ok: false; error: string } {
   if (!input.reason || input.reason.trim() === "") {
-    return { ok: false, error: "Lý do là bắt buộc — không thể chỉnh điểm khi chưa nhập lý do." };
+    return { ok: false, error: "A reason is required — you cannot adjust the score without one." };
   }
   if (Number.isNaN(input.newScore) || input.newScore < 0 || input.newScore > 100) {
-    return { ok: false, error: "Điểm phải nằm trong khoảng 0–100." };
+    return { ok: false, error: "Score must be between 0 and 100." };
   }
   const diff = Math.abs(input.newScore - input.oldScore);
   const flagged = diff > SCORE_ANOMALY_THRESHOLD;

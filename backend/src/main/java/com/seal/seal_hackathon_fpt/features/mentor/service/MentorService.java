@@ -17,7 +17,7 @@ public class MentorService { // 🌟 Viết thẳng Class, không qua Interface
     public Mentor createMentor(User user, String specialty, String organization) {
         // Chặn trùng lặp user_id dưới DB để bảo vệ ràng buộc UNIQUE
         if (mentorRepository.findByUserId(user.getId()).isPresent()) {
-            throw new RuntimeException("Tài khoản User này đã có hồ sơ Mentor trong hệ thống!");
+            throw new RuntimeException("This user account already has a mentor profile.");
         }
 
         Mentor mentor = Mentor.builder()

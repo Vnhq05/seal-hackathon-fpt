@@ -52,6 +52,7 @@ export interface CreateCompetitionRequest {
     seasonId?: number | null;
     name: string;
     description?: string;
+    location?: string | null;
     status: CompetitionStatus;
     format: CompetitionFormat;
     startDate?: string | null;
@@ -65,6 +66,7 @@ export interface CreateCompetitionRequest {
 export interface UpdateCompetitionRequest {
     name?: string;
     description?: string;
+    location?: string | null;
     status?: CompetitionStatus;
     format?: CompetitionFormat;
     startDate?: string | null;
@@ -127,6 +129,7 @@ export function buildCreateCompetitionPayload(input: {
     seasonId?: number | string | null;
     name: string;
     description?: string;
+    location?: string | null;
     status?: CompetitionStatus;
     format?: CompetitionFormat;
     startDate?: string | null;
@@ -141,6 +144,7 @@ export function buildCreateCompetitionPayload(input: {
                 : Number(input.seasonId),
         name: input.name.trim(),
         description: input.description?.trim() ?? "",
+        location: input.location?.trim() || null,
         status: input.status ?? "Draft",
         format: input.format ?? "Offline",
         startDate: normalizeDateTime(input.startDate),
@@ -155,6 +159,7 @@ export function buildCreateCompetitionPayload(input: {
 export function buildUpdateCompetitionPayload(input: {
     name?: string;
     description?: string;
+    location?: string | null;
     status?: CompetitionStatus;
     format?: CompetitionFormat;
     startDate?: string | null;
@@ -168,6 +173,10 @@ export function buildUpdateCompetitionPayload(input: {
 
     if (input.description !== undefined) {
         payload.description = input.description?.trim() ?? "";
+    }
+
+    if (input.location !== undefined) {
+        payload.location = input.location?.trim() || null;
     }
 
     if (input.status !== undefined) {

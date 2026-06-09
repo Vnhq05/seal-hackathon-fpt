@@ -9,6 +9,7 @@ public class CreateCompetitionRequest {
     private Long seasonId;
     private String name;
     private String description;
+    private String location;
     //đổi thành danh sách status
     //private String status;
     private LocalDateTime startDate;

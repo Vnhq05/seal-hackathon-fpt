@@ -17,6 +17,6 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
                          HttpServletResponse response,
                          AuthenticationException authException) throws IOException, ServletException {
         // Trả về mã lỗi 401 Unauthorized khi user chưa xác thực
-        response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Bạn chưa đăng nhập hoặc Token không hợp lệ!");
+        response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "You are not logged in or your token is invalid.");
     }
 }

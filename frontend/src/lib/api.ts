@@ -37,7 +37,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     const message =
       data && typeof data === "object" && "message" in data
         ? String((data as { message: unknown }).message)
-        : raw || `Lỗi ${res.status}`;
+        : raw || `Error ${res.status}`;
     throw new Error(message);
   }
   return data as T;

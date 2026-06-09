@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, X, ChevronRight, ChevronLeft, Check, Trophy, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { CAMPUSES } from "@/lib/campuses";
 
 const STEPS = ["Year & Season", "Basic Info", "Timeline & Rounds", "Rules & Teams", "Prizes & Guests", "Scoring", "Review & Publish"];
 
@@ -152,6 +153,7 @@ export default function Wizard() {
         seasonId: 1,
         name: s.name,
         description: s.description,
+        location: s.location,
         status,
         format: s.format,
         startDate: s.startDate,
@@ -258,7 +260,13 @@ function BasicStep({ s, update }: any) {
       <div><Label>Name <span className="text-destructive">*</span></Label><Input value={s.name} onChange={(e) => update("name", e.target.value)} className="mt-1.5" placeholder="e.g. SEAL Hackathon 2026" /></div>
       <div><Label>Description <span className="text-destructive">*</span></Label><Textarea value={s.description} onChange={(e) => update("description", e.target.value)} className="mt-1.5" rows={3} placeholder="What is this competition about?" /></div>
       <div className="grid sm:grid-cols-2 gap-3">
-        <div><Label>Location <span className="text-destructive">*</span></Label><Input value={s.location} onChange={(e) => update("location", e.target.value)} className="mt-1.5" placeholder="FPT University Hòa Lạc" /></div>
+        <div>
+          <Label>Campus / Location <span className="text-destructive">*</span></Label>
+          <Select value={s.location || undefined} onValueChange={(v) => update("location", v)}>
+            <SelectTrigger className="mt-1.5"><SelectValue placeholder="Select a campus…" /></SelectTrigger>
+            <SelectContent>{CAMPUSES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
         <div><Label>Format</Label><Input value="Offline" disabled className="mt-1.5" /></div>
       </div>
       <p className="text-xs text-muted-foreground">Fields marked <span className="text-destructive">*</span> are required before you can continue.</p>
