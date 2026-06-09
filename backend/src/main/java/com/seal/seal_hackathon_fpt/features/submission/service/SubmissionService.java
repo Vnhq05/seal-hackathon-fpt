@@ -15,23 +15,28 @@ public class SubmissionService {
     private final SubmissionRepository submissionRepository;
     private final TeamMemberRepository teamMemberRepository; // Để check quyền Leader
 
-    public Submission submitWork(Long teamId, Long roundId, String fileUrl, Long currentUserId) {
+    public Submission submitWork(Long teamId, Long roundId, String githubUrl, String videoUrl,
+                                 String pdfUrl, String notes, Long currentUserId) {
 
         // [BUSINESS RULE: Chỉ Leader được Submit]
         TeamMember member = teamMemberRepository.findByTeamIdAndUserId(teamId, currentUserId)
                 .orElseThrow(() -> new RuntimeException("You are not a member of this team!"));
 
-        if (!member.getIsLeader()) {
+        if (!Boolean.TRUE.equals(member.getIsLeader())) {
             throw new RuntimeException("ERROR: Only the team Leader can submit work!");
         }
 
-        Submission submission = Submission.builder()
-                .teamId(teamId)
-                .roundId(roundId)
-                .submitterId(currentUserId)
-                .fileUrl(fileUrl)
-                .submittedAt(LocalDateTime.now())
-                .build();
+        // Mỗi (team, round) chỉ 1 bài (UNIQUE) → có thì cập nhật, chưa có thì tạo mới.
+        Submission submission = submissionRepository.findByTeamIdAndRoundId(teamId, roundId)
+                .orElseGet(() -> Submission.builder().teamId(teamId).roundId(roundId).build());
+
+        submission.setGithubUrl(githubUrl);
+        submission.setVideoUrl(videoUrl);
+        submission.setPdfUrl(pdfUrl);
+        submission.setNotes(notes);
+        submission.setStatus("Submitted");
+        submission.setSubmittedAt(LocalDateTime.now());
+        submission.setUpdatedAt(LocalDateTime.now());
 
         return submissionRepository.save(submission);
     }

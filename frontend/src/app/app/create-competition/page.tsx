@@ -9,6 +9,7 @@ import {
   type CompetitionFull, type PrizeTier, type ScoringCriterionDef, type CompetitionRound,
 } from "@/lib/competition-store";
 import { buildCreateCompetitionPayload, createCompetitionApi, updateCompetitionApi, createRoundApi, normalizeDateTime } from "@/lib/competition";
+import { buildCreateCompetitionPayload, createCompetitionApi, createRoundApi, normalizeDateTime } from "@/lib/competition";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -181,12 +182,10 @@ export default function Wizard() {
           console.error("Failed to save round", r.name, err);
         }
       }
-
       // Nếu publish (Open): sau khi đã có round mới chuyển trạng thái sang Open.
       if (status === "Open") {
         await updateCompetitionApi(Number(saved.id), { status: "Open" });
       }
-
       // Báo cho các trang đang nghe (dashboard / event-control) tải lại danh sách từ API.
       window.dispatchEvent(new CustomEvent("competition-store-changed"));
       clearDraft(); // lưu thành công → xóa bản nháp đang giữ

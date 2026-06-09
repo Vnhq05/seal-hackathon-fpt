@@ -29,4 +29,11 @@ public class TeamMember {
 
     @Column(name = "joined_at")
     private LocalDateTime joinedAt;
+
+    // Không lưu DB — chỉ để API trả kèm email/tên của user cho FE hiển thị.
+    @Transient
+    private String email;
+
+    @Transient
+    private String name;
 }

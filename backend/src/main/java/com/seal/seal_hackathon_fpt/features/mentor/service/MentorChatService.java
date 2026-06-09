@@ -42,6 +42,11 @@ public class MentorChatService {
         return requestRepository.findByMentorIdAndStatus(mentorId, "PENDING");
     }
 
+    // Team xem các lời mời ĐÃ GỬI của mình kèm trạng thái (Sent invitations).
+    public List<MentorRequest> getRequestsByTeam(Long teamId) {
+        return requestRepository.findByTeamIdOrderByCreatedAtDesc(teamId);
+    }
+
     // QUY TRÌNH 3: Xử lý quyết định của Mentor (ACCEPT / DENY)
     @Transactional
     public MentorRequest handleRequest(Long requestId, String decision) {

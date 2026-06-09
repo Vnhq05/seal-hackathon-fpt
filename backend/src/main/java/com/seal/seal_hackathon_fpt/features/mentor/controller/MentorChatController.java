@@ -27,6 +27,12 @@ public class MentorChatController {
         return ResponseEntity.ok(chatService.getPendingRequestsForMentor(mentorId));
     }
 
+    // 2b. Team xem các lời mời ĐÃ GỬI của mình + trạng thái (Sent invitations).
+    @GetMapping("/requests/by-team/{teamId}")
+    public ResponseEntity<List<MentorRequest>> getRequestsByTeam(@PathVariable Long teamId) {
+        return ResponseEntity.ok(chatService.getRequestsByTeam(teamId));
+    }
+
     // 3. Mentor đưa ra quyết định duyệt: truyền decision là ACCEPTED hoặc DENIED
     @PutMapping("/request/{requestId}/respond")
     public ResponseEntity<MentorRequest> respondRequest(

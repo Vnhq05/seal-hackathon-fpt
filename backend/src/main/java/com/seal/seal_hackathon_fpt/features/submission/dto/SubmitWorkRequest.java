@@ -6,5 +6,8 @@ import lombok.Data;
 public class SubmitWorkRequest {
     private Long teamId;
     private Long roundId;
-    private String fileUrl;
+    private String githubUrl;
+    private String videoUrl;
+    private String pdfUrl;
+    private String notes;
 }

@@ -8,6 +8,7 @@
     import com.seal.seal_hackathon_fpt.features.team.entity.TeamStatus;
     import com.seal.seal_hackathon_fpt.features.team.repository.TeamMemberRepository;
     import com.seal.seal_hackathon_fpt.features.team.repository.TeamRepository;
+    import com.seal.seal_hackathon_fpt.features.user.repository.UserRepository;
     import lombok.RequiredArgsConstructor;
     import org.springframework.stereotype.Service;
 
@@ -21,6 +22,17 @@
         private final TeamRepository teamRepository;
         private final TeamMemberRepository memberRepository;
         private final CompetitionRepository competitionRepository;
+        private final UserRepository userRepository;
+        private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+
+        /** Gắn email/tên (từ bảng users) vào từng member để FE hiển thị thay cho userId. */
+        private List<TeamMember> enrichWithUser(List<TeamMember> members) {
+            members.forEach(m -> userRepository.findById(m.getUserId()).ifPresent(u -> {
+                m.setEmail(u.getEmail());
+                m.setName(u.getFull_name());
+            }));
+            return members;
+        }
 
         public Team createTeam(Team team, Long creatorUserId) {
             Competition competition = competitionRepository.findById(team.getCompetitionId())
@@ -50,7 +62,46 @@
         }
 
         public List<TeamMember> getMembersByTeamId(Long teamId) {
-            return memberRepository.findByTeamId(teamId);
+            return enrichWithUser(memberRepository.findByTeamId(teamId));
+        }
+
+        /**
+         * Leader thêm thành viên TRỰC TIẾP bằng email — không cần lời mời/accept.
+         * Nếu email CHƯA có tài khoản → tự tạo 1 tài khoản Participant tạm (status pending,
+         * mật khẩu ngẫu nhiên; người đó dùng "quên mật khẩu" để nhận tài khoản sau),
+         * rồi add vào team. Vẫn áp dụng luật của addMemberToTeam (tối đa 5, trùng, hạn...).
+         */
+        public TeamMember addMemberByEmail(Long teamId, Long requesterId, String email) {
+            if (email == null || email.trim().isEmpty()) {
+                throw new RuntimeException("Email is required");
+            }
+            String normalized = email.trim().toLowerCase();
+            if (!normalized.matches("^[A-Za-z0-9._%+-]+@gmail\\.com$")) {
+                throw new RuntimeException("Email must be a valid Gmail address");
+            }
+
+            TeamMember requester = memberRepository.findByTeamIdAndUserId(teamId, requesterId)
+                    .orElseThrow(() -> new RuntimeException("You are not a member of this team."));
+            if (!Boolean.TRUE.equals(requester.getIsLeader())) {
+                throw new RuntimeException("Only the team leader can add members.");
+            }
+
+            com.seal.seal_hackathon_fpt.features.user.entity.User user = userRepository.findByEmail(normalized)
+                    .orElseGet(() -> {
+                        int at = normalized.indexOf('@');
+                        String displayName = at > 0 ? normalized.substring(0, at) : normalized;
+                        com.seal.seal_hackathon_fpt.features.user.entity.User created =
+                                com.seal.seal_hackathon_fpt.features.user.entity.User.builder()
+                                        .full_name(displayName)
+                                        .email(normalized)
+                                        .password(passwordEncoder.encode(java.util.UUID.randomUUID().toString()))
+                                        .role(com.seal.seal_hackathon_fpt.features.user.entity.Role.Participant)
+                                        .status(com.seal.seal_hackathon_fpt.features.user.entity.UserStatus.pending)
+                                        .build();
+                        return userRepository.save(created);
+                    });
+
+            return addMemberToTeam(teamId, user.getId(), false);
         }
 
         public TeamMember addMemberToTeam(Long teamId, Long userId, boolean isLeader) {
@@ -123,7 +174,7 @@
             Team team = teamRepository.findById(myMember.getTeamId())
                     .orElseThrow(() -> new RuntimeException("Team not found"));
 
-            List<TeamMember> members = memberRepository.findByTeamId(team.getId());
+            List<TeamMember> members = enrichWithUser(memberRepository.findByTeamId(team.getId()));
 
             return new MyTeamResponse(
                     team,
@@ -142,7 +193,7 @@
                         Team team = teamRepository.findById(myMember.getTeamId())
                                 .orElse(null);
                         if (team == null) return null;
-                        List<TeamMember> members = memberRepository.findByTeamId(team.getId());
+                        List<TeamMember> members = enrichWithUser(memberRepository.findByTeamId(team.getId()));
                         return new MyTeamResponse(
                                 team,
                                 members,

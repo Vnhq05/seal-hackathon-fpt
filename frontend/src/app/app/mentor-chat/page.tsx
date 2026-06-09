@@ -231,6 +231,7 @@ function InvitePanel({
     try {
       setSending(true);
       await sendMentorRequestApi(teamId, mentor.id, note);
+      await sendMentorRequestApi(teamId, mentor.id);
       toast.success(`Invitation sent to ${mentor.email ?? mentor.fullName}.`);
       setEmail("");
       setNote("");

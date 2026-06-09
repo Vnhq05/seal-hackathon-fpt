@@ -92,6 +92,19 @@ public class TeamController {
         );
     }
 
+    // Leader thêm thành viên TRỰC TIẾP bằng email (vào team luôn, không cần accept).
+    @PostMapping("/{teamId}/members/by-email")
+    public ResponseEntity<?> addMemberByEmail(
+            @PathVariable Long teamId,
+            @RequestBody SendInviteRequest request,
+            Authentication authentication
+    ) {
+        Long currentUserId = getCurrentUserId(authentication);
+        return ResponseEntity.ok(
+                teamService.addMemberByEmail(teamId, currentUserId, request.getEmail())
+        );
+    }
+
     @DeleteMapping("/{teamId}/members/{userId}")
     public ResponseEntity<?> removeMember(
             @PathVariable Long teamId,
