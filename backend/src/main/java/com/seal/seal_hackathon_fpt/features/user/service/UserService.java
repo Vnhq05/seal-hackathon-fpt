@@ -9,10 +9,16 @@ import com.seal.seal_hackathon_fpt.features.user.entity.Role;
 import com.seal.seal_hackathon_fpt.features.user.entity.User;
 import com.seal.seal_hackathon_fpt.features.user.entity.UserStatus;
 import com.seal.seal_hackathon_fpt.features.user.repository.UserRepository;
+import com.seal.seal_hackathon_fpt.features.judging.entity.Judge;
+import com.seal.seal_hackathon_fpt.features.judging.repository.JudgeRepository;
+import com.seal.seal_hackathon_fpt.features.mentor.entity.Mentor;
+import com.seal.seal_hackathon_fpt.features.mentor.repository.MentorRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -21,6 +27,8 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JudgeRepository judgeRepository;
+    private final MentorRepository mentorRepository;
 
     // ==========================================
     // 1. LẤY DANH SÁCH USER (Sẽ dùng DTO để che mật khẩu ở bước sau)
@@ -105,6 +113,7 @@ public class UserService {
     // ==========================================
     // 1d. TẠO TÀI KHOẢN NHÂN SỰ (Admin tạo Mentor/Judge/Lecturer/Coordinator)
     // ==========================================
+    @Transactional
     public UserResponse createStaff(CreateStaffRequest request) {
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
             throw new RuntimeException("Email already exists in the system!");
@@ -126,7 +135,36 @@ public class UserService {
                 .role(role)
                 .status(UserStatus.active)
                 .build();
-        return UserResponse.from(userRepository.save(user));
+        userRepository.save(user);
+
+        // Sinh hồ sơ Judge/Mentor để hiển thị ở màn hình "Judge & Mentor assignment".
+        // Lecturer = vừa Judge vừa Mentor nên tạo cả hai.
+        provisionStaffProfiles(user);
+
+        return UserResponse.from(user);
+    }
+
+    /** Tạo bản ghi judges/mentors tương ứng với role (idempotent theo user_id). */
+    private void provisionStaffProfiles(User user) {
+        Role role = user.getRole();
+
+        if ((role == Role.Judge || role == Role.Lecturer)
+                && judgeRepository.findByUserId(user.getId()).isEmpty()) {
+            judgeRepository.save(Judge.builder()
+                    .userId(user.getId())
+                    .fullName(user.getFull_name())
+                    .isGuest(false)
+                    .createdAt(LocalDateTime.now())
+                    .build());
+        }
+
+        if ((role == Role.Mentor || role == Role.Lecturer)
+                && mentorRepository.findByUserId(user.getId()).isEmpty()) {
+            mentorRepository.save(Mentor.builder()
+                    .userId(user.getId())
+                    .fullName(user.getFull_name())
+                    .build());
+        }
     }
 
     // ==========================================

@@ -4,6 +4,7 @@ import com.seal.seal_hackathon_fpt.features.judging.dto.CreateJudgeRequest;
 import com.seal.seal_hackathon_fpt.features.judging.dto.JudgeResponse;
 import com.seal.seal_hackathon_fpt.features.judging.entity.Judge;
 import com.seal.seal_hackathon_fpt.features.judging.repository.JudgeRepository;
+import com.seal.seal_hackathon_fpt.features.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -15,6 +16,7 @@ import java.util.List;
 public class JudgeService {
 
     private final JudgeRepository judgeRepository;
+    private final UserRepository userRepository;
 
     public JudgeResponse createJudge(
             CreateJudgeRequest request
@@ -38,6 +40,14 @@ public class JudgeService {
     }
 
     public List<Judge> getAllJudges() {
-        return judgeRepository.findAll();
+        List<Judge> judges = judgeRepository.findAll();
+        // Gắn email (từ bảng users) để hiển thị/tìm kiếm judge cho dễ phân biệt.
+        judges.forEach(j -> {
+            if (j.getUserId() != null) {
+                userRepository.findById(j.getUserId())
+                        .ifPresent(u -> j.setEmail(u.getEmail()));
+            }
+        });
+        return judges;
     }
 }
