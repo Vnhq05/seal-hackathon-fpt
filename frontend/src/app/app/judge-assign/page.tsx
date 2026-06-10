@@ -1,139 +1,350 @@
 "use client";
 import * as React from "react";
 import { PageHeader } from "@/components/app-shell";
-import { useJudgingStore, addAssignment, removeAssignment } from "@/lib/judging-store";
-import { useCompetitionStore } from "@/lib/competition-store";
-import { useAuth } from "@/lib/auth";
 import { useRequireRole } from "@/lib/role-guard";
+import { getCompetitionsApi, type Competition } from "@/lib/competition";
+import {
+  listAllJudgesApi,
+  listAllMentorsApi,
+  listCompetitionJudgesApi,
+  addCompetitionJudgeApi,
+  removeCompetitionJudgeApi,
+  listCompetitionMentorsApi,
+  addCompetitionMentorApi,
+  removeCompetitionMentorApi,
+  type Judge,
+  type Mentor,
+} from "@/lib/staff-api";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { trackBadgeClass } from "@/lib/utils";
-import { Check, X, Wand2, Users } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Plus, X, Search, Gavel, GraduationCap, Users } from "lucide-react";
 import { toast } from "sonner";
 
-export default function JudgeAssign() {
-  useRequireRole(["Coordinator", "Admin"]); // thay cho beforeLoad
-  const { judges, teams, assignments, rounds } = useJudgingStore();
-  const { competitions } = useCompetitionStore();
-  const { user } = useAuth();
+// Cuộc thi đang nhận nhân sự: chỉ Open / Active.
+const VISIBLE_STATUS: Competition["status"][] = ["Open", "Active"];
 
-  const activeComps = competitions.filter((c) => ["Open", "Active", "Scoring"].includes(c.status));
-  const defaultComp = activeComps[0] ?? competitions[0];
-  const [compId, setCompId] = React.useState(defaultComp?.id ?? "");
-  const currentComp = competitions.find((c) => c.id === compId);
-  const compRounds = rounds.filter((r) => !currentComp || r.competitionId === currentComp.id);
-  const [roundId, setRoundId] = React.useState(compRounds[0]?.id ?? "r1");
+/** Một dòng người để search/thêm (judge hoặc mentor). */
+interface PickItem {
+  id: number;
+  name: string;
+  sub?: string | null; // email / chuyên môn để phân biệt
+}
+
+/** Dialog tìm kiếm theo tên và chọn người để thêm vào cuộc thi. */
+function AddStaffDialog({
+  open,
+  onOpenChange,
+  title,
+  pool,
+  addedIds,
+  onPick,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  title: string;
+  pool: PickItem[];
+  addedIds: Set<number>;
+  onPick: (id: number) => void;
+}) {
+  const [q, setQ] = React.useState("");
   React.useEffect(() => {
-    if (!compRounds.find((r) => r.id === roundId)) setRoundId(compRounds[0]?.id ?? "");
-  }, [compRounds, roundId]);
+    if (!open) setQ("");
+  }, [open]);
 
-  // Group teams by track.
-  const tracks = React.useMemo(() => {
-    const map = new Map<string, typeof teams>();
-    teams.forEach((t) => {
-      const arr = map.get(t.track) ?? [];
-      arr.push(t);
-      map.set(t.track, arr);
-    });
-    return Array.from(map.entries());
-  }, [teams]);
+  const filtered = pool.filter((p) => {
+    const hay = `${p.name} ${p.sub ?? ""}`.toLowerCase();
+    return hay.includes(q.trim().toLowerCase());
+  });
 
-  const toggle = (judgeId: string, judgeName: string, teamId: string) => {
-    if (!currentComp) return;
-    const existing = assignments.find((a) => a.judgeId === judgeId && a.teamId === teamId && a.roundId === roundId);
-    if (existing) removeAssignment(existing.id, { id: user!.id, name: user!.name });
-    else addAssignment({ judgeId, judgeName, competitionId: currentComp.id, seasonId: currentComp.seasonId, roundId, teamId }, { id: user!.id, name: user!.name });
-  };
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
+        <div className="relative">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            autoFocus
+            placeholder="Tìm theo tên hoặc email…"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            className="pl-8"
+          />
+        </div>
+        <div className="max-h-72 overflow-auto -mx-1 mt-1">
+          {filtered.length === 0 ? (
+            <p className="text-sm text-muted-foreground px-2 py-6 text-center">Không tìm thấy.</p>
+          ) : (
+            <ul className="divide-y">
+              {filtered.map((p) => {
+                const added = addedIds.has(p.id);
+                return (
+                  <li key={p.id} className="flex items-center gap-2 px-2 py-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-medium truncate">{p.name}</div>
+                      {p.sub ? <div className="text-xs text-muted-foreground truncate">{p.sub}</div> : null}
+                    </div>
+                    <Button
+                      size="sm"
+                      variant={added ? "outline" : "default"}
+                      disabled={added}
+                      onClick={() => onPick(p.id)}
+                    >
+                      {added ? "Đã thêm" : "Thêm"}
+                    </Button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
-  const autoAssign = () => {
-    if (!currentComp) return;
-    let created = 0;
-    // Round-robin assign each team to 2 judges (excluding the judge if they mentor this team).
-    teams.forEach((t, idx) => {
-      const eligible = judges.filter((j) => t.mentorId !== j.id);
-      if (eligible.length === 0) return;
-      for (let k = 0; k < Math.min(2, eligible.length); k++) {
-        const j = eligible[(idx + k) % eligible.length];
-        const exists = assignments.some((a) => a.judgeId === j.id && a.teamId === t.id && a.roundId === roundId);
-        if (!exists) {
-          addAssignment({ judgeId: j.id, judgeName: j.name, competitionId: currentComp.id, seasonId: currentComp.seasonId, roundId, teamId: t.id }, { id: user!.id, name: user!.name });
-          created++;
-        }
+export default function JudgeAssign() {
+  useRequireRole(["Admin"]);
+
+  const [comps, setComps] = React.useState<Competition[]>([]);
+  const [compId, setCompId] = React.useState<string>("");
+
+  const [judges, setJudges] = React.useState<Judge[]>([]);
+  const [mentors, setMentors] = React.useState<Mentor[]>([]);
+
+  const [allJudges, setAllJudges] = React.useState<Judge[]>([]);
+  const [allMentors, setAllMentors] = React.useState<Mentor[]>([]);
+
+  const [judgeDialog, setJudgeDialog] = React.useState(false);
+  const [mentorDialog, setMentorDialog] = React.useState(false);
+
+  const compIdNum = compId ? Number(compId) : null;
+
+  // Tải cuộc thi (Open/Active) + pool judge/mentor 1 lần.
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const [allComps, aj, am] = await Promise.all([
+          getCompetitionsApi(),
+          listAllJudgesApi(),
+          listAllMentorsApi(),
+        ]);
+        const visible = allComps.filter((c) => VISIBLE_STATUS.includes(c.status));
+        setComps(visible);
+        setAllJudges(aj);
+        setAllMentors(am);
+        if (visible[0]) setCompId(String(visible[0].id));
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Không tải được dữ liệu.");
       }
-    });
-    toast.success(`Auto-assign complete · ${created} new assignment(s) created.`);
+    })();
+  }, []);
+
+  // Tải roster của cuộc thi đang chọn.
+  const loadRoster = React.useCallback(async (id: number) => {
+    try {
+      const [js, ms] = await Promise.all([
+        listCompetitionJudgesApi(id),
+        listCompetitionMentorsApi(id),
+      ]);
+      setJudges(js);
+      setMentors(ms);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Không tải được danh sách nhân sự.");
+    }
+  }, []);
+
+  React.useEffect(() => {
+    if (compIdNum != null) loadRoster(compIdNum);
+    else {
+      setJudges([]);
+      setMentors([]);
+    }
+  }, [compIdNum, loadRoster]);
+
+  const addedJudgeIds = React.useMemo(() => new Set(judges.map((j) => j.id)), [judges]);
+  const addedMentorIds = React.useMemo(() => new Set(mentors.map((m) => m.id)), [mentors]);
+
+  const handleAddJudge = async (judgeId: number) => {
+    if (compIdNum == null) return;
+    try {
+      await addCompetitionJudgeApi(compIdNum, judgeId);
+      await loadRoster(compIdNum);
+      toast.success("Đã thêm judge.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Thêm judge thất bại.");
+    }
   };
 
-  const clearAll = () => {
-    assignments
-      .filter((a) => a.competitionId === compId && a.roundId === roundId)
-      .forEach((a) => removeAssignment(a.id, { id: user!.id, name: user!.name }));
-    toast.success("Cleared assignments for this round.");
+  const handleRemoveJudge = async (judgeId: number) => {
+    if (compIdNum == null) return;
+    try {
+      await removeCompetitionJudgeApi(compIdNum, judgeId);
+      setJudges((prev) => prev.filter((j) => j.id !== judgeId));
+      toast.success("Đã gỡ judge.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Gỡ judge thất bại.");
+    }
   };
+
+  const handleAddMentor = async (mentorId: number) => {
+    if (compIdNum == null) return;
+    try {
+      await addCompetitionMentorApi(compIdNum, mentorId);
+      await loadRoster(compIdNum);
+      toast.success("Đã thêm mentor.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Thêm mentor thất bại.");
+    }
+  };
+
+  const handleRemoveMentor = async (mentorId: number) => {
+    if (compIdNum == null) return;
+    try {
+      await removeCompetitionMentorApi(compIdNum, mentorId);
+      setMentors((prev) => prev.filter((m) => m.id !== mentorId));
+      toast.success("Đã gỡ mentor.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Gỡ mentor thất bại.");
+    }
+  };
+
+  const judgePool: PickItem[] = allJudges.map((j) => ({
+    id: j.id,
+    name: j.fullName + (j.isGuest ? " (guest)" : ""),
+    sub: j.email,
+  }));
+  const mentorPool: PickItem[] = allMentors.map((m) => ({
+    id: m.id,
+    name: m.fullName,
+    sub: m.email ?? m.specialty,
+  }));
 
   return (
     <div>
-      <PageHeader title="Judge assignment" subtitle="Group teams by track · auto-assign skips conflict-of-interest (mentor = judge)." />
-      <div className="flex gap-2 mb-4 flex-wrap items-center">
+      <PageHeader
+        title="Judge & Mentor assignment"
+        subtitle="Chọn cuộc thi (đang Open/Active) rồi thêm judge và mentor cho cuộc thi đó."
+      />
+
+      <div className="flex gap-2 mb-6 flex-wrap items-center">
         <Select value={compId} onValueChange={setCompId}>
-          <SelectTrigger className="w-64"><SelectValue /></SelectTrigger>
-          <SelectContent>{competitions.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+          <SelectTrigger className="w-72">
+            <SelectValue placeholder="Chọn cuộc thi…" />
+          </SelectTrigger>
+          <SelectContent>
+            {comps.length === 0 ? (
+              <div className="px-2 py-1.5 text-sm text-muted-foreground">Không có cuộc thi Open/Active</div>
+            ) : (
+              comps.map((c) => (
+                <SelectItem key={c.id} value={String(c.id)}>
+                  {c.name} · {c.status}
+                </SelectItem>
+              ))
+            )}
+          </SelectContent>
         </Select>
-        <Select value={roundId} onValueChange={setRoundId}>
-          <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
-          <SelectContent>{compRounds.map((r) => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}</SelectContent>
-        </Select>
-        <div className="ml-auto flex gap-2">
-          <Button size="sm" variant="outline" onClick={clearAll}>Clear round</Button>
-          <Button size="sm" onClick={autoAssign} className="btn-gradient text-primary-foreground"><Wand2 className="h-4 w-4 mr-1" /> Auto-assign</Button>
-        </div>
       </div>
 
-      <div className="space-y-6">
-        {tracks.map(([track, trackTeams]) => (
-          <div key={track} className="rounded-xl border bg-card overflow-hidden">
+      {compIdNum == null ? (
+        <div className="rounded-xl border bg-card p-10 text-center text-sm text-muted-foreground">
+          Hãy chọn một cuộc thi để xem và phân judge / mentor.
+        </div>
+      ) : (
+        <div className="grid gap-6 md:grid-cols-2">
+          {/* JUDGES */}
+          <div className="rounded-xl border bg-card overflow-hidden">
             <div className="px-4 py-3 border-b flex items-center justify-between bg-muted/30">
               <div className="flex items-center gap-2">
-                <span className={trackBadgeClass(track)}>{track}</span>
-                <span className="text-xs text-muted-foreground inline-flex items-center gap-1"><Users className="h-3 w-3" /> {trackTeams.length} team(s)</span>
+                <Gavel className="h-4 w-4 text-primary" />
+                <span className="font-medium">Judges</span>
+                <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
+                  <Users className="h-3 w-3" /> {judges.length}
+                </span>
               </div>
+              <Button size="sm" onClick={() => setJudgeDialog(true)} className="btn-gradient text-primary-foreground">
+                <Plus className="h-4 w-4 mr-1" /> Add judge
+              </Button>
             </div>
-            <div className="overflow-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/20 text-xs">
-                  <tr>
-                    <th className="text-left px-3 py-2">Judge \ Team</th>
-                    {trackTeams.map((t) => <th key={t.id} className="px-3 py-2 text-left">{t.name}</th>)}
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {judges.map((j) => (
-                    <tr key={j.id}>
-                      <td className="px-3 py-2 font-medium">{j.name}</td>
-                      {trackTeams.map((t) => {
-                        const on = assignments.some((a) => a.judgeId === j.id && a.teamId === t.id && a.roundId === roundId);
-                        const conflict = t.mentorId === j.id;
-                        return (
-                          <td key={t.id} className="px-3 py-2">
-                            <button
-                              disabled={conflict}
-                              title={conflict ? "Conflict of interest — judge mentors this team" : ""}
-                              onClick={() => toggle(j.id, j.name, t.id)}
-                              className={`h-7 w-7 rounded-md grid place-items-center disabled:opacity-30 disabled:cursor-not-allowed ${on ? "btn-gradient text-primary-foreground" : "bg-muted text-muted-foreground"}`}
-                            >
-                              {on ? <Check className="h-3.5 w-3.5" /> : <X className="h-3.5 w-3.5" />}
-                            </button>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <ul className="divide-y">
+              {judges.length === 0 ? (
+                <li className="px-4 py-8 text-center text-sm text-muted-foreground">Chưa có judge nào.</li>
+              ) : (
+                judges.map((j) => (
+                  <li key={j.id} className="flex items-center gap-2 px-4 py-2.5">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-medium truncate">
+                        {j.fullName}
+                        {j.isGuest ? <Badge variant="outline" className="ml-2 text-[10px]">guest</Badge> : null}
+                      </div>
+                      {j.email ? <div className="text-xs text-muted-foreground truncate">{j.email}</div> : null}
+                    </div>
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleRemoveJudge(j.id)}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </li>
+                ))
+              )}
+            </ul>
           </div>
-        ))}
-      </div>
+
+          {/* MENTORS */}
+          <div className="rounded-xl border bg-card overflow-hidden">
+            <div className="px-4 py-3 border-b flex items-center justify-between bg-muted/30">
+              <div className="flex items-center gap-2">
+                <GraduationCap className="h-4 w-4 text-primary" />
+                <span className="font-medium">Mentors</span>
+                <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
+                  <Users className="h-3 w-3" /> {mentors.length}
+                </span>
+              </div>
+              <Button size="sm" onClick={() => setMentorDialog(true)} className="btn-gradient text-primary-foreground">
+                <Plus className="h-4 w-4 mr-1" /> Add mentor
+              </Button>
+            </div>
+            <ul className="divide-y">
+              {mentors.length === 0 ? (
+                <li className="px-4 py-8 text-center text-sm text-muted-foreground">Chưa có mentor nào.</li>
+              ) : (
+                mentors.map((m) => (
+                  <li key={m.id} className="flex items-center gap-2 px-4 py-2.5">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-medium truncate">{m.fullName}</div>
+                      <div className="text-xs text-muted-foreground truncate">
+                        {m.email ?? m.specialty ?? ""}
+                      </div>
+                    </div>
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleRemoveMentor(m.id)}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </li>
+                ))
+              )}
+            </ul>
+          </div>
+        </div>
+      )}
+
+      <AddStaffDialog
+        open={judgeDialog}
+        onOpenChange={setJudgeDialog}
+        title="Thêm judge vào cuộc thi"
+        pool={judgePool}
+        addedIds={addedJudgeIds}
+        onPick={handleAddJudge}
+      />
+      <AddStaffDialog
+        open={mentorDialog}
+        onOpenChange={setMentorDialog}
+        title="Thêm mentor vào cuộc thi"
+        pool={mentorPool}
+        addedIds={addedMentorIds}
+        onPick={handleAddMentor}
+      />
     </div>
   );
 }

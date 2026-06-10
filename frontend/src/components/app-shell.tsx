@@ -67,7 +67,7 @@ const NAV: NavGroup[] = [
       { label: "Organizer Dashboard", path: "/app/event-control", icon: Trophy, roles: ["Coordinator", "Admin"] },
       { label: "Create Competition", path: "/app/create-competition", icon: FilePlus, roles: ["Coordinator", "Admin"] },
       { label: "Scoring Criteria", path: "/app/scoring-criteria", icon: Sliders, roles: ["Coordinator", "Admin"] },
-      { label: "Judge Assign", path: "/app/judge-assign", icon: UserCheck, roles: ["Coordinator", "Admin"] },
+      { label: "Judge & Mentor", path: "/app/judge-assign", icon: UserCheck, roles: ["Admin"] },
       { label: "Score Viewer", path: "/app/moderation", icon: ClipboardList, roles: ["Coordinator", "Admin"] },
       { label: "Account Approval", path: "/app/account-approval", icon: UserPlus, roles: ["Coordinator", "Admin"] },
       { label: "Audit Log", path: "/app/audit-log", icon: FileText, roles: ["Coordinator", "Admin"] },

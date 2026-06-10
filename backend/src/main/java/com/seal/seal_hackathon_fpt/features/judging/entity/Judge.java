@@ -32,4 +32,8 @@ public class Judge {
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
+
+    // Không lưu DB — trả kèm email (từ bảng users) để hiển thị/tìm kiếm judge.
+    @Transient
+    private String email;
 }
