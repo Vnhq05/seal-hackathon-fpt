@@ -1,0 +1,15 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+  mail:
+    host: localhost
+    port: 3025
+
+app:
+  jwt:
+    secret: dGVzdHNlY3JldGtleWZvcmludGVncmF0aW9udGVzdHNzZWFsaGFja2F0aG9uMjAyNnN3cDM5MQ==
+    access-token-expiration-ms: 900000
+    refresh-token-expiration-days: 7
+    password-reset-token-expiration-minutes: 15

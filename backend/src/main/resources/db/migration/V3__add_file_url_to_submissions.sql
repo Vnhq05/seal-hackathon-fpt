@@ -1,1 +1,0 @@
-ALTER TABLE submissions ADD file_url NVARCHAR(MAX);

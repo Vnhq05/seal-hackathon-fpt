@@ -1,0 +1,43 @@
+spring:
+  application:
+    name: seal-hackathon
+
+  datasource:
+    url: jdbc:sqlserver://localhost:1433;databaseName=SEAL;encrypt=true;trustServerCertificate=true
+    username: sa
+    password: 12345
+    driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.SQLServerDialect
+        format_sql: true
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:dGhpc2lzYXZlcnlsb25nc2VjcmV0a2V5Zm9ydGhlc2VhbGhhY2thdGhvbnByb2plY3QyMDI2c3dwMzkx}
+    access-token-expiration-ms: 900000
+    refresh-token-expiration-days: 7
+    password-reset-token-expiration-minutes: 15
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
