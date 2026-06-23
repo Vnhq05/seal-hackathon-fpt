@@ -1,5 +1,8 @@
 package com.sealhackathon.event.service;
 
+import com.sealhackathon.audit.service.AuditService;
+import com.sealhackathon.auth.service.AuthPublicService;
+import com.sealhackathon.common.enums.UserType;
 import com.sealhackathon.common.exception.BusinessException;
 import com.sealhackathon.common.exception.DuplicateResourceException;
 import com.sealhackathon.common.exception.ResourceNotFoundException;
@@ -9,14 +12,21 @@ import com.sealhackathon.event.dto.request.CreateEventRequest;
 import com.sealhackathon.event.dto.request.UpdateEventRequest;
 import com.sealhackathon.event.dto.response.EventResponse;
 import com.sealhackathon.event.repository.HackathonEventRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.quality.Strictness;
+import org.mockito.junit.jupiter.MockitoSettings;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -28,12 +38,29 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class EventServiceTest {
 
     @Mock private HackathonEventRepository eventRepository;
     @Mock private ApplicationEventPublisher eventPublisher;
+    @Mock private AuditService auditService;
+    @Mock private AuthPublicService authPublicService;
 
     @InjectMocks private EventService eventService;
+
+    private static final UUID ADMIN_USER_ID = UUID.randomUUID();
+    private static final String ADMIN_EMAIL = "admin@test.com";
+
+    @BeforeEach
+    void setUpSecurity() {
+        var auth = new UsernamePasswordAuthenticationToken(
+                ADMIN_EMAIL, null,
+                List.of(new SimpleGrantedAuthority("ROLE_SYSTEM_ADMIN")));
+        SecurityContextHolder.getContext().setAuthentication(auth);
+
+        when(authPublicService.getCurrentUserRole()).thenReturn(UserType.SYSTEM_ADMIN);
+        when(authPublicService.getCurrentUserId()).thenReturn(ADMIN_USER_ID);
+    }
 
     // ── BR-08: Create event ──
 
@@ -58,7 +85,7 @@ class EventServiceTest {
         EventResponse result = eventService.createEvent(request);
 
         assertThat(result.getName()).isEqualTo("Hackathon 2026");
-        assertThat(result.getStatus()).isEqualTo(EventStatus.DRAFT);
+        assertThat(result.getStatus()).isEqualTo(EventStatus.UPCOMING);
         verify(eventPublisher).publishEvent(any(Object.class));
     }
 
@@ -102,7 +129,7 @@ class EventServiceTest {
     @Test
     void updateEvent_shouldThrow_whenEventIsActive() {
         UUID eventId = UUID.randomUUID();
-        HackathonEvent event = buildEvent(eventId, EventStatus.ACTIVE);
+        HackathonEvent event = buildActiveEvent(eventId);
         when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
 
         UpdateEventRequest request = UpdateEventRequest.builder()
@@ -114,15 +141,15 @@ class EventServiceTest {
                 .registrationDeadline(LocalDate.of(2026, 6, 30))
                 .build();
 
-        assertThatThrownBy(() -> eventService.updateEvent(eventId, request))
+        assertThatThrownBy(() -> eventService.updateEvent(eventId, request, "127.0.0.1"))
                 .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("Cannot modify event after activation");
+                .hasMessageContaining("Cannot modify event during or after the competition period");
     }
 
     @Test
     void updateEvent_shouldSucceed_whenDraft() {
         UUID eventId = UUID.randomUUID();
-        HackathonEvent event = buildEvent(eventId, EventStatus.DRAFT);
+        HackathonEvent event = buildEvent(eventId, EventStatus.UPCOMING);
         when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
         when(eventRepository.existsByNameAndIdNot(anyString(), any())).thenReturn(false);
         when(eventRepository.save(any(HackathonEvent.class))).thenAnswer(i -> i.getArgument(0));
@@ -136,43 +163,8 @@ class EventServiceTest {
                 .registrationDeadline(LocalDate.of(2026, 8, 31))
                 .build();
 
-        EventResponse result = eventService.updateEvent(eventId, request);
+        EventResponse result = eventService.updateEvent(eventId, request, "127.0.0.1");
         assertThat(result.getName()).isEqualTo("Updated Name");
-    }
-
-    // ── Status transitions ──
-
-    @Test
-    void activateEvent_shouldTransitionDraftToActive() {
-        UUID eventId = UUID.randomUUID();
-        HackathonEvent event = buildEvent(eventId, EventStatus.DRAFT);
-        when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
-        when(eventRepository.save(any(HackathonEvent.class))).thenAnswer(i -> i.getArgument(0));
-
-        EventResponse result = eventService.activateEvent(eventId);
-        assertThat(result.getStatus()).isEqualTo(EventStatus.ACTIVE);
-    }
-
-    @Test
-    void activateEvent_shouldThrow_whenNotDraft() {
-        UUID eventId = UUID.randomUUID();
-        HackathonEvent event = buildEvent(eventId, EventStatus.COMPLETED);
-        when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
-
-        assertThatThrownBy(() -> eventService.activateEvent(eventId))
-                .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("Only DRAFT events");
-    }
-
-    @Test
-    void completeEvent_shouldThrow_whenNotActive() {
-        UUID eventId = UUID.randomUUID();
-        HackathonEvent event = buildEvent(eventId, EventStatus.DRAFT);
-        when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
-
-        assertThatThrownBy(() -> eventService.completeEvent(eventId))
-                .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("Only ACTIVE events");
     }
 
     @Test
@@ -184,6 +176,31 @@ class EventServiceTest {
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 
+    // ── Delete ──
+
+    @Test
+    void deleteEvent_shouldSucceed_whenUpcoming() {
+        UUID eventId = UUID.randomUUID();
+        HackathonEvent event = buildEvent(eventId, EventStatus.UPCOMING);
+        when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
+
+        eventService.deleteEvent(eventId, "127.0.0.1");
+
+        verify(eventRepository).delete(event);
+        verify(auditService).log(any(), any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void deleteEvent_shouldThrow_whenActive() {
+        UUID eventId = UUID.randomUUID();
+        HackathonEvent event = buildActiveEvent(eventId);
+        when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
+
+        assertThatThrownBy(() -> eventService.deleteEvent(eventId, "127.0.0.1"))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("Cannot delete an active event");
+    }
+
     private HackathonEvent buildEvent(UUID id, EventStatus status) {
         HackathonEvent event = HackathonEvent.builder()
                 .name("Test Event")
@@ -193,6 +210,20 @@ class EventServiceTest {
                 .endDate(LocalDate.of(2026, 8, 31))
                 .registrationDeadline(LocalDate.of(2026, 6, 30))
                 .status(status)
+                .build();
+        event.setId(id);
+        return event;
+    }
+
+    private HackathonEvent buildActiveEvent(UUID id) {
+        HackathonEvent event = HackathonEvent.builder()
+                .name("Test Event")
+                .season("Summer")
+                .year(2026)
+                .startDate(LocalDate.now().minusDays(7))
+                .endDate(LocalDate.now().plusDays(60))
+                .registrationDeadline(LocalDate.now().minusDays(14))
+                .status(EventStatus.ACTIVE)
                 .build();
         event.setId(id);
         return event;

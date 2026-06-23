@@ -24,4 +24,5 @@ public class UserSnapshot {
     private String universityName;
     private UserType userType;
     private AccountStatus status;
+    private Integer semester;
 }

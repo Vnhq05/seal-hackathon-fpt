@@ -18,7 +18,7 @@ export function useHackathonRegistration(hackathonId: string) {
     mutationFn: (teamName: string) =>
       teamApi.create(hackathonId, { name: teamName }),
     onSuccess: () => {
-      router.push(`/participant/projects/${hackathonId}?registered=true`);
+      router.push(`/student/projects/${hackathonId}?registered=true`);
     },
   });
 

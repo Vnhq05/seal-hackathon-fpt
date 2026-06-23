@@ -3,9 +3,9 @@
 import Link from "next/link";
 
 const NAV_LINKS = [
-  { href: "/participant/projects", label: "Explore" },
-  { href: "/participant/leaderboard", label: "Leaderboard" },
-  { href: "/participant/teams", label: "Teams" },
+  { href: "/student/projects", label: "Explore" },
+  { href: "/student/leaderboard", label: "Leaderboard" },
+  { href: "/student/teams", label: "Teams" },
 ];
 
 export function DashboardTopNav() {

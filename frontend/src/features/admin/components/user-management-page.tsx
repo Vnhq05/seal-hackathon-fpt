@@ -18,8 +18,6 @@ const inputStyle: React.CSSProperties = {
 
 const USER_TYPE_COLORS: Record<UserType, React.CSSProperties> = {
   SYSTEM_ADMIN: { backgroundColor: "#fef3c7", color: "#92400e" },
-  JUDGE: { backgroundColor: "#eef2ff", color: "#4338ca" },
-  MENTOR: { backgroundColor: "#f0fdf4", color: "#166534" },
   FPT_STUDENT: { backgroundColor: "#eff6ff", color: "#1e40af" },
   EXTERNAL_STUDENT: { backgroundColor: "#f5f3ff", color: "#5b21b6" },
   LECTURER: { backgroundColor: "#fdf4ff", color: "#86198f" },
@@ -35,8 +33,6 @@ const STATUS_COLORS: Record<AccountStatus, React.CSSProperties> = {
 
 const USER_TYPE_LABELS: Record<UserType, string> = {
   SYSTEM_ADMIN: "Admin",
-  JUDGE: "Judge",
-  MENTOR: "Mentor",
   FPT_STUDENT: "FPT Student",
   EXTERNAL_STUDENT: "External Student",
   LECTURER: "Lecturer",
@@ -131,8 +127,6 @@ export function UserManagementPage() {
         >
           <option value="">All Roles</option>
           <option value="SYSTEM_ADMIN">Admin</option>
-          <option value="JUDGE">Judge</option>
-          <option value="MENTOR">Mentor</option>
           <option value="FPT_STUDENT">FPT Student</option>
           <option value="EXTERNAL_STUDENT">External Student</option>
           <option value="LECTURER">Lecturer</option>

@@ -20,9 +20,10 @@ function ArrowIcon() {
 
 interface MentorDashboardTrackCardProps {
   summary: MentorSummary;
+  portalBase?: string;
 }
 
-export function MentorDashboardTrackCard({ summary }: MentorDashboardTrackCardProps) {
+export function MentorDashboardTrackCard({ summary, portalBase = "/mentor" }: MentorDashboardTrackCardProps) {
   const progressPercent = summary.totalTeams > 0
     ? Math.round((summary.submittedCount / summary.totalTeams) * 100)
     : 0;
@@ -38,7 +39,7 @@ export function MentorDashboardTrackCard({ summary }: MentorDashboardTrackCardPr
           <h2 style={{ fontSize: 18, fontWeight: 600, color: "#0e1528", lineHeight: "25.2px" }}>My Track</h2>
         </div>
         <Link
-          href="/mentor/tracks"
+          href={`${portalBase}/tracks`}
           style={{ fontSize: 12, fontWeight: 500, color: "#38bdf8", letterSpacing: "0.24px" }}
         >
           View details →
@@ -76,14 +77,14 @@ export function MentorDashboardTrackCard({ summary }: MentorDashboardTrackCardPr
 
           <div className="flex gap-3" style={{ borderTop: "1px solid rgba(198,198,205,0.5)", paddingTop: 16 }}>
             <Link
-              href="/mentor/teams"
+              href={`${portalBase}/teams`}
               className="flex items-center gap-2"
               style={{ backgroundColor: "#38bdf8", padding: "8px 16px", borderRadius: 6, fontSize: 12, fontWeight: 600, color: "#ffffff", letterSpacing: "0.24px" }}
             >
               View Teams <ArrowIcon />
             </Link>
             <Link
-              href="/mentor/tracks"
+              href={`${portalBase}/tracks`}
               className="flex items-center gap-2"
               style={{ backgroundColor: "#ffffff", border: "1px solid rgba(223,226,236,0.8)", padding: "8px 16px", borderRadius: 6, fontSize: 12, fontWeight: 500, color: "#0e1528", letterSpacing: "0.24px" }}
             >

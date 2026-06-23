@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRoundSubmissions } from "@/features/judging/hooks/use-round-submissions";
+import { usePortalBase } from "@/shared/hooks/use-portal-base";
 import type { SubmissionFilterTab, RoundSubmission } from "@/features/judging/types/judge.types";
 
 const cardStyle: React.CSSProperties = {
@@ -63,7 +64,7 @@ function SubmissionRow({ submission, roundId }: { submission: RoundSubmission; r
       </td>
       <td style={{ padding: "14px 16px" }}>
         <Link
-          href={`/judge/scoring/${submission.id}`}
+          href={`${portalBase}/scoring/${submission.id}`}
           className="inline-block rounded-lg"
           style={{
             backgroundColor: submission.status === "unscored" ? "#38bdf8" : "#dfe2ec",
@@ -81,6 +82,7 @@ function SubmissionRow({ submission, roundId }: { submission: RoundSubmission; r
 }
 
 export function RoundSubmissionsPage({ roundId }: { roundId: string }) {
+  const portalBase = usePortalBase();
   const [activeTab, setActiveTab] = useState<SubmissionFilterTab>("all");
   const { data, isLoading } = useRoundSubmissions(roundId, { filter: activeTab });
 

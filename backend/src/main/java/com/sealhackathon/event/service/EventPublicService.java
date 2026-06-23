@@ -3,6 +3,7 @@ package com.sealhackathon.event.service;
 import com.sealhackathon.event.dto.snapshot.CriteriaSnapshot;
 import com.sealhackathon.event.dto.snapshot.EventSnapshot;
 import com.sealhackathon.event.dto.snapshot.RoundSnapshot;
+import com.sealhackathon.event.dto.snapshot.TrackSnapshot;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -18,6 +19,8 @@ public interface EventPublicService {
     List<RoundSnapshot> getRoundsByEvent(UUID eventId);
 
     List<CriteriaSnapshot> getCriteriaByRound(UUID roundId);
+
+    List<TrackSnapshot> getTracksByEvent(UUID eventId);
 
     LocalDateTime getRegistrationDeadline(UUID eventId);
 

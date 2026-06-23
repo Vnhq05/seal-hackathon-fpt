@@ -19,9 +19,10 @@ function ArrowIcon() {
 
 interface JudgeQuickStartProps {
   dashboard: JudgeDashboard;
+  portalBase?: string;
 }
 
-export function JudgeQuickStart({ dashboard }: JudgeQuickStartProps) {
+export function JudgeQuickStart({ dashboard, portalBase = "/judge" }: JudgeQuickStartProps) {
   const nextRound = dashboard.assignedRounds.find(
     (r) => r.scored < r.total && r.status === "open",
   );
@@ -50,7 +51,7 @@ export function JudgeQuickStart({ dashboard }: JudgeQuickStartProps) {
       </p>
       {nextRound && (
         <Link
-          href={`/judge/rounds/${nextRound.id}`}
+          href={`${portalBase}/rounds/${nextRound.id}`}
           className="flex w-full items-center justify-center gap-2 rounded-lg"
           style={{ backgroundColor: "#38bdf8", padding: "8px 16px", fontSize: 14, fontWeight: 700, color: "#0e1528", lineHeight: "21px" }}
         >

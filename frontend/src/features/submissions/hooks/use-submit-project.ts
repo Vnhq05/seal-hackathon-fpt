@@ -18,7 +18,7 @@ export function useSubmitProject() {
     mutationFn: (payload: SubmitPayload) =>
       submissionApi.submit(payload.roundId, payload.request, payload.pdfFile),
     onSuccess: () => {
-      router.push("/participant/submissions");
+      router.push("/student/submissions");
     },
   });
 

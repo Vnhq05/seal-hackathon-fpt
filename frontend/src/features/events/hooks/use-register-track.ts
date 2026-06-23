@@ -26,7 +26,7 @@ export function useRegisterTrack(hackathonId: string) {
       return { message: "Not implemented", registrationId: "" };
     },
     onSuccess: () => {
-      router.push(`/participant/projects/${hackathonId}?track_registered=true`);
+      router.push(`/student/projects/${hackathonId}?track_registered=true`);
     },
   });
 

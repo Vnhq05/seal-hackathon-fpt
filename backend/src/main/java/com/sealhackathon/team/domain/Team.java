@@ -70,6 +70,9 @@ public class Team extends BaseEntity {
     @Builder.Default
     private TeamStatus status = TeamStatus.FORMING;
 
+    @Column(name = "track_id")
+    private UUID trackId;
+
     // ── Child entities ──
     @OneToMany(mappedBy = "team", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @Builder.Default

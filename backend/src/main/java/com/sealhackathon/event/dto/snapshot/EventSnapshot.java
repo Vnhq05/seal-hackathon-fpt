@@ -17,8 +17,21 @@ public class EventSnapshot {
 
     private UUID id;
     private String name;
+    private String season;
+    private Integer year;
     private LocalDate startDate;
     private LocalDate endDate;
     private LocalDate registrationDeadline;
+    private LocalDate registrationOpenDate;
     private EventStatus status;
+    private Integer semesterMin;
+    private Integer semesterMax;
+
+    public boolean isActive() {
+        return status == EventStatus.ACTIVE;
+    }
+
+    public boolean isOpenForEnrollment() {
+        return status == EventStatus.OPEN || status == EventStatus.ACTIVE;
+    }
 }

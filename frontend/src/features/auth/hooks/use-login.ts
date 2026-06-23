@@ -9,11 +9,9 @@ import { useAuthStore } from "@/features/auth/store/auth.store";
 const USER_TYPE_HOME: Record<UserType, string> = {
   SYSTEM_ADMIN: "/admin",
   EVENT_COORDINATOR: "/staff",
-  MENTOR: "/mentor",
-  JUDGE: "/judge",
   LECTURER: "/lecturer",
-  FPT_STUDENT: "/participant",
-  EXTERNAL_STUDENT: "/participant",
+  FPT_STUDENT: "/student",
+  EXTERNAL_STUDENT: "/student",
 };
 
 export function useLogin() {
@@ -27,7 +25,7 @@ export function useLogin() {
       if (typeof window !== "undefined") {
         localStorage.setItem("access_token", data.accessToken);
       }
-      router.push(USER_TYPE_HOME[data.user.userType] ?? "/participant");
+      router.push(USER_TYPE_HOME[data.user.userType] ?? "/student");
     },
   });
 

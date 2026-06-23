@@ -1,7 +1,24 @@
 import { api } from "./api-client";
 import type { EventStatus, Page, PageParams } from "./types";
+import type { TrackResponse } from "./track.api";
 
 // ═══ Types ═══
+
+export type PrizeRank = "FIRST" | "SECOND" | "THIRD" | "CONSOLATION";
+
+export interface PrizeResponse {
+  id: string;
+  trackId: string | null;
+  rank: PrizeRank;
+  value: string;
+  quantity: number;
+}
+
+export interface HonoredGuestResponse {
+  id: string;
+  fullName: string;
+  title: string | null;
+}
 
 export interface EventResponse {
   id: string;
@@ -11,10 +28,43 @@ export interface EventResponse {
   startDate: string;
   endDate: string;
   registrationDeadline: string;
+  registrationOpenDate: string | null;
   status: EventStatus;
+  description: string | null;
+  location: string | null;
+  format: string;
+  minTeam: number | null;
+  maxTeam: number | null;
+  semesterMin: number | null;
+  semesterMax: number | null;
+  scoringTemplateId: string | null;
+  tiebreakerCriteria: string | null;
   roundCount: number;
   mentorCount: number;
+  trackCount: number;
+  tracks: TrackResponse[];
+  prizes: PrizeResponse[];
+  honoredGuests: HonoredGuestResponse[];
   createdAt: string;
+}
+
+export interface PrizeRequest {
+  trackId?: string;
+  rank: PrizeRank;
+  value: string;
+  quantity: number;
+}
+
+export interface HonoredGuestRequest {
+  fullName: string;
+  title?: string;
+}
+
+export interface TrackRequest {
+  name: string;
+  description?: string;
+  maxTeams: number;
+  scoringTemplateId?: string;
 }
 
 export interface CreateEventRequest {
@@ -24,12 +74,29 @@ export interface CreateEventRequest {
   startDate: string;
   endDate: string;
   registrationDeadline: string;
+  description?: string;
+  location?: string;
+  format?: string;
+  registrationOpenDate?: string;
+  minTeam?: number;
+  maxTeam?: number;
+  semesterMin?: number;
+  semesterMax?: number;
+  scoringTemplateId?: string;
+  tiebreakerCriteria?: string;
+  tracks?: TrackRequest[];
+  prizes?: PrizeRequest[];
+  honoredGuests?: HonoredGuestRequest[];
+  mentorUserIds?: string[];
+  judgeUserIds?: string[];
 }
 
-export type UpdateEventRequest = CreateEventRequest;
+export type UpdateEventRequest = Omit<CreateEventRequest, "tracks" | "mentorUserIds" | "judgeUserIds">;
 
 export interface EventListParams extends PageParams {
   status?: EventStatus;
+  season?: string;
+  year?: number;
 }
 
 // ═══ API calls ═══
@@ -43,12 +110,12 @@ export const eventApi = {
     return api.put<EventResponse>(`/events/${eventId}`, body);
   },
 
-  activate(eventId: string): Promise<EventResponse> {
-    return api.post<EventResponse>(`/events/${eventId}/activate`);
+  delete(eventId: string): Promise<void> {
+    return api.delete<void>(`/events/${eventId}`);
   },
 
-  complete(eventId: string): Promise<EventResponse> {
-    return api.post<EventResponse>(`/events/${eventId}/complete`);
+  activate(eventId: string): Promise<EventResponse> {
+    return api.post<EventResponse>(`/events/${eventId}/activate`);
   },
 
   cancel(eventId: string): Promise<EventResponse> {

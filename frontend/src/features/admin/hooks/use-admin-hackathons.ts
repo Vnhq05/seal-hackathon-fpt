@@ -9,7 +9,6 @@ import {
 export const ADMIN_EVENTS_KEY = "admin-events" as const;
 export const ADMIN_EVENT_KEY = "admin-event" as const;
 
-/** List all events (replaces old "hackathons" listing). */
 export function useAdminEvents(params?: EventListParams) {
   return useQuery({
     queryKey: [ADMIN_EVENTS_KEY, params],
@@ -17,7 +16,6 @@ export function useAdminEvents(params?: EventListParams) {
   });
 }
 
-/** Fetch a single event by id. */
 export function useAdminEvent(eventId: string) {
   return useQuery({
     queryKey: [ADMIN_EVENT_KEY, eventId],
@@ -26,7 +24,6 @@ export function useAdminEvent(eventId: string) {
   });
 }
 
-/** Create a new event. */
 export function useCreateEvent() {
   const qc = useQueryClient();
   return useMutation({
@@ -35,7 +32,6 @@ export function useCreateEvent() {
   });
 }
 
-/** Update an existing event. */
 export function useUpdateEvent() {
   const qc = useQueryClient();
   return useMutation({
@@ -45,34 +41,41 @@ export function useUpdateEvent() {
   });
 }
 
-/** Activate a DRAFT event. */
 export function useActivateEvent() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (eventId: string) => eventApi.activate(eventId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: [ADMIN_EVENTS_KEY] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [ADMIN_EVENTS_KEY] });
+      qc.invalidateQueries({ queryKey: ["admin-active-events"] });
+    },
   });
 }
 
-/** Mark an event as completed. */
-export function useCompleteEvent() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (eventId: string) => eventApi.complete(eventId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: [ADMIN_EVENTS_KEY] }),
-  });
-}
-
-/** Cancel an event. */
 export function useCancelEvent() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (eventId: string) => eventApi.cancel(eventId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: [ADMIN_EVENTS_KEY] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [ADMIN_EVENTS_KEY] });
+      qc.invalidateQueries({ queryKey: ["admin-active-events"] });
+    },
   });
 }
 
-// ── Backward-compat aliases (remove once callers are migrated) ──
+export function useDeleteEvent() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (eventId: string) => eventApi.delete(eventId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [ADMIN_EVENTS_KEY] });
+      qc.invalidateQueries({ queryKey: ["admin-active-events"] });
+      qc.invalidateQueries({ queryKey: ["admin-dashboard"] });
+    },
+  });
+}
+
+// ── Backward-compat aliases ──
 /** @deprecated Use useAdminEvents instead */
 export const useAdminHackathons = useAdminEvents;
 /** @deprecated Use useAdminEvent instead */

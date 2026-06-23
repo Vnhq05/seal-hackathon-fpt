@@ -1,5 +1,7 @@
 package com.sealhackathon.event.dto.request;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -9,6 +11,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.util.List;
+import java.util.UUID;
 
 @Getter
 @Builder
@@ -35,4 +39,36 @@ public class UpdateEventRequest {
 
     @NotNull(message = "Registration deadline is required")
     private LocalDate registrationDeadline;
+
+    @Size(max = 2000)
+    private String description;
+
+    @Size(max = 500)
+    private String location;
+
+    @Size(max = 50)
+    private String format;
+
+    private LocalDate registrationOpenDate;
+
+    @Min(0)
+    private Integer minTeam;
+
+    @Min(0)
+    private Integer maxTeam;
+
+    private Integer semesterMin;
+
+    private Integer semesterMax;
+
+    private UUID scoringTemplateId;
+
+    @Size(max = 1000)
+    private String tiebreakerCriteria;
+
+    @Valid
+    private List<PrizeRequest> prizes;
+
+    @Valid
+    private List<HonoredGuestRequest> honoredGuests;
 }

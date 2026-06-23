@@ -1,7 +1,6 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
 import { authApi, type RegisterRequest } from "@/lib/api/auth.api";
 import type { RegisterFormValues } from "@/features/auth/schemas/register.schema";
 
@@ -16,17 +15,13 @@ function toRegisterRequest(values: RegisterFormValues): RegisterRequest {
       values.userType === "EXTERNAL_STUDENT"
         ? values.universityName
         : undefined,
+    semester: values.semester,
   };
 }
 
 export function useRegister() {
-  const router = useRouter();
-
   const mutation = useMutation({
     mutationFn: (payload: RegisterRequest) => authApi.register(payload),
-    onSuccess: () => {
-      router.push("/login?registered=true");
-    },
   });
 
   return {
@@ -35,5 +30,6 @@ export function useRegister() {
     isPending: mutation.isPending,
     error: mutation.error,
     isError: mutation.isError,
+    isSuccess: mutation.isSuccess,
   };
 }

@@ -11,6 +11,7 @@ export interface RegisterRequest {
   studentId?: string;
   universityName?: string;
   userType: Extract<UserType, "FPT_STUDENT" | "EXTERNAL_STUDENT">;
+  semester?: number;
 }
 
 export interface LoginRequest {

@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo } from "react";
-import { useLeaderboard } from "@/features/rankings/hooks/use-leaderboard";
+import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { eventApi, roundApi, rankingApi } from "@/lib/api";
 import { useDownloadRanking } from "@/features/rankings/hooks/use-download-ranking";
-import type { RankingResponse } from "@/lib/api";
+import type { RankingResponse, EventResponse, RoundResponse } from "@/lib/api";
 
 const MEDAL_COLORS: Record<number, string> = {
   1: "#f59e0b",
@@ -11,168 +12,201 @@ const MEDAL_COLORS: Record<number, string> = {
   3: "#cd7f32",
 };
 
-const headerCellStyle: React.CSSProperties = {
-  backgroundColor: "#eef0f6",
-  fontSize: 12,
-  fontWeight: 600,
-  color: "#8891a5",
-  padding: "12px 16px",
-  textAlign: "left",
-  borderBottom: "1px solid rgba(198,198,205,0.5)",
-};
-
-const bodyCellStyle: React.CSSProperties = {
-  fontSize: 14,
-  color: "#0e1528",
-  padding: "14px 16px",
-};
-
 function MedalBadge({ rank }: { rank: number }) {
   const color = MEDAL_COLORS[rank];
   if (!color) {
-    return (
-      <span style={{ fontSize: 14, fontWeight: 600, color: "#0e1528" }}>
-        {rank}
-      </span>
-    );
+    return <span className="text-sm font-semibold text-seal-text">{rank}</span>;
   }
   return (
     <div
       className="flex items-center justify-center rounded-full"
       style={{ width: 28, height: 28, backgroundColor: color, flexShrink: 0 }}
     >
-      <span style={{ fontSize: 13, fontWeight: 700, color: "#ffffff", lineHeight: "13px" }}>
-        {rank}
-      </span>
+      <span className="text-[13px] font-bold text-white">{rank}</span>
     </div>
   );
 }
 
-interface LeaderboardPageProps {
-  roundId: string;
+function TrophyIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+      <path d="M5 1h8v5a4 4 0 01-8 0V1z" stroke="currentColor" strokeWidth="1.3" />
+      <path d="M5 3H2a1 1 0 00-1 1v1a3 3 0 003 3M13 3h3a1 1 0 011 1v1a3 3 0 01-3 3M9 10v3M6 15h6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+    </svg>
+  );
 }
 
-export function LeaderboardPage({ roundId }: LeaderboardPageProps) {
-  const { data: rankings, isLoading, isError } = useLeaderboard(roundId);
+interface LeaderboardPageProps {
+  roundId?: string;
+}
+
+export function LeaderboardPage({ roundId: initialRoundId }: LeaderboardPageProps) {
   const downloadMutation = useDownloadRanking();
+
+  const { data: eventsPage } = useQuery({
+    queryKey: ["leaderboard-events"],
+    queryFn: () => eventApi.list({ size: 50 }),
+  });
+
+  const events = useMemo(() => {
+    const all = eventsPage?.content ?? [];
+    return all.filter((e) => e.status === "COMPLETED" || e.status === "ACTIVE");
+  }, [eventsPage]);
+
+  const [eventId, setEventId] = useState<string>("");
+  const selectedEvent = events.find((e) => e.id === eventId) ?? events[0];
+  const activeEventId = selectedEvent?.id ?? "";
+
+  const { data: rounds = [] } = useQuery({
+    queryKey: ["leaderboard-rounds", activeEventId],
+    queryFn: () => roundApi.list(activeEventId),
+    enabled: !!activeEventId,
+  });
+
+  const [roundId, setRoundId] = useState<string>(initialRoundId || "");
+  const activeRoundId = roundId || rounds[0]?.id || "";
+
+  const { data: rankings, isLoading } = useQuery({
+    queryKey: ["leaderboard-rankings", activeRoundId],
+    queryFn: () => rankingApi.getRankings(activeRoundId),
+    enabled: !!activeRoundId,
+  });
 
   const sortedRankings = useMemo(() => {
     if (!rankings) return [];
     return [...rankings].sort((a, b) => a.rank - b.rank);
   }, [rankings]);
 
-  const handleDownload = () => {
-    downloadMutation.mutate(roundId);
-  };
-
-  if (isError) {
-    return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-4" style={{ padding: 64 }}>
-        <p style={{ fontSize: 18, fontWeight: 600, color: "#0e1528" }}>
-          Unable to load rankings
-        </p>
-        <p style={{ fontSize: 14, color: "#8891a5" }}>
-          Could not load leaderboard data. Please try again later.
-        </p>
-      </div>
-    );
-  }
-
   return (
-    <div className="flex flex-col gap-8" style={{ maxWidth: 1440, padding: 24 }}>
+    <div className="flex flex-col gap-6" style={{ maxWidth: 1440, padding: 24 }}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1
-            style={{
-              fontSize: 32,
-              fontWeight: 700,
-              color: "#0e1528",
-              letterSpacing: "-0.64px",
-              lineHeight: "38.4px",
-            }}
-          >
-            Leaderboard
-          </h1>
-          <p style={{ fontSize: 14, color: "#8891a5", lineHeight: "21px", marginTop: 4 }}>
-            Live rankings based on judging scores.
+          <h1 className="text-[32px] font-bold tracking-tight text-seal-text">Leaderboard</h1>
+          <p className="mt-1 text-sm text-seal-text-secondary">
+            Rankings for completed and active events.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={handleDownload}
-          disabled={downloadMutation.isPending}
-          style={{
-            backgroundColor: "#ffffff",
-            border: "1px solid rgba(223,226,236,0.8)",
-            borderRadius: 6,
-            padding: "10px 20px",
-            fontSize: 13,
-            fontWeight: 600,
-            color: "#0e1528",
-            cursor: "pointer",
-            opacity: downloadMutation.isPending ? 0.6 : 1,
-          }}
-        >
-          {downloadMutation.isPending ? "Downloading..." : "Download CSV"}
-        </button>
+        {activeRoundId && (
+          <button
+            type="button"
+            onClick={() => downloadMutation.mutate(activeRoundId)}
+            disabled={downloadMutation.isPending}
+            className="rounded-lg border border-seal-border bg-seal-surface px-5 py-2.5 text-[13px] font-semibold text-seal-text transition-colors hover:bg-seal-surface-elevated disabled:opacity-50"
+          >
+            {downloadMutation.isPending ? "Downloading..." : "Download CSV"}
+          </button>
+        )}
       </div>
 
-      {/* Table */}
-      {isLoading ? (
-        <div className="flex items-center justify-center" style={{ padding: 64 }}>
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-black border-t-transparent" />
-        </div>
-      ) : sortedRankings.length === 0 ? (
-        <div
-          className="flex flex-col items-center justify-center rounded-lg py-16"
-          style={{ border: "1px dashed rgba(223,226,236,0.8)", backgroundColor: "#fafafa" }}
+      {/* Selectors */}
+      <div className="flex flex-wrap items-center gap-3">
+        <select
+          value={activeEventId}
+          onChange={(e) => { setEventId(e.target.value); setRoundId(""); }}
+          className="rounded-lg border border-seal-border bg-seal-surface px-3 py-2 text-sm text-seal-text outline-none focus:border-seal-cyan/40"
+          style={{ minWidth: 240 }}
         >
-          <p style={{ fontSize: 16, fontWeight: 600, color: "#0e1528" }}>No rankings yet</p>
-          <p style={{ fontSize: 14, color: "#8891a5", marginTop: 4 }}>
-            Rankings will appear here once teams have been scored.
-          </p>
-        </div>
-      ) : (
-        <div
-          style={{
-            backgroundColor: "#ffffff",
-            border: "1px solid rgba(198,198,205,0.5)",
-            borderRadius: 12,
-            overflow: "hidden",
-          }}
+          {events.map((e) => (
+            <option key={e.id} value={e.id}>{e.name} — {e.season} {e.year}</option>
+          ))}
+          {events.length === 0 && <option value="">No events</option>}
+        </select>
+
+        <select
+          value={activeRoundId}
+          onChange={(e) => setRoundId(e.target.value)}
+          className="rounded-lg border border-seal-border bg-seal-surface px-3 py-2 text-sm text-seal-text outline-none focus:border-seal-cyan/40"
+          style={{ minWidth: 180 }}
         >
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          {rounds.map((r) => (
+            <option key={r.id} value={r.id}>{r.name}</option>
+          ))}
+          {rounds.length === 0 && <option value="">No rounds</option>}
+        </select>
+
+        {selectedEvent && (
+          <span className={`ml-auto rounded-full px-3 py-1 text-xs font-semibold ${
+            selectedEvent.status === "COMPLETED" ? "bg-gray-100 text-gray-500" :
+            selectedEvent.status === "ACTIVE" ? "bg-emerald-50 text-emerald-700" :
+            "bg-blue-50 text-blue-700"
+          }`}>{selectedEvent.status}</span>
+        )}
+      </div>
+
+      {/* Awards Summary */}
+      {selectedEvent && selectedEvent.prizes.length > 0 && sortedRankings.length > 0 && (
+        <div className="rounded-lg border border-seal-border bg-seal-surface overflow-hidden">
+          <div className="flex items-center gap-2 border-b border-seal-border px-5 py-3">
+            <TrophyIcon />
+            <h3 className="text-sm font-semibold text-seal-text">Awards summary</h3>
+            <span className="text-xs text-seal-text-muted">Prizes mapped to top-ranked teams</span>
+          </div>
+          <table className="w-full text-sm">
             <thead>
-              <tr>
-                <th style={{ ...headerCellStyle, width: 72 }}>Rank</th>
-                <th style={headerCellStyle}>Team</th>
-                <th style={{ ...headerCellStyle, width: 120 }}>Score</th>
+              <tr className="bg-seal-surface-sunken text-[11px] font-medium uppercase tracking-wider text-seal-text-muted">
+                <th className="px-5 py-2.5 text-left">Prize</th>
+                <th className="px-5 py-2.5 text-left">Value</th>
+                <th className="px-5 py-2.5 text-left">Awarded to</th>
+                <th className="px-5 py-2.5 text-right">Score</th>
               </tr>
             </thead>
-            <tbody>
-              {sortedRankings.map((entry: RankingResponse, idx: number) => (
-                <tr
-                  key={entry.id}
-                  style={{
-                    borderBottom:
-                      idx < sortedRankings.length - 1
-                        ? "1px solid rgba(198,198,205,0.3)"
-                        : "none",
-                  }}
-                >
-                  <td style={bodyCellStyle}>
-                    <MedalBadge rank={entry.rank} />
-                  </td>
-                  <td style={bodyCellStyle}>
-                    <span style={{ fontWeight: 400, color: "#0e1528" }}>
-                      {entry.teamName ?? entry.teamId}
-                    </span>
-                  </td>
-                  <td style={bodyCellStyle}>
-                    <span style={{ fontSize: 16, fontWeight: 600, color: "#0e1528" }}>
-                      {entry.finalScore}
-                    </span>
+            <tbody className="divide-y divide-seal-border-light">
+              {(() => {
+                let cursor = 0;
+                return selectedEvent.prizes.flatMap((p) =>
+                  Array.from({ length: p.quantity }).map((_, i) => {
+                    const row = sortedRankings[cursor];
+                    cursor++;
+                    return (
+                      <tr key={`${p.id}-${i}`}>
+                        <td className="px-5 py-2.5 font-medium text-seal-text">
+                          {p.rank}{p.quantity > 1 ? ` #${i + 1}` : ""}
+                        </td>
+                        <td className="px-5 py-2.5 text-seal-text-secondary">{p.value || "—"}</td>
+                        <td className="px-5 py-2.5 text-seal-text">
+                          {row ? row.teamName ?? row.teamId : <span className="italic text-seal-text-muted">—</span>}
+                        </td>
+                        <td className="px-5 py-2.5 text-right font-mono text-seal-text">
+                          {row ? row.finalScore.toFixed(2) : "—"}
+                        </td>
+                      </tr>
+                    );
+                  }),
+                );
+              })()}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Ranking Table */}
+      {isLoading ? (
+        <div className="flex items-center justify-center p-16">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-seal-cyan border-t-transparent" />
+        </div>
+      ) : sortedRankings.length === 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-seal-border bg-seal-surface-sunken py-16">
+          <p className="text-base font-semibold text-seal-text">No rankings yet</p>
+          <p className="mt-1 text-sm text-seal-text-muted">Rankings will appear here once teams have been scored.</p>
+        </div>
+      ) : (
+        <div className="rounded-lg border border-seal-border bg-seal-surface overflow-hidden">
+          <table className="w-full text-sm" style={{ borderCollapse: "collapse" }}>
+            <thead>
+              <tr className="bg-seal-surface-sunken text-[11px] font-medium uppercase tracking-wider text-seal-text-muted">
+                <th className="px-5 py-3 text-left" style={{ width: 72 }}>Rank</th>
+                <th className="px-5 py-3 text-left">Team</th>
+                <th className="px-5 py-3 text-right" style={{ width: 120 }}>Score</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-seal-border-light">
+              {sortedRankings.map((entry) => (
+                <tr key={entry.id} className="transition-colors hover:bg-seal-surface-sunken/50">
+                  <td className="px-5 py-3.5"><MedalBadge rank={entry.rank} /></td>
+                  <td className="px-5 py-3.5 font-medium text-seal-text">{entry.teamName ?? entry.teamId}</td>
+                  <td className="px-5 py-3.5 text-right">
+                    <span className="text-base font-semibold text-seal-text">{entry.finalScore.toFixed(2)}</span>
                   </td>
                 </tr>
               ))}

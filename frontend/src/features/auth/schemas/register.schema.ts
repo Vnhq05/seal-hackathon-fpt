@@ -12,6 +12,7 @@ export const registerSchema = z
     userType: z.enum(USER_TYPES),
     studentId: z.string().optional(),
     universityName: z.string().optional(),
+    semester: z.number().int().min(1).max(10).optional().or(z.nan().transform(() => undefined)),
     password: z.string().min(8, "Password must be at least 8 characters"),
     confirmPassword: z.string().min(1, "Please confirm your password"),
     agreeToTerms: z
@@ -33,6 +34,13 @@ export const registerSchema = z
           data.userType === "FPT_STUDENT"
             ? "FPT Student ID is required"
             : "Student ID is required for external students",
+        path: ["studentId"],
+      });
+    }
+    if (data.userType === "FPT_STUDENT" && data.studentId && !/^SE[0-9]{6}$/.test(data.studentId)) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Student ID must match format SE followed by 6 digits (e.g. SE191021)",
         path: ["studentId"],
       });
     }

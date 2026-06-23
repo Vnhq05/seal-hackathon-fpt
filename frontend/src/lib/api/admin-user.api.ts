@@ -30,7 +30,7 @@ export interface CreateInternalAccountRequest {
   password: string;
   fullName: string;
   phone?: string;
-  userType: Extract<UserType, "MENTOR" | "JUDGE" | "LECTURER" | "EVENT_COORDINATOR">;
+  userType: Extract<UserType, "LECTURER" | "EVENT_COORDINATOR">;
 }
 
 // ═══ API calls ═══

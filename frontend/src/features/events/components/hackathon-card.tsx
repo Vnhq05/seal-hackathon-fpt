@@ -8,15 +8,17 @@ import {
 } from "@/features/events/components/hackathon-icons";
 
 const STATUS_COLORS: Record<string, string> = {
+  UPCOMING: "rgba(3, 105, 161, 0.9)",
+  OPEN: "rgba(2, 132, 199, 0.9)",
   ACTIVE: "rgba(16, 185, 129, 0.9)",
-  DRAFT: "rgba(245, 158, 11, 0.9)",
   COMPLETED: "#8891a5",
   CANCELLED: "#dc2626",
 };
 
 const STATUS_LABELS: Record<string, string> = {
+  UPCOMING: "Upcoming",
+  OPEN: "Open",
   ACTIVE: "Active",
-  DRAFT: "Draft",
   COMPLETED: "Completed",
   CANCELLED: "Cancelled",
 };
@@ -93,7 +95,7 @@ function CardFooter({ event }: { event: EventResponse }) {
     );
   }
 
-  if (event.status === "DRAFT") {
+  if (event.status === "UPCOMING") {
     return (
       <div
         className="flex items-center justify-end pt-4"
@@ -124,7 +126,7 @@ export function HackathonCard({ hackathon }: HackathonCardProps) {
 
   return (
     <Link
-      href={`/participant/projects/${hackathon.id}`}
+      href={`/student/projects/${hackathon.id}`}
       className="flex flex-col overflow-hidden rounded-lg transition-shadow hover:shadow-md"
       style={{
         backgroundColor: "#ffffff",

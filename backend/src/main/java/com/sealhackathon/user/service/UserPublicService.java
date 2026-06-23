@@ -28,7 +28,9 @@ public interface UserPublicService {
 
     UUID createParticipant(String email, String passwordHash, String fullName,
                            String phone, String studentId, String universityName,
-                           UserType userType);
+                           UserType userType, Integer semester);
+
+    Optional<UserSnapshot> getUser(UUID userId);
 
     void updatePassword(UUID userId, String newPasswordHash);
 

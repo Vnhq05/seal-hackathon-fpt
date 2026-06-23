@@ -42,7 +42,7 @@ function ChevronRight() {
 const BREADCRUMB_MAP: Record<string, { label: string; href: string }[]> = {
   "/staff": [{ label: "Dashboard", href: "/staff" }],
   "/staff/user-approval": [{ label: "User Approval", href: "/staff/user-approval" }],
-  "/staff/participants": [{ label: "Participants", href: "/staff/participants" }],
+  "/staff/students": [{ label: "Participants", href: "/staff/students" }],
   "/staff/teams": [{ label: "Teams", href: "/staff/teams" }],
   "/staff/submissions": [{ label: "Submissions", href: "/staff/submissions" }],
   "/staff/disqualification": [{ label: "Disqualifications", href: "/staff/disqualification" }],

@@ -10,6 +10,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -22,6 +23,7 @@ import lombok.Setter;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Aggregate Root — Event Management Context.
@@ -68,20 +70,68 @@ public class HackathonEvent extends BaseEntity {
     @Column(name = "registration_deadline", nullable = false)
     private LocalDate registrationDeadline;
 
+    @Size(max = 2000)
+    @Column(name = "description", length = 2000)
+    private String description;
+
+    @Size(max = 500)
+    @Column(name = "location")
+    private String location;
+
+    @Size(max = 50)
+    @Column(name = "format")
+    @Builder.Default
+    private String format = "OFFLINE";
+
+    @Column(name = "registration_open_date")
+    private LocalDate registrationOpenDate;
+
+    @Min(0)
+    @Column(name = "min_team")
+    private Integer minTeam;
+
+    @Min(0)
+    @Column(name = "max_team")
+    private Integer maxTeam;
+
+    @Column(name = "semester_min")
+    private Integer semesterMin;
+
+    @Column(name = "semester_max")
+    private Integer semesterMax;
+
+    @Column(name = "scoring_template_id")
+    private UUID scoringTemplateId;
+
+    @Size(max = 1000)
+    @Column(name = "tiebreaker_criteria", length = 1000)
+    private String tiebreakerCriteria;
+
     // ── BR-08: Draft → Active → Completed | Cancelled ──
     @NotNull
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     @Builder.Default
-    private EventStatus status = EventStatus.DRAFT;
+    private EventStatus status = EventStatus.UPCOMING;
 
-    // ── Child entities: rounds belong to this event ──
+    // ── Child entities ──
     @OneToMany(mappedBy = "hackathonEvent", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @Builder.Default
     private List<Round> rounds = new ArrayList<>();
 
-    // ── Child entities: mentor assignments belong to this event ──
     @OneToMany(mappedBy = "hackathonEvent", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @Builder.Default
     private List<MentorAssignment> mentorAssignments = new ArrayList<>();
+
+    @OneToMany(mappedBy = "hackathonEvent", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @Builder.Default
+    private List<Track> tracks = new ArrayList<>();
+
+    @OneToMany(mappedBy = "hackathonEvent", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @Builder.Default
+    private List<Prize> prizes = new ArrayList<>();
+
+    @OneToMany(mappedBy = "hackathonEvent", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @Builder.Default
+    private List<HonoredGuest> honoredGuests = new ArrayList<>();
 }

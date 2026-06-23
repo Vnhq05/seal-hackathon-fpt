@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useAssignedRounds } from "@/features/judging/hooks/use-assigned-rounds";
+import { usePortalBase } from "@/shared/hooks/use-portal-base";
 import type { AssignedRound, RoundStatus } from "@/features/judging/types/judge.types";
 
 const cardStyle: React.CSSProperties = {
@@ -98,7 +99,7 @@ function RoundCard({ round }: { round: AssignedRound }) {
           </span>
         ) : (
           <Link
-            href={`/judge/rounds/${round.id}`}
+            href={`${portalBase}/rounds/${round.id}`}
             className="inline-block rounded-lg"
             style={{
               backgroundColor: round.status === "open" ? "#38bdf8" : "#dfe2ec",
@@ -117,6 +118,7 @@ function RoundCard({ round }: { round: AssignedRound }) {
 }
 
 export function AssignedRoundsPage() {
+  const portalBase = usePortalBase();
   const { data, isLoading } = useAssignedRounds();
   const rounds = data?.data ?? [];
 

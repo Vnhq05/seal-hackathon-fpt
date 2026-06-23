@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useAssignedRounds } from "@/features/judging/hooks/use-assigned-rounds";
+import { usePortalBase } from "@/shared/hooks/use-portal-base";
 
 const statusColors: Record<string, { bg: string; color: string; border: string }> = {
   open: { bg: "#f0fdf4", color: "#166534", border: "#bbf7d0" },
@@ -58,7 +59,7 @@ function RoundCard({ round }: { round: { id: string; hackathonName: string; roun
           </div>
           {round.status === "open" && remaining > 0 ? (
             <Link
-              href={`/judge/rounds/${round.id}`}
+              href={`${portalBase}/rounds/${round.id}`}
               className="inline-flex items-center justify-center rounded-lg"
               style={{ padding: "8px 24px", fontSize: 13, fontWeight: 600, backgroundColor: "#38bdf8", color: "#0e1528" }}
             >
@@ -90,6 +91,7 @@ function SkeletonCard() {
 }
 
 export function JudgeScoringListPage() {
+  const portalBase = usePortalBase();
   const { data, isLoading } = useAssignedRounds();
   const rounds = data?.data ?? [];
 

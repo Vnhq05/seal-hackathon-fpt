@@ -36,7 +36,7 @@ public class JudgingController {
     private final AuthPublicService authPublicService;
 
     @PostMapping
-    @PreAuthorize("hasRole('JUDGE')")
+    @PreAuthorize("hasRole('LECTURER')")
     @Operation(summary = "Submit scores for a submission (BR-34, BR-35, BR-36, BR-37)")
     public ResponseEntity<ApiResponse<JudgeScoreResponse>> submitScore(
             @PathVariable UUID roundId,
@@ -48,7 +48,7 @@ public class JudgingController {
     }
 
     @PutMapping("/{judgeScoreId}")
-    @PreAuthorize("hasRole('JUDGE')")
+    @PreAuthorize("hasRole('LECTURER')")
     @Operation(summary = "Update existing score (BR-39 — before deadline)")
     public ResponseEntity<ApiResponse<JudgeScoreResponse>> updateScore(
             @PathVariable UUID roundId, @PathVariable UUID judgeScoreId,
@@ -76,7 +76,7 @@ public class JudgingController {
     }
 
     @GetMapping("/my")
-    @PreAuthorize("hasRole('JUDGE')")
+    @PreAuthorize("hasRole('LECTURER')")
     @Operation(summary = "Get my scores")
     public ResponseEntity<ApiResponse<List<JudgeScoreResponse>>> getMyScores(
             @PathVariable UUID roundId) {
@@ -86,7 +86,7 @@ public class JudgingController {
     }
 
     @GetMapping("/my/submission/{submissionId}")
-    @PreAuthorize("hasRole('JUDGE')")
+    @PreAuthorize("hasRole('LECTURER')")
     @Operation(summary = "Get my score for a specific submission")
     public ResponseEntity<ApiResponse<JudgeScoreResponse>> getMyScoreForSubmission(
             @PathVariable UUID roundId, @PathVariable UUID submissionId) {

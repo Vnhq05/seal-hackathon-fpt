@@ -54,7 +54,7 @@ export function TeamCard({ team }: TeamCardProps) {
           </span>
         </div>
         <Link
-          href={`/participant/teams/${team.id}`}
+          href={`/student/teams/${team.id}`}
           style={{
             fontSize: 12,
             fontWeight: 500,

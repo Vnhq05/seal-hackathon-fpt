@@ -94,7 +94,8 @@ public class AuthService {
                 request.getPhone(),
                 request.getStudentId(),
                 request.getUniversityName(),
-                request.getUserType()
+                request.getUserType(),
+                request.getSemester()
         );
     }
 

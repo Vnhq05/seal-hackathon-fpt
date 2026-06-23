@@ -7,7 +7,10 @@ import { useDashboardHackathons } from "@/features/dashboard/hooks/use-dashboard
 import { useDashboardTeam } from "@/features/dashboard/hooks/use-dashboard-team";
 import { useQuery } from "@tanstack/react-query";
 import { notificationApi } from "@/lib/api";
-import type { NotificationResponse, TeamResponse } from "@/lib/api";
+import type { NotificationResponse, TeamResponse, EventResponse } from "@/lib/api";
+import { useState } from "react";
+import { EventDetailDialog } from "@/features/dashboard/components/event-detail-dialog";
+import { useMyActiveEnrollment } from "@/features/events/hooks/use-enrollment";
 
 function ArrowRightIcon() {
   return (
@@ -77,7 +80,7 @@ function WelcomeBanner({ userName }: { userName: string }) {
       </div>
 
       <Link
-        href="/participant/submissions"
+        href="/student/submissions"
         className="flex flex-shrink-0 items-center gap-2 rounded-lg bg-white/15 px-6 py-2.5 text-sm font-semibold text-white backdrop-blur-sm transition-all duration-200 hover:bg-white/25"
       >
         View my submission
@@ -158,6 +161,71 @@ function StatsRow({ summary, team }: { summary: DashboardSummaryData | undefined
   );
 }
 
+const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
+  OPEN:      { bg: "bg-blue-50",    text: "text-blue-700" },
+  ACTIVE:    { bg: "bg-emerald-50", text: "text-emerald-700" },
+  UPCOMING:  { bg: "bg-sky-50",     text: "text-sky-700" },
+  COMPLETED: { bg: "bg-gray-100",   text: "text-gray-500" },
+  CANCELLED: { bg: "bg-red-50",     text: "text-red-700" },
+};
+
+function EventCard({ event, onClickDetail }: { event: EventResponse; onClickDetail: (e: EventResponse) => void }) {
+  const sc = STATUS_COLORS[event.status] ?? STATUS_COLORS.UPCOMING;
+  const trackNames = event.tracks.map((t) => t.name).join(", ");
+
+  return (
+    <button
+      type="button"
+      onClick={() => onClickDetail(event)}
+      className="flex w-full items-center justify-between rounded-lg border border-seal-border bg-seal-surface p-5 text-left shadow-sm transition-all duration-200 hover:shadow-md"
+    >
+      <div className="flex-1">
+        <div className="flex items-center gap-3">
+          <h3 className="text-base font-semibold text-seal-text">{event.name}</h3>
+          <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${sc.bg} ${sc.text}`}>
+            {event.status}
+          </span>
+        </div>
+        <div className="mt-2 flex flex-wrap items-center gap-4 text-xs text-seal-text-secondary">
+          <span>{event.season} {event.year}</span>
+          <span>{event.startDate} — {event.endDate}</span>
+          {event.roundCount > 0 && <span>{event.roundCount} round{event.roundCount > 1 ? "s" : ""}</span>}
+          {trackNames && <span>{trackNames}</span>}
+        </div>
+        {event.description && (
+          <p className="mt-2 line-clamp-2 text-xs text-seal-text-muted">{event.description}</p>
+        )}
+      </div>
+    </button>
+  );
+}
+
+function HackathonEvents({ hackathons, onClickDetail }: { hackathons: EventResponse[]; onClickDetail: (e: EventResponse) => void }) {
+  const visibleEvents = hackathons.filter(
+    (e) => e.status !== "CANCELLED"
+  );
+
+  return (
+    <div className="rounded-lg border border-seal-border bg-seal-surface p-6 shadow-sm">
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-2 text-seal-text">
+          <CalendarIcon />
+          <h2 className="text-xl font-semibold tracking-tight">Hackathon Events</h2>
+        </div>
+      </div>
+      {visibleEvents.length === 0 ? (
+        <p className="py-4 text-sm text-seal-text-muted">No events available right now.</p>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {visibleEvents.map((e) => (
+            <EventCard key={e.id} event={e} onClickDetail={onClickDetail} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function UpdateItem({
   notification,
   showBorder,
@@ -209,7 +277,7 @@ function RecentUpdates({ notifications }: { notifications: NotificationResponse[
             Recent Updates
           </h2>
         </div>
-        <Link href="/participant/notifications" className="text-xs font-semibold text-seal-cyan transition-colors hover:text-seal-cyan-dark">
+        <Link href="/student/notifications" className="text-xs font-semibold text-seal-cyan transition-colors hover:text-seal-cyan-dark">
           See all
         </Link>
       </div>
@@ -240,7 +308,7 @@ function TeamQuickCard({ team }: { team: TeamResponse | null | undefined }) {
           Join or create a team to get started.
         </p>
         <Link
-          href="/participant/teams"
+          href="/student/teams"
           className="mt-4 inline-flex items-center justify-center rounded-lg border border-seal-border bg-seal-surface-elevated px-6 py-2.5 text-xs font-semibold text-seal-text transition-all duration-200 hover:border-seal-cyan/30 hover:bg-seal-cyan/5"
         >
           Browse Teams
@@ -288,7 +356,7 @@ function TeamQuickCard({ team }: { team: TeamResponse | null | undefined }) {
 
       <div className="border-t border-seal-border-light bg-seal-surface-sunken p-4">
         <Link
-          href="/participant/teams"
+          href="/student/teams"
           className="flex w-full items-center justify-center rounded-lg border border-seal-border bg-seal-surface px-4 py-2.5 text-xs font-semibold text-seal-text transition-all duration-200 hover:border-seal-cyan/30 hover:bg-seal-cyan/5"
         >
           View Team Details
@@ -301,13 +369,16 @@ function TeamQuickCard({ team }: { team: TeamResponse | null | undefined }) {
 export function DashboardPage() {
   const { user } = useAuthStore();
   const { data: summary, isLoading: summaryLoading } = useDashboardSummary();
-  const { data: hackathons } = useDashboardHackathons();
-  const activeEvent = hackathons?.find((e) => e.status === "ACTIVE");
+  const { data: hackathons, isLoading: hackathonsLoading } = useDashboardHackathons();
+  const activeEvent = hackathons?.find((e) => e.status === "ACTIVE" || e.status === "OPEN");
   const { data: team, isLoading: teamLoading } = useDashboardTeam(activeEvent?.id);
   const { data: notifData } = useQuery({
     queryKey: ["notifications"],
     queryFn: () => notificationApi.getAll({ size: 3 }),
   });
+
+  const { data: activeEnrollment } = useMyActiveEnrollment();
+  const [detailEvent, setDetailEvent] = useState<EventResponse | null>(null);
 
   const notifications = notifData?.content ?? [];
   const firstName = user?.fullName?.split(" ")[0] ?? "there";
@@ -319,13 +390,7 @@ export function DashboardPage() {
         <div className="grid grid-cols-3 gap-4">
           {Array.from({ length: 3 }).map((_, i) => <SkeletonBlock key={i} height={160} />)}
         </div>
-        <div className="grid gap-6" style={{ gridTemplateColumns: "2fr 1fr" }}>
-          <div className="flex flex-col gap-6">
-            <SkeletonBlock height={200} />
-            <SkeletonBlock height={250} />
-          </div>
-          <SkeletonBlock height={400} />
-        </div>
+        <SkeletonBlock height={200} />
       </div>
     );
   }
@@ -335,12 +400,29 @@ export function DashboardPage() {
       <WelcomeBanner userName={firstName} />
       <StatsRow summary={summary} team={team} />
 
-      <div className="grid gap-6 pt-2" style={{ gridTemplateColumns: "2fr 1fr" }}>
-        <div className="flex flex-col gap-6">
-          <RecentUpdates notifications={notifications} />
-        </div>
+      {hackathonsLoading ? (
+        <SkeletonBlock height={200} />
+      ) : (
+        <HackathonEvents
+          hackathons={hackathons ?? []}
+          onClickDetail={(e) => setDetailEvent(e)}
+        />
+      )}
+
+      <div className="grid gap-6" style={{ gridTemplateColumns: "2fr 1fr" }}>
+        <RecentUpdates notifications={notifications} />
         <TeamQuickCard team={team} />
       </div>
+
+      {detailEvent && (
+        <EventDetailDialog
+          event={detailEvent}
+          onClose={() => setDetailEvent(null)}
+          canRegister={user?.userType === "FPT_STUDENT" || user?.userType === "EXTERNAL_STUDENT"}
+          activeEnrollment={activeEnrollment}
+          allEvents={hackathons}
+        />
+      )}
     </div>
   );
 }

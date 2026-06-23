@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePortalBase } from "@/shared/hooks/use-portal-base";
 import type { TrackTeamEntry, TrackTeamSubmissionStatus } from "@/features/mentor/types/mentor-track.types";
 
 const STATUS_CONFIG: Record<TrackTeamSubmissionStatus, { bg: string; border: string; text: string; label: string }> = {
@@ -58,6 +59,7 @@ interface Props {
 }
 
 export function MentorTrackTeamsTable({ teams, totalTeamCount }: Props) {
+  const portalBase = usePortalBase();
   return (
     <div
       className="overflow-hidden rounded-lg"
@@ -163,7 +165,7 @@ export function MentorTrackTeamsTable({ teams, totalTeamCount }: Props) {
           style={{ padding: "17px 16px 16px", borderTop: "1px solid rgba(223,226,236,0.8)", backgroundColor: "#eef0f6" }}
         >
           <Link
-            href="/mentor/teams"
+            href={`${portalBase}/teams`}
             style={{ fontSize: 12, fontWeight: 500, color: "#38bdf8", letterSpacing: "0.24px", lineHeight: "12px" }}
           >
             View all {totalTeamCount} teams

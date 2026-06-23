@@ -17,14 +17,14 @@ export function TeamDetailBreadcrumb({ hackathonName, teamName }: TeamDetailBrea
   return (
     <nav className="flex items-center gap-2" aria-label="Breadcrumb">
       <Link
-        href="/participant"
+        href="/student"
         style={{ fontSize: 12, color: "#8891a5", letterSpacing: "0.24px", lineHeight: "12px" }}
       >
         {hackathonName}
       </Link>
       <ChevronIcon />
       <Link
-        href="/participant/teams"
+        href="/student/teams"
         style={{ fontSize: 12, color: "#8891a5", letterSpacing: "0.24px", lineHeight: "12px" }}
       >
         Teams

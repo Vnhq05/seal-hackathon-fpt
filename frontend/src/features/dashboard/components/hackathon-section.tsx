@@ -32,7 +32,7 @@ function EmptyHackathons() {
         Explore and register for upcoming hackathons.
       </p>
       <Link
-        href="/participant/projects"
+        href="/student/projects"
         className="mt-4 rounded-md px-4 py-2 text-sm font-medium transition-colors hover:bg-indigo-700"
         style={{ backgroundColor: "#38bdf8", color: "#0e1528" }}
       >
@@ -55,7 +55,7 @@ export function HackathonSection() {
         </h2>
         {items.length > 0 && (
           <Link
-            href="/participant/projects"
+            href="/student/projects"
             style={{ fontSize: "13px", color: "#38bdf8", fontWeight: 500 }}
             className="hover:underline"
           >

@@ -37,11 +37,11 @@ export function useAdminDashboard() {
   });
 }
 
-/** List active events (status = ACTIVE). */
+/** List active & upcoming events for the dashboard table. */
 export function useActiveEvents() {
   return useQuery({
     queryKey: [ADMIN_ACTIVE_EVENTS_KEY],
-    queryFn: () => eventApi.list({ status: "ACTIVE" }),
+    queryFn: () => eventApi.list({ size: 10 }),
   });
 }
 

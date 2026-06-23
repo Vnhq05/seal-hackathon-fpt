@@ -42,7 +42,9 @@ function StatusBadge({ status }: { status: string }) {
 
 export function AdminEventsTable() {
   const { data: eventsPage, isLoading } = useActiveEvents();
-  const events = eventsPage?.content ?? [];
+  const events = (eventsPage?.content ?? []).filter(
+    (e) => e.status !== "CANCELLED" && e.status !== "COMPLETED"
+  );
 
   return (
     <div

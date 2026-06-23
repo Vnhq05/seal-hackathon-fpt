@@ -2,7 +2,8 @@ package com.sealhackathon.event.domain.enums;
 
 public enum EventStatus {
 
-    DRAFT,
+    UPCOMING,
+    OPEN,
     ACTIVE,
     COMPLETED,
     CANCELLED

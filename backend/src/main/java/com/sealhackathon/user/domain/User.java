@@ -94,4 +94,7 @@ public class User extends BaseEntity {
     // ── BR-06: null when not locked; set to now + 15 min on 5th failure ──
     @Column(name = "locked_until")
     private LocalDateTime lockedUntil;
+
+    @Column(name = "semester")
+    private Integer semester;
 }

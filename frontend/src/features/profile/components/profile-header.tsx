@@ -8,8 +8,6 @@ export type ProfileTab = "personal" | "security" | "events";
 const USER_TYPE_LABEL: Record<UserType, string> = {
   FPT_STUDENT: "FPT Student",
   EXTERNAL_STUDENT: "External Student",
-  MENTOR: "Mentor",
-  JUDGE: "Judge",
   LECTURER: "Lecturer",
   EVENT_COORDINATOR: "Event Coordinator",
   SYSTEM_ADMIN: "System Admin",

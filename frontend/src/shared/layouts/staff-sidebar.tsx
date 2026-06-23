@@ -59,7 +59,7 @@ function LogoutIcon() {
 const NAV_ITEMS: NavItem[] = [
   { href: "/staff", label: "Dashboard", icon: <DashboardIcon /> },
   { href: "/staff/user-approval", label: "User Approval", icon: <UserApprovalIcon /> },
-  { href: "/staff/participants", label: "Participants", icon: <ParticipantsIcon /> },
+  { href: "/staff/students", label: "Participants", icon: <ParticipantsIcon /> },
   { href: "/staff/teams", label: "Teams", icon: <TeamsIcon /> },
   { href: "/staff/submissions", label: "Submissions", icon: <SubmissionsIcon /> },
   { href: "/staff/disqualification", label: "Disqualifications", icon: <DisqualifyIcon /> },

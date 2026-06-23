@@ -114,7 +114,7 @@ export function useMentorOptions() {
   return useQuery({
     queryKey: ["mentor-options"],
     queryFn: async () => {
-      const page = await adminUserApi.listUsers({ userType: "MENTOR", status: "ACTIVE", size: 200 });
+      const page = await adminUserApi.listUsers({ userType: "LECTURER", status: "ACTIVE", size: 200 });
       return page.content.map((u: UserListItem) => ({
         id: u.id,
         name: u.fullName,

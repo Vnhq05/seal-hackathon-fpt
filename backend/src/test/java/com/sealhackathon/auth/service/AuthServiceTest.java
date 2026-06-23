@@ -58,7 +58,7 @@ class AuthServiceTest {
         when(userPublicService.existsByEmail(anyString())).thenReturn(false);
         when(passwordEncoder.encode(anyString())).thenReturn("hashed");
         when(userPublicService.createParticipant(
-                anyString(), anyString(), anyString(), any(), anyString(), any(), eq(UserType.FPT_STUDENT)))
+                anyString(), anyString(), anyString(), any(), anyString(), any(), eq(UserType.FPT_STUDENT), any()))
                 .thenReturn(expectedId);
 
         UUID result = authService.register(request);
@@ -72,7 +72,7 @@ class AuthServiceTest {
                 .email("mentor@test.com")
                 .password("password123")
                 .fullName("Mentor")
-                .userType(UserType.MENTOR)
+                .userType(UserType.LECTURER)
                 .build();
 
         assertThatThrownBy(() -> authService.register(request))

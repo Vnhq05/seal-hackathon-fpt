@@ -21,15 +21,13 @@ export interface Page<T> {
 export type UserType =
   | "FPT_STUDENT"
   | "EXTERNAL_STUDENT"
-  | "MENTOR"
-  | "JUDGE"
   | "LECTURER"
   | "EVENT_COORDINATOR"
   | "SYSTEM_ADMIN";
 
 export type AccountStatus = "PENDING" | "ACTIVE" | "REJECTED" | "LOCKED";
 
-export type EventStatus = "DRAFT" | "ACTIVE" | "COMPLETED" | "CANCELLED";
+export type EventStatus = "UPCOMING" | "OPEN" | "ACTIVE" | "COMPLETED" | "CANCELLED";
 
 export type TeamStatus = "FORMING" | "CONFIRMED" | "DISBANDED";
 

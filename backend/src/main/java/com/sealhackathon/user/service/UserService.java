@@ -41,8 +41,6 @@ public class UserService {
     private final ApplicationEventPublisher eventPublisher;
 
     private static final Set<UserType> INTERNAL_ROLES = Set.of(
-            UserType.MENTOR,
-            UserType.JUDGE,
             UserType.LECTURER,
             UserType.EVENT_COORDINATOR
     );

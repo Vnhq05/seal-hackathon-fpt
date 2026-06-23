@@ -26,7 +26,7 @@ function NoTeamState() {
         Join or create a team to get started.
       </p>
       <Link
-        href="/participant/teams"
+        href="/student/teams"
         className="mt-4 rounded-md px-3 py-1.5 text-sm font-medium hover:bg-indigo-50"
         style={{ color: "#38bdf8", border: "1px solid #c4b5fd" }}
       >
@@ -87,14 +87,14 @@ function TeamCardContent({ team }: { team: TeamResponse }) {
 
       <div className="mt-4 flex gap-2">
         <Link
-          href={`/participant/teams/${team.id}`}
+          href={`/student/teams/${team.id}`}
           className="flex-1 rounded-md py-1.5 text-center text-sm font-medium transition-colors hover:bg-indigo-700"
           style={{ backgroundColor: "#38bdf8", color: "#0e1528" }}
         >
           View Team
         </Link>
         <Link
-          href={`/participant/teams/${team.id}`}
+          href={`/student/teams/${team.id}`}
           className="flex-1 rounded-md py-1.5 text-center text-sm font-medium transition-colors hover:bg-indigo-50"
           style={{ color: "#38bdf8", border: "1px solid #c4b5fd" }}
         >

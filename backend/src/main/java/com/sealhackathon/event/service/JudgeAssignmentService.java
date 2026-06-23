@@ -38,9 +38,9 @@ public class JudgeAssignmentService {
         UserSnapshot judge = userPublicService.findById(request.getJudgeUserId())
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", request.getJudgeUserId()));
 
-        if (judge.getUserType() != UserType.JUDGE) {
+        if (judge.getUserType() != UserType.LECTURER) {
             throw new BusinessException(
-                    "User " + judge.getEmail() + " is not a JUDGE. Role: " + judge.getUserType(),
+                    "User " + judge.getEmail() + " is not a LECTURER. Role: " + judge.getUserType(),
                     HttpStatus.BAD_REQUEST) {};
         }
 

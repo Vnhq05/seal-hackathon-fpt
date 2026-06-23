@@ -1,6 +1,7 @@
 "use client";
 
 import { useJudgeDashboard } from "@/features/judging/hooks/use-judge-dashboard";
+import { usePortalBase } from "@/shared/hooks/use-portal-base";
 import { JudgeUrgencyBanner } from "@/features/judging/components/judge-urgency-banner";
 import { JudgeStatsRow } from "@/features/judging/components/judge-stats-row";
 import { JudgeAssignedRoundsSection } from "@/features/judging/components/judge-assigned-rounds-section";
@@ -28,22 +29,23 @@ function PageSkeleton() {
 }
 
 export function JudgeDashboardPage() {
+  const portalBase = usePortalBase();
   const { data: dashboard, isLoading } = useJudgeDashboard();
 
   if (isLoading || !dashboard) return <PageSkeleton />;
 
   return (
     <div className="flex flex-col gap-6" style={{ padding: "16px 32px 32px", maxWidth: 1440 }}>
-      {dashboard.urgency && <JudgeUrgencyBanner urgency={dashboard.urgency} />}
+      {dashboard.urgency && <JudgeUrgencyBanner urgency={dashboard.urgency} portalBase={portalBase} />}
 
       <JudgeStatsRow stats={dashboard.stats} />
 
       <div className="grid grid-cols-3 gap-6">
         <div className="col-span-2">
-          <JudgeAssignedRoundsSection rounds={dashboard.assignedRounds} />
+          <JudgeAssignedRoundsSection rounds={dashboard.assignedRounds} portalBase={portalBase} />
         </div>
         <div className="flex flex-col gap-6">
-          <JudgeQuickStart dashboard={dashboard} />
+          <JudgeQuickStart dashboard={dashboard} portalBase={portalBase} />
           <JudgeRecentActivity activities={dashboard.recentActivity} />
         </div>
       </div>

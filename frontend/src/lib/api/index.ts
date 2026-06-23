@@ -54,3 +54,27 @@ export type { AuditLogResponse, AuditListParams, AuditRangeParams, AuditExportRe
 
 export { publicApi } from "./public.api";
 export type { PlatformStats } from "./public.api";
+
+export { scoringTemplateApi } from "./scoring-template.api";
+export type { ScoringTemplateResponse, ScoringTemplateCriterionResponse, CreateScoringTemplateRequest, CriterionRequest } from "./scoring-template.api";
+
+export { systemConfigApi } from "./system-config.api";
+export type { SystemConfigResponse, SystemConfigRequest } from "./system-config.api";
+
+export { enrollmentApi } from "./enrollment.api";
+export type { EnrollmentResponse, EnrollmentStatus } from "./enrollment.api";
+
+export { mentorChatApi } from "./mentor-chat.api";
+export type { ChatMessageResponse, ChatMessageRequest } from "./mentor-chat.api";
+
+export { mentorInvitationApi } from "./mentor-invitation.api";
+export type { MentorInvitationResponse, MentorInvitationStatus, SendMentorInvitationRequest, RespondMentorInvitationRequest, MentorRoomResponse } from "./mentor-invitation.api";
+
+export { teamJudgeAssignmentApi } from "./team-judge-assignment.api";
+export type { TeamJudgeAssignmentResponse, AssignJudgeToTeamRequest } from "./team-judge-assignment.api";
+
+export { trackApi } from "./track.api";
+export type { TrackResponse, CreateTrackRequest } from "./track.api";
+
+export { livescoreApi } from "./livescore.api";
+export type { LiveScoreBoard, LiveScoreEntry, RankingEvent } from "./livescore.api";

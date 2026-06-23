@@ -1,5 +1,5 @@
-import { HackathonFormPage } from "@/features/admin/components/hackathon-form-page";
+import { EventWizardPage } from "@/features/admin/components/event-wizard/event-wizard-page";
 
 export default function NewHackathonPage() {
-  return <HackathonFormPage />;
+  return <EventWizardPage />;
 }

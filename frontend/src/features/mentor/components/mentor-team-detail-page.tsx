@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMentorTeamDetail } from "@/features/mentor/hooks/use-mentor-team-detail";
+import { usePortalBase } from "@/shared/hooks/use-portal-base";
 import { MentorTeamDetailHeader } from "@/features/mentor/components/mentor-team-detail-header";
 import { MentorTeamMembers } from "@/features/mentor/components/mentor-team-members";
 import { MentorRoundCard } from "@/features/mentor/components/mentor-round-card";
@@ -42,6 +43,7 @@ interface Props {
 }
 
 export function MentorTeamDetailPage({ teamId }: Props) {
+  const portalBase = usePortalBase();
   const { data, isLoading } = useMentorTeamDetail(teamId);
 
   if (isLoading) return <PageSkeleton />;
@@ -59,7 +61,7 @@ export function MentorTeamDetailPage({ teamId }: Props) {
     <div className="flex flex-col gap-8" style={{ padding: 24, maxWidth: 1440 }}>
       <div className="flex flex-col gap-2">
         <Link
-          href="/mentor/teams"
+          href={`${portalBase}/teams`}
           className="flex items-center gap-1"
           style={{ fontSize: 12, fontWeight: 500, color: "#8891a5", letterSpacing: "0.24px" }}
         >

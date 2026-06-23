@@ -50,7 +50,7 @@ public class UserPublicServiceImpl implements UserPublicService {
     @Override
     @Transactional(readOnly = true)
     public LockState getLockState(UUID userId) {
-        User user = getUser(userId);
+        User user = getUserEntity(userId);
         return LockState.builder()
                 .failedAttempts(user.getFailedLoginAttempts())
                 .lockedUntil(user.getLockedUntil())
@@ -60,7 +60,7 @@ public class UserPublicServiceImpl implements UserPublicService {
     @Override
     @Transactional
     public void incrementFailedAttempts(UUID userId) {
-        User user = getUser(userId);
+        User user = getUserEntity(userId);
         user.setFailedLoginAttempts(user.getFailedLoginAttempts() + 1);
         userRepository.save(user);
     }
@@ -68,7 +68,7 @@ public class UserPublicServiceImpl implements UserPublicService {
     @Override
     @Transactional
     public void resetFailedAttempts(UUID userId) {
-        User user = getUser(userId);
+        User user = getUserEntity(userId);
         user.setFailedLoginAttempts(0);
         user.setLockedUntil(null);
         userRepository.save(user);
@@ -77,7 +77,7 @@ public class UserPublicServiceImpl implements UserPublicService {
     @Override
     @Transactional
     public void lockAccount(UUID userId, LocalDateTime until) {
-        User user = getUser(userId);
+        User user = getUserEntity(userId);
         user.setLockedUntil(until);
         userRepository.save(user);
     }
@@ -86,7 +86,7 @@ public class UserPublicServiceImpl implements UserPublicService {
     @Transactional
     public UUID createParticipant(String email, String passwordHash, String fullName,
                                   String phone, String studentId, String universityName,
-                                  UserType userType) {
+                                  UserType userType, Integer semester) {
         User user = User.builder()
                 .email(email)
                 .passwordHash(passwordHash)
@@ -96,14 +96,21 @@ public class UserPublicServiceImpl implements UserPublicService {
                 .universityName(universityName)
                 .userType(userType)
                 .status(AccountStatus.PENDING)
+                .semester(semester)
                 .build();
         return userRepository.save(user).getId();
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public Optional<UserSnapshot> getUser(UUID userId) {
+        return findById(userId);
+    }
+
+    @Override
     @Transactional
     public void updatePassword(UUID userId, String newPasswordHash) {
-        User user = getUser(userId);
+        User user = getUserEntity(userId);
         user.setPasswordHash(newPasswordHash);
         userRepository.save(user);
     }
@@ -122,7 +129,7 @@ public class UserPublicServiceImpl implements UserPublicService {
         return userRepository.countByStatus(AccountStatus.ACTIVE);
     }
 
-    private User getUser(UUID userId) {
+    private User getUserEntity(UUID userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
     }
@@ -138,6 +145,7 @@ public class UserPublicServiceImpl implements UserPublicService {
                 .universityName(user.getUniversityName())
                 .userType(user.getUserType())
                 .status(user.getStatus())
+                .semester(user.getSemester())
                 .build();
     }
 }

@@ -12,9 +12,10 @@ function AlertIcon() {
 
 interface JudgeUrgencyBannerProps {
   urgency: JudgeDashboardUrgency;
+  portalBase?: string;
 }
 
-export function JudgeUrgencyBanner({ urgency }: JudgeUrgencyBannerProps) {
+export function JudgeUrgencyBanner({ urgency, portalBase = "/judge" }: JudgeUrgencyBannerProps) {
   return (
     <div
       className="flex items-center justify-between"
@@ -32,7 +33,7 @@ export function JudgeUrgencyBanner({ urgency }: JudgeUrgencyBannerProps) {
         </span>
       </div>
       <Link
-        href={`/judge/rounds/${urgency.roundId}`}
+        href={`${portalBase}/rounds/${urgency.roundId}`}
         style={{
           backgroundColor: "#ba1a1a",
           borderRadius: 4,

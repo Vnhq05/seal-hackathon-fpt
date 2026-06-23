@@ -28,7 +28,7 @@ public class PublicEventController {
     @Operation(summary = "List active events (public)")
     public ResponseEntity<ApiResponse<Page<EventResponse>>> listActiveEvents(
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        Page<EventResponse> page = eventService.listEvents(EventStatus.ACTIVE, pageable);
+        Page<EventResponse> page = eventService.listPublicEvents(EventStatus.ACTIVE, pageable);
         return ResponseEntity.ok(ApiResponse.success(page));
     }
 }

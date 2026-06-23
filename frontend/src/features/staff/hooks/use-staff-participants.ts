@@ -39,7 +39,7 @@ export function useStaffParticipants(params?: ParticipantListParams) {
   });
 }
 
-// TODO: backend endpoint not implemented yet — /staff/participants/:id/deactivate does not exist.
+// TODO: backend endpoint not implemented yet — /staff/students/:id/deactivate does not exist.
 export function useDeactivateParticipant() {
   const queryClient = useQueryClient();
   return useMutation({

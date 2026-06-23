@@ -1,6 +1,7 @@
 "use client";
 
 import { useMentorSummary } from "@/features/mentor/hooks/use-mentor-summary";
+import { usePortalBase } from "@/shared/hooks/use-portal-base";
 import { MentorDashboardStats } from "@/features/mentor/components/mentor-dashboard-stats";
 import { MentorDashboardTrackCard } from "@/features/mentor/components/mentor-dashboard-track-card";
 import { MentorDashboardActivity } from "@/features/mentor/components/mentor-dashboard-activity";
@@ -20,6 +21,7 @@ function PageSkeleton() {
 }
 
 export function MentorDashboardPage() {
+  const portalBase = usePortalBase();
   const { data: summary, isLoading } = useMentorSummary();
 
   if (isLoading) return <PageSkeleton />;
@@ -41,7 +43,7 @@ export function MentorDashboardPage() {
 
       <div className="grid grid-cols-3 gap-6">
         <div className="col-span-2">
-          <MentorDashboardTrackCard summary={summary} />
+          <MentorDashboardTrackCard summary={summary} portalBase={portalBase} />
         </div>
         <div>
           <MentorDashboardActivity />

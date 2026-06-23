@@ -5,6 +5,7 @@ import com.sealhackathon.judging.domain.enums.ScoreStatus;
 import com.sealhackathon.judging.dto.snapshot.JudgeScoreSnapshot;
 import com.sealhackathon.judging.dto.snapshot.ScoreDetailSnapshot;
 import com.sealhackathon.judging.repository.JudgeScoreRepository;
+import com.sealhackathon.judging.repository.TeamJudgeAssignmentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,6 +18,7 @@ import java.util.UUID;
 public class JudgingPublicServiceImpl implements JudgingPublicService {
 
     private final JudgeScoreRepository judgeScoreRepository;
+    private final TeamJudgeAssignmentRepository teamJudgeAssignmentRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -58,6 +60,19 @@ public class JudgingPublicServiceImpl implements JudgingPublicService {
         int completed = judgeScoreRepository.countBySubmissionIdAndStatus(
                 submissionId, ScoreStatus.COMPLETED);
         return completed >= minJudges;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public int countCompletedScores(UUID submissionId) {
+        return judgeScoreRepository.countBySubmissionIdAndStatus(submissionId, ScoreStatus.COMPLETED)
+                + judgeScoreRepository.countBySubmissionIdAndStatus(submissionId, ScoreStatus.LOCKED);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public long countAssignedJudges(UUID teamId, UUID roundId) {
+        return teamJudgeAssignmentRepository.countByTeamIdAndRoundId(teamId, roundId);
     }
 
     private JudgeScoreSnapshot toSnapshot(JudgeScore score) {

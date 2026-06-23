@@ -2,8 +2,9 @@ import Link from "next/link";
 import type { EventResponse, EventStatus } from "@/lib/api";
 
 const STATUS_CONFIG: Record<EventStatus, { bg: string; color: string; label: string }> = {
-  DRAFT: { bg: "#eef0f6", color: "#8891a5", label: "Draft" },
-  ACTIVE: { bg: "#dcfce7", color: "#15803d", label: "Active" },
+  UPCOMING:  { bg: "#f0f9ff", color: "#0369a1", label: "Upcoming" },
+  OPEN:      { bg: "#e0f2fe", color: "#0284c7", label: "Open" },
+  ACTIVE:    { bg: "#dcfce7", color: "#15803d", label: "Active" },
   COMPLETED: { bg: "#eef0f6", color: "#2dd4bf", label: "Completed" },
   CANCELLED: { bg: "#fef9c3", color: "#a16207", label: "Cancelled" },
 };
@@ -63,7 +64,7 @@ export function HackathonItem({ hackathon }: HackathonItemProps) {
       </div>
 
       <Link
-        href={`/participant/projects/${hackathon.id}`}
+        href={`/student/projects/${hackathon.id}`}
         className="flex-shrink-0 rounded-md px-3 py-1.5 text-sm font-medium transition-colors hover:bg-indigo-50"
         style={{ color: "#38bdf8", border: "1px solid #c4b5fd", whiteSpace: "nowrap" }}
       >

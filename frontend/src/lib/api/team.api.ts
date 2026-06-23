@@ -18,6 +18,7 @@ export interface TeamResponse {
   name: string;
   leaderId: string;
   status: TeamStatus;
+  trackId: string | null;
   memberCount: number;
   members: TeamMemberResponse[];
   createdAt: string;
@@ -58,6 +59,10 @@ export const teamApi = {
 
   getById(eventId: string, teamId: string): Promise<TeamResponse> {
     return api.get<TeamResponse>(`/events/${eventId}/teams/${teamId}`);
+  },
+
+  updateName(eventId: string, teamId: string, body: { name: string }): Promise<TeamResponse> {
+    return api.put<TeamResponse>(`/events/${eventId}/teams/${teamId}`, body);
   },
 
   removeMember(eventId: string, teamId: string, memberId: string): Promise<TeamResponse> {

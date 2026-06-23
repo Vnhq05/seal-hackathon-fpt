@@ -22,7 +22,7 @@ function getErrorMessage(error: unknown): string {
 }
 
 export function RegisterForm() {
-  const { register: doRegister, isPending, isError, error } = useRegister();
+  const { register: doRegister, isPending, isError, error, isSuccess } = useRegister();
 
   const {
     register,
@@ -37,6 +37,23 @@ export function RegisterForm() {
 
   const userType = watch("userType");
   const password = watch("password") ?? "";
+
+  if (isSuccess) {
+    return (
+      <div className="flex flex-col items-center gap-4 py-8">
+        <div style={{ width: 48, height: 48, borderRadius: "50%", backgroundColor: "#d1fae5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <svg width="24" height="24" fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" /></svg>
+        </div>
+        <h2 className="text-xl font-semibold text-seal-text">Account Created</h2>
+        <p className="text-center text-sm text-seal-text-secondary" style={{ maxWidth: 360 }}>
+          Your account has been submitted for review. You will be notified once an admin approves your registration.
+        </p>
+        <Link href="/login" className="mt-4 font-medium text-seal-cyan hover:underline">
+          Back to Sign In
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col">
@@ -123,6 +140,18 @@ export function RegisterForm() {
             />
           </div>
         )}
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="semester">Current Semester (optional)</Label>
+          <Input
+            id="semester"
+            type="number"
+            placeholder="e.g. 5"
+            autoComplete="off"
+            error={errors.semester?.message}
+            {...register("semester", { valueAsNumber: true })}
+          />
+        </div>
 
         <div>
           <PasswordField

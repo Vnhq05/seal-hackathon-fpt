@@ -169,7 +169,7 @@ public class RoundService {
     }
 
     private void guardDraftOrActive(HackathonEvent event) {
-        if (event.getStatus() != EventStatus.DRAFT && event.getStatus() != EventStatus.ACTIVE) {
+        if (event.getStatus() == EventStatus.COMPLETED || event.getStatus() == EventStatus.CANCELLED) {
             throw new BusinessException(
                     "Cannot modify rounds for event with status: " + event.getStatus(),
                     HttpStatus.BAD_REQUEST) {};

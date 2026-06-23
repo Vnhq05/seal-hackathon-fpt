@@ -75,11 +75,11 @@ public abstract class BaseIntegrationTest {
     }
 
     protected User createJudge() {
-        return createUser("judge@test.com", UserType.JUDGE, AccountStatus.ACTIVE);
+        return createUser("judge@test.com", UserType.LECTURER, AccountStatus.ACTIVE);
     }
 
     protected User createMentor() {
-        return createUser("mentor@test.com", UserType.MENTOR, AccountStatus.ACTIVE);
+        return createUser("mentor@test.com", UserType.LECTURER, AccountStatus.ACTIVE);
     }
 
     protected User createStudent() {

@@ -161,7 +161,7 @@ class RoundServiceTest {
                 .startDate(LocalDate.of(2026, 7, 1))
                 .endDate(LocalDate.of(2026, 8, 31))
                 .registrationDeadline(LocalDate.of(2026, 6, 30))
-                .status(EventStatus.DRAFT)
+                .status(EventStatus.UPCOMING)
                 .build();
         event.setId(id);
         return event;

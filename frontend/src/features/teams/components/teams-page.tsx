@@ -45,7 +45,7 @@ export function TeamsPage({ eventId }: TeamsPageProps) {
           </div>
 
           <Link
-            href="/participant/teams"
+            href="/student/teams"
             className="flex items-center gap-2 rounded-lg"
             style={{
               backgroundColor: "#38bdf8",

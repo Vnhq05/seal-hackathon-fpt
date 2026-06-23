@@ -9,6 +9,7 @@ import com.sealhackathon.event.service.EventService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -18,6 +19,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -53,32 +55,39 @@ public class EventController {
     @Operation(summary = "Update event configuration (BR-08 — blocked after activation)")
     public ResponseEntity<ApiResponse<EventResponse>> updateEvent(
             @PathVariable UUID eventId,
-            @Valid @RequestBody UpdateEventRequest request) {
-        EventResponse response = eventService.updateEvent(eventId, request);
+            @Valid @RequestBody UpdateEventRequest request,
+            HttpServletRequest httpRequest) {
+        EventResponse response = eventService.updateEvent(eventId, request, httpRequest.getRemoteAddr());
         return ResponseEntity.ok(ApiResponse.success("Event updated successfully", response));
+    }
+
+    @DeleteMapping("/{eventId}")
+    @PreAuthorize("hasAnyRole('SYSTEM_ADMIN', 'EVENT_COORDINATOR')")
+    @Operation(summary = "Delete an event (Admin: any, Coordinator: own only)")
+    public ResponseEntity<ApiResponse<Void>> deleteEvent(
+            @PathVariable UUID eventId,
+            HttpServletRequest httpRequest) {
+        eventService.deleteEvent(eventId, httpRequest.getRemoteAddr());
+        return ResponseEntity.ok(ApiResponse.success("Event deleted successfully", null));
     }
 
     @PostMapping("/{eventId}/activate")
     @PreAuthorize("hasAnyRole('SYSTEM_ADMIN', 'EVENT_COORDINATOR')")
-    @Operation(summary = "Activate a draft event (BR-08)")
-    public ResponseEntity<ApiResponse<EventResponse>> activateEvent(@PathVariable UUID eventId) {
-        EventResponse response = eventService.activateEvent(eventId);
+    @Operation(summary = "Activate an event manually")
+    public ResponseEntity<ApiResponse<EventResponse>> activateEvent(
+            @PathVariable UUID eventId,
+            HttpServletRequest httpRequest) {
+        EventResponse response = eventService.activateEvent(eventId, httpRequest.getRemoteAddr());
         return ResponseEntity.ok(ApiResponse.success("Event activated", response));
-    }
-
-    @PostMapping("/{eventId}/complete")
-    @PreAuthorize("hasAnyRole('SYSTEM_ADMIN', 'EVENT_COORDINATOR')")
-    @Operation(summary = "Mark event as completed")
-    public ResponseEntity<ApiResponse<EventResponse>> completeEvent(@PathVariable UUID eventId) {
-        EventResponse response = eventService.completeEvent(eventId);
-        return ResponseEntity.ok(ApiResponse.success("Event completed", response));
     }
 
     @PostMapping("/{eventId}/cancel")
     @PreAuthorize("hasAnyRole('SYSTEM_ADMIN', 'EVENT_COORDINATOR')")
     @Operation(summary = "Cancel an event")
-    public ResponseEntity<ApiResponse<EventResponse>> cancelEvent(@PathVariable UUID eventId) {
-        EventResponse response = eventService.cancelEvent(eventId);
+    public ResponseEntity<ApiResponse<EventResponse>> cancelEvent(
+            @PathVariable UUID eventId,
+            HttpServletRequest httpRequest) {
+        EventResponse response = eventService.cancelEvent(eventId, httpRequest.getRemoteAddr());
         return ResponseEntity.ok(ApiResponse.success("Event cancelled", response));
     }
 
@@ -90,11 +99,13 @@ public class EventController {
     }
 
     @GetMapping
-    @Operation(summary = "List events with optional status filter")
+    @Operation(summary = "List events — Admin sees all, Coordinator sees own. Filter by season/year/status.")
     public ResponseEntity<ApiResponse<Page<EventResponse>>> listEvents(
             @RequestParam(required = false) EventStatus status,
+            @RequestParam(required = false) String season,
+            @RequestParam(required = false) Integer year,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        Page<EventResponse> page = eventService.listEvents(status, pageable);
+        Page<EventResponse> page = eventService.listEvents(status, season, year, pageable);
         return ResponseEntity.ok(ApiResponse.success(page));
     }
 }

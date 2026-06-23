@@ -32,9 +32,9 @@ export function HackathonListPage() {
   // Map UI filter tabs to backend EventStatus values
   const statusMap: Record<string, EventStatus | undefined> = {
     all: undefined,
-    open: "ACTIVE",
+    open: "OPEN",
     ongoing: "ACTIVE",
-    upcoming: "DRAFT",
+    upcoming: "UPCOMING",
     ended: "COMPLETED",
   };
 

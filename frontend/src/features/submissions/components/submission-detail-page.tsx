@@ -54,7 +54,7 @@ export function SubmissionDetailPage({ roundId, submissionId }: SubmissionDetail
   return (
     <div className="flex flex-col gap-6">
       <Link
-        href="/participant/projects"
+        href="/student/projects"
         className="inline-flex items-center gap-1 self-start"
         style={{
           fontSize: 12,

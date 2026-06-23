@@ -17,4 +17,8 @@ public interface JudgingPublicService {
     List<ScoreDetailSnapshot> getDetailedScores(UUID submissionId);
 
     boolean isFullyScored(UUID submissionId, int minJudges);
+
+    int countCompletedScores(UUID submissionId);
+
+    long countAssignedJudges(UUID teamId, UUID roundId);
 }

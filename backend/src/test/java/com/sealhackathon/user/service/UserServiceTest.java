@@ -243,13 +243,13 @@ class UserServiceTest {
                 .password("password")
                 .fullName("Mentor User")
                 .phone("0901234567")
-                .userType(UserType.MENTOR)
+                .userType(UserType.LECTURER)
                 .build();
 
         UserProfileResponse result = userService.createInternalAccount(request);
 
         assertThat(result.getEmail()).isEqualTo("mentor@test.com");
-        assertThat(result.getUserType()).isEqualTo(UserType.MENTOR);
+        assertThat(result.getUserType()).isEqualTo(UserType.LECTURER);
         assertThat(result.getStatus()).isEqualTo(AccountStatus.ACTIVE);
         verify(eventPublisher).publishEvent(any(com.sealhackathon.user.event.InternalAccountCreatedEvent.class));
     }
@@ -276,7 +276,7 @@ class UserServiceTest {
                 .email("exists@test.com")
                 .password("password")
                 .fullName("Duplicate")
-                .userType(UserType.JUDGE)
+                .userType(UserType.EVENT_COORDINATOR)
                 .build();
 
         assertThatThrownBy(() -> userService.createInternalAccount(request))
@@ -284,7 +284,7 @@ class UserServiceTest {
     }
 
     @Test
-    void createInternalAccount_shouldAcceptAllFourInternalRoles() {
+    void createInternalAccount_shouldAcceptAllInternalRoles() {
         when(userRepository.existsByEmail(anyString())).thenReturn(false);
         when(passwordEncoder.encode(anyString())).thenReturn("hashed");
         when(userRepository.save(any(User.class))).thenAnswer(i -> {
@@ -293,7 +293,7 @@ class UserServiceTest {
             return u;
         });
 
-        for (UserType role : List.of(UserType.MENTOR, UserType.JUDGE, UserType.LECTURER, UserType.EVENT_COORDINATOR)) {
+        for (UserType role : List.of(UserType.LECTURER, UserType.EVENT_COORDINATOR)) {
             CreateInternalAccountRequest request = CreateInternalAccountRequest.builder()
                     .email(role.name().toLowerCase() + "@test.com")
                     .password("password")

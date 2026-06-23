@@ -83,6 +83,7 @@ public class TeamPublicServiceImpl implements TeamPublicService {
                 .eventId(team.getEventId())
                 .name(team.getName())
                 .leaderId(team.getLeaderId())
+                .trackId(team.getTrackId())
                 .status(team.getStatus())
                 .memberCount(memberCount)
                 .build();

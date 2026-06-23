@@ -38,9 +38,9 @@ public class MentorAssignmentService {
         UserSnapshot mentor = userPublicService.findById(request.getMentorUserId())
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", request.getMentorUserId()));
 
-        if (mentor.getUserType() != UserType.MENTOR) {
+        if (mentor.getUserType() != UserType.LECTURER) {
             throw new BusinessException(
-                    "User " + mentor.getEmail() + " is not a MENTOR. Role: " + mentor.getUserType(),
+                    "User " + mentor.getEmail() + " is not a LECTURER. Role: " + mentor.getUserType(),
                     HttpStatus.BAD_REQUEST) {};
         }
 

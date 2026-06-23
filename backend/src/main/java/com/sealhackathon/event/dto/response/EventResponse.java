@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Getter
@@ -23,8 +24,22 @@ public class EventResponse {
     private LocalDate startDate;
     private LocalDate endDate;
     private LocalDate registrationDeadline;
+    private LocalDate registrationOpenDate;
     private EventStatus status;
+    private String description;
+    private String location;
+    private String format;
+    private Integer minTeam;
+    private Integer maxTeam;
+    private Integer semesterMin;
+    private Integer semesterMax;
+    private UUID scoringTemplateId;
+    private String tiebreakerCriteria;
     private int roundCount;
     private int mentorCount;
+    private int trackCount;
+    private List<TrackResponse> tracks;
+    private List<PrizeResponse> prizes;
+    private List<HonoredGuestResponse> honoredGuests;
     private LocalDateTime createdAt;
 }

@@ -7,11 +7,13 @@ import com.sealhackathon.event.domain.enums.EventStatus;
 import com.sealhackathon.event.dto.snapshot.CriteriaSnapshot;
 import com.sealhackathon.event.dto.snapshot.EventSnapshot;
 import com.sealhackathon.event.dto.snapshot.RoundSnapshot;
+import com.sealhackathon.event.dto.snapshot.TrackSnapshot;
 import com.sealhackathon.event.repository.CriteriaRepository;
 import com.sealhackathon.event.repository.HackathonEventRepository;
 import com.sealhackathon.event.repository.JudgeAssignmentRepository;
 import com.sealhackathon.event.repository.MentorAssignmentRepository;
 import com.sealhackathon.event.repository.RoundRepository;
+import com.sealhackathon.event.repository.TrackRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +30,7 @@ public class EventPublicServiceImpl implements EventPublicService {
     private final HackathonEventRepository eventRepository;
     private final RoundRepository roundRepository;
     private final CriteriaRepository criteriaRepository;
+    private final TrackRepository trackRepository;
     private final JudgeAssignmentRepository judgeAssignmentRepository;
     private final MentorAssignmentRepository mentorAssignmentRepository;
 
@@ -60,6 +63,17 @@ public class EventPublicServiceImpl implements EventPublicService {
                         .name(c.getName())
                         .weight(c.getWeight())
                         .sortOrder(c.getSortOrder())
+                        .build())
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<TrackSnapshot> getTracksByEvent(UUID eventId) {
+        return trackRepository.findByHackathonEventId(eventId).stream()
+                .map(t -> TrackSnapshot.builder()
+                        .id(t.getId())
+                        .name(t.getName())
                         .build())
                 .toList();
     }
@@ -130,10 +144,15 @@ public class EventPublicServiceImpl implements EventPublicService {
         return EventSnapshot.builder()
                 .id(event.getId())
                 .name(event.getName())
+                .season(event.getSeason())
+                .year(event.getYear())
                 .startDate(event.getStartDate())
                 .endDate(event.getEndDate())
                 .registrationDeadline(event.getRegistrationDeadline())
+                .registrationOpenDate(event.getRegistrationOpenDate())
                 .status(event.getStatus())
+                .semesterMin(event.getSemesterMin())
+                .semesterMax(event.getSemesterMax())
                 .build();
     }
 

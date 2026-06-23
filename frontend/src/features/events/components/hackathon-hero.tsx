@@ -106,7 +106,7 @@ export function HackathonHero({ hackathon }: HackathonHeroProps) {
         {registration.team && (
           <div style={{ paddingBottom: 8 }}>
             <Link
-              href={`/participant/teams/${registration.team.id}`}
+              href={`/student/teams/${registration.team.id}`}
               className="flex items-center gap-1"
               style={{
                 fontSize: 12,

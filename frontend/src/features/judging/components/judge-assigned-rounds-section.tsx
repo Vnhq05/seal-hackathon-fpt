@@ -18,7 +18,7 @@ function ArrowIcon() {
   );
 }
 
-function RoundCard({ round }: { round: AssignedRoundCard }) {
+function RoundCard({ round, portalBase = "/judge" }: { round: AssignedRoundCard; portalBase?: string }) {
   const pct = round.total > 0 ? (round.scored / round.total) * 100 : 0;
   const isUpcoming = round.status === "upcoming";
 
@@ -74,7 +74,7 @@ function RoundCard({ round }: { round: AssignedRoundCard }) {
         </span>
       ) : (
         <Link
-          href={`/judge/rounds/${round.id}`}
+          href={`${portalBase}/rounds/${round.id}`}
           className="flex flex-shrink-0 items-center gap-2 rounded-lg"
           style={{ backgroundColor: "#38bdf8", padding: "8px 16px", fontSize: 14, fontWeight: 500, color: "#0e1528", lineHeight: "21px" }}
         >
@@ -87,16 +87,17 @@ function RoundCard({ round }: { round: AssignedRoundCard }) {
 
 interface JudgeAssignedRoundsSectionProps {
   rounds: AssignedRoundCard[];
+  portalBase?: string;
 }
 
-export function JudgeAssignedRoundsSection({ rounds }: JudgeAssignedRoundsSectionProps) {
+export function JudgeAssignedRoundsSection({ rounds, portalBase = "/judge" }: JudgeAssignedRoundsSectionProps) {
   return (
     <div className="flex flex-col gap-6">
       <h2 style={{ fontSize: 18, fontWeight: 600, color: "#0e1528", lineHeight: "25.2px" }}>
         Assigned Rounds
       </h2>
       {rounds.map((r) => (
-        <RoundCard key={r.id} round={r} />
+        <RoundCard key={r.id} round={r} portalBase={portalBase} />
       ))}
     </div>
   );

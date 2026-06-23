@@ -130,7 +130,7 @@ export function HackathonRegistrationCard({
               </span>
             </div>
           </div>
-          <Link href={`/participant/teams/${team.id}`} aria-label="Edit team">
+          <Link href={`/student/teams/${team.id}`} aria-label="Edit team">
             <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
               <path
                 d="M11 2l2 2-8 8H3v-2l8-8z"
@@ -145,7 +145,7 @@ export function HackathonRegistrationCard({
       )}
 
       <Link
-        href={`/participant/projects/${hackathonId}`}
+        href={`/student/projects/${hackathonId}`}
         className="flex w-full items-center justify-center gap-1 rounded-lg"
         style={{
           backgroundColor: "#38bdf8",

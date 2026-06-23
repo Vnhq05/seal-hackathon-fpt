@@ -22,8 +22,11 @@ function DashboardIcon() {
 function TeamIcon() {
   return <svg width="24" height="12" viewBox="0 0 24 12" {...svgProps}><circle cx="8" cy="4" r="2.5" {...s15} /><path d="M2 12c0-2.761 2.239-5 5-5" {...s15} {...cap} /><circle cx="16" cy="4" r="2" {...s15} /><path d="M22 12c0-2.21-1.343-4-3-4" {...s15} {...cap} /></svg>;
 }
-function ProjectsIcon() {
-  return <svg width="20" height="16" viewBox="0 0 20 16" {...svgProps}><rect x="2" y="2" width="16" height="12" rx="2" {...s15} /><path d="M6 2V0M14 2V0M2 6h16" {...s15} {...cap} /></svg>;
+function MentorHubIcon() {
+  return <svg width="20" height="20" viewBox="0 0 20 20" {...svgProps}><path d="M2 16V4a2 2 0 012-2h12a2 2 0 012 2v8a2 2 0 01-2 2H6l-4 4z" {...s15} {...cap} strokeLinejoin="round" /></svg>;
+}
+function SubmissionsIcon() {
+  return <svg width="20" height="20" viewBox="0 0 20 20" {...svgProps}><path d="M10 2v10M6 8l4 4 4-4" {...s15} {...cap} /><path d="M3 14v2a1 1 0 001 1h12a1 1 0 001-1v-2" {...s15} {...cap} /></svg>;
 }
 function LeaderboardIcon() {
   return <svg width="20" height="18" viewBox="0 0 20 18" {...svgProps}><rect x="2" y="8" width="4" height="10" rx="1" {...s15} /><rect x="8" y="2" width="4" height="16" rx="1" {...s15} /><rect x="14" y="5" width="4" height="13" rx="1" {...s15} /></svg>;
@@ -39,11 +42,12 @@ function SignOutIcon() {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { href: "/participant", label: "Dashboard", icon: <DashboardIcon /> },
-  { href: "/participant/teams", label: "Teams", icon: <TeamIcon /> },
-  { href: "/participant/projects", label: "Projects", icon: <ProjectsIcon /> },
-  { href: "/participant/leaderboard", label: "Leaderboard", icon: <LeaderboardIcon /> },
-  { href: "/participant/settings", label: "Settings", icon: <SettingsIcon /> },
+  { href: "/student", label: "Dashboard", icon: <DashboardIcon /> },
+  { href: "/student/teams", label: "Teams", icon: <TeamIcon /> },
+  { href: "/student/submissions", label: "Submissions", icon: <SubmissionsIcon /> },
+  { href: "/student/leaderboard", label: "Leaderboard", icon: <LeaderboardIcon /> },
+  { href: "/student/mentor-hub", label: "MentorHub", icon: <MentorHubIcon /> },
+  { href: "/student/settings", label: "Settings", icon: <SettingsIcon /> },
 ];
 
 export function DashboardSidebar() {
@@ -65,7 +69,7 @@ export function DashboardSidebar() {
     <aside className="seal-sidebar-bg flex w-60 min-h-screen flex-shrink-0 flex-col p-4">
       {/* Logo */}
       <div className="pb-5">
-        <Link href="/participant" className="flex items-center gap-2.5">
+        <Link href="/student" className="flex items-center gap-2.5">
           <div className="relative flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-seal-cyan/20 to-seal-blue/10 ring-1 ring-white/10">
             <Image src="/logo-removebg-preview.png" alt="SEAL" width={28} height={28} className="brightness-0 invert" />
           </div>
@@ -73,7 +77,7 @@ export function DashboardSidebar() {
             <span className="font-heading text-[15px] font-extrabold tracking-tight text-white">
               SEAL <span className="text-seal-cyan">Hackathon</span>
             </span>
-            <p className="text-[10px] font-medium tracking-widest text-seal-cyan/50">PARTICIPANT</p>
+            <p className="text-[10px] font-medium tracking-widest text-seal-cyan/50">STUDENT</p>
           </div>
         </Link>
       </div>
@@ -91,7 +95,7 @@ export function DashboardSidebar() {
               {user?.fullName ?? "User"}
             </p>
             <p className="truncate text-[11px] font-medium text-seal-cyan/70">
-              Participant
+              Student
             </p>
           </div>
         </div>
@@ -101,10 +105,10 @@ export function DashboardSidebar() {
       <nav className="flex flex-1 flex-col gap-1" aria-label="Main navigation">
         {NAV_ITEMS.map((item) => {
           const isActive =
-            item.href === "/participant"
-              ? pathname === "/participant"
+            item.href === "/student"
+              ? pathname === "/student"
               : pathname.startsWith(item.href) ||
-                (item.href === "/participant/settings" && pathname.startsWith("/participant/profile"));
+                (item.href === "/student/settings" && pathname.startsWith("/student/profile"));
           return (
             <Link
               key={item.href}
@@ -126,7 +130,7 @@ export function DashboardSidebar() {
       {/* Bottom */}
       <div className="flex flex-col gap-3">
         <Link
-          href="/participant/submissions"
+          href="/student/submissions"
           className="flex items-center justify-center gap-2 rounded-lg bg-seal-cyan px-4 py-2.5 text-[13px] font-bold text-white transition-colors duration-200 hover:bg-seal-cyan-dark"
         >
           Submit Project
@@ -136,7 +140,7 @@ export function DashboardSidebar() {
 
         <div className="flex flex-col gap-0.5">
           <Link
-            href="/participant/support"
+            href="/student/support"
             className="flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium tracking-wide text-slate-500 transition-colors duration-200 hover:bg-white/[0.04] hover:text-slate-300"
           >
             <SupportIcon />

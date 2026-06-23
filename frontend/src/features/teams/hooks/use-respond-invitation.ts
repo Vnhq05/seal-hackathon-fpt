@@ -26,9 +26,9 @@ export function useRespondInvitation(invitationId: string) {
     onSuccess: (_data, action) => {
       queryClient.invalidateQueries({ queryKey: [TEAM_INVITATION_KEY] });
       if (action === "accept") {
-        router.push("/participant/teams");
+        router.push("/student/teams");
       } else {
-        router.push("/participant");
+        router.push("/student");
       }
     },
   });

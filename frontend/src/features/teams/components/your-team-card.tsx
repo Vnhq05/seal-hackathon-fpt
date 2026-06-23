@@ -69,7 +69,7 @@ export function YourTeamCard({ team }: YourTeamCardProps) {
             totalCount={team.memberCount}
           />
           <Link
-            href={`/participant/teams/${team.id}`}
+            href={`/student/teams/${team.id}`}
             className="rounded-lg text-center"
             style={{
               backgroundColor: "#eef0f6",
