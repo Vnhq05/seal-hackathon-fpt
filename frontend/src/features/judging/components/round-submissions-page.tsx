@@ -43,6 +43,7 @@ function StatusBadge({ status }: { status: "scored" | "unscored" }) {
 }
 
 function SubmissionRow({ submission, roundId }: { submission: RoundSubmission; roundId: string }) {
+  const portalBase = usePortalBase();
   return (
     <tr style={{ borderBottom: "1px solid rgba(198,198,205,0.3)" }}>
       <td style={{ padding: "14px 16px", fontSize: 14, fontWeight: 600, color: "#0e1528" }}>

@@ -11,6 +11,7 @@ const statusColors: Record<string, { bg: string; color: string; border: string }
 };
 
 function RoundCard({ round }: { round: { id: string; hackathonName: string; roundName: string; status: string; scored: number; total: number; criteria: { name: string }[] } }) {
+  const portalBase = usePortalBase();
   const sc = statusColors[round.status] ?? statusColors.closed;
   const remaining = round.total - round.scored;
   const progress = round.total > 0 ? Math.round((round.scored / round.total) * 100) : 0;

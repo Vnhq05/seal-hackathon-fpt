@@ -31,6 +31,7 @@ const actionLabels: Record<RoundStatus, string> = {
 };
 
 function RoundCard({ round }: { round: AssignedRound }) {
+  const portalBase = usePortalBase();
   const pct = round.total > 0 ? (round.scored / round.total) * 100 : 0;
   const accent = accentColors[round.status];
 
