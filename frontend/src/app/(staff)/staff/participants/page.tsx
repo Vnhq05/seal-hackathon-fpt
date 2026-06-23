@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { ParticipantManagementPage } from "@/features/staff/components/student-management-page";
+import { ParticipantManagementPage } from "@/features/staff/components/participant-management-page";
 
 export const metadata: Metadata = {
   title: "Participants — SEAL Hackathon Staff",
