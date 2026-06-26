@@ -1,5 +1,6 @@
 package com.sealhackathon.user.service;
 
+import com.sealhackathon.auth.service.AuthPublicService;
 import com.sealhackathon.common.enums.AccountStatus;
 import com.sealhackathon.common.enums.UserType;
 import com.sealhackathon.common.exception.BusinessException;
@@ -10,9 +11,11 @@ import com.sealhackathon.user.domain.User;
 import com.sealhackathon.user.dto.request.ApprovalRequest;
 import com.sealhackathon.user.dto.request.ChangePasswordRequest;
 import com.sealhackathon.user.dto.request.CreateInternalAccountRequest;
+import com.sealhackathon.user.dto.request.SetOfficialPasswordRequest;
 import com.sealhackathon.user.dto.request.UpdateProfileRequest;
 import com.sealhackathon.user.dto.response.UserListResponse;
 import com.sealhackathon.user.dto.response.UserProfileResponse;
+import com.sealhackathon.user.dto.response.UserSearchResponse;
 import com.sealhackathon.user.event.AccountApprovedEvent;
 import com.sealhackathon.user.event.AccountRejectedEvent;
 import com.sealhackathon.user.event.InternalAccountCreatedEvent;
@@ -21,6 +24,7 @@ import com.sealhackathon.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -31,6 +35,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -39,10 +44,23 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final ApplicationEventPublisher eventPublisher;
+    private final UserReferenceService userReferenceService;
+    private final AuthPublicService authPublicService;
+
+    private static final Set<String> PROTECTED_EMAILS = Set.of(
+            "admin@seal.com",
+            "coordinator@seal.com",
+            "lecturer1@fpt.edu.vn",
+            "lecturer2@fpt.edu.vn",
+            "lecturer3@fpt.edu.vn",
+            "lecturer4@fpt.edu.vn",
+            "lecturer5@fpt.edu.vn"
+    );
 
     private static final Set<UserType> INTERNAL_ROLES = Set.of(
             UserType.LECTURER,
-            UserType.EVENT_COORDINATOR
+            UserType.EVENT_COORDINATOR,
+            UserType.SYSTEM_ADMIN
     );
 
     // ═══════════════════════════════════════
@@ -90,6 +108,20 @@ public class UserService {
 
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
+    }
+
+    @Transactional
+    public UserProfileResponse setOfficialPassword(UUID userId, SetOfficialPasswordRequest request) {
+        User user = getUser(userId);
+        if (user.getUserType() != UserType.EXTERNAL_STUDENT || !user.isTemporaryAccount()) {
+            throw new BusinessException(
+                    "Official password setup is only available for temporary external student accounts",
+                    HttpStatus.BAD_REQUEST) {};
+        }
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        user.setTemporaryAccount(false);
+        userRepository.save(user);
+        return toProfileResponse(user);
     }
 
     // ═══════════════════════════════════════
@@ -140,7 +172,7 @@ public class UserService {
     public UserProfileResponse createInternalAccount(CreateInternalAccountRequest request) {
         if (!INTERNAL_ROLES.contains(request.getUserType())) {
             throw new BusinessException(
-                    "Only internal roles (MENTOR, JUDGE, LECTURER, EVENT_COORDINATOR) can be created by admin. " +
+                    "Only internal roles (LECTURER, EVENT_COORDINATOR, SYSTEM_ADMIN) can be created by admin. " +
                             "Received: " + request.getUserType(),
                     HttpStatus.BAD_REQUEST) {};
         }
@@ -187,9 +219,82 @@ public class UserService {
         return userRepository.countByStatus(AccountStatus.PENDING);
     }
 
+    @Transactional(readOnly = true)
+    public Page<UserListResponse> listStudentParticipants(AccountStatus status, String search,
+                                                          Pageable pageable) {
+        return userRepository.findStudentParticipants(status, search, pageable)
+                .map(this::toListResponse);
+    }
+
+    @Transactional(readOnly = true)
+    public List<UserSearchResponse> searchActiveStudents(String query, int limit) {
+        if (query == null || query.trim().length() < 2) {
+            throw new BusinessException("Search query must be at least 2 characters",
+                    HttpStatus.BAD_REQUEST) {};
+        }
+        return userRepository.searchActiveStudents(query.trim(), PageRequest.of(0, limit)).stream()
+                .map(user -> UserSearchResponse.builder()
+                        .id(user.getId())
+                        .fullName(user.getFullName())
+                        .email(user.getEmail())
+                        .build())
+                .toList();
+    }
+
+    // ═══════════════════════════════════════
+    //  Admin Deactivate / Delete
+    // ═══════════════════════════════════════
+
+    @Transactional
+    public UserProfileResponse deactivateUser(UUID userId, UUID currentUserId) {
+        User user = getUser(userId);
+        guardAccountManagement(user, currentUserId);
+
+        if (user.getStatus() == AccountStatus.LOCKED) {
+            return toProfileResponse(user);
+        }
+
+        user.setStatus(AccountStatus.LOCKED);
+        user = userRepository.save(user);
+        authPublicService.invalidateAllSessions(userId);
+
+        return toProfileResponse(user);
+    }
+
+    @Transactional
+    public void deleteUser(UUID userId, UUID currentUserId) {
+        User user = getUser(userId);
+        guardAccountManagement(user, currentUserId);
+
+        if (userReferenceService.hasReferences(userId)) {
+            String details = userReferenceService.describeReferences(userId).stream()
+                    .collect(Collectors.joining("; "));
+            throw new BusinessException(
+                    "Cannot delete user: account is referenced in the system (" + details
+                            + "). Deactivate the account instead.",
+                    HttpStatus.CONFLICT) {};
+        }
+
+        authPublicService.invalidateAllSessions(userId);
+        userRepository.delete(user);
+    }
+
     // ═══════════════════════════════════════
     //  Helpers
     // ═══════════════════════════════════════
+
+    private void guardAccountManagement(User user, UUID currentUserId) {
+        if (PROTECTED_EMAILS.contains(user.getEmail().toLowerCase())) {
+            throw new BusinessException(
+                    "This account is protected and cannot be modified",
+                    HttpStatus.FORBIDDEN) {};
+        }
+        if (user.getId().equals(currentUserId)) {
+            throw new BusinessException(
+                    "You cannot deactivate or delete your own account",
+                    HttpStatus.BAD_REQUEST) {};
+        }
+    }
 
     private User getUser(UUID userId) {
         return userRepository.findById(userId)
@@ -206,6 +311,7 @@ public class UserService {
                 .universityName(user.getUniversityName())
                 .userType(user.getUserType())
                 .status(user.getStatus())
+                .temporaryAccount(user.isTemporaryAccount())
                 .createdAt(user.getCreatedAt())
                 .build();
     }
@@ -215,6 +321,8 @@ public class UserService {
                 .id(user.getId())
                 .email(user.getEmail())
                 .fullName(user.getFullName())
+                .studentId(user.getStudentId())
+                .universityName(user.getUniversityName())
                 .userType(user.getUserType())
                 .status(user.getStatus())
                 .createdAt(user.getCreatedAt())

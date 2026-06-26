@@ -30,4 +30,9 @@ public class PrizeRequest {
     @NotNull(message = "Quantity is required")
     @Min(value = 1, message = "Quantity must be at least 1")
     private Integer quantity;
+
+    @Size(max = 100)
+    private String label;
+
+    private Integer trackIndex;
 }

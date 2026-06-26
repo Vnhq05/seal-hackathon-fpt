@@ -53,6 +53,17 @@ class TeamControllerIntegrationTest extends BaseIntegrationTest {
     // ── BR-15, BR-16: Create team ──
 
     @Test
+    void createTeam_shouldReturn400_whenNameMissing() throws Exception {
+        User student = createStudent();
+
+        mockMvc.perform(post("/api/events/" + eventId + "/teams")
+                        .header("Authorization", "Bearer " + tokenFor(student))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void createTeam_shouldReturn201_andStatusForming() throws Exception {
         User student = createStudent();
 

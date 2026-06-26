@@ -12,6 +12,8 @@ export interface EnrollmentResponse {
   enrolledAt: string;
   userFullName: string;
   userEmail: string;
+  userStudentId?: string | null;
+  userUniversityName?: string | null;
 }
 
 // ═══ API calls ═══
@@ -26,7 +28,9 @@ export const enrollmentApi = {
   },
 
   getMyActiveEnrollment(): Promise<EnrollmentResponse | null> {
-    return api.get<EnrollmentResponse | null>(`/enrollments/my-active`);
+    return api
+      .get<EnrollmentResponse | null>(`/enrollments/my-active`)
+      .then((data) => data ?? null);
   },
 
   list(eventId: string, params?: { status?: EnrollmentStatus }): Promise<EnrollmentResponse[]> {
@@ -47,5 +51,14 @@ export const enrollmentApi = {
 
   withdraw(eventId: string): Promise<void> {
     return api.post<void>(`/events/${eventId}/enrollments/withdraw`);
+  },
+
+  enrollExternal(eventId: string, body: {
+    fullName: string;
+    email: string;
+    studentId: string;
+    universityName: string;
+  }): Promise<EnrollmentResponse> {
+    return api.post<EnrollmentResponse>(`/public/events/${eventId}/enrollments`, body);
   },
 };

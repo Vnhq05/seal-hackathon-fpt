@@ -34,7 +34,6 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/admin/audit")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('SYSTEM_ADMIN')")
 @Tag(name = "Audit", description = "Immutable audit log — view and export (BR-53, BR-54, BR-55)")
 @SecurityRequirement(name = "bearerAuth")
 public class AuditController {

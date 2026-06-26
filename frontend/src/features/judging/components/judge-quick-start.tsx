@@ -22,7 +22,7 @@ interface JudgeQuickStartProps {
   portalBase?: string;
 }
 
-export function JudgeQuickStart({ dashboard, portalBase = "/judge" }: JudgeQuickStartProps) {
+export function JudgeQuickStart({ dashboard, portalBase = "/lecturer" }: JudgeQuickStartProps) {
   const nextRound = dashboard.assignedRounds.find(
     (r) => r.scored < r.total && r.status === "open",
   );

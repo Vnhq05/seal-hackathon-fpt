@@ -15,4 +15,6 @@ public interface JudgeAssignmentRepository extends JpaRepository<JudgeAssignment
     boolean existsByRoundIdAndJudgeUserId(UUID roundId, UUID judgeUserId);
 
     List<JudgeAssignment> findByJudgeUserId(UUID judgeUserId);
+
+    long countByJudgeUserId(UUID judgeUserId);
 }

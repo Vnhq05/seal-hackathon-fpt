@@ -68,6 +68,7 @@ public class TokenService {
 
     @Transactional
     public String createPasswordResetToken(UUID userId) {
+        passwordResetTokenRepository.invalidateAllByUserId(userId);
         String token = UUID.randomUUID().toString();
         PasswordResetToken resetToken = PasswordResetToken.builder()
                 .token(token)

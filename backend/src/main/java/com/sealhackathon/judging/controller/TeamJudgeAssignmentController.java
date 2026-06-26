@@ -40,7 +40,8 @@ public class TeamJudgeAssignmentController {
             @PathVariable UUID roundId,
             @PathVariable UUID teamId,
             @Valid @RequestBody AssignJudgeToTeamRequest request) {
-        TeamJudgeAssignmentResponse response = assignmentService.assignJudgeToTeam(roundId, teamId, request);
+        TeamJudgeAssignmentResponse response = assignmentService.assignJudgeToTeam(
+                eventId, roundId, teamId, request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Judge assigned to team", response));
     }

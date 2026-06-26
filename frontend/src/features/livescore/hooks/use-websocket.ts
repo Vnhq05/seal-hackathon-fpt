@@ -3,6 +3,8 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import { env } from "@/lib/env";
 
+const MAX_RETRIES = 10;
+
 interface StompFrame {
   command: string;
   headers: Record<string, string>;
@@ -43,6 +45,7 @@ export function useStompWebSocket(eventId: string | undefined) {
   const [connected, setConnected] = useState(false);
   const listenersRef = useRef<Map<string, Set<(data: unknown) => void>>>(new Map());
   const subIdRef = useRef(0);
+  const retryCountRef = useRef(0);
 
   const subscribe = useCallback((destination: string, callback: (data: unknown) => void) => {
     if (!listenersRef.current.has(destination)) {
@@ -68,13 +71,22 @@ export function useStompWebSocket(eventId: string | undefined) {
 
     let ws: WebSocket;
     let heartbeatInterval: ReturnType<typeof setInterval>;
+    let reconnectTimeout: ReturnType<typeof setTimeout>;
+    let aborted = false;
 
     function connect() {
+      if (aborted || retryCountRef.current >= MAX_RETRIES) return;
+
       ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 
       ws.onopen = () => {
-        ws.send(buildStompFrame("CONNECT", { "accept-version": "1.2", "heart-beat": "10000,10000" }));
+        const token = localStorage.getItem("access_token");
+        ws.send(buildStompFrame("CONNECT", {
+          "accept-version": "1.2",
+          "heart-beat": "10000,10000",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        }));
       };
 
       ws.onmessage = (event) => {
@@ -82,6 +94,7 @@ export function useStompWebSocket(eventId: string | undefined) {
         if (!frame) return;
 
         if (frame.command === "CONNECTED") {
+          retryCountRef.current = 0;
           setConnected(true);
           subIdRef.current = 0;
           const topics = [
@@ -113,7 +126,11 @@ export function useStompWebSocket(eventId: string | undefined) {
       ws.onclose = () => {
         setConnected(false);
         clearInterval(heartbeatInterval);
-        setTimeout(connect, 3000);
+        if (!aborted && retryCountRef.current < MAX_RETRIES) {
+          const delay = Math.min(1000 * Math.pow(2, retryCountRef.current), 30000);
+          retryCountRef.current++;
+          reconnectTimeout = setTimeout(connect, delay);
+        }
       };
 
       ws.onerror = () => {
@@ -124,6 +141,8 @@ export function useStompWebSocket(eventId: string | undefined) {
     connect();
 
     return () => {
+      aborted = true;
+      clearTimeout(reconnectTimeout);
       clearInterval(heartbeatInterval);
       if (wsRef.current) {
         wsRef.current.onclose = null;

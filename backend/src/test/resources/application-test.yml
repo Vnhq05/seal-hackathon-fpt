@@ -1,4 +1,6 @@
 spring:
+  datasource:
+    password: test
   jpa:
     hibernate:
       ddl-auto: create-drop
@@ -13,3 +15,5 @@ app:
     access-token-expiration-ms: 900000
     refresh-token-expiration-days: 7
     password-reset-token-expiration-minutes: 15
+  cors:
+    allowed-origins: http://localhost:3000

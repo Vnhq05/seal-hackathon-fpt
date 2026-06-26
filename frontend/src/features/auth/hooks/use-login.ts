@@ -8,7 +8,7 @@ import { useAuthStore } from "@/features/auth/store/auth.store";
 
 const USER_TYPE_HOME: Record<UserType, string> = {
   SYSTEM_ADMIN: "/admin",
-  EVENT_COORDINATOR: "/staff",
+  EVENT_COORDINATOR: "/coordinator",
   LECTURER: "/lecturer",
   FPT_STUDENT: "/student",
   EXTERNAL_STUDENT: "/student",
@@ -17,13 +17,16 @@ const USER_TYPE_HOME: Record<UserType, string> = {
 export function useLogin() {
   const router = useRouter();
   const setAuth = useAuthStore((state) => state.setAuth);
+  const setRefreshToken = useAuthStore((state) => state.setRefreshToken);
 
   const mutation = useMutation({
     mutationFn: (credentials: LoginRequest) => authApi.login(credentials),
     onSuccess: (data) => {
       setAuth(data.user, data.accessToken);
+      setRefreshToken(data.refreshToken);
       if (typeof window !== "undefined") {
         localStorage.setItem("access_token", data.accessToken);
+        document.cookie = "auth-check=1; path=/; SameSite=Lax";
       }
       router.push(USER_TYPE_HOME[data.user.userType] ?? "/student");
     },

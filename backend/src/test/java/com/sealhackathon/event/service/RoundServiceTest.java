@@ -6,39 +6,55 @@ import com.sealhackathon.event.domain.Round;
 import com.sealhackathon.event.domain.enums.EventStatus;
 import com.sealhackathon.event.dto.request.CreateRoundRequest;
 import com.sealhackathon.event.dto.response.RoundResponse;
+import com.sealhackathon.event.repository.HackathonEventRepository;
 import com.sealhackathon.event.repository.RoundRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class RoundServiceTest {
 
     @Mock private RoundRepository roundRepository;
-    @Mock private EventService eventService;
+    @Mock private HackathonEventRepository eventRepository;
     @Mock private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks private RoundService roundService;
+
+    private UUID eventId;
+    private HackathonEvent event;
+
+    @BeforeEach
+    void setUp() {
+        eventId = UUID.randomUUID();
+        event = buildEvent(eventId);
+        when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
+        when(roundRepository.findByHackathonEventIdOrderByRoundNumberAsc(eventId)).thenReturn(List.of());
+    }
 
     // ── BR-09: Round dates within event dates ──
 
     @Test
     void createRound_shouldSucceed_whenDatesWithinEvent() {
-        UUID eventId = UUID.randomUUID();
-        HackathonEvent event = buildEvent(eventId);
-        when(eventService.getEvent(eventId)).thenReturn(event);
         when(roundRepository.existsByHackathonEventIdAndRoundNumber(eventId, 1)).thenReturn(false);
         when(roundRepository.existsOverlappingRoundForNew(any(), any(), any())).thenReturn(false);
         when(roundRepository.save(any(Round.class))).thenAnswer(i -> {
@@ -65,10 +81,6 @@ class RoundServiceTest {
 
     @Test
     void createRound_shouldThrow_whenDatesOutsideEvent() {
-        UUID eventId = UUID.randomUUID();
-        HackathonEvent event = buildEvent(eventId);
-        when(eventService.getEvent(eventId)).thenReturn(event);
-
         CreateRoundRequest request = CreateRoundRequest.builder()
                 .roundNumber(1)
                 .name("Bad Round")
@@ -84,14 +96,9 @@ class RoundServiceTest {
                 .hasMessageContaining("Round dates must be within event dates");
     }
 
-    // ── BR-09: No overlapping rounds ──
-
     @Test
     void createRound_shouldThrow_whenOverlapping() {
-        UUID eventId = UUID.randomUUID();
-        HackathonEvent event = buildEvent(eventId);
-        when(eventService.getEvent(eventId)).thenReturn(event);
-        when(roundRepository.existsOverlappingRoundForNew(any(), any(), any())).thenReturn(true);
+        when(roundRepository.existsOverlappingRoundForNew(eq(eventId), any(), any())).thenReturn(true);
 
         CreateRoundRequest request = CreateRoundRequest.builder()
                 .roundNumber(2)
@@ -110,9 +117,6 @@ class RoundServiceTest {
 
     @Test
     void createRound_shouldThrow_whenSubmissionDeadlineOutsideRound() {
-        UUID eventId = UUID.randomUUID();
-        HackathonEvent event = buildEvent(eventId);
-        when(eventService.getEvent(eventId)).thenReturn(event);
         when(roundRepository.existsByHackathonEventIdAndRoundNumber(eventId, 1)).thenReturn(false);
         when(roundRepository.existsOverlappingRoundForNew(any(), any(), any())).thenReturn(false);
 
@@ -133,10 +137,7 @@ class RoundServiceTest {
 
     @Test
     void createRound_shouldThrow_whenCompletedEvent() {
-        UUID eventId = UUID.randomUUID();
-        HackathonEvent event = buildEvent(eventId);
         event.setStatus(EventStatus.COMPLETED);
-        when(eventService.getEvent(eventId)).thenReturn(event);
 
         CreateRoundRequest request = CreateRoundRequest.builder()
                 .roundNumber(1)

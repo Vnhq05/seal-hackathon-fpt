@@ -72,14 +72,10 @@
             <artifactId>spring-boot-starter-websocket</artifactId>
         </dependency>
 
-        <!-- Spring Modulith -->
+        <!-- Spring Modulith (JDBC event registry — avoid JPA VARCHAR(255) on serialized_event) -->
         <dependency>
             <groupId>org.springframework.modulith</groupId>
             <artifactId>spring-modulith-starter-core</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.modulith</groupId>
-            <artifactId>spring-modulith-starter-jpa</artifactId>
         </dependency>
 
         <!-- OpenAPI -->

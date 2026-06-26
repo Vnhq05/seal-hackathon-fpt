@@ -34,6 +34,7 @@ class RankingControllerIntegrationTest extends BaseIntegrationTest {
     @Autowired private PublishedResultRepository publishedResultRepository;
 
     private UUID roundId;
+    private UUID eventId;
 
     @BeforeEach
     void setUp() {
@@ -50,6 +51,7 @@ class RankingControllerIntegrationTest extends BaseIntegrationTest {
                 .endDate(LocalDate.of(2026, 12, 31))
                 .registrationDeadline(LocalDate.of(2026, 6, 1))
                 .status(EventStatus.ACTIVE).build());
+        eventId = event.getId();
 
         Round round = roundRepository.save(Round.builder()
                 .hackathonEvent(event).roundNumber(1).name("Final")
@@ -77,13 +79,14 @@ class RankingControllerIntegrationTest extends BaseIntegrationTest {
                 .andExpect(jsonPath("$.data.length()", is(0)));
     }
 
-    // ── BR-51: Publish requires admin/coordinator ──
+    // ── BR-51: Publish requires admin/coordinator (via LiveScoreController) ──
 
     @Test
     void publish_shouldReturn403_forStudent() throws Exception {
         User student = createStudent();
 
-        mockMvc.perform(post("/api/rounds/" + roundId + "/results/publish")
+        mockMvc.perform(post("/api/events/" + eventId + "/leaderboard/publish")
+                        .param("roundId", roundId.toString())
                         .header("Authorization", "Bearer " + tokenFor(student)))
                 .andExpect(status().isForbidden());
     }
@@ -94,7 +97,8 @@ class RankingControllerIntegrationTest extends BaseIntegrationTest {
     void publish_shouldReturn400_whenNoRankings() throws Exception {
         User admin = createAdmin();
 
-        mockMvc.perform(post("/api/rounds/" + roundId + "/results/publish")
+        mockMvc.perform(post("/api/events/" + eventId + "/leaderboard/publish")
+                        .param("roundId", roundId.toString())
                         .header("Authorization", "Bearer " + tokenFor(admin)))
                 .andExpect(status().isBadRequest());
     }

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
-export default function ParticipantDashboardRedirect() {
+export default function StudentDashboardRedirect() {
   redirect("/student");
 }

@@ -6,10 +6,6 @@ export const metadata: Metadata = {
   description: "Your SEAL Hackathon participant overview.",
 };
 
-export default function ParticipantRoot() {
-  return (
-    <div style={{ padding: 32, maxWidth: 1440 }}>
-      <DashboardPage />
-    </div>
-  );
+export default function StudentHomePage() {
+  return <DashboardPage />;
 }

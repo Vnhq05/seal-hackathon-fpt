@@ -1,8 +1,12 @@
 package com.sealhackathon.submission.service;
 
+import com.sealhackathon.common.enums.UserType;
 import com.sealhackathon.common.exception.BusinessException;
 import com.sealhackathon.common.exception.ResourceNotFoundException;
+import com.sealhackathon.common.storage.FileStorageService;
+import com.sealhackathon.event.dto.snapshot.RoundSnapshot;
 import com.sealhackathon.event.service.EventPublicService;
+import com.sealhackathon.judging.repository.TeamJudgeAssignmentRepository;
 import com.sealhackathon.submission.domain.Submission;
 import com.sealhackathon.submission.domain.SubmissionAttachment;
 import com.sealhackathon.submission.domain.SubmissionVersion;
@@ -29,7 +33,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -44,6 +50,8 @@ public class SubmissionService {
     private final GitHubUrlValidator gitHubUrlValidator;
     private final DemoUrlWhitelistValidator demoUrlValidator;
     private final PdfValidator pdfValidator;
+    private final FileStorageService fileStorageService;
+    private final TeamJudgeAssignmentRepository teamJudgeAssignmentRepository;
     private final ApplicationEventPublisher eventPublisher;
 
     // ── BR-25, BR-31, BR-32: Create or re-submit ──
@@ -56,11 +64,10 @@ public class SubmissionService {
         // BR-28: Demo URL whitelist
         demoUrlValidator.validate(request.getDemoUrl());
 
-        // BR-26, BR-27: PDF validation
-        pdfValidator.validate(pdfFile, request.getPdfPageCount());
+        // BR-26, BR-27: PDF validated after isNew is determined
 
         // Resolve team from current user via round's event
-        var roundSnapshot = eventPublicService.getRound(roundId)
+        RoundSnapshot roundSnapshot = eventPublicService.getRound(roundId)
                 .orElseThrow(() -> new ResourceNotFoundException("Round", "id", roundId));
 
         TeamSnapshot team = teamPublicService.getTeamByParticipantAndEvent(
@@ -75,17 +82,17 @@ public class SubmissionService {
                     HttpStatus.FORBIDDEN) {};
         }
 
-        // BR-32: check submission deadline
-        LocalDateTime deadline = eventPublicService.getSubmissionDeadline(roundId);
-        if (LocalDateTime.now().isAfter(deadline)) {
-            throw new BusinessException("Submission deadline has passed", HttpStatus.BAD_REQUEST) {};
-        }
+        // BR-32: only submit while round is in progress
+        validateRoundInProgress(roundSnapshot);
 
         // Find or create submission
         Submission submission = submissionRepository.findByTeamIdAndRoundId(team.getId(), roundId)
                 .orElse(null);
 
         boolean isNew = (submission == null);
+        boolean hasPdf = pdfFile != null && !pdfFile.isEmpty();
+
+        pdfValidator.validate(pdfFile, request.getPdfPageCount(), isNew);
 
         if (isNew) {
             submission = Submission.builder()
@@ -107,21 +114,32 @@ public class SubmissionService {
                 .demoUrl(request.getDemoUrl().trim())
                 .submittedAt(LocalDateTime.now())
                 .build();
-        version = versionRepository.save(version);
+        final SubmissionVersion savedVersion = versionRepository.save(version);
 
-        // Save PDF attachment
-        String fileUrl = storePdf(pdfFile, submission.getId(), nextVersion);
-        SubmissionAttachment attachment = SubmissionAttachment.builder()
-                .submissionVersion(version)
-                .fileName(pdfFile.getOriginalFilename())
-                .fileUrl(fileUrl)
-                .fileSize(pdfFile.getSize())
-                .pageCount(request.getPdfPageCount())
-                .build();
-        attachmentRepository.save(attachment);
+        if (hasPdf) {
+            String fileUrl = fileStorageService.storeSubmissionPdf(pdfFile, submission.getId(), nextVersion);
+            SubmissionAttachment attachment = SubmissionAttachment.builder()
+                    .submissionVersion(savedVersion)
+                    .fileName(pdfFile.getOriginalFilename())
+                    .fileUrl(fileUrl)
+                    .fileSize(pdfFile.getSize())
+                    .pageCount(request.getPdfPageCount() != null ? request.getPdfPageCount() : 1)
+                    .build();
+            attachmentRepository.save(attachment);
+        } else if (!isNew && submission.getCurrentVersionId() != null) {
+            UUID previousVersionId = submission.getCurrentVersionId();
+            attachmentRepository.findBySubmissionVersionId(previousVersionId).forEach(prev ->
+                    attachmentRepository.save(SubmissionAttachment.builder()
+                            .submissionVersion(savedVersion)
+                            .fileName(prev.getFileName())
+                            .fileUrl(prev.getFileUrl())
+                            .fileSize(prev.getFileSize())
+                            .pageCount(prev.getPageCount())
+                            .build()));
+        }
 
         // Update submission pointer and status
-        submission.setCurrentVersionId(version.getId());
+        submission.setCurrentVersionId(savedVersion.getId());
         submission.setStatus(SubmissionStatus.SUBMITTED);
         submission = submissionRepository.save(submission);
 
@@ -154,10 +172,46 @@ public class SubmissionService {
     }
 
     @Transactional(readOnly = true)
-    public List<SubmissionResponse> getSubmissionsByRound(UUID roundId) {
-        return submissionRepository.findByRoundId(roundId).stream()
-                .map(this::toResponse)
-                .toList();
+    public List<SubmissionResponse> getSubmissionsByRound(UUID roundId, UUID requesterId,
+                                                          UserType requesterRole) {
+        List<Submission> submissions = submissionRepository.findByRoundId(roundId);
+
+        if (requesterRole == UserType.SYSTEM_ADMIN || requesterRole == UserType.EVENT_COORDINATOR) {
+            return submissions.stream().map(this::toResponse).toList();
+        }
+
+        RoundSnapshot round = eventPublicService.getRound(roundId)
+                .orElseThrow(() -> new ResourceNotFoundException("Round", "id", roundId));
+
+        if (requesterRole == UserType.FPT_STUDENT || requesterRole == UserType.EXTERNAL_STUDENT) {
+            TeamSnapshot team = teamPublicService.getTeamByParticipantAndEvent(
+                            requesterId, round.getEventId())
+                    .orElseThrow(() -> new BusinessException(
+                            "You are not a member of any team in this event",
+                            HttpStatus.FORBIDDEN) {});
+            return submissions.stream()
+                    .filter(s -> s.getTeamId().equals(team.getId()))
+                    .map(this::toResponse)
+                    .toList();
+        }
+
+        if (requesterRole == UserType.LECTURER) {
+            Set<UUID> allowedTeamIds = new HashSet<>();
+            teamJudgeAssignmentRepository.findByJudgeUserId(requesterId).stream()
+                    .filter(a -> a.getRoundId().equals(roundId))
+                    .map(a -> a.getTeamId())
+                    .forEach(allowedTeamIds::add);
+            teamPublicService.getTeamsByMentor(requesterId, round.getEventId()).stream()
+                    .map(TeamSnapshot::getId)
+                    .forEach(allowedTeamIds::add);
+
+            return submissions.stream()
+                    .filter(s -> allowedTeamIds.contains(s.getTeamId()))
+                    .map(this::toResponse)
+                    .toList();
+        }
+
+        throw new BusinessException("Access denied", HttpStatus.FORBIDDEN) {};
     }
 
     // ── BR-33: Mentor can view team submissions ──
@@ -189,8 +243,17 @@ public class SubmissionService {
                 .orElseThrow(() -> new ResourceNotFoundException("Submission", "id", submissionId));
     }
 
-    private String storePdf(MultipartFile file, UUID submissionId, int version) {
-        return String.format("submissions/%s/v%d/%s", submissionId, version, file.getOriginalFilename());
+    private void validateRoundInProgress(RoundSnapshot round) {
+        LocalDateTime now = LocalDateTime.now();
+        if (round.getStartDate() == null || round.getEndDate() == null) {
+            throw new BusinessException("Round schedule is not configured", HttpStatus.BAD_REQUEST) {};
+        }
+        if (now.isBefore(round.getStartDate())) {
+            throw new BusinessException("Round has not started yet", HttpStatus.BAD_REQUEST) {};
+        }
+        if (now.isAfter(round.getEndDate())) {
+            throw new BusinessException("Round has ended", HttpStatus.BAD_REQUEST) {};
+        }
     }
 
     SubmissionResponse toResponse(Submission submission) {

@@ -1,5 +1,10 @@
 import { api } from "./api-client";
 
+export interface TrackInfo {
+  id: string;
+  name: string;
+}
+
 export interface LiveScoreEntry {
   teamId: string;
   teamName: string;
@@ -21,10 +26,12 @@ export interface LiveScoreBoard {
   year: number;
   roundId: string;
   roundName: string;
-  tracks: string[];
+  tracks: TrackInfo[];
   rankings: LiveScoreEntry[];
   scoresLocked: boolean;
   resultsPublished: boolean;
+  leaderboardPublic: boolean;
+  canManageLeaderboard: boolean;
 }
 
 export interface RankingEvent {
@@ -49,5 +56,9 @@ export const livescoreApi = {
 
   publishResults(eventId: string, roundId: string): Promise<LiveScoreBoard> {
     return api.post<LiveScoreBoard>(`/events/${eventId}/leaderboard/publish`, null, { params: { roundId } });
+  },
+
+  setLeaderboardPublic(eventId: string, enabled: boolean): Promise<LiveScoreBoard> {
+    return api.post<LiveScoreBoard>(`/events/${eventId}/leaderboard/public`, null, { params: { enabled } });
   },
 };

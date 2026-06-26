@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { MentorFeedbackForm } from "@/features/mentor/components/mentor-feedback-form";
+import { MentorFeedbackForm } from "@/features/lecturer-mentor/components/mentor-feedback-form";
 
 export const metadata: Metadata = {
   title: "New Feedback — SEAL Hackathon Lecturer",

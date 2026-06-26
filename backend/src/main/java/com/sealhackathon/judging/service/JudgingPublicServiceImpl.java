@@ -11,7 +11,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -73,6 +75,32 @@ public class JudgingPublicServiceImpl implements JudgingPublicService {
     @Transactional(readOnly = true)
     public long countAssignedJudges(UUID teamId, UUID roundId) {
         return teamJudgeAssignmentRepository.countByTeamIdAndRoundId(teamId, roundId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean existsLockedScoreByRound(UUID roundId) {
+        return judgeScoreRepository.existsByRoundIdAndStatus(roundId, ScoreStatus.LOCKED);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<UUID, Integer> countCompletedScoresByRound(UUID roundId) {
+        return judgeScoreRepository.countByRoundIdGroupBySubmission(
+                        roundId, List.of(ScoreStatus.COMPLETED, ScoreStatus.LOCKED))
+                .stream()
+                .collect(Collectors.toMap(
+                        row -> (UUID) row[0],
+                        row -> ((Number) row[1]).intValue()));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<UUID, Long> countAssignedJudgesByRound(UUID roundId) {
+        return teamJudgeAssignmentRepository.countByRoundIdGroupByTeam(roundId).stream()
+                .collect(Collectors.toMap(
+                        row -> (UUID) row[0],
+                        row -> ((Number) row[1]).longValue()));
     }
 
     private JudgeScoreSnapshot toSnapshot(JudgeScore score) {

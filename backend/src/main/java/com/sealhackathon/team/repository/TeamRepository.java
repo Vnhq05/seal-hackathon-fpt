@@ -2,9 +2,13 @@ package com.sealhackathon.team.repository;
 
 import com.sealhackathon.team.domain.Team;
 import com.sealhackathon.team.domain.enums.TeamStatus;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -22,5 +26,11 @@ public interface TeamRepository extends JpaRepository<Team, UUID> {
 
     List<Team> findByEventIdAndStatus(UUID eventId, TeamStatus status);
 
+    long countByEventId(UUID eventId);
+
     Optional<Team> findByEventIdAndLeaderId(UUID eventId, UUID leaderId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT t FROM Team t WHERE t.id = :id")
+    Optional<Team> findByIdForUpdate(@Param("id") UUID id);
 }

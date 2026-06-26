@@ -57,4 +57,15 @@ public class LiveScoreController {
         LiveScoreBoard board = liveScoreService.getLeaderboard(eventId, null, roundId);
         return ResponseEntity.ok(ApiResponse.success("Results published", board));
     }
+
+    @PostMapping("/public")
+    @PreAuthorize("hasAnyRole('SYSTEM_ADMIN', 'EVENT_COORDINATOR')")
+    public ResponseEntity<ApiResponse<LiveScoreBoard>> setLeaderboardPublic(
+            @PathVariable UUID eventId,
+            @RequestParam boolean enabled) {
+        liveScoreService.setLeaderboardPublic(eventId, enabled);
+        LiveScoreBoard board = liveScoreService.getLeaderboard(eventId, null, null);
+        return ResponseEntity.ok(ApiResponse.success(
+                enabled ? "Public leaderboard enabled" : "Public leaderboard disabled", board));
+    }
 }

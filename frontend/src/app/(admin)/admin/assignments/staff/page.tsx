@@ -1,5 +1,5 @@
-import { StaffAssignmentPage } from "@/features/admin/components/staff-assignment-page";
+import { redirect } from "next/navigation";
 
-export default function StaffAssignmentRoutePage() {
-  return <StaffAssignmentPage />;
+export default function AdminStaffAssignmentsPage() {
+  redirect("/admin/assignments");
 }

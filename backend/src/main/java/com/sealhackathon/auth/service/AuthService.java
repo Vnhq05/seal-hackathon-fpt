@@ -23,7 +23,9 @@ import com.sealhackathon.user.dto.snapshot.LockState;
 import com.sealhackathon.user.dto.snapshot.UserSnapshot;
 import com.sealhackathon.user.service.UserPublicService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -36,6 +38,7 @@ import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AuthService {
 
     private final UserPublicService userPublicService;
@@ -43,6 +46,7 @@ public class AuthService {
     private final JwtProvider jwtProvider;
     private final PasswordEncoder passwordEncoder;
     private final ApplicationEventPublisher eventPublisher;
+    private final AuthEmailService authEmailService;
 
     private static final int MAX_FAILED_ATTEMPTS = 5;
     private static final int LOCK_DURATION_MINUTES = 15;
@@ -60,19 +64,19 @@ public class AuthService {
             throw new BusinessException("Only FPT_STUDENT and EXTERNAL_STUDENT can self-register", HttpStatus.BAD_REQUEST) {};
         }
 
-        // BR-03: validate FPT student ID
+        // BR-03: validate FPT student ID and email
         if (request.getUserType() == UserType.FPT_STUDENT) {
             if (request.getStudentId() == null || request.getStudentId().isBlank()) {
                 throw new BusinessException("Student ID is required for FPT students", HttpStatus.BAD_REQUEST) {};
             }
-            if (!FPT_STUDENT_ID_PATTERN.matcher(request.getStudentId()).matches()) {
+            if (!FPT_STUDENT_ID_PATTERN.matcher(request.getStudentId().trim().toUpperCase()).matches()) {
                 throw new BusinessException("Student ID must match format SE followed by 6 digits", HttpStatus.BAD_REQUEST) {};
             }
         }
 
         // BR-03: validate external student fields
         if (request.getUserType() == UserType.EXTERNAL_STUDENT) {
-            if (request.getStudentId() == null) {
+            if (request.getStudentId() == null || request.getStudentId().isBlank()) {
                 throw new BusinessException("Student ID is required for external students", HttpStatus.BAD_REQUEST) {};
             }
             if (request.getUniversityName() == null || request.getUniversityName().isBlank()) {
@@ -87,16 +91,23 @@ public class AuthService {
 
         String passwordHash = passwordEncoder.encode(request.getPassword());
 
-        return userPublicService.createParticipant(
-                request.getEmail(),
-                passwordHash,
-                request.getFullName(),
-                request.getPhone(),
-                request.getStudentId(),
-                request.getUniversityName(),
-                request.getUserType(),
-                request.getSemester()
-        );
+        try {
+            return userPublicService.createParticipant(
+                    request.getEmail().trim(),
+                    passwordHash,
+                    request.getFullName(),
+                    request.getPhone(),
+                    request.getUserType() == UserType.FPT_STUDENT
+                            ? request.getStudentId().trim().toUpperCase()
+                            : request.getStudentId().trim(),
+                    request.getUniversityName(),
+                    request.getUserType(),
+                    request.getSemester(),
+                    false
+            );
+        } catch (DataIntegrityViolationException e) {
+            throw new DuplicateResourceException("Account", "email", request.getEmail());
+        }
     }
 
     // ── BR-05: Login ──
@@ -159,22 +170,21 @@ public class AuthService {
 
     // ── BR-07: Forgot password ──
     @Transactional
-    public String forgotPassword(ForgotPasswordRequest request) {
+    public void forgotPassword(ForgotPasswordRequest request) {
         UserSnapshot user = userPublicService.findByEmail(request.getEmail())
                 .orElse(null);
 
-        // Always return success to prevent email enumeration
-        if (user == null || user.getStatus() != AccountStatus.ACTIVE) {
-            return null;
+        if (user != null && user.getStatus() == AccountStatus.ACTIVE) {
+            String token = tokenService.createPasswordResetToken(user.getId());
+            authEmailService.sendPasswordResetEmail(user.getEmail(), token);
         }
-
-        return tokenService.createPasswordResetToken(user.getId());
     }
 
     // ── BR-07: Reset password ──
     @Transactional
     public void resetPassword(ResetPasswordRequest request) {
         PasswordResetToken resetToken = tokenService.validatePasswordResetToken(request.getToken());
+        tokenService.markPasswordResetTokenUsed(resetToken);
 
         String newPasswordHash = passwordEncoder.encode(request.getNewPassword());
 
@@ -185,9 +195,6 @@ public class AuthService {
 
         UserSnapshot user = userPublicService.findById(userId)
                 .orElseThrow(InvalidCredentialsException::new);
-
-        // Mark token as used
-        tokenService.markPasswordResetTokenUsed(resetToken);
 
         // BR-07: invalidate all sessions
         tokenService.revokeAllUserTokens(user.getId());

@@ -10,11 +10,18 @@ export type {
   SubmissionStatus,
 } from "./types";
 
+export { coordinatorUserApi } from "./coordinator-user.api";
+export type {
+  CoordinatorUserListItem,
+  CoordinatorUserListParams,
+  RejectAccountRequest,
+} from "./coordinator-user.api";
+
 export { authApi } from "./auth.api";
 export type { RegisterRequest, LoginRequest, RefreshTokenRequest, ForgotPasswordRequest, ResetPasswordRequest, AuthResponse, UserInfo } from "./auth.api";
 
 export { userApi } from "./user.api";
-export type { UserProfile, UpdateProfileRequest, ChangePasswordRequest } from "./user.api";
+export type { UserProfile, UpdateProfileRequest, ChangePasswordRequest, UserSearchResult } from "./user.api";
 
 export { adminUserApi } from "./admin-user.api";
 export type { UserListItem, UserListParams, ApprovalRequest, CreateInternalAccountRequest } from "./admin-user.api";
@@ -29,7 +36,16 @@ export { criteriaApi } from "./criteria.api";
 export type { CriteriaResponse, CriteriaRequest } from "./criteria.api";
 
 export { assignmentApi } from "./assignment.api";
-export type { JudgeAssignmentResponse, MentorAssignmentResponse, AssignJudgeRequest, AssignMentorRequest } from "./assignment.api";
+export type {
+  JudgeAssignmentResponse,
+  MentorAssignmentResponse,
+  AssignJudgeRequest,
+  AssignMentorRequest,
+  EventAssignmentsOverviewResponse,
+  TeamAssignmentOverview,
+  EventJudgeOption,
+  CreateTeamAssignmentsRequest,
+} from "./assignment.api";
 
 export { teamApi } from "./team.api";
 export type { TeamResponse, TeamMemberResponse, CreateTeamRequest, JoinTeamRequest, AssignMentorTeamRequest } from "./team.api";
@@ -41,10 +57,10 @@ export { submissionApi } from "./submission.api";
 export type { SubmissionResponse, SubmissionVersionResponse, AttachmentResponse, CreateSubmissionRequest } from "./submission.api";
 
 export { judgingApi } from "./judging.api";
-export type { JudgeScoreResponse, ScoreDetailResponse, CommentResponse, ScoreSubmissionRequest, ScoreDetailDto, ScoreStatus } from "./judging.api";
+export type { JudgeScoreResponse, ScoreDetailResponse, CommentResponse, ScoreSubmissionRequest, ScoreDetailDto, ScoreStatus, JudgeScoringAssignment } from "./judging.api";
 
 export { rankingApi } from "./ranking.api";
-export type { RankingResponse, AdvancementResponse, PublishedResultResponse, DisputeRequest, ResolveDisputeRequest, DisputeResponse } from "./ranking.api";
+export type { RankingResponse, EventRankingBoard, AdvancementResponse, PublishedResultResponse, DisputeRequest, ResolveDisputeRequest, DisputeResponse } from "./ranking.api";
 
 export { notificationApi } from "./notification.api";
 export type { NotificationResponse, NotificationType } from "./notification.api";
@@ -72,6 +88,12 @@ export type { MentorInvitationResponse, MentorInvitationStatus, SendMentorInvita
 
 export { teamJudgeAssignmentApi } from "./team-judge-assignment.api";
 export type { TeamJudgeAssignmentResponse, AssignJudgeToTeamRequest } from "./team-judge-assignment.api";
+
+export { joinRequestApi } from "./join-request.api";
+export type { JoinableTeamResponse, TeamJoinRequestResponse, JoinRequestStatus, CreateJoinRequestRequest } from "./join-request.api";
+
+export { leaveRequestApi } from "./leave-request.api";
+export type { TeamLeaveRequestResponse, LeaveRequestStatus, CreateLeaveRequestRequest } from "./leave-request.api";
 
 export { trackApi } from "./track.api";
 export type { TrackResponse, CreateTrackRequest } from "./track.api";

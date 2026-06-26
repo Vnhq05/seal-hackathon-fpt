@@ -1,135 +1,94 @@
 "use client";
 
-import { useJudgeDashboard } from "@/features/judging/hooks/use-judge-dashboard";
-import { useMentorSummary } from "@/features/mentor/hooks/use-mentor-summary";
-import { JudgeUrgencyBanner } from "@/features/judging/components/judge-urgency-banner";
-import { JudgeStatsRow } from "@/features/judging/components/judge-stats-row";
-import { JudgeAssignedRoundsSection } from "@/features/judging/components/judge-assigned-rounds-section";
-import { JudgeQuickStart } from "@/features/judging/components/judge-quick-start";
-import { JudgeRecentActivity } from "@/features/judging/components/judge-recent-activity";
-import { MentorDashboardStats } from "@/features/mentor/components/mentor-dashboard-stats";
-import { MentorDashboardTrackCard } from "@/features/mentor/components/mentor-dashboard-track-card";
-import { MentorDashboardActivity } from "@/features/mentor/components/mentor-dashboard-activity";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
+import { mentorInvitationApi } from "@/lib/api/mentor-invitation.api";
+import { useJudgeScoringAssignments } from "@/features/judging/hooks/use-judge-scoring-assignments";
 
-function SectionHeading({ children }: { children: React.ReactNode }) {
+function StatCard({ label, value, href }: { label: string; value: number; href: string }) {
   return (
-    <h2 className="text-lg font-bold text-seal-text tracking-tight">{children}</h2>
-  );
-}
-
-function SectionDivider() {
-  return <div className="h-px bg-gradient-to-r from-transparent via-seal-border to-transparent" />;
-}
-
-function PageSkeleton() {
-  return (
-    <div className="flex flex-col gap-6">
-      {Array.from({ length: 4 }).map((_, i) => (
-        <div key={i} className="animate-pulse rounded-lg bg-seal-surface-elevated" style={{ height: 120 }} />
-      ))}
-    </div>
-  );
-}
-
-function JudgingIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-      <rect x="2" y="1" width="14" height="16" rx="2" stroke="currentColor" strokeWidth="1.3" />
-      <path d="M5 5h8M5 8.5h8M5 12h5" stroke="currentColor" strokeWidth="1" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function MentoringIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-      <circle cx="10" cy="7" r="3.5" stroke="currentColor" strokeWidth="1.3" />
-      <path d="M3 18c0-3.866 3.134-7 7-7s7 3.134 7 7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-    </svg>
+    <Link
+      href={href}
+      className="rounded-xl border border-seal-border/50 bg-white p-5 shadow-sm transition-colors hover:border-seal-purple/40"
+    >
+      <p className="text-sm text-seal-text-muted">{label}</p>
+      <p className="mt-2 text-3xl font-bold text-seal-text">{value}</p>
+    </Link>
   );
 }
 
 export function LecturerDashboardPage() {
-  const { data: judgeDashboard, isLoading: judgeLoading } = useJudgeDashboard();
-  const { data: mentorSummary, isLoading: mentorLoading } = useMentorSummary();
-  if (judgeLoading && mentorLoading) return <PageSkeleton />;
+  const { data: assignments = [], isLoading: judgingLoading } = useJudgeScoringAssignments();
+  const { data: mentorRooms = [], isLoading: mentorLoading } = useQuery({
+    queryKey: ["lecturer-mentor-rooms"],
+    queryFn: () => mentorInvitationApi.getAllMentorActiveRooms(),
+  });
+
+  const pendingScoring = assignments.filter(
+    (a) => a.scoringStatus === "NOT_STARTED" || a.scoringStatus === "IN_PROGRESS",
+  ).length;
+  const completedScoring = assignments.filter((a) => a.scoringStatus === "COMPLETED").length;
+
+  if (judgingLoading && mentorLoading) {
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-seal-purple border-t-transparent" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-8">
-      {/* ── Judging Section ── */}
-      <div className="flex flex-col gap-5">
-        <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-seal-amber/10 text-seal-amber">
-            <JudgingIcon />
-          </div>
-          <SectionHeading>Judging</SectionHeading>
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-seal-text">Lecturer Dashboard</h1>
+        <p className="mt-1 text-sm text-seal-text-muted">
+          Overview of your judging assignments and mentoring teams.
+        </p>
+      </div>
+
+      <section className="flex flex-col gap-4">
+        <h2 className="text-lg font-bold text-seal-text">Judging</h2>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <StatCard label="Teams assigned" value={assignments.length} href="/lecturer/scoring" />
+          <StatCard label="Pending scoring" value={pendingScoring} href="/lecturer/scoring" />
+          <StatCard label="Completed" value={completedScoring} href="/lecturer/history" />
+        </div>
+        <div className="flex flex-wrap gap-3">
+          <Link
+            href="/lecturer/scoring"
+            className="rounded-lg bg-seal-purple px-4 py-2 text-sm font-semibold text-white hover:bg-seal-purple-dark"
+          >
+            Go to Scoring
+          </Link>
           <Link
             href="/lecturer/rounds"
-            className="ml-auto text-xs font-semibold text-violet-500 transition-colors hover:text-violet-600"
+            className="rounded-lg border border-seal-border px-4 py-2 text-sm font-semibold text-seal-text hover:bg-seal-bg"
           >
-            View all rounds
+            Assigned Rounds
           </Link>
         </div>
+      </section>
 
-        {judgeDashboard ? (
-          <>
-            {judgeDashboard.urgency && (
-              <JudgeUrgencyBanner urgency={judgeDashboard.urgency} portalBase="/lecturer" />
-            )}
-            <JudgeStatsRow stats={judgeDashboard.stats} />
-            <div className="grid grid-cols-3 gap-6">
-              <div className="col-span-2">
-                <JudgeAssignedRoundsSection rounds={judgeDashboard.assignedRounds} portalBase="/lecturer" />
-              </div>
-              <div className="flex flex-col gap-6">
-                <JudgeQuickStart dashboard={judgeDashboard} portalBase="/lecturer" />
-                <JudgeRecentActivity activities={judgeDashboard.recentActivity} />
-              </div>
-            </div>
-          </>
-        ) : (
-          <div className="rounded-lg border border-seal-border bg-seal-surface p-6 text-sm text-seal-text-muted">
-            No judging assignments yet.
-          </div>
-        )}
-      </div>
-
-      <SectionDivider />
-
-      {/* ── Mentoring Section ── */}
-      <div className="flex flex-col gap-5">
-        <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-seal-mint/10 text-seal-mint">
-            <MentoringIcon />
-          </div>
-          <SectionHeading>Mentoring</SectionHeading>
+      <section className="flex flex-col gap-4">
+        <h2 className="text-lg font-bold text-seal-text">Mentoring</h2>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <StatCard label="Active mentor teams" value={mentorRooms.length} href="/lecturer/teams" />
+        </div>
+        <div className="flex flex-wrap gap-3">
           <Link
             href="/lecturer/teams"
-            className="ml-auto text-xs font-semibold text-violet-500 transition-colors hover:text-violet-600"
+            className="rounded-lg bg-seal-purple px-4 py-2 text-sm font-semibold text-white hover:bg-seal-purple-dark"
           >
-            View all teams
+            My Teams
+          </Link>
+          <Link
+            href="/lecturer/mentor-hub"
+            className="rounded-lg border border-seal-border px-4 py-2 text-sm font-semibold text-seal-text hover:bg-seal-bg"
+          >
+            Mentor Hub
           </Link>
         </div>
-
-        {mentorSummary ? (
-          <>
-            <MentorDashboardStats summary={mentorSummary} />
-            <div className="grid grid-cols-3 gap-6">
-              <div className="col-span-2">
-                <MentorDashboardTrackCard summary={mentorSummary} portalBase="/lecturer" />
-              </div>
-              <div>
-                <MentorDashboardActivity />
-              </div>
-            </div>
-          </>
-        ) : (
-          <div className="rounded-lg border border-seal-border bg-seal-surface p-6 text-sm text-seal-text-muted">
-            No mentoring assignments yet.
-          </div>
-        )}
-      </div>
+      </section>
     </div>
   );
 }

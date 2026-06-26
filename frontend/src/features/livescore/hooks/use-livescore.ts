@@ -19,7 +19,7 @@ export function useLiveScoreWebSocket(eventId: string | undefined) {
   const queryClient = useQueryClient();
   const { connected, subscribe } = useStompWebSocket(eventId);
   const [rankingEvents, setRankingEvents] = useState<RankingEvent[]>([]);
-  const [finalResults, setFinalResults] = useState<boolean>(false);
+  const [finalResults, setFinalResults] = useState(false);
 
   const clearEvents = useCallback(() => setRankingEvents([]), []);
 
@@ -32,22 +32,22 @@ export function useLiveScoreWebSocket(eventId: string | undefined) {
 
     const unsub2 = subscribe(`/topic/events/${eventId}/ranking-events`, (data) => {
       const event = data as RankingEvent;
-      setRankingEvents((prev) => [event, ...prev].slice(0, 20));
-    });
-
-    const unsub3 = subscribe(`/topic/events/${eventId}/final-results`, () => {
-      setFinalResults(true);
+      if (event.type === "FINAL_RESULTS_PUBLISHED") {
+        setFinalResults(true);
+      }
+      if (event.type !== "LEADERBOARD_UPDATED") {
+        setRankingEvents((prev) => [event, ...prev].slice(0, 20));
+      }
       queryClient.invalidateQueries({ queryKey: ["livescore", eventId] });
     });
 
     return () => {
       unsub1();
       unsub2();
-      unsub3();
     };
   }, [eventId, connected, subscribe, queryClient]);
 
-  return { connected, rankingEvents, finalResults, clearEvents };
+  return { connected, rankingEvents, finalResults, clearEvents, setFinalResults };
 }
 
 export function useLockScores(eventId: string) {
@@ -64,6 +64,16 @@ export function usePublishResults(eventId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (roundId: string) => livescoreApi.publishResults(eventId, roundId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["livescore", eventId] });
+    },
+  });
+}
+
+export function useToggleLeaderboardPublic(eventId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (enabled: boolean) => livescoreApi.setLeaderboardPublic(eventId, enabled),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["livescore", eventId] });
     },

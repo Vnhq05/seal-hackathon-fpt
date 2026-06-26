@@ -23,8 +23,8 @@ import java.util.UUID;
  * Child entity of JudgeScore aggregate.
  * One row per (judge-score, criteria) — the actual numeric score.
  *
- * BR-35  Score range 0–100 per criteria.
- * BR-36  Comment required when score < 50 or > 90 (enforced at service
+ * BR-35  Score range 0–10 per criteria.
+ * BR-36  Comment required when score < 3 or > 8 (enforced at service
  *        layer by checking corresponding JudgeComment).
  *
  * References Criteria by ID — cross-module (criteria owned by event module).
@@ -50,10 +50,10 @@ public class JudgeScoreDetail extends BaseEntity {
     @Column(name = "criteria_id", nullable = false)
     private UUID criteriaId;
 
-    // ── BR-35: integer score [0, 100] ──
+    // ── BR-35: integer score [0, 10] ──
     @NotNull
     @Min(0)
-    @Max(100)
+    @Max(10)
     @Column(name = "score", nullable = false)
     private Integer score;
 }

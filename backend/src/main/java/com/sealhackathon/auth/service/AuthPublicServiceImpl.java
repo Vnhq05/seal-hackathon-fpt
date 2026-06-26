@@ -1,8 +1,7 @@
 package com.sealhackathon.auth.service;
 
+import com.sealhackathon.auth.security.UserPrincipal;
 import com.sealhackathon.common.enums.UserType;
-import com.sealhackathon.user.dto.snapshot.UserSnapshot;
-import com.sealhackathon.user.service.UserPublicService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -16,16 +15,16 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class AuthPublicServiceImpl implements AuthPublicService {
 
-    private final UserPublicService userPublicService;
     private final TokenService tokenService;
 
     @Override
     public UUID getCurrentUserId() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String email = auth.getName();
-        return userPublicService.findByEmail(email)
-                .map(UserSnapshot::getId)
-                .orElseThrow(() -> new IllegalStateException("Authenticated user not found"));
+        return requirePrincipal().userId();
+    }
+
+    @Override
+    public String getCurrentUserEmail() {
+        return requirePrincipal().email();
     }
 
     @Override
@@ -44,5 +43,13 @@ public class AuthPublicServiceImpl implements AuthPublicService {
     @Transactional
     public void invalidateAllSessions(UUID userId) {
         tokenService.revokeAllUserTokens(userId);
+    }
+
+    private UserPrincipal requirePrincipal() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !(auth.getPrincipal() instanceof UserPrincipal principal)) {
+            throw new IllegalStateException("Authenticated user not found");
+        }
+        return principal;
     }
 }

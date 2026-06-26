@@ -18,8 +18,7 @@ function ResultSkeleton() {
 }
 
 export function InviteSearchResults({ teamId, search }: InviteSearchResultsProps) {
-  const { data, isLoading } = useInviteSearch(teamId, search);
-  const candidates = data?.content ?? [];
+  const { data: candidates = [], isLoading } = useInviteSearch(teamId, search);
 
   if (search.length < 2) return null;
 

@@ -6,7 +6,7 @@ import { eventApi } from "@/lib/api/event.api";
 import type { EventResponse } from "@/lib/api/event.api";
 import type { Page } from "@/lib/api/types";
 
-export function LiveScoreListPage() {
+export function LiveScoreListPage({ portalBase = "/admin" }: { portalBase?: string }) {
   const { data, isLoading } = useQuery<Page<EventResponse>>({
     queryKey: ["admin-events-livescore"],
     queryFn: () => eventApi.list({ status: "ACTIVE" }),
@@ -44,7 +44,7 @@ export function LiveScoreListPage() {
           {events.map((event) => (
             <Link
               key={event.id}
-              href={`/admin/livescore/${event.id}`}
+              href={`${portalBase}/livescore/${event.id}`}
               className="flex items-center justify-between rounded-lg transition-colors hover:bg-slate-50"
               style={{
                 padding: "16px 20px",

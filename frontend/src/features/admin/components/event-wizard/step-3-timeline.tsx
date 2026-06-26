@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useEventWizardStore, type WizardRound } from "@/features/admin/store/event-wizard.store";
+import { getEventEndDate, getRoundWeightTotal, parsePositiveInt } from "@/features/admin/utils/event-wizard.utils";
 
 const inputStyle: React.CSSProperties = {
   border: "1px solid rgba(223,226,236,0.8)", borderRadius: 8, padding: "11px 16px", fontSize: 14, width: "100%", outline: "none",
@@ -13,20 +14,10 @@ const warnBoxStyle: React.CSSProperties = {
   padding: "6px 10px", fontSize: 12, color: "#991b1b", marginTop: 4,
 };
 
-function addDays(dateStr: string, days: number): string {
-  const d = new Date(dateStr + "T00:00:00");
-  d.setDate(d.getDate() + days);
-  return d.toISOString().split("T")[0];
-}
-
 function formatDateTime(dt: string) {
   if (!dt) return "—";
   const d = new Date(dt);
   return d.toLocaleString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
-}
-
-function getEventEndDate(startDate: string, duration: number): string {
-  return addDays(startDate, duration - 1);
 }
 
 function getRoundWarnings(
@@ -50,8 +41,8 @@ function getRoundWarnings(
   if (round.startDate && round.endDate && round.startDate >= round.endDate) {
     warnings.push("Round end must be after round start");
   }
-  if (prevRound && prevRound.endDate && round.startDate && round.startDate < prevRound.endDate) {
-    warnings.push(`Overlaps with previous round "${prevRound.name}"`);
+  if (prevRound && prevRound.endDate && round.startDate && round.startDate <= prevRound.endDate) {
+    warnings.push(`Must start after previous round "${prevRound.name}" ends`);
   }
 
   return warnings;
@@ -64,9 +55,12 @@ export function Step3Timeline({ onNext, onBack }: { onNext: () => void; onBack: 
   const [roundStart, setRoundStart] = useState("");
   const [roundEnd, setRoundEnd] = useState("");
   const [roundCutoff, setRoundCutoff] = useState(5);
+  const [roundWeight, setRoundWeight] = useState<number | "">(data.rounds.length === 0 ? 100 : "");
   const [addRoundErrors, setAddRoundErrors] = useState<string[]>([]);
 
   const eventEnd = data.startDate ? getEventEndDate(data.startDate, data.duration) : "";
+  const totalRoundWeight = getRoundWeightTotal(data.rounds);
+  const isRoundWeightValid = data.rounds.length <= 1 || totalRoundWeight === 100;
 
   const roundMinDt = data.startDate ? data.startDate + "T00:00" : undefined;
   const roundMaxDt = eventEnd ? eventEnd + "T23:59" : undefined;
@@ -85,8 +79,13 @@ export function Step3Timeline({ onNext, onBack }: { onNext: () => void; onBack: 
       if (roundEnd > eventEndDt) errs.push("Round end is after the event end date");
     }
     const prevRound = data.rounds.length > 0 ? data.rounds[data.rounds.length - 1] : null;
-    if (prevRound && prevRound.endDate && roundStart < prevRound.endDate) {
-      errs.push(`Overlaps with previous round "${prevRound.name}"`);
+    if (prevRound && prevRound.endDate && roundStart <= prevRound.endDate) {
+      errs.push(`Must start after previous round "${prevRound.name}" ends`);
+    }
+
+    const weight = roundWeight === "" ? (data.rounds.length === 0 ? 100 : 0) : roundWeight;
+    if (data.rounds.length > 0 && (!weight || weight <= 0)) {
+      errs.push("Round weight is required for multiple rounds");
     }
 
     if (errs.length > 0) {
@@ -100,12 +99,14 @@ export function Step3Timeline({ onNext, onBack }: { onNext: () => void; onBack: 
       endDate: roundEnd,
       judgeUserIds: [],
       advancementCutoff: roundCutoff,
+      roundWeight: weight,
     };
     updateData({ rounds: [...data.rounds, newRound] });
     setRoundName("");
     setRoundStart("");
     setRoundEnd("");
     setRoundCutoff(5);
+    setRoundWeight("");
     setAddRoundErrors([]);
   };
 
@@ -125,6 +126,9 @@ export function Step3Timeline({ onNext, onBack }: { onNext: () => void; onBack: 
       errs.registrationDeadline = "Registration must close before event start date";
     }
     if (data.rounds.length < 1) errs.rounds = "At least 1 round is required";
+    if (data.rounds.length > 1 && totalRoundWeight !== 100) {
+      errs.roundWeight = `Total round weight must equal 100%. Currently: ${totalRoundWeight}%`;
+    }
     if (data.duration < 1 || data.duration > 3) errs.duration = "Duration must be 1-3 days";
 
     if (data.startDate && data.rounds.length > 0) {
@@ -143,8 +147,8 @@ export function Step3Timeline({ onNext, onBack }: { onNext: () => void; onBack: 
         }
         if (i > 0) {
           const prev = data.rounds[i - 1];
-          if (r.startDate < prev.endDate) {
-            errs.rounds = "Rounds must not overlap with each other";
+          if (r.startDate <= prev.endDate) {
+            errs.rounds = "Each round must start after the previous round ends";
             break;
           }
         }
@@ -166,8 +170,24 @@ export function Step3Timeline({ onNext, onBack }: { onNext: () => void; onBack: 
           {errors.startDate && <p style={errorStyle}>{errors.startDate}</p>}
         </div>
         <div>
-          <label style={labelStyle}>Duration (days)</label>
-          <input type="number" value={data.duration} onChange={(e) => updateData({ duration: parseInt(e.target.value) || 1 })} style={{ ...inputStyle, borderColor: errors.duration ? "#ef4444" : undefined }} min={1} max={3} />
+          <label style={labelStyle}>Duration</label>
+          <div className="flex gap-3" style={{ marginTop: 6 }}>
+            {[1, 2, 3].map((d) => (
+              <button
+                key={d}
+                type="button"
+                onClick={() => updateData({ duration: d })}
+                style={{
+                  flex: 1, padding: "10px 0", borderRadius: 8, cursor: "pointer", fontSize: 14, fontWeight: 600,
+                  border: data.duration === d ? "2px solid #38bdf8" : "1px solid rgba(223,226,236,0.8)",
+                  backgroundColor: data.duration === d ? "#f0f9ff" : "#ffffff",
+                  color: "#0e1528",
+                }}
+              >
+                {d} day{d > 1 ? "s" : ""}
+              </button>
+            ))}
+          </div>
           {errors.duration && <p style={errorStyle}>{errors.duration}</p>}
         </div>
       </div>
@@ -196,12 +216,25 @@ export function Step3Timeline({ onNext, onBack }: { onNext: () => void; onBack: 
       </div>
 
       <div>
-        <label style={labelStyle}>Rounds</label>
+        <div className="flex items-center justify-between" style={{ marginBottom: 8 }}>
+          <label style={labelStyle}>Rounds</label>
+          <p style={{ fontSize: 13, fontWeight: 700, color: isRoundWeightValid ? "#10b981" : "#ef4444" }}>
+            Total round weight: {totalRoundWeight}/100%
+          </p>
+        </div>
         {errors.rounds && <p style={{ ...errorStyle, marginBottom: 8 }}>{errors.rounds}</p>}
+        {errors.roundWeight && (
+          <div style={warnBoxStyle}>{errors.roundWeight}</div>
+        )}
+        {!isRoundWeightValid && data.rounds.length > 1 && (
+          <div style={{ ...warnBoxStyle, marginBottom: 8 }}>
+            Total round weight must equal exactly 100%. Currently: {totalRoundWeight}%
+          </div>
+        )}
 
         <div className="flex flex-col gap-2" style={{ padding: 16, backgroundColor: "#f8f9fc", borderRadius: 8, marginBottom: 8 }}>
-          <div className="grid grid-cols-4 gap-2">
-            <input value={roundName} onChange={(e) => setRoundName(e.target.value)} style={inputStyle} placeholder="Round name" />
+          <div className="grid grid-cols-6 gap-2">
+            <input value={roundName} onChange={(e) => setRoundName(e.target.value)} style={inputStyle} placeholder="Round name" className="col-span-2" />
             <input
               type="datetime-local"
               value={roundStart}
@@ -220,9 +253,21 @@ export function Step3Timeline({ onNext, onBack }: { onNext: () => void; onBack: 
               max={roundMaxDt}
               title="Round end (must be within event period)"
             />
-            <div className="flex gap-2">
-              <input type="number" value={roundCutoff} onChange={(e) => setRoundCutoff(parseInt(e.target.value) || 1)} style={{ ...inputStyle, width: 80 }} min={1} placeholder="Top N" title="Teams advancing" />
-              <button onClick={addRound} style={{ backgroundColor: "#38bdf8", color: "#fff", padding: "10px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600, whiteSpace: "nowrap" }}>
+            <div className="flex gap-2 col-span-2">
+              <input type="number" value={roundCutoff} onChange={(e) => setRoundCutoff(parseInt(e.target.value) || 1)} style={{ ...inputStyle, width: 70 }} min={1} placeholder="Top N" title="Teams advancing" />
+              <input
+                type="text"
+                inputMode="numeric"
+                value={roundWeight}
+                onChange={(e) => {
+                  const v = parsePositiveInt(e.target.value);
+                  setRoundWeight(v ?? "");
+                }}
+                style={{ ...inputStyle, width: 70 }}
+                placeholder="Weight %"
+                title={data.rounds.length === 0 ? "Default 100% for single round" : "Round weight"}
+              />
+              <button onClick={addRound} style={{ backgroundColor: "#38bdf8", color: "#fff", padding: "10px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600, whiteSpace: "nowrap", flex: 1 }}>
                 Add
               </button>
             </div>
@@ -257,7 +302,7 @@ export function Step3Timeline({ onNext, onBack }: { onNext: () => void; onBack: 
                 <div>
                   <span style={{ fontSize: 14, fontWeight: 600 }}>Round {idx + 1}: {r.name}</span>
                   <span style={{ fontSize: 12, color: "#8891a5", marginLeft: 12 }}>
-                    Top {r.advancementCutoff} advance
+                    Top {r.advancementCutoff} advance · {r.roundWeight}%
                   </span>
                 </div>
                 <button onClick={() => removeRound(idx)} style={{ color: "#991b1b", background: "none", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Remove</button>
@@ -277,7 +322,18 @@ export function Step3Timeline({ onNext, onBack }: { onNext: () => void; onBack: 
 
       <div className="flex justify-between" style={{ marginTop: 8 }}>
         <button onClick={onBack} className="rounded-lg" style={{ backgroundColor: "#ffffff", padding: "10px 24px", color: "#0e1528", fontSize: 14, fontWeight: 600, border: "1px solid rgba(223,226,236,0.8)", cursor: "pointer" }}>Back</button>
-        <button onClick={() => { if (validate()) onNext(); }} className="rounded-lg" style={{ backgroundColor: "#38bdf8", padding: "10px 24px", color: "#ffffff", fontSize: 14, fontWeight: 600, border: "none", cursor: "pointer" }}>Next</button>
+        <button
+          onClick={() => { if (validate()) onNext(); }}
+          disabled={data.rounds.length < 1 || !isRoundWeightValid}
+          className="rounded-lg"
+          style={{
+            backgroundColor: data.rounds.length >= 1 && isRoundWeightValid ? "#38bdf8" : "#9ca3af",
+            padding: "10px 24px", color: "#ffffff", fontSize: 14, fontWeight: 600, border: "none",
+            cursor: data.rounds.length >= 1 && isRoundWeightValid ? "pointer" : "not-allowed",
+          }}
+        >
+          Next
+        </button>
       </div>
     </div>
   );

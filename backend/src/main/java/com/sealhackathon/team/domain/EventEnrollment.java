@@ -6,6 +6,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.constraints.NotNull;
@@ -21,6 +22,9 @@ import java.util.UUID;
 @Entity
 @Table(name = "event_enrollments", uniqueConstraints = {
         @UniqueConstraint(columnNames = {"user_id", "event_id"})
+}, indexes = {
+        @Index(name = "idx_enrollment_event_id", columnList = "event_id"),
+        @Index(name = "idx_enrollment_user_id", columnList = "user_id")
 })
 @Getter
 @Setter

@@ -49,7 +49,7 @@ public class SubmissionController {
     public ResponseEntity<ApiResponse<SubmissionResponse>> submit(
             @PathVariable UUID roundId,
             @RequestPart("submission") String submissionJson,
-            @RequestPart("pdf") MultipartFile pdfFile) {
+            @RequestPart(value = "pdf", required = false) MultipartFile pdfFile) {
         CreateSubmissionRequest request = parseAndValidateSubmission(submissionJson);
         UUID userId = authPublicService.getCurrentUserId();
         SubmissionResponse response = submissionService.submit(userId, roundId, request, pdfFile);
@@ -82,7 +82,10 @@ public class SubmissionController {
     @Operation(summary = "List all submissions for a round")
     public ResponseEntity<ApiResponse<List<SubmissionResponse>>> getSubmissions(
             @PathVariable UUID roundId) {
-        List<SubmissionResponse> submissions = submissionService.getSubmissionsByRound(roundId);
+        UUID userId = authPublicService.getCurrentUserId();
+        var role = authPublicService.getCurrentUserRole();
+        List<SubmissionResponse> submissions =
+                submissionService.getSubmissionsByRound(roundId, userId, role);
         return ResponseEntity.ok(ApiResponse.success(submissions));
     }
 

@@ -3,6 +3,8 @@ package com.sealhackathon.common.exception;
 import com.sealhackathon.common.response.ApiResponse;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.InvalidDataAccessResourceUsageException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -98,15 +100,27 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error("Invalid parameter: " + ex.getName() + ". Expected a valid value."));
     }
 
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
+        log.error("Data integrity violation:", ex);
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(ApiResponse.error("Operation could not be completed due to a data conflict."));
+    }
+
+    @ExceptionHandler(InvalidDataAccessResourceUsageException.class)
+    public ResponseEntity<ApiResponse<Void>> handleInvalidDataAccess(InvalidDataAccessResourceUsageException ex) {
+        log.error("Invalid data access:", ex);
+        return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiResponse.error("A database error occurred. Please contact support if this persists."));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGenericException(Exception ex) {
         log.error("Unhandled exception:", ex);
-        String detail = ex.getMessage();
-        if (ex.getCause() != null) {
-            detail = ex.getCause().getMessage();
-        }
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.error("Internal server error: " + detail));
+                .body(ApiResponse.error("An unexpected error occurred. Please try again later."));
     }
 }

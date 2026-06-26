@@ -1,5 +1,5 @@
-import { CalibrationSessionPage } from "@/features/admin/components/calibration-session-page";
+import { redirect } from "next/navigation";
 
-export default function CalibrationPage() {
-  return <CalibrationSessionPage />;
+export default function AdminAnalyticsCalibrationPage() {
+  redirect("/admin");
 }

@@ -25,6 +25,7 @@ export interface CreateRoundRequest {
   submissionDeadline: string;
   scoringDeadline: string;
   advancementCutoff: number;
+  roundWeight?: number;
 }
 
 // ═══ API calls ═══

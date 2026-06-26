@@ -3,6 +3,7 @@ package com.sealhackathon.auth.domain;
 import com.sealhackathon.common.entity.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -23,7 +24,9 @@ import java.util.UUID;
  * References User by ID (cross-module — no JPA relationship).
  */
 @Entity
-@Table(name = "refresh_tokens")
+@Table(name = "refresh_tokens", indexes = {
+        @Index(name = "idx_refresh_token_user_id", columnList = "user_id")
+})
 @Getter
 @Setter
 @NoArgsConstructor

@@ -48,8 +48,8 @@ export function RoleSelector({ value, onChange }: RoleSelectorProps) {
     <div className="grid grid-cols-2 gap-3">
       {(
         [
-          { type: "FPT_STUDENT", label: "FPT University Student", Icon: ShieldIcon },
-          { type: "EXTERNAL_STUDENT", label: "External Student", Icon: BuildingIcon },
+          { type: "FPT_STUDENT", label: "Sinh viên FPT", Icon: ShieldIcon },
+          { type: "EXTERNAL_STUDENT", label: "Sinh viên trường ngoài", Icon: BuildingIcon },
         ] as const
       ).map(({ type, label, Icon }) => {
         const isActive = value === type;

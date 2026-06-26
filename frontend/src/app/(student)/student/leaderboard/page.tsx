@@ -1,11 +1,5 @@
-import type { Metadata } from "next";
-import { LeaderboardPage } from "@/features/rankings/components/leaderboard-page";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "Leaderboard — SEAL Hackathon",
-  description: "Track rankings and competition results.",
-};
-
-export default function LeaderboardRoute() {
-  return <LeaderboardPage />;
+export default function StudentRankingRedirect() {
+  redirect("/ranking");
 }

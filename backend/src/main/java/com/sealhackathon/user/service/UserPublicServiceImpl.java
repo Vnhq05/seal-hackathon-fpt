@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -31,6 +32,17 @@ public class UserPublicServiceImpl implements UserPublicService {
     @Transactional(readOnly = true)
     public Optional<UserSnapshot> findById(UUID userId) {
         return userRepository.findById(userId).map(this::toSnapshot);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<UserSnapshot> findAllByIds(List<UUID> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return userRepository.findAllById(ids).stream()
+                .map(this::toSnapshot)
+                .toList();
     }
 
     @Override
@@ -86,7 +98,7 @@ public class UserPublicServiceImpl implements UserPublicService {
     @Transactional
     public UUID createParticipant(String email, String passwordHash, String fullName,
                                   String phone, String studentId, String universityName,
-                                  UserType userType, Integer semester) {
+                                  UserType userType, Integer semester, boolean temporaryAccount) {
         User user = User.builder()
                 .email(email)
                 .passwordHash(passwordHash)
@@ -97,8 +109,19 @@ public class UserPublicServiceImpl implements UserPublicService {
                 .userType(userType)
                 .status(AccountStatus.PENDING)
                 .semester(semester)
+                .temporaryAccount(temporaryAccount)
                 .build();
         return userRepository.save(user).getId();
+    }
+
+    @Override
+    @Transactional
+    public void activateParticipant(UUID userId) {
+        User user = getUserEntity(userId);
+        if (user.getStatus() == AccountStatus.PENDING) {
+            user.setStatus(AccountStatus.ACTIVE);
+            userRepository.save(user);
+        }
     }
 
     @Override

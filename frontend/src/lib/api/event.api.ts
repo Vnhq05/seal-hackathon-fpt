@@ -1,6 +1,7 @@
 import { api } from "./api-client";
 import type { EventStatus, Page, PageParams } from "./types";
 import type { TrackResponse } from "./track.api";
+import type { CreateRoundRequest } from "./round.api";
 
 // ═══ Types ═══
 
@@ -12,6 +13,7 @@ export interface PrizeResponse {
   rank: PrizeRank;
   value: string;
   quantity: number;
+  label?: string | null;
 }
 
 export interface HonoredGuestResponse {
@@ -50,9 +52,11 @@ export interface EventResponse {
 
 export interface PrizeRequest {
   trackId?: string;
+  trackIndex?: number;
   rank: PrizeRank;
   value: string;
   quantity: number;
+  label?: string;
 }
 
 export interface HonoredGuestRequest {
@@ -91,10 +95,14 @@ export interface CreateEventRequest {
   judgeUserIds?: string[];
 }
 
+export type PublishEventRequest = CreateEventRequest & {
+  rounds?: CreateRoundRequest[];
+};
+
 export type UpdateEventRequest = Omit<CreateEventRequest, "tracks" | "mentorUserIds" | "judgeUserIds">;
 
 export interface EventListParams extends PageParams {
-  status?: EventStatus;
+  status?: EventStatus | EventStatus[] | string;
   season?: string;
   year?: number;
 }
@@ -104,6 +112,10 @@ export interface EventListParams extends PageParams {
 export const eventApi = {
   create(body: CreateEventRequest): Promise<EventResponse> {
     return api.post<EventResponse>("/events", body);
+  },
+
+  publish(body: PublishEventRequest): Promise<EventResponse> {
+    return api.post<EventResponse>("/events/publish", body);
   },
 
   update(eventId: string, body: UpdateEventRequest): Promise<EventResponse> {
@@ -127,6 +139,10 @@ export const eventApi = {
   },
 
   list(params?: EventListParams): Promise<Page<EventResponse>> {
-    return api.get<Page<EventResponse>>("/events", { params });
+    const query: Record<string, unknown> = { ...params };
+    if (Array.isArray(query.status)) {
+      query.status = (query.status as EventStatus[]).join(",");
+    }
+    return api.get<Page<EventResponse>>("/events", { params: query });
   },
 };

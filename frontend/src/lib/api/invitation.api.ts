@@ -33,6 +33,10 @@ export const invitationApi = {
     return api.post<InvitationResponse>(`/invitations/${invitationId}/reject`);
   },
 
+  cancel(invitationId: string): Promise<InvitationResponse> {
+    return api.post<InvitationResponse>(`/invitations/${invitationId}/cancel`);
+  },
+
   getMyPending(): Promise<InvitationResponse[]> {
     return api.get<InvitationResponse[]>("/invitations/my");
   },

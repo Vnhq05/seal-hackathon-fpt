@@ -12,6 +12,7 @@ export interface UserProfile {
   universityName: string | null;
   userType: UserType;
   status: AccountStatus;
+  temporaryAccount?: boolean;
   createdAt: string;
 }
 
@@ -27,6 +28,16 @@ export interface ChangePasswordRequest {
   newPassword: string;
 }
 
+export interface SetOfficialPasswordRequest {
+  newPassword: string;
+}
+
+export interface UserSearchResult {
+  id: string;
+  fullName: string;
+  email: string;
+}
+
 // ═══ API calls ═══
 
 export const userApi = {
@@ -40,5 +51,13 @@ export const userApi = {
 
   changePassword(body: ChangePasswordRequest): Promise<void> {
     return api.put<void>("/users/me/password", body);
+  },
+
+  setOfficialPassword(body: SetOfficialPasswordRequest): Promise<UserProfile> {
+    return api.put<UserProfile>("/users/me/official-password", body);
+  },
+
+  search(q: string, limit = 20): Promise<UserSearchResult[]> {
+    return api.get<UserSearchResult[]>("/users/search", { params: { q, limit } });
   },
 };

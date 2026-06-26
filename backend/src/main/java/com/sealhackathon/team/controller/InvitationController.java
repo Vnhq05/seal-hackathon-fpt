@@ -61,6 +61,15 @@ public class InvitationController {
         return ResponseEntity.ok(ApiResponse.success("Invitation rejected", response));
     }
 
+    @PostMapping("/{invitationId}/cancel")
+    @Operation(summary = "Cancel a pending invitation (team leader only, BR-21)")
+    public ResponseEntity<ApiResponse<InvitationResponse>> cancelInvitation(
+            @PathVariable UUID invitationId) {
+        UUID leaderId = authPublicService.getCurrentUserId();
+        InvitationResponse response = invitationService.cancelInvitation(leaderId, invitationId);
+        return ResponseEntity.ok(ApiResponse.success("Invitation cancelled", response));
+    }
+
     @GetMapping("/my")
     @Operation(summary = "Get my pending invitations")
     public ResponseEntity<ApiResponse<List<InvitationResponse>>> getMyInvitations() {

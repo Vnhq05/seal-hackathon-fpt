@@ -1,43 +1,71 @@
 import { useQuery } from "@tanstack/react-query";
-import { submissionApi } from "@/lib/api/submission.api";
+import { criteriaApi, submissionApi } from "@/lib/api";
 import { judgingApi } from "@/lib/api/judging.api";
+import { resolveFileUrl } from "@/lib/files";
 import type { SubmissionForScoring } from "@/features/judging/types/judge.types";
 
 export const SUBMISSION_SCORING_KEY = "judge-submission-scoring" as const;
 
-/**
- * Fetches a submission together with the judge's existing scores for it.
- * Requires both roundId and submissionId since the backend APIs are round-scoped.
- */
-export function useSubmissionScoring(roundId: string, submissionId: string) {
+export function useSubmissionScoring(roundId: string, teamId: string) {
   return useQuery<SubmissionForScoring>({
-    queryKey: [SUBMISSION_SCORING_KEY, roundId, submissionId],
+    queryKey: [SUBMISSION_SCORING_KEY, roundId, teamId],
     queryFn: async (): Promise<SubmissionForScoring> => {
-      const [submission, myScore] = await Promise.all([
-        submissionApi.getById(roundId, submissionId),
-        judgingApi.getMyScoreForSubmission(roundId, submissionId).catch(() => null),
+      const [sub, assignments, criteria] = await Promise.all([
+        submissionApi.getByTeam(roundId, teamId).catch(() => null),
+        judgingApi.getMyAssignments(),
+        criteriaApi.list(roundId),
       ]);
 
+      if (!sub) throw new Error("Team chưa nộp bài cho round này");
+
+      const assignment = assignments.find(
+        (a) => a.teamId === teamId && a.roundId === roundId,
+      );
+      const score = await judgingApi
+        .getMyScoreForSubmission(roundId, sub.id)
+        .catch(() => null);
+
+      const version = sub.latestVersion;
+      const commentMap = new Map(
+        (score?.comments ?? []).map((c) => [c.criteriaId, c.comment]),
+      );
+
       return {
-        id: submission.id,
-        teamName: submission.teamId,
-        hackathonName: "",
-        roundName: "",
+        id: sub.id,
+        teamId,
+        teamName: assignment?.teamName ?? teamId,
+        hackathonName: assignment?.eventName ?? "",
+        roundName: assignment?.roundName ?? "",
+        trackName: assignment?.trackName ?? null,
         roundId,
-        deadline: "",
+        deadline: assignment?.scoringDeadline ?? "",
         description: "",
+        githubUrl: version?.githubUrl ?? null,
+        demoUrl: version?.demoUrl ?? null,
+        pdfUrl: resolveFileUrl(version?.attachments?.[0]?.fileUrl ?? null),
+        pdfFileName: version?.attachments?.[0]?.fileName ?? null,
         links: [],
-        criteria: [],
-        existingScores: myScore
-          ? myScore.details.map((d) => ({
+        criteria: criteria.map((c) => ({
+          id: c.id,
+          name: c.name,
+          weight: c.weight,
+          description: c.description ?? "",
+          maxScore: 10,
+        })),
+        existingScores: score
+          ? score.details.map((d) => ({
               criterionId: d.criteriaId,
               score: d.score,
-              feedback: "",
+              feedback: commentMap.get(d.criteriaId) ?? "",
             }))
           : null,
-        isDraft: myScore?.status === "IN_PROGRESS",
+        scoreStatus: score?.status ?? null,
+        judgeScoreId: score?.id ?? null,
+        isDraft: score?.status === "IN_PROGRESS",
+        isLocked: score?.status === "LOCKED",
+        isCompleted: score?.status === "COMPLETED" || score?.status === "LOCKED",
       };
     },
-    enabled: !!roundId && !!submissionId,
+    enabled: !!roundId && !!teamId,
   });
 }

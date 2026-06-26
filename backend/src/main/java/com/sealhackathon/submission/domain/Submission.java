@@ -8,6 +8,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.Index;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
@@ -37,6 +38,9 @@ import java.util.UUID;
 @Entity
 @Table(name = "submissions", uniqueConstraints = {
         @UniqueConstraint(columnNames = {"team_id", "round_id"})
+}, indexes = {
+        @Index(name = "idx_submission_team_id", columnList = "team_id"),
+        @Index(name = "idx_submission_round_id", columnList = "round_id")
 })
 @Getter
 @Setter

@@ -22,7 +22,7 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"email":"new@fpt.edu.vn","password":"pass123","fullName":"Nguyen A",
+                                {"email":"new@fpt.edu.vn","password":"Password123","fullName":"Nguyen A",
                                  "studentId":"SE123456","userType":"FPT_STUDENT"}
                                 """))
                 .andExpect(status().isCreated())
@@ -66,7 +66,7 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"email":"exists@fpt.edu.vn","password":"pass123","fullName":"Dup",
+                                {"email":"exists@fpt.edu.vn","password":"Password123","fullName":"Dup",
                                  "studentId":"SE000002","userType":"FPT_STUDENT"}
                                 """))
                 .andExpect(status().isConflict());

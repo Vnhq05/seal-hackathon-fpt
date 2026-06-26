@@ -18,7 +18,7 @@ function ArrowIcon() {
   );
 }
 
-function RoundCard({ round, portalBase = "/judge" }: { round: AssignedRoundCard; portalBase?: string }) {
+function RoundCard({ round, portalBase = "/lecturer" }: { round: AssignedRoundCard; portalBase?: string }) {
   const pct = round.total > 0 ? (round.scored / round.total) * 100 : 0;
   const isUpcoming = round.status === "upcoming";
 
@@ -90,7 +90,7 @@ interface JudgeAssignedRoundsSectionProps {
   portalBase?: string;
 }
 
-export function JudgeAssignedRoundsSection({ rounds, portalBase = "/judge" }: JudgeAssignedRoundsSectionProps) {
+export function JudgeAssignedRoundsSection({ rounds, portalBase = "/lecturer" }: JudgeAssignedRoundsSectionProps) {
   return (
     <div className="flex flex-col gap-6">
       <h2 style={{ fontSize: 18, fontWeight: 600, color: "#0e1528", lineHeight: "25.2px" }}>

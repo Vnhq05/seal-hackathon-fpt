@@ -7,8 +7,10 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -24,4 +26,10 @@ public class SystemConfigRequest {
 
     @Size(max = 4000)
     private String defaultRules;
+
+    @Min(value = 0, message = "Minimum teams must be at least 0")
+    private Integer minTeams;
+
+    @Min(value = 0, message = "Maximum teams must be at least 0")
+    private Integer maxTeams;
 }

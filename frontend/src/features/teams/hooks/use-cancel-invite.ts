@@ -1,21 +1,20 @@
-import { useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { invitationApi } from "@/lib/api";
 import { PENDING_INVITES_KEY } from "@/features/teams/hooks/use-pending-invites";
 
-/**
- * Cancel-invite endpoint does not exist in the backend.
- * This hook is kept as a no-op stub so existing imports do not break.
- * The mutation callback logs a warning and resolves immediately.
- * Remove usages when the UI drops the cancel-invite feature.
- */
 export function useCancelInvite(teamId: string) {
   const queryClient = useQueryClient();
 
-  return {
-    cancelInvite: (_inviteId: string) => {
-      console.warn("[useCancelInvite] No backend endpoint for cancelling invitations.");
+  const mutation = useMutation({
+    mutationFn: (inviteId: string) => invitationApi.cancel(inviteId),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [PENDING_INVITES_KEY, teamId] });
     },
-    isPending: false,
-    pendingInviteId: undefined as string | undefined,
+  });
+
+  return {
+    cancelInvite: mutation.mutate,
+    isPending: mutation.isPending,
+    pendingInviteId: mutation.variables,
   };
 }

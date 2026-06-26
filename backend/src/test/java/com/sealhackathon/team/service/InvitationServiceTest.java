@@ -2,6 +2,8 @@ package com.sealhackathon.team.service;
 
 import com.sealhackathon.common.exception.BusinessException;
 import com.sealhackathon.common.exception.DuplicateResourceException;
+import com.sealhackathon.common.dto.SystemConfigResponse;
+import com.sealhackathon.common.service.SystemConfigService;
 import com.sealhackathon.team.domain.Invitation;
 import com.sealhackathon.team.domain.Team;
 import com.sealhackathon.team.domain.enums.InvitationStatus;
@@ -28,6 +30,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -38,8 +41,18 @@ class InvitationServiceTest {
     @Mock private TeamMemberRepository teamMemberRepository;
     @Mock private UserPublicService userPublicService;
     @Mock private ApplicationEventPublisher eventPublisher;
+    @Mock private EventEnrollmentService enrollmentService;
+    @Mock private SystemConfigService systemConfigService;
+    @Mock private TeamService teamService;
 
     @InjectMocks private InvitationService invitationService;
+
+    private void stubTeamSizeConfig() {
+        when(systemConfigService.getConfig()).thenReturn(SystemConfigResponse.builder()
+                .minTeamMembers(3)
+                .maxTeamMembers(5)
+                .build());
+    }
 
     @Test
     void sendInvitation_shouldSucceed() {
@@ -49,13 +62,15 @@ class InvitationServiceTest {
         UUID inviteeId = UUID.randomUUID();
 
         Team team = buildTeam(teamId, eventId, leaderId);
+        stubTeamSizeConfig();
         when(teamRepository.findById(teamId)).thenReturn(Optional.of(team));
         when(teamMemberRepository.countByTeamId(teamId)).thenReturn(2);
         when(invitationRepository.existsByTeamIdAndInviteeEmailAndStatus(
                 teamId, "invitee@test.com", InvitationStatus.PENDING)).thenReturn(false);
         when(userPublicService.findByEmail("invitee@test.com"))
                 .thenReturn(Optional.of(UserSnapshot.builder().id(inviteeId).email("invitee@test.com").build()));
-        when(teamMemberRepository.existsByUserIdAndEventId(inviteeId, eventId)).thenReturn(false);
+        doNothing().when(enrollmentService).requireOnWaitingList(inviteeId, eventId);
+        when(enrollmentService.hasActiveEnrollmentInOtherEvent(inviteeId, eventId)).thenReturn(false);
         when(invitationRepository.save(any(Invitation.class))).thenAnswer(i -> {
             Invitation inv = i.getArgument(0);
             inv.setId(UUID.randomUUID());
@@ -93,6 +108,7 @@ class InvitationServiceTest {
         UUID teamId = UUID.randomUUID();
 
         Team team = buildTeam(teamId, UUID.randomUUID(), leaderId);
+        stubTeamSizeConfig();
         when(teamRepository.findById(teamId)).thenReturn(Optional.of(team));
         when(teamMemberRepository.countByTeamId(teamId)).thenReturn(5);
 
@@ -110,6 +126,7 @@ class InvitationServiceTest {
         UUID teamId = UUID.randomUUID();
 
         Team team = buildTeam(teamId, UUID.randomUUID(), leaderId);
+        stubTeamSizeConfig();
         when(teamRepository.findById(teamId)).thenReturn(Optional.of(team));
         when(teamMemberRepository.countByTeamId(teamId)).thenReturn(2);
         when(invitationRepository.existsByTeamIdAndInviteeEmailAndStatus(

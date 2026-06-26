@@ -4,8 +4,9 @@ export const criterionScoreSchema = z.object({
   criterionId: z.string().min(1),
   score: z
     .number()
-    .min(0, "Score must be at least 0")
-    .max(100, "Score must be at most 100"),
+    .min(0)
+    .max(10, "Score must be at most 10")
+    .nullable(),
   feedback: z.string(),
 });
 

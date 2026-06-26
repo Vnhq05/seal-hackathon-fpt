@@ -2,6 +2,7 @@ package com.sealhackathon.user.controller;
 
 import com.sealhackathon.common.enums.AccountStatus;
 import com.sealhackathon.common.enums.UserType;
+import com.sealhackathon.auth.service.AuthPublicService;
 import com.sealhackathon.common.response.ApiResponse;
 import com.sealhackathon.user.dto.request.ApprovalRequest;
 import com.sealhackathon.user.dto.request.CreateInternalAccountRequest;
@@ -20,7 +21,9 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -39,6 +42,7 @@ import java.util.UUID;
 public class AdminUserController {
 
     private final UserService userService;
+    private final AuthPublicService authPublicService;
 
     @GetMapping
     @Operation(summary = "List all users with filters")
@@ -73,6 +77,17 @@ public class AdminUserController {
         return ResponseEntity.ok(ApiResponse.success(profile));
     }
 
+    @PatchMapping("/{userId}/approve")
+    @Operation(summary = "Approve a pending account (BR-01)")
+    public ResponseEntity<ApiResponse<UserProfileResponse>> approveUser(@PathVariable UUID userId) {
+        ApprovalRequest request = ApprovalRequest.builder()
+                .userId(userId)
+                .action(ApprovalRequest.Action.APPROVE)
+                .build();
+        UserProfileResponse result = userService.approveOrReject(request);
+        return ResponseEntity.ok(ApiResponse.success("Account approved successfully", result));
+    }
+
     @PostMapping("/approve")
     @Operation(summary = "Approve or reject a pending account (BR-01)")
     public ResponseEntity<ApiResponse<UserProfileResponse>> approveOrReject(
@@ -84,13 +99,37 @@ public class AdminUserController {
         return ResponseEntity.ok(ApiResponse.success(message, result));
     }
 
+    @PostMapping
+    @Operation(summary = "Create internal account — Lecturer, Coordinator (BR-02)")
+    public ResponseEntity<ApiResponse<UserProfileResponse>> createUser(
+            @Valid @RequestBody CreateInternalAccountRequest request) {
+        UserProfileResponse result = userService.createInternalAccount(request);
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(ApiResponse.success("Internal account created successfully", result));
+    }
+
     @PostMapping("/internal")
-    @Operation(summary = "Create internal account — Mentor, Judge, Lecturer, Coordinator (BR-02)")
+    @Operation(summary = "Create internal account — Lecturer, Coordinator (BR-02)")
     public ResponseEntity<ApiResponse<UserProfileResponse>> createInternalAccount(
             @Valid @RequestBody CreateInternalAccountRequest request) {
         UserProfileResponse result = userService.createInternalAccount(request);
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Internal account created successfully", result));
+    }
+
+    @PatchMapping("/{userId}/deactivate")
+    @Operation(summary = "Deactivate user account (sets status to LOCKED)")
+    public ResponseEntity<ApiResponse<UserProfileResponse>> deactivateUser(@PathVariable UUID userId) {
+        UserProfileResponse result = userService.deactivateUser(userId, authPublicService.getCurrentUserId());
+        return ResponseEntity.ok(ApiResponse.success("Account deactivated", result));
+    }
+
+    @DeleteMapping("/{userId}")
+    @Operation(summary = "Delete user account when no references exist")
+    public ResponseEntity<ApiResponse<Void>> deleteUser(@PathVariable UUID userId) {
+        userService.deleteUser(userId, authPublicService.getCurrentUserId());
+        return ResponseEntity.ok(ApiResponse.success("Account deleted successfully", null));
     }
 }

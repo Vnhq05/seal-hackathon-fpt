@@ -3,8 +3,11 @@ package com.sealhackathon.team.controller;
 import com.sealhackathon.auth.service.AuthPublicService;
 import com.sealhackathon.common.response.ApiResponse;
 import com.sealhackathon.team.dto.request.AssignMentorTeamRequest;
+import com.sealhackathon.team.dto.request.CreateTeamBodyRequest;
 import com.sealhackathon.team.dto.request.CreateTeamRequest;
 import com.sealhackathon.team.dto.request.JoinTeamRequest;
+import com.sealhackathon.team.dto.request.RenameTeamRequest;
+import com.sealhackathon.team.dto.request.SelectTrackRequest;
 import com.sealhackathon.team.dto.response.TeamResponse;
 import com.sealhackathon.team.service.MentorTeamService;
 import com.sealhackathon.team.service.TeamService;
@@ -46,10 +49,10 @@ public class TeamController {
     @Operation(summary = "Create a new team (BR-15, BR-16 form 1)")
     public ResponseEntity<ApiResponse<TeamResponse>> createTeam(
             @PathVariable UUID eventId,
-            @Valid @RequestBody CreateTeamRequest request) {
+            @Valid @RequestBody CreateTeamBodyRequest body) {
         UUID userId = authPublicService.getCurrentUserId();
         CreateTeamRequest fullRequest = CreateTeamRequest.builder()
-                .name(request.getName())
+                .name(body.getName())
                 .eventId(eventId)
                 .build();
         TeamResponse response = teamService.createTeam(userId, fullRequest);
@@ -58,7 +61,7 @@ public class TeamController {
     }
 
     @PostMapping("/join")
-    @Operation(summary = "Join an existing team (BR-16 form 2)")
+    @Operation(summary = "Deprecated — use join-request flow instead")
     public ResponseEntity<ApiResponse<TeamResponse>> joinTeam(
             @PathVariable UUID eventId,
             @Valid @RequestBody JoinTeamRequest request) {
@@ -92,6 +95,17 @@ public class TeamController {
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
+    @PutMapping("/{teamId}")
+    @Operation(summary = "Rename team (leader only)")
+    public ResponseEntity<ApiResponse<TeamResponse>> renameTeam(
+            @PathVariable UUID eventId,
+            @PathVariable UUID teamId,
+            @Valid @RequestBody RenameTeamRequest request) {
+        UUID leaderId = authPublicService.getCurrentUserId();
+        TeamResponse response = teamService.renameTeam(leaderId, teamId, request.getName());
+        return ResponseEntity.ok(ApiResponse.success("Team renamed", response));
+    }
+
     @DeleteMapping("/{teamId}/members/{memberId}")
     @Operation(summary = "Remove a member from team (leader only)")
     public ResponseEntity<ApiResponse<TeamResponse>> removeMember(
@@ -102,7 +116,7 @@ public class TeamController {
     }
 
     @PostMapping("/{teamId}/leave")
-    @Operation(summary = "Leave a team (non-leader)")
+    @Operation(summary = "Deprecated — use leave-request flow instead")
     public ResponseEntity<ApiResponse<Void>> leaveTeam(
             @PathVariable UUID eventId, @PathVariable UUID teamId) {
         UUID userId = authPublicService.getCurrentUserId();
@@ -117,6 +131,17 @@ public class TeamController {
         UUID currentLeaderId = authPublicService.getCurrentUserId();
         TeamResponse response = teamService.transferLeadership(currentLeaderId, teamId, newLeaderId);
         return ResponseEntity.ok(ApiResponse.success("Leadership transferred", response));
+    }
+
+    @PutMapping("/{teamId}/track")
+    @Operation(summary = "Select track for team (leader only, min members required)")
+    public ResponseEntity<ApiResponse<TeamResponse>> selectTrack(
+            @PathVariable UUID eventId,
+            @PathVariable UUID teamId,
+            @Valid @RequestBody SelectTrackRequest request) {
+        UUID leaderId = authPublicService.getCurrentUserId();
+        TeamResponse response = teamService.selectTrack(leaderId, teamId, request);
+        return ResponseEntity.ok(ApiResponse.success("Track selected", response));
     }
 
     @PostMapping("/mentor-team")

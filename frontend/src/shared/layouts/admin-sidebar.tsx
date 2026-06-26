@@ -3,7 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { performLogout } from "@/features/auth/lib/logout";
 import { useAuthStore } from "@/features/auth/store/auth.store";
+import { isPortalNavActive, PortalNavLink } from "@/shared/layouts/portal-nav-link";
 
 interface NavItem {
   href: string;
@@ -25,9 +28,6 @@ function HackathonIcon() {
 function RoundsIcon() {
   return <svg width="18" height="18" viewBox="0 0 18 18" {...svgProps}><circle cx="9" cy="9" r="7" {...s15} /><path d="M9 5v4l3 2" {...s15} {...cap} /></svg>;
 }
-function TracksIcon() {
-  return <svg width="18" height="18" viewBox="0 0 18 18" {...svgProps}><path d="M2 5h14M2 9h14M2 13h14" {...s15} {...cap} /></svg>;
-}
 function CriteriaIcon() {
   return <svg width="18" height="18" viewBox="0 0 18 18" {...svgProps}><path d="M4 9l3 3 7-7" {...s15} {...cap} strokeLinejoin="round" /><rect x="1" y="1" width="16" height="16" rx="3" {...s15} /></svg>;
 }
@@ -43,12 +43,6 @@ function SystemIcon() {
 function LiveScoreIcon() {
   return <svg width="18" height="18" viewBox="0 0 18 18" {...svgProps}><path d="M9 1L11 6H16L12 9.5L13.5 15L9 11.5L4.5 15L6 9.5L2 6H7L9 1Z" {...s15} /><circle cx="9" cy="9" r="7.5" {...s12} /></svg>;
 }
-function AnalyticsIcon() {
-  return <svg width="18" height="18" viewBox="0 0 18 18" {...svgProps}><rect x="2" y="10" width="3" height="6" rx="0.5" {...s12} /><rect x="7.5" y="5" width="3" height="11" rx="0.5" {...s12} /><rect x="13" y="2" width="3" height="14" rx="0.5" {...s12} /></svg>;
-}
-function ExportIcon() {
-  return <svg width="18" height="18" viewBox="0 0 18 18" {...svgProps}><path d="M9 2v10M5 8l4 4 4-4M3 14h12" {...s15} {...cap} /></svg>;
-}
 function SupportIcon() {
   return <svg width="18" height="18" viewBox="0 0 18 18" {...svgProps}><circle cx="9" cy="9" r="7.5" {...s12} /><path d="M6.5 6.5a2.5 2.5 0 015 0c0 1.5-2.5 2-2.5 3.5M9 13h.01" {...s12} {...cap} /></svg>;
 }
@@ -62,25 +56,21 @@ function LogoutIcon() {
 const NAV_ITEMS: NavItem[] = [
   { href: "/admin", label: "Dashboard", icon: <DashboardIcon /> },
   { href: "/admin/hackathons", label: "Hackathons", icon: <HackathonIcon /> },
-  { href: "/admin/tracks", label: "Tracks", icon: <TracksIcon /> },
   { href: "/admin/criteria", label: "Criteria", icon: <CriteriaIcon /> },
   { href: "/admin/assignments", label: "Assignments", icon: <AssignmentIcon /> },
   { href: "/admin/livescore", label: "LiveScore Arena", icon: <LiveScoreIcon /> },
   { href: "/admin/users", label: "Users", icon: <UsersIcon /> },
   { href: "/admin/system", label: "System Config", icon: <SystemIcon /> },
-  { href: "/admin/analytics", label: "Analytics", icon: <AnalyticsIcon /> },
-  { href: "/admin/export", label: "Export", icon: <ExportIcon /> },
 ];
 
 export function AdminSidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, clearAuth } = useAuthStore();
+  const queryClient = useQueryClient();
+  const { user } = useAuthStore();
 
-  const handleLogout = () => {
-    clearAuth();
-    if (typeof window !== "undefined") localStorage.removeItem("access_token");
-    router.push("/login");
+  const handleLogout = async () => {
+    await performLogout(router, queryClient);
   };
 
   const initials = user?.fullName
@@ -134,27 +124,16 @@ export function AdminSidebar() {
 
       {/* Nav */}
       <nav className="flex flex-1 flex-col gap-1 overflow-y-auto" aria-label="Admin navigation">
-        {NAV_ITEMS.map((item) => {
-          const isActive =
-            item.href === "/admin"
-              ? pathname === "/admin"
-              : pathname.startsWith(item.href);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              aria-current={isActive ? "page" : undefined}
-              className={`flex items-center gap-3 ${
-                isActive
-                  ? "seal-sidebar-item-active bg-white/[0.08] rounded-lg px-3 py-2.5 text-[13px] font-medium tracking-wide transition-colors duration-200 text-seal-purple-light"
-                  : "rounded-lg px-3 py-2.5 text-[13px] font-medium tracking-wide transition-colors duration-200 text-slate-400 hover:bg-white/[0.04] hover:text-slate-200"
-              }`}
-            >
-              <span className={isActive ? "text-seal-purple-light" : "text-slate-500"}>{item.icon}</span>
-              {item.label}
-            </Link>
-          );
-        })}
+        {NAV_ITEMS.map((item) => (
+          <PortalNavLink
+            key={item.href}
+            href={item.href}
+            label={item.label}
+            icon={item.icon}
+            isActive={isPortalNavActive(pathname, item.href)}
+            accent="purple"
+          />
+        ))}
       </nav>
 
       {/* Bottom */}

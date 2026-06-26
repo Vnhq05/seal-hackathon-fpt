@@ -10,7 +10,13 @@ import com.sealhackathon.notification.service.NotificationService;
 import com.sealhackathon.ranking.event.DisputeFiledEvent;
 import com.sealhackathon.ranking.event.ResultsPublishedEvent;
 import com.sealhackathon.submission.event.SubmissionCreatedEvent;
+import com.sealhackathon.team.event.InvitationAcceptedEvent;
 import com.sealhackathon.team.event.InvitationSentEvent;
+import com.sealhackathon.team.event.JoinRequestCreatedEvent;
+import com.sealhackathon.team.event.JoinRequestResolvedEvent;
+import com.sealhackathon.team.event.LeaveRequestCreatedEvent;
+import com.sealhackathon.team.event.LeaveRequestResolvedEvent;
+import com.sealhackathon.team.event.MemberKickedEvent;
 import com.sealhackathon.team.event.TeamConfirmedEvent;
 import com.sealhackathon.team.event.TeamCreatedEvent;
 import com.sealhackathon.team.event.MentorTeamAssignedEvent;
@@ -90,9 +96,75 @@ public class NotificationEventListener {
         userPublicService.findByEmail(event.inviteeEmail()).ifPresent(invitee ->
                 notify(NotificationType.INVITATION_RECEIVED,
                         "Team Invitation",
-                        "You have been invited to join a team. Check your invitations to accept or reject.",
+                        "Bạn được mời vào team. Kiểm tra lời mời để chấp nhận hoặc từ chối.",
                         event.teamId(), "Team",
                         List.of(invitee.getId())));
+    }
+
+    @TransactionalEventListener
+    public void onInvitationAccepted(InvitationAcceptedEvent event) {
+        notify(NotificationType.INVITATION_ACCEPTED,
+                "Invitation Accepted",
+                event.memberName() + " đã tham gia team " + event.teamName(),
+                event.teamId(), "Team",
+                List.of(event.leaderId()));
+    }
+
+    @TransactionalEventListener
+    public void onJoinRequestCreated(JoinRequestCreatedEvent event) {
+        notify(NotificationType.JOIN_REQUEST_RECEIVED,
+                "Join Request",
+                "Có yêu cầu tham gia team " + event.teamName(),
+                event.teamId(), "Team",
+                List.of(event.leaderId()));
+    }
+
+    @TransactionalEventListener
+    public void onJoinRequestResolved(JoinRequestResolvedEvent event) {
+        if (event.accepted()) {
+            notify(NotificationType.JOIN_REQUEST_ACCEPTED,
+                    "Join Request Accepted",
+                    "Yêu cầu tham gia team " + event.teamName() + " được chấp nhận",
+                    event.teamId(), "Team",
+                    List.of(event.requesterId()));
+        } else {
+            notify(NotificationType.JOIN_REQUEST_REJECTED,
+                    "Join Request Rejected",
+                    "Yêu cầu tham gia team " + event.teamName() + " bị từ chối",
+                    event.teamId(), "Team",
+                    List.of(event.requesterId()));
+        }
+    }
+
+    @TransactionalEventListener
+    public void onLeaveRequestCreated(LeaveRequestCreatedEvent event) {
+        notify(NotificationType.LEAVE_REQUEST_CREATED,
+                "Leave Request",
+                event.userFullName() + " yêu cầu rời team " + event.teamName(),
+                event.teamId(), "Team",
+                event.coordinatorIds());
+    }
+
+    @TransactionalEventListener
+    public void onLeaveRequestResolved(LeaveRequestResolvedEvent event) {
+        NotificationType type = event.approved()
+                ? NotificationType.LEAVE_REQUEST_APPROVED
+                : NotificationType.LEAVE_REQUEST_REJECTED;
+        String message = event.approved()
+                ? "Yêu cầu rời team " + event.teamName() + " được duyệt"
+                : "Yêu cầu rời team " + event.teamName() + " bị từ chối";
+        notify(type, event.approved() ? "Leave Approved" : "Leave Rejected",
+                message, event.teamId(), "Team",
+                List.of(event.userId(), event.leaderId()));
+    }
+
+    @TransactionalEventListener
+    public void onMemberKicked(MemberKickedEvent event) {
+        notify(NotificationType.MEMBER_KICKED,
+                "Removed from Team",
+                "Bạn đã bị xóa khỏi team " + event.teamName(),
+                event.teamId(), "Team",
+                List.of(event.userId()));
     }
 
     @TransactionalEventListener
@@ -175,9 +247,13 @@ public class NotificationEventListener {
             return;
         }
 
-        Notification notification = notificationService.createNotification(
-                type, title, message, referenceId, referenceType, recipientUserIds);
+        try {
+            Notification notification = notificationService.createNotification(
+                    type, title, message, referenceId, referenceType, recipientUserIds);
 
-        emailService.sendEmailsForNotification(notification);
+            emailService.sendEmailsForNotification(notification);
+        } catch (Exception e) {
+            log.error("Failed to deliver notification {} - {}", type, title, e);
+        }
     }
 }

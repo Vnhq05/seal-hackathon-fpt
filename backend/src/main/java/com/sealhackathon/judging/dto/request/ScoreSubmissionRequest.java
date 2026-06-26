@@ -23,4 +23,7 @@ public class ScoreSubmissionRequest {
     @NotEmpty(message = "At least one score detail is required")
     @Valid
     private List<ScoreDetailDto> scores;
+
+    /** When false, saves progress (IN_PROGRESS). When true, completes scoring (all criteria required). */
+    private Boolean complete = true;
 }

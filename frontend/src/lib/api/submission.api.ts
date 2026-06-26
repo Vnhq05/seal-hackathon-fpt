@@ -36,7 +36,7 @@ export interface SubmissionResponse {
 export interface CreateSubmissionRequest {
   githubUrl: string;
   demoUrl: string;
-  pdfPageCount: number;
+  pdfPageCount?: number;
 }
 
 // ═══ API calls ═══
@@ -45,14 +45,16 @@ export const submissionApi = {
   async submit(
     roundId: string,
     request: CreateSubmissionRequest,
-    pdfFile: File,
+    pdfFile?: File | null,
   ): Promise<SubmissionResponse> {
     const formData = new FormData();
     formData.append(
       "submission",
       new Blob([JSON.stringify(request)], { type: "application/json" }),
     );
-    formData.append("pdf", pdfFile);
+    if (pdfFile) {
+      formData.append("pdf", pdfFile);
+    }
 
     const { data } = await apiClient.post<ApiResponse<SubmissionResponse>>(
       `/rounds/${roundId}/submissions`,
@@ -60,6 +62,14 @@ export const submissionApi = {
       { headers: { "Content-Type": "multipart/form-data" } },
     );
     return data.data;
+  },
+
+  async getByTeamOptional(roundId: string, teamId: string): Promise<SubmissionResponse | null> {
+    try {
+      return await this.getByTeam(roundId, teamId);
+    } catch {
+      return null;
+    }
   },
 
   list(roundId: string): Promise<SubmissionResponse[]> {

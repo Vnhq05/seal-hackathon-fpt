@@ -3,6 +3,7 @@ package com.sealhackathon.ranking.domain;
 import com.sealhackathon.common.entity.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.constraints.Min;
@@ -33,6 +34,9 @@ import java.util.UUID;
 @Entity
 @Table(name = "rankings", uniqueConstraints = {
         @UniqueConstraint(columnNames = {"team_id", "round_id", "version"})
+}, indexes = {
+        @Index(name = "idx_ranking_round_id", columnList = "round_id"),
+        @Index(name = "idx_ranking_team_id", columnList = "team_id")
 })
 @Getter
 @Setter

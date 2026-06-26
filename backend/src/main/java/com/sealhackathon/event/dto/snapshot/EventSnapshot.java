@@ -26,12 +26,14 @@ public class EventSnapshot {
     private EventStatus status;
     private Integer semesterMin;
     private Integer semesterMax;
+    private boolean leaderboardPublic;
+    private String tiebreakerCriteria;
 
     public boolean isActive() {
         return status == EventStatus.ACTIVE;
     }
 
     public boolean isOpenForEnrollment() {
-        return status == EventStatus.OPEN || status == EventStatus.ACTIVE;
+        return status == EventStatus.OPEN;
     }
 }

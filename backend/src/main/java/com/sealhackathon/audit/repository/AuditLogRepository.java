@@ -26,7 +26,7 @@ public interface AuditLogRepository extends Repository<AuditLog, UUID> {
 
     Page<AuditLog> findAll(Pageable pageable);
 
-    @Query("SELECT a FROM AuditLog a WHERE a.timestamp BETWEEN :from AND :to ORDER BY a.timestamp DESC")
+    @Query("SELECT a FROM AuditLog a WHERE a.timestamp BETWEEN :from AND :to")
     Page<AuditLog> findByTimestampRange(@Param("from") LocalDateTime from,
                                         @Param("to") LocalDateTime to,
                                         Pageable pageable);
@@ -38,8 +38,7 @@ public interface AuditLogRepository extends Repository<AuditLog, UUID> {
     @Query("SELECT a FROM AuditLog a WHERE " +
             "(:actorId IS NULL OR a.actorId = :actorId) AND " +
             "(:action IS NULL OR a.action = :action) AND " +
-            "(:targetType IS NULL OR a.targetType = :targetType) " +
-            "ORDER BY a.timestamp DESC")
+            "(:targetType IS NULL OR a.targetType = :targetType)")
     Page<AuditLog> findByFilters(@Param("actorId") UUID actorId,
                                  @Param("action") String action,
                                  @Param("targetType") String targetType,

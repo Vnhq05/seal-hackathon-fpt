@@ -1,5 +1,6 @@
 package com.sealhackathon.team.controller;
 
+import com.sealhackathon.auth.service.AuthPublicService;
 import com.sealhackathon.common.response.ApiResponse;
 import com.sealhackathon.team.dto.request.ChatMessageRequest;
 import com.sealhackathon.team.dto.response.ChatMessageResponse;
@@ -11,8 +12,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -31,15 +30,15 @@ import java.util.UUID;
 public class MentorChatController {
 
     private final MentorChatService chatService;
+    private final AuthPublicService authPublicService;
 
     @PostMapping
     @Operation(summary = "Send a chat message")
     public ResponseEntity<ApiResponse<ChatMessageResponse>> sendMessage(
             @PathVariable UUID eventId,
             @PathVariable UUID teamId,
-            @Valid @RequestBody ChatMessageRequest request,
-            @AuthenticationPrincipal UserDetails userDetails) {
-        UUID userId = UUID.fromString(userDetails.getUsername());
+            @Valid @RequestBody ChatMessageRequest request) {
+        UUID userId = authPublicService.getCurrentUserId();
         ChatMessageResponse response = chatService.sendMessage(userId, teamId, request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Message sent", response));
@@ -49,9 +48,8 @@ public class MentorChatController {
     @Operation(summary = "Get chat history")
     public ResponseEntity<ApiResponse<List<ChatMessageResponse>>> getMessages(
             @PathVariable UUID eventId,
-            @PathVariable UUID teamId,
-            @AuthenticationPrincipal UserDetails userDetails) {
-        UUID userId = UUID.fromString(userDetails.getUsername());
+            @PathVariable UUID teamId) {
+        UUID userId = authPublicService.getCurrentUserId();
         return ResponseEntity.ok(ApiResponse.success(chatService.getMessages(userId, teamId)));
     }
 }

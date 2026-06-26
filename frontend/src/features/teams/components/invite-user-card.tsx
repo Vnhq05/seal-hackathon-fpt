@@ -1,10 +1,10 @@
 "use client";
 
-import type { UserListItem } from "@/lib/api";
+import type { UserSearchResult } from "@/lib/api/user.api";
 import { useSendInvite } from "@/features/teams/hooks/use-send-invite";
 
 interface InviteUserCardProps {
-  candidate: UserListItem;
+  candidate: UserSearchResult;
   teamId: string;
 }
 

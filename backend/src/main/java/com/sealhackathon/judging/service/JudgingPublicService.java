@@ -4,6 +4,7 @@ import com.sealhackathon.judging.dto.snapshot.JudgeScoreSnapshot;
 import com.sealhackathon.judging.dto.snapshot.ScoreDetailSnapshot;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public interface JudgingPublicService {
@@ -21,4 +22,10 @@ public interface JudgingPublicService {
     int countCompletedScores(UUID submissionId);
 
     long countAssignedJudges(UUID teamId, UUID roundId);
+
+    boolean existsLockedScoreByRound(UUID roundId);
+
+    Map<UUID, Integer> countCompletedScoresByRound(UUID roundId);
+
+    Map<UUID, Long> countAssignedJudgesByRound(UUID roundId);
 }

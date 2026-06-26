@@ -11,6 +11,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -26,6 +27,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/admin/scoring-templates")
 @RequiredArgsConstructor
+@PreAuthorize("hasRole('SYSTEM_ADMIN')")
 @Tag(name = "Scoring Templates", description = "Manage scoring criteria templates (Admin only)")
 @SecurityRequirement(name = "bearerAuth")
 public class ScoringTemplateController {
@@ -70,5 +72,14 @@ public class ScoringTemplateController {
     public ResponseEntity<ApiResponse<Void>> deleteTemplate(@PathVariable UUID templateId) {
         templateService.deleteTemplate(templateId);
         return ResponseEntity.ok(ApiResponse.success("Scoring template deleted successfully", null));
+    }
+
+    @DeleteMapping("/{templateId}/criteria/{criterionId}")
+    @Operation(summary = "Delete a criterion from a template (remaining weights must sum to 100%)")
+    public ResponseEntity<ApiResponse<ScoringTemplateResponse>> deleteCriterion(
+            @PathVariable UUID templateId,
+            @PathVariable UUID criterionId) {
+        ScoringTemplateResponse response = templateService.deleteCriterion(templateId, criterionId);
+        return ResponseEntity.ok(ApiResponse.success("Criterion deleted successfully", response));
     }
 }

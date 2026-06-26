@@ -14,13 +14,25 @@ export interface WizardRound {
   endDate: string;
   judgeUserIds: string[];
   advancementCutoff: number;
+  roundWeight: number;
+}
+
+export type LecturerRole = "MENTOR" | "JUDGE" | "BOTH";
+
+export interface WizardLecturerAssignment {
+  userId: string;
+  fullName: string;
+  email: string;
+  role: LecturerRole;
 }
 
 export interface WizardPrize {
   trackId?: string;
+  trackIndex?: number;
   rank: PrizeRank;
   value: string;
   quantity: number;
+  label?: string;
 }
 
 export interface WizardGuest {
@@ -38,6 +50,7 @@ export interface EventWizardData {
   location: string;
   format: string;
   tracks: WizardTrack[];
+  lecturerAssignments: WizardLecturerAssignment[];
   mentorUserIds: string[];
   judgeUserIds: string[];
   semesterMin: number | null;
@@ -53,6 +66,7 @@ export interface EventWizardData {
   maxTeam: number | null;
   // Step 5
   prizes: WizardPrize[];
+  applyPrizesToAllTracks: boolean;
   honoredGuests: WizardGuest[];
   tiebreakerCriteria: string;
   // Step 6
@@ -76,6 +90,7 @@ const initialData: EventWizardData = {
   location: "",
   format: "OFFLINE",
   tracks: [],
+  lecturerAssignments: [],
   mentorUserIds: [],
   judgeUserIds: [],
   semesterMin: null,
@@ -88,6 +103,7 @@ const initialData: EventWizardData = {
   minTeam: null,
   maxTeam: null,
   prizes: [],
+  applyPrizesToAllTracks: true,
   honoredGuests: [],
   tiebreakerCriteria: "",
   scoringTemplateId: null,

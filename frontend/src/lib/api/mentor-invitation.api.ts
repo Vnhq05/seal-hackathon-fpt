@@ -1,4 +1,5 @@
 import { api } from "./api-client";
+import type { MentorAssignmentResponse } from "./assignment.api";
 
 // ═══ Types ═══
 
@@ -7,6 +8,8 @@ export type MentorInvitationStatus = "PENDING" | "ACCEPTED" | "DENIED";
 export interface MentorInvitationResponse {
   id: string;
   teamId: string;
+  teamName: string | null;
+  eventId: string;
   mentorUserId: string;
   mentorEmail: string | null;
   mentorName: string | null;
@@ -16,7 +19,7 @@ export interface MentorInvitationResponse {
 }
 
 export interface SendMentorInvitationRequest {
-  mentorEmail: string;
+  mentorUserId: string;
   message?: string;
 }
 
@@ -27,6 +30,8 @@ export interface RespondMentorInvitationRequest {
 export interface MentorRoomResponse {
   id: string;
   teamId: string;
+  teamName: string | null;
+  eventId: string;
   mentorUserId: string;
   createdAt: string;
 }
@@ -42,8 +47,16 @@ export const mentorInvitationApi = {
     return api.get<MentorInvitationResponse[]>(`/events/${eventId}/mentor-invitations/team/${teamId}`);
   },
 
+  getAvailableMentors(eventId: string): Promise<MentorAssignmentResponse[]> {
+    return api.get<MentorAssignmentResponse[]>(`/events/${eventId}/mentor-invitations/available-mentors`);
+  },
+
   getPendingForMentor(eventId: string): Promise<MentorInvitationResponse[]> {
     return api.get<MentorInvitationResponse[]>(`/events/${eventId}/mentor-invitations/pending`);
+  },
+
+  getAllPendingForMentor(): Promise<MentorInvitationResponse[]> {
+    return api.get<MentorInvitationResponse[]>(`/mentor-invitations/pending`);
   },
 
   respond(eventId: string, invitationId: string, body: RespondMentorInvitationRequest): Promise<MentorInvitationResponse> {
@@ -56,5 +69,9 @@ export const mentorInvitationApi = {
 
   getMentorActiveRooms(eventId: string): Promise<MentorRoomResponse[]> {
     return api.get<MentorRoomResponse[]>(`/events/${eventId}/mentor-rooms`);
+  },
+
+  getAllMentorActiveRooms(): Promise<MentorRoomResponse[]> {
+    return api.get<MentorRoomResponse[]>(`/mentor-rooms`);
   },
 };

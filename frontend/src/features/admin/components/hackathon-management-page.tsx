@@ -102,6 +102,13 @@ function ActionMenu({ event, onError }: { event: EventResponse; onError: (msg: s
 
   if (event.status !== "COMPLETED" && event.status !== "CANCELLED") {
     actions.push({
+      label: "Enrollments",
+      onClick: () => { setOpen(false); router.push(`/admin/hackathons/${event.id}/enrollments`); },
+    });
+  }
+
+  if (event.status !== "COMPLETED" && event.status !== "CANCELLED") {
+    actions.push({
       label: "Cancel",
       onClick: () => { setOpen(false); cancel(event.id, errorHandler); },
       color: "#b45309",

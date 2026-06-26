@@ -22,4 +22,6 @@ public class EnrollmentResponse {
     private LocalDateTime enrolledAt;
     private String userFullName;
     private String userEmail;
+    private String userStudentId;
+    private String userUniversityName;
 }

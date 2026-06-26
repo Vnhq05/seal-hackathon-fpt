@@ -82,15 +82,35 @@ All responses wrapped in `{ "success": boolean, "message": string, "data": T }`
 | Method | Path | Description | BR |
 |---|---|---|---|
 | POST | `/events/{eid}/teams` | Create team | BR-15,16 |
-| POST | `/events/{eid}/teams/join` | Join team | BR-16 |
+| POST | `/events/{eid}/teams/join` | **Deprecated (410)** — use join-request | — |
+| GET | `/events/{eid}/teams/joinable` | List teams with available slots | BR-NEW-1 |
 | GET | `/events/{eid}/teams` | List teams | — |
 | GET | `/events/{eid}/teams/my-team` | Get my team | — |
 | GET | `/events/{eid}/teams/{tid}` | Get team | — |
-| DELETE | `/events/{eid}/teams/{tid}/members/{mid}` | Remove member | BR-20 |
-| POST | `/events/{eid}/teams/{tid}/leave` | Leave team | — |
+| PUT | `/events/{eid}/teams/{tid}` | Rename team (leader) | BR-19 |
+| PUT | `/events/{eid}/teams/{tid}/track` | Select track (leader, min members) | BR-NEW-4 |
+| DELETE | `/events/{eid}/teams/{tid}/members/{mid}` | Remove member (leader kick) | BR-20 |
+| POST | `/events/{eid}/teams/{tid}/leave` | **Deprecated (410)** — use leave-request | BR-NEW-2 |
 | PUT | `/events/{eid}/teams/{tid}/leader/{uid}` | Transfer leadership | BR-20 |
+| POST | `/events/{eid}/teams/{tid}/join-requests` | Submit join request | BR-NEW-1 |
+| GET | `/events/{eid}/teams/{tid}/join-requests` | Pending join requests (leader) | BR-NEW-1 |
+| GET | `/events/{eid}/teams/join-requests/my` | My join requests in event | BR-NEW-1 |
+| POST | `/events/{eid}/teams/join-requests/{jid}/accept` | Accept join request (leader) | BR-NEW-1 |
+| POST | `/events/{eid}/teams/join-requests/{jid}/reject` | Reject join request (leader) | BR-NEW-1 |
+| POST | `/events/{eid}/teams/join-requests/{jid}/cancel` | Cancel my join request | BR-NEW-1 |
+| POST | `/events/{eid}/teams/{tid}/leave-requests` | Request leave (member) | BR-NEW-2 |
+| GET | `/events/{eid}/teams/leave-requests` | Pending leave requests (coordinator) | BR-NEW-2 |
+| GET | `/events/{eid}/teams/{tid}/leave-requests` | Team leave requests (leader) | BR-NEW-2 |
+| PUT | `/events/{eid}/teams/leave-requests/{lid}/approve` | Approve leave (coordinator) | BR-NEW-2 |
+| PUT | `/events/{eid}/teams/leave-requests/{lid}/reject` | Reject leave (coordinator) | BR-NEW-2 |
 | POST | `/events/{eid}/teams/mentor-team` | Assign mentor to team | BR-23 |
 | DELETE | `/events/{eid}/teams/mentor-team/{aid}` | Remove mentor | — |
+
+## System Config (read) — `/api/system-config` (Authenticated)
+
+| Method | Path | Description |
+|---|---|---|
+| GET | `/system-config` | Min/max team members (public read) |
 
 ## Invitations — `/api/invitations` (Authenticated)
 
@@ -99,6 +119,7 @@ All responses wrapped in `{ "success": boolean, "message": string, "data": T }`
 | POST | `/invitations/teams/{tid}` | Send invitation | BR-21 |
 | POST | `/invitations/{iid}/accept` | Accept | BR-21 |
 | POST | `/invitations/{iid}/reject` | Reject | BR-21 |
+| POST | `/invitations/{iid}/cancel` | Cancel pending (leader only) | BR-21 |
 | GET | `/invitations/my` | My pending invitations | — |
 | GET | `/invitations/teams/{tid}` | Team's invitations | — |
 
@@ -136,11 +157,19 @@ All responses wrapped in `{ "success": boolean, "message": string, "data": T }`
 | POST | `/rounds/{rid}/rankings/recalculate` | Manual recalc (ADMIN/COORD) | BR-48 |
 | GET | `/rounds/{rid}/rankings/advancements` | Advancement status | BR-49 |
 
-## Results — `/api/rounds/{roundId}/results` (ADMIN/COORDINATOR for publish)
+## Live Score — `/api/events/{eventId}/leaderboard` (Authenticated)
 
 | Method | Path | Description | BR |
 |---|---|---|---|
-| POST | `/rounds/{rid}/results/publish` | Publish results | BR-51 |
+| GET | `/events/{eid}/leaderboard` | Get live leaderboard | — |
+| POST | `/events/{eid}/leaderboard/lock?roundId=` | Lock scores (ADMIN/COORD) | — |
+| POST | `/events/{eid}/leaderboard/publish?roundId=` | Publish results (ADMIN/COORD) | BR-51 |
+| POST | `/events/{eid}/leaderboard/public?enabled=` | Toggle public leaderboard | — |
+
+## Results — `/api/rounds/{roundId}/results` (Authenticated, read-only)
+
+| Method | Path | Description | BR |
+|---|---|---|---|
 | GET | `/rounds/{rid}/results` | Get published results | — |
 
 ## Disputes — `/api/rounds/{roundId}/disputes` (Team leader files)

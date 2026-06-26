@@ -73,8 +73,9 @@ class AuditEventListenerTest {
         UUID scoreId = UUID.randomUUID();
         UUID submissionId = UUID.randomUUID();
         UUID roundId = UUID.randomUUID();
+        UUID teamId = UUID.randomUUID();
 
-        listener.onScoreCreated(new ScoreCreatedEvent(scoreId, judgeId, submissionId, roundId));
+        listener.onScoreCreated(new ScoreCreatedEvent(scoreId, judgeId, submissionId, roundId, teamId));
 
         verify(auditService).log(eq(judgeId), eq("SCORE_CREATED"),
                 eq(scoreId), eq("JudgeScore"), isNull(), any(), isNull());

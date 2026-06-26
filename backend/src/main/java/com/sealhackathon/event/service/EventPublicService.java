@@ -37,4 +37,6 @@ public interface EventPublicService {
     boolean isJudgeAssignedToRound(UUID judgeId, UUID roundId);
 
     boolean isEventActive(UUID eventId);
+
+    void setLeaderboardPublic(UUID eventId, boolean enabled);
 }

@@ -21,7 +21,11 @@ public class TeamResponse {
     private String name;
     private UUID leaderId;
     private TeamStatus status;
+    private UUID trackId;
     private int memberCount;
+    private int minTeamMembers;
+    private int maxTeamMembers;
+    private boolean canSelectTrack;
     private List<TeamMemberResponse> members;
     private LocalDateTime createdAt;
 }

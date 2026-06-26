@@ -2,52 +2,60 @@ import { z } from "zod";
 
 export const USER_TYPES = ["FPT_STUDENT", "EXTERNAL_STUDENT"] as const;
 
+const FPT_STUDENT_ID_PATTERN = /^SE\d{6}$/;
+
 export const registerSchema = z
   .object({
-    fullName: z.string().min(1, "Full name is required"),
+    fullName: z.string().min(1, "Họ tên là bắt buộc"),
     email: z
       .string()
-      .min(1, "Email is required")
-      .email("Please enter a valid email address"),
+      .min(1, "Email là bắt buộc")
+      .email("Vui lòng nhập email hợp lệ"),
     userType: z.enum(USER_TYPES),
     studentId: z.string().optional(),
     universityName: z.string().optional(),
     semester: z.number().int().min(1).max(10).optional().or(z.nan().transform(() => undefined)),
-    password: z.string().min(8, "Password must be at least 8 characters"),
-    confirmPassword: z.string().min(1, "Please confirm your password"),
+    password: z.string()
+      .min(8, "Password must be at least 8 characters")
+      .max(72, "Password must not exceed 72 characters")
+      .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+      .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+      .regex(/\d/, "Password must contain at least one digit"),
+    confirmPassword: z.string().min(1, "Vui lòng xác nhận mật khẩu"),
     agreeToTerms: z
       .boolean()
-      .refine((v) => v === true, "You must agree to the terms to continue"),
+      .refine((v) => v === true, "Bạn phải đồng ý với điều khoản để tiếp tục"),
   })
   .superRefine((data, ctx) => {
     if (data.password !== data.confirmPassword) {
       ctx.addIssue({
         code: "custom",
-        message: "Passwords do not match",
+        message: "Mật khẩu không khớp",
         path: ["confirmPassword"],
       });
     }
-    if (!data.studentId?.trim()) {
+    const studentId = data.studentId?.trim().toUpperCase();
+    if (!studentId) {
       ctx.addIssue({
         code: "custom",
         message:
           data.userType === "FPT_STUDENT"
-            ? "FPT Student ID is required"
-            : "Student ID is required for external students",
+            ? "Mã sinh viên FPT là bắt buộc"
+            : "Mã sinh viên là bắt buộc",
         path: ["studentId"],
       });
     }
-    if (data.userType === "FPT_STUDENT" && data.studentId && !/^SE[0-9]{6}$/.test(data.studentId)) {
+    if (data.userType === "FPT_STUDENT" && studentId && !FPT_STUDENT_ID_PATTERN.test(studentId)) {
       ctx.addIssue({
         code: "custom",
-        message: "Student ID must match format SE followed by 6 digits (e.g. SE191021)",
+        message: "Mã sinh viên phải đúng định dạng SE + 6 chữ số (vd: SE191021)",
         path: ["studentId"],
       });
     }
     if (data.userType === "EXTERNAL_STUDENT" && !data.universityName?.trim()) {
       ctx.addIssue({
         code: "custom",
-        message: "University name is required for external students",
+        message: "Tên trường là bắt buộc",
         path: ["universityName"],
       });
     }

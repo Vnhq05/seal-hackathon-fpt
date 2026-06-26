@@ -51,11 +51,6 @@ const BREADCRUMB_MAP: Record<string, { label: string; href: string }[]> = {
     { label: "Rounds", href: "/admin/rounds" },
     { label: "New Round", href: "/admin/rounds/new" },
   ],
-  "/admin/tracks": [{ label: "Tracks", href: "/admin/tracks" }],
-  "/admin/tracks/new": [
-    { label: "Tracks", href: "/admin/tracks" },
-    { label: "New Track", href: "/admin/tracks/new" },
-  ],
   "/admin/criteria": [{ label: "Criteria", href: "/admin/criteria" }],
   "/admin/criteria/event": [
     { label: "Criteria", href: "/admin/criteria" },
@@ -70,25 +65,8 @@ const BREADCRUMB_MAP: Record<string, { label: string; href: string }[]> = {
     { label: "Assignments", href: "/admin/assignments" },
     { label: "Mentors", href: "/admin/assignments/mentors" },
   ],
-  "/admin/assignments/staff": [
-    { label: "Assignments", href: "/admin/assignments" },
-    { label: "Staff", href: "/admin/assignments/staff" },
-  ],
   "/admin/users": [{ label: "Users", href: "/admin/users" }],
   "/admin/system": [{ label: "System Config", href: "/admin/system" }],
-  "/admin/analytics": [{ label: "Analytics", href: "/admin/analytics" }],
-  "/admin/analytics/variance": [
-    { label: "Analytics", href: "/admin/analytics" },
-    { label: "Judge Variance", href: "/admin/analytics/variance" },
-  ],
-  "/admin/analytics/calibration": [
-    { label: "Analytics", href: "/admin/analytics" },
-    { label: "Calibration", href: "/admin/analytics/calibration" },
-  ],
-  "/admin/analytics/research": [
-    { label: "Analytics", href: "/admin/analytics" },
-    { label: "Research Export", href: "/admin/analytics/research" },
-  ],
   "/admin/export": [{ label: "Export", href: "/admin/export" }],
   "/admin/settings": [{ label: "Settings", href: "/admin/settings" }],
   "/admin/support": [{ label: "Support", href: "/admin/support" }],
@@ -106,12 +84,6 @@ function getBreadcrumbs(pathname: string) {
     return [
       { label: "Rounds", href: "/admin/rounds" },
       { label: "Edit Round", href: pathname },
-    ];
-  }
-  if (pathname.startsWith("/admin/tracks/")) {
-    return [
-      { label: "Tracks", href: "/admin/tracks" },
-      { label: "Edit Track", href: pathname },
     ];
   }
   return [{ label: "Dashboard", href: "/admin" }];

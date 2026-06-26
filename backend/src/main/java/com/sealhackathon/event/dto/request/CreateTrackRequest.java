@@ -25,7 +25,8 @@ public class CreateTrackRequest {
     private String description;
 
     @NotNull(message = "Max teams is required")
-    @Min(value = 1, message = "Max teams must be at least 1")
+    @Min(value = 16, message = "Max teams must be at least 16")
+    @jakarta.validation.constraints.Max(value = 40, message = "Max teams must be at most 40")
     private Integer maxTeams;
 
     private UUID scoringTemplateId;

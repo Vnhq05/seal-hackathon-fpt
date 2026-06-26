@@ -5,6 +5,7 @@ import { useProfile } from "@/features/profile/hooks/use-profile";
 import { ProfileHeader } from "@/features/profile/components/profile-header";
 import { ProfileInfoForm } from "@/features/profile/components/profile-info-form";
 import { ChangePasswordForm } from "@/features/profile/components/change-password-form";
+import { SetupOfficialPasswordForm } from "@/features/profile/components/setup-official-password-form";
 import type { ProfileTab } from "@/features/profile/components/profile-header";
 
 function ProfileSkeleton() {
@@ -85,7 +86,13 @@ export function ProfilePage() {
       />
 
       {activeTab === "personal" && <ProfileInfoForm profile={profile} />}
-      {activeTab === "security" && <ChangePasswordForm />}
+      {activeTab === "security" && (
+        profile.temporaryAccount && profile.userType === "EXTERNAL_STUDENT" ? (
+          <SetupOfficialPasswordForm />
+        ) : (
+          <ChangePasswordForm />
+        )
+      )}
       {activeTab === "events" && (
         <div
           className="rounded-lg bg-seal-surface p-10 text-center"

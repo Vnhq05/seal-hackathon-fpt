@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useEventWizardStore } from "@/features/admin/store/event-wizard.store";
 import { useCriteriaTemplates } from "@/features/admin/hooks/use-admin-criteria";
 import type { ScoringTemplateResponse } from "@/lib/api";
@@ -40,14 +41,46 @@ function TemplateSelect({
   onChange,
   templates,
   isLoading,
+  isError,
+  error,
+  onRetry,
 }: {
   value: string | null;
   onChange: (id: string | null) => void;
   templates: ScoringTemplateResponse[];
   isLoading: boolean;
+  isError?: boolean;
+  error?: Error | null;
+  onRetry?: () => void;
 }) {
   if (isLoading) {
     return <div className="animate-pulse rounded" style={{ height: 44, backgroundColor: "rgba(223,226,236,0.8)" }} />;
+  }
+
+  if (isError) {
+    return (
+      <div style={{
+        backgroundColor: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8,
+        padding: "10px 14px", fontSize: 13, color: "#991b1b",
+      }}>
+        <div className="flex items-center justify-between gap-3">
+          <span>{error?.message || "Failed to load scoring templates."}</span>
+          {onRetry && (
+            <button
+              type="button"
+              onClick={onRetry}
+              style={{
+                fontSize: 12, fontWeight: 600, color: "#991b1b",
+                backgroundColor: "#ffffff", border: "1px solid #fecaca",
+                borderRadius: 6, padding: "4px 10px", cursor: "pointer", flexShrink: 0,
+              }}
+            >
+              Retry
+            </button>
+          )}
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -66,10 +99,25 @@ function TemplateSelect({
 
 export function Step6Scoring({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
   const { data, updateData } = useEventWizardStore();
-  const { data: templates = [], isLoading } = useCriteriaTemplates();
+  const { data: templates = [], isLoading, isError, error: loadError, refetch } = useCriteriaTemplates();
   const allTemplates = templates as ScoringTemplateResponse[];
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   const selectedSharedTemplate = allTemplates.find((t) => t.id === data.scoringTemplateId);
+
+  const validate = () => {
+    if (data.applyToAllTracks) {
+      if (!data.scoringTemplateId) {
+        setValidationError("Please select a scoring template");
+        return false;
+      }
+    } else if (data.tracks.some((t) => !t.scoringTemplateId)) {
+      setValidationError("Each track must have a scoring template assigned");
+      return false;
+    }
+    setValidationError(null);
+    return true;
+  };
 
   const handleModeChange = (applyAll: boolean) => {
     if (applyAll) {
@@ -90,6 +138,12 @@ export function Step6Scoring({ onNext, onBack }: { onNext: () => void; onBack: (
   return (
     <div className="flex flex-col gap-5" style={{ maxWidth: 660 }}>
       <h2 style={{ fontSize: 24, fontWeight: 700, color: "#0e1528" }}>Step 6: Scoring</h2>
+
+      {validationError && (
+        <div style={{ backgroundColor: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, padding: "10px 14px", fontSize: 13, color: "#991b1b" }}>
+          {validationError}
+        </div>
+      )}
 
       <div>
         <label style={labelStyle}>Scoring Mode</label>
@@ -149,6 +203,9 @@ export function Step6Scoring({ onNext, onBack }: { onNext: () => void; onBack: (
             onChange={(id) => updateData({ scoringTemplateId: id })}
             templates={allTemplates}
             isLoading={isLoading}
+            isError={isError}
+            error={loadError}
+            onRetry={() => refetch()}
           />
           {selectedSharedTemplate && (
             <TemplateCriteriaPreview template={selectedSharedTemplate} />
@@ -181,6 +238,9 @@ export function Step6Scoring({ onNext, onBack }: { onNext: () => void; onBack: (
                     onChange={(id) => handleTrackTemplateChange(idx, id)}
                     templates={allTemplates}
                     isLoading={isLoading}
+                    isError={isError}
+                    error={loadError}
+                    onRetry={() => refetch()}
                   />
                   {trackTemplate && (
                     <TemplateCriteriaPreview template={trackTemplate} />
@@ -194,7 +254,7 @@ export function Step6Scoring({ onNext, onBack }: { onNext: () => void; onBack: (
 
       <div className="flex justify-between" style={{ marginTop: 8 }}>
         <button onClick={onBack} className="rounded-lg" style={{ backgroundColor: "#ffffff", padding: "10px 24px", color: "#0e1528", fontSize: 14, fontWeight: 600, border: "1px solid rgba(223,226,236,0.8)", cursor: "pointer" }}>Back</button>
-        <button onClick={onNext} className="rounded-lg" style={{ backgroundColor: "#38bdf8", padding: "10px 24px", color: "#ffffff", fontSize: 14, fontWeight: 600, border: "none", cursor: "pointer" }}>Next</button>
+        <button onClick={() => { if (validate()) onNext(); }} className="rounded-lg" style={{ backgroundColor: "#38bdf8", padding: "10px 24px", color: "#ffffff", fontSize: 14, fontWeight: 600, border: "none", cursor: "pointer" }}>Next</button>
       </div>
     </div>
   );

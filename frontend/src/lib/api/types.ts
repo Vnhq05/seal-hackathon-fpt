@@ -33,7 +33,7 @@ export type TeamStatus = "FORMING" | "CONFIRMED" | "DISBANDED";
 
 export type TeamMemberRole = "LEADER" | "MEMBER";
 
-export type InvitationStatus = "PENDING" | "ACCEPTED" | "REJECTED" | "EXPIRED";
+export type InvitationStatus = "PENDING" | "ACCEPTED" | "REJECTED" | "EXPIRED" | "CANCELLED";
 
 export type SubmissionStatus = "DRAFT" | "SUBMITTED" | "SCORED" | "NOT_SCORED";
 

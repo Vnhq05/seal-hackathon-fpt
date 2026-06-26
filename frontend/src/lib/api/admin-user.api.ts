@@ -8,6 +8,8 @@ export interface UserListItem {
   id: string;
   email: string;
   fullName: string;
+  studentId?: string | null;
+  schoolName?: string | null;
   userType: UserType;
   status: AccountStatus;
   createdAt: string;
@@ -30,7 +32,7 @@ export interface CreateInternalAccountRequest {
   password: string;
   fullName: string;
   phone?: string;
-  userType: Extract<UserType, "LECTURER" | "EVENT_COORDINATOR">;
+  userType: Extract<UserType, "LECTURER" | "EVENT_COORDINATOR" | "SYSTEM_ADMIN">;
 }
 
 // ═══ API calls ═══
@@ -52,11 +54,23 @@ export const adminUserApi = {
     return api.get<UserProfile>(`/admin/users/${userId}`);
   },
 
+  approveUser(userId: string): Promise<UserProfile> {
+    return api.patch<UserProfile>(`/admin/users/${userId}/approve`);
+  },
+
   approveOrReject(body: ApprovalRequest): Promise<UserProfile> {
     return api.post<UserProfile>("/admin/users/approve", body);
   },
 
   createInternalAccount(body: CreateInternalAccountRequest): Promise<UserProfile> {
-    return api.post<UserProfile>("/admin/users/internal", body);
+    return api.post<UserProfile>("/admin/users", body);
+  },
+
+  deactivateUser(userId: string): Promise<UserProfile> {
+    return api.patch<UserProfile>(`/admin/users/${userId}/deactivate`);
+  },
+
+  deleteUser(userId: string): Promise<void> {
+    return api.delete<void>(`/admin/users/${userId}`);
   },
 };

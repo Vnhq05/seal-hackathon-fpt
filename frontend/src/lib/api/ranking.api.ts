@@ -8,10 +8,24 @@ export interface RankingResponse {
   teamId: string;
   teamName: string | null;
   roundId: string;
+  roundName: string | null;
+  trackId: string | null;
+  trackName: string | null;
   finalScore: number;
   rank: number;
   version: number;
   calculatedAt: string;
+}
+
+export interface EventRankingBoard {
+  eventId: string;
+  eventName: string;
+  season: string;
+  year: number;
+  roundId: string;
+  roundName: string;
+  tracks: { id: string; name: string; description?: string | null; maxTeams: number; eventId: string; scoringTemplateId?: string | null }[];
+  rankings: RankingResponse[];
 }
 
 export interface AdvancementResponse {
@@ -59,6 +73,10 @@ export interface DisputeResponse {
 // ═══ API calls ═══
 
 export const rankingApi = {
+  getSeasonRankings(params?: { season?: string; year?: number; trackId?: string }): Promise<EventRankingBoard[]> {
+    return api.get<EventRankingBoard[]>("/ranking", { params });
+  },
+
   getRankings(roundId: string): Promise<RankingResponse[]> {
     return api.get<RankingResponse[]>(`/rounds/${roundId}/rankings`);
   },
@@ -73,10 +91,6 @@ export const rankingApi = {
 
   getAdvancements(roundId: string): Promise<AdvancementResponse[]> {
     return api.get<AdvancementResponse[]>(`/rounds/${roundId}/rankings/advancements`);
-  },
-
-  publishResults(roundId: string): Promise<PublishedResultResponse> {
-    return api.post<PublishedResultResponse>(`/rounds/${roundId}/results/publish`);
   },
 
   getPublishedResults(roundId: string): Promise<PublishedResultResponse> {

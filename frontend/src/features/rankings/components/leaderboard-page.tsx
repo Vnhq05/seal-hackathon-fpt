@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { eventApi, roundApi, rankingApi } from "@/lib/api";
 import { useDownloadRanking } from "@/features/rankings/hooks/use-download-ranking";
 import type { RankingResponse, EventResponse, RoundResponse } from "@/lib/api";
+import { getPrizeLabel } from "@/lib/prize.utils";
 
 const MEDAL_COLORS: Record<number, string> = {
   1: "#f59e0b",
@@ -161,7 +162,7 @@ export function LeaderboardPage({ roundId: initialRoundId }: LeaderboardPageProp
                     return (
                       <tr key={`${p.id}-${i}`}>
                         <td className="px-5 py-2.5 font-medium text-seal-text">
-                          {p.rank}{p.quantity > 1 ? ` #${i + 1}` : ""}
+                          {getPrizeLabel(p.rank, p.label)}{p.quantity > 1 ? ` #${i + 1}` : ""}
                         </td>
                         <td className="px-5 py-2.5 text-seal-text-secondary">{p.value || "—"}</td>
                         <td className="px-5 py-2.5 text-seal-text">

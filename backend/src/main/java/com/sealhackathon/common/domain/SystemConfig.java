@@ -35,4 +35,14 @@ public class SystemConfig extends BaseEntity {
 
     @Column(name = "default_rules", length = 4000)
     private String defaultRules;
+
+    /** Min teams required for an event to run (platform-wide). */
+    @Min(0)
+    @Column(name = "min_teams")
+    private Integer minTeams;
+
+    /** Max teams before registration closes (platform-wide). */
+    @Min(0)
+    @Column(name = "max_teams")
+    private Integer maxTeams;
 }

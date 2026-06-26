@@ -15,7 +15,7 @@ interface JudgeUrgencyBannerProps {
   portalBase?: string;
 }
 
-export function JudgeUrgencyBanner({ urgency, portalBase = "/judge" }: JudgeUrgencyBannerProps) {
+export function JudgeUrgencyBanner({ urgency, portalBase = "/lecturer" }: JudgeUrgencyBannerProps) {
   return (
     <div
       className="flex items-center justify-between"

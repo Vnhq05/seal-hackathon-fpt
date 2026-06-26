@@ -1,5 +1,5 @@
-import { ResearchExportPage } from "@/features/admin/components/research-export-page";
+import { redirect } from "next/navigation";
 
-export default function ResearchPage() {
-  return <ResearchExportPage />;
+export default function AdminAnalyticsResearchPage() {
+  redirect("/admin/export");
 }

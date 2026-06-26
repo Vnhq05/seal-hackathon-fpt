@@ -97,4 +97,8 @@ public class User extends BaseEntity {
 
     @Column(name = "semester")
     private Integer semester;
+
+    @Column(name = "temporary_account", nullable = false, columnDefinition = "BIT NOT NULL DEFAULT 0")
+    @Builder.Default
+    private boolean temporaryAccount = false;
 }

@@ -8,6 +8,8 @@ public interface AuthPublicService {
 
     UUID getCurrentUserId();
 
+    String getCurrentUserEmail();
+
     UserType getCurrentUserRole();
 
     void invalidateAllSessions(UUID userId);

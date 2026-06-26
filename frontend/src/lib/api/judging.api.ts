@@ -13,6 +13,7 @@ export interface ScoreDetailDto {
 export interface ScoreSubmissionRequest {
   submissionId: string;
   scores: ScoreDetailDto[];
+  complete?: boolean;
 }
 
 export interface ScoreDetailResponse {
@@ -80,4 +81,26 @@ export const judgingApi = {
   deleteScore(roundId: string, judgeScoreId: string): Promise<void> {
     return api.delete<void>(`/rounds/${roundId}/scoring/${judgeScoreId}`);
   },
+
+  getMyAssignments(): Promise<JudgeScoringAssignment[]> {
+    return api.get<JudgeScoringAssignment[]>("/judging/my-assignments");
+  },
+
+  getMyScoresHistory(): Promise<JudgeScoreResponse[]> {
+    return api.get<JudgeScoreResponse[]>("/judging/my-scores");
+  },
 };
+
+export interface JudgeScoringAssignment {
+  teamId: string;
+  teamName: string;
+  roundId: string;
+  roundName: string;
+  eventId: string | null;
+  eventName: string | null;
+  trackId: string | null;
+  trackName: string | null;
+  submissionId: string | null;
+  scoringStatus: "NOT_STARTED" | "IN_PROGRESS" | "COMPLETED" | "LOCKED";
+  scoringDeadline: string | null;
+}

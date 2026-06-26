@@ -1,27 +1,44 @@
 package com.sealhackathon.judging.service;
 
+import com.sealhackathon.common.enums.UserType;
 import com.sealhackathon.common.exception.BusinessException;
 import com.sealhackathon.common.exception.ResourceNotFoundException;
+import com.sealhackathon.event.domain.HackathonEvent;
+import com.sealhackathon.event.domain.Round;
+import com.sealhackathon.event.domain.Track;
 import com.sealhackathon.event.dto.snapshot.CriteriaSnapshot;
+import com.sealhackathon.event.repository.HackathonEventRepository;
+import com.sealhackathon.event.repository.RoundRepository;
+import com.sealhackathon.event.repository.TrackRepository;
 import com.sealhackathon.event.service.EventPublicService;
 import com.sealhackathon.judging.domain.JudgeComment;
 import com.sealhackathon.judging.domain.JudgeScore;
 import com.sealhackathon.judging.domain.JudgeScoreDetail;
+import com.sealhackathon.judging.domain.TeamJudgeAssignment;
 import com.sealhackathon.judging.domain.enums.ScoreStatus;
 import com.sealhackathon.judging.dto.request.ScoreDetailDto;
 import com.sealhackathon.judging.dto.request.ScoreSubmissionRequest;
 import com.sealhackathon.judging.dto.response.CommentResponse;
+import com.sealhackathon.judging.dto.response.JudgeScoringAssignmentResponse;
 import com.sealhackathon.judging.dto.response.JudgeScoreResponse;
 import com.sealhackathon.judging.dto.response.ScoreDetailResponse;
+import com.sealhackathon.judging.event.ScoreChangeDetail;
 import com.sealhackathon.judging.event.ScoreCreatedEvent;
 import com.sealhackathon.judging.event.ScoreDeletedEvent;
 import com.sealhackathon.judging.event.ScoreUpdatedEvent;
 import com.sealhackathon.judging.event.ScoringCompletedEvent;
 import com.sealhackathon.judging.repository.JudgeScoreRepository;
+import com.sealhackathon.judging.repository.TeamJudgeAssignmentRepository;
+import com.sealhackathon.submission.domain.Submission;
+import com.sealhackathon.submission.repository.SubmissionRepository;
+import com.sealhackathon.submission.service.SubmissionPublicService;
+import com.sealhackathon.team.domain.Team;
+import com.sealhackathon.team.repository.TeamRepository;
 import com.sealhackathon.user.dto.snapshot.UserSnapshot;
 import com.sealhackathon.user.service.UserPublicService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +47,8 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -38,98 +57,119 @@ import java.util.stream.Collectors;
 public class JudgingService {
 
     private final JudgeScoreRepository judgeScoreRepository;
+    private final TeamJudgeAssignmentRepository teamJudgeAssignmentRepository;
+    private final SubmissionRepository submissionRepository;
+    private final TeamRepository teamRepository;
+    private final RoundRepository roundRepository;
+    private final HackathonEventRepository eventRepository;
+    private final TrackRepository trackRepository;
     private final ConflictDetectionService conflictDetectionService;
     private final EventPublicService eventPublicService;
+    private final SubmissionPublicService submissionPublicService;
     private final UserPublicService userPublicService;
     private final ApplicationEventPublisher eventPublisher;
 
-    private static final int SCORING_TIMER_HOURS = 2;
-
-    // ── BR-34, BR-35, BR-36, BR-37: Submit scores ──
     @Transactional
     public JudgeScoreResponse submitScore(UUID judgeId, UUID roundId,
                                           ScoreSubmissionRequest request) {
         UUID submissionId = request.getSubmissionId();
+        boolean completing = request.getComplete() == null || Boolean.TRUE.equals(request.getComplete());
 
-        // BR-34: conflict of interest
         conflictDetectionService.checkConflict(judgeId, submissionId);
+        assertScoringWindowOpen(roundId);
 
-        // BR-40: check scoring deadline
-        LocalDateTime scoringDeadline = eventPublicService.getScoringDeadline(roundId);
-        if (LocalDateTime.now().isAfter(scoringDeadline)) {
-            throw new BusinessException("Scoring deadline has passed", HttpStatus.BAD_REQUEST) {};
-        }
-
-        // Validate judge is assigned to this round
-        if (!eventPublicService.isJudgeAssignedToRound(judgeId, roundId)) {
-            throw new BusinessException("You are not assigned to judge this round",
+        if (!isJudgeAssignedToTeam(judgeId, submissionId, roundId)) {
+            throw new BusinessException("You are not assigned to score this team for this round",
                     HttpStatus.FORBIDDEN) {};
         }
 
-        // Validate criteria match round's criteria
         List<CriteriaSnapshot> roundCriteria = eventPublicService.getCriteriaByRound(roundId);
-        validateCriteriaMatch(request.getScores(), roundCriteria);
+        validateCriteriaBelongToRound(request.getScores(), roundCriteria);
+        if (completing) {
+            validateAllCriteriaPresent(request.getScores(), roundCriteria);
+            validateExtremeScoreComments(request.getScores());
+        }
 
-        // BR-36: validate comments for extreme scores
-        validateExtremeScoreComments(request.getScores());
-
-        // Check if already scored
         var existing = judgeScoreRepository.findByJudgeUserIdAndSubmissionId(judgeId, submissionId);
 
         if (existing.isPresent()) {
-            return updateExistingScore(existing.get(), request, roundCriteria);
-        } else {
-            return createNewScore(judgeId, roundId, request, roundCriteria);
+            JudgeScore score = existing.get();
+            if (score.getStatus() == ScoreStatus.LOCKED) {
+                throw new BusinessException("Score is locked and cannot be modified",
+                        HttpStatus.BAD_REQUEST) {};
+            }
+            try {
+                return saveScore(score, request, roundCriteria, completing);
+            } catch (OptimisticLockingFailureException e) {
+                throw new BusinessException(
+                        "Concurrent score modification detected. Please retry.",
+                        HttpStatus.CONFLICT) {};
+            }
+        }
+        try {
+            return createNewScore(judgeId, roundId, request, roundCriteria, completing);
+        } catch (OptimisticLockingFailureException e) {
+            throw new BusinessException(
+                    "Concurrent score modification detected. Please retry.",
+                    HttpStatus.CONFLICT) {};
         }
     }
 
-    // ── BR-39: Update score before deadline ──
     @Transactional
     public JudgeScoreResponse updateScore(UUID judgeId, UUID judgeScoreId,
                                           ScoreSubmissionRequest request) {
         JudgeScore score = getJudgeScore(judgeScoreId);
+        boolean completing = request.getComplete() == null || Boolean.TRUE.equals(request.getComplete());
 
         if (!score.getJudgeUserId().equals(judgeId)) {
             throw new BusinessException("You can only update your own scores",
                     HttpStatus.FORBIDDEN) {};
         }
 
-        // BR-40: check locked
         if (score.getStatus() == ScoreStatus.LOCKED) {
             throw new BusinessException("Score is locked and cannot be modified",
                     HttpStatus.BAD_REQUEST) {};
         }
 
-        // BR-37: check 2h timer
-        if (score.getStartedAt().plusHours(SCORING_TIMER_HOURS).isBefore(LocalDateTime.now())) {
-            throw new BusinessException("2-hour scoring timer has expired",
-                    HttpStatus.BAD_REQUEST) {};
-        }
-
-        // BR-40: check scoring deadline
-        LocalDateTime deadline = eventPublicService.getScoringDeadline(score.getRoundId());
-        if (LocalDateTime.now().isAfter(deadline)) {
-            throw new BusinessException("Scoring deadline has passed", HttpStatus.BAD_REQUEST) {};
-        }
+        assertScoringWindowOpen(score.getRoundId());
+        conflictDetectionService.checkConflict(judgeId, score.getSubmissionId());
 
         List<CriteriaSnapshot> roundCriteria = eventPublicService.getCriteriaByRound(score.getRoundId());
-        validateCriteriaMatch(request.getScores(), roundCriteria);
-        validateExtremeScoreComments(request.getScores());
+        validateCriteriaBelongToRound(request.getScores(), roundCriteria);
+        if (completing) {
+            validateAllCriteriaPresent(request.getScores(), roundCriteria);
+            validateExtremeScoreComments(request.getScores());
+        }
 
-        return updateExistingScore(score, request, roundCriteria);
+        try {
+            return saveScore(score, request, roundCriteria, completing);
+        } catch (OptimisticLockingFailureException e) {
+            throw new BusinessException(
+                    "Concurrent score modification detected. Please retry.",
+                    HttpStatus.CONFLICT) {};
+        }
     }
 
-    // ── BR-40: Lock all scores after deadline (called by scheduler or manually) ──
     @Transactional
     public int lockScoresForRound(UUID roundId) {
-        return judgeScoreRepository.updateStatusByRoundId(
+        int lockedCompleted = judgeScoreRepository.updateStatusByRoundId(
                 roundId, ScoreStatus.COMPLETED, ScoreStatus.LOCKED);
+        int lockedInProgress = judgeScoreRepository.updateStatusByRoundId(
+                roundId, ScoreStatus.IN_PROGRESS, ScoreStatus.LOCKED);
+        return lockedCompleted + lockedInProgress;
     }
 
-    // ── Admin delete score ──
     @Transactional
-    public void deleteScore(UUID judgeScoreId) {
+    public void deleteScore(UUID judgeScoreId, UUID roundId) {
         JudgeScore score = getJudgeScore(judgeScoreId);
+
+        if (!score.getRoundId().equals(roundId)) {
+            throw new BusinessException("Score does not belong to this round", HttpStatus.BAD_REQUEST) {};
+        }
+        if (score.getStatus() == ScoreStatus.LOCKED) {
+            throw new BusinessException("Cannot delete a locked score", HttpStatus.BAD_REQUEST) {};
+        }
+
         UUID submissionId = score.getSubmissionId();
 
         judgeScoreRepository.delete(score);
@@ -138,15 +178,30 @@ public class JudgingService {
                 judgeScoreId, score.getJudgeUserId(), submissionId, score.getRoundId()));
     }
 
-    // ── Read endpoints ──
-
     @Transactional(readOnly = true)
-    public JudgeScoreResponse getScoreById(UUID judgeScoreId) {
-        return toResponse(getJudgeScore(judgeScoreId));
+    public List<JudgeScoringAssignmentResponse> getMyScoringAssignments(UUID judgeId) {
+        List<TeamJudgeAssignment> assignments = teamJudgeAssignmentRepository.findByJudgeUserId(judgeId);
+        return assignments.stream()
+                .map(a -> buildScoringAssignment(judgeId, a))
+                .toList();
     }
 
     @Transactional(readOnly = true)
-    public List<JudgeScoreResponse> getScoresBySubmission(UUID submissionId) {
+    public JudgeScoreResponse getScoreById(UUID judgeScoreId, UUID requesterId, UserType requesterRole) {
+        JudgeScore score = getJudgeScore(judgeScoreId);
+        assertScoreReadAccess(score, requesterId, requesterRole);
+        return toResponse(score);
+    }
+
+    @Transactional(readOnly = true)
+    public List<JudgeScoreResponse> getScoresBySubmission(
+            UUID submissionId, UUID roundId, UUID requesterId, UserType requesterRole) {
+        if (requesterRole == UserType.LECTURER
+                && !isJudgeAssignedToTeam(requesterId, submissionId, roundId)) {
+            throw new BusinessException(
+                    "You are not assigned to score this team for this round",
+                    HttpStatus.FORBIDDEN) {};
+        }
         return judgeScoreRepository.findBySubmissionId(submissionId).stream()
                 .map(this::toResponse)
                 .toList();
@@ -174,27 +229,166 @@ public class JudgingService {
         return toResponse(score);
     }
 
-    // ═══ Private helpers ═══
+    private JudgeScoringAssignmentResponse buildScoringAssignment(UUID judgeId, TeamJudgeAssignment a) {
+        Team team = teamRepository.findById(a.getTeamId()).orElse(null);
+        Round round = roundRepository.findById(a.getRoundId()).orElse(null);
+        HackathonEvent event = team != null
+                ? eventRepository.findById(team.getEventId()).orElse(null) : null;
+        Track track = team != null && team.getTrackId() != null
+                ? trackRepository.findById(team.getTrackId()).orElse(null) : null;
+
+        Submission submission = submissionRepository
+                .findByTeamIdAndRoundId(a.getTeamId(), a.getRoundId()).orElse(null);
+
+        Optional<JudgeScore> myScore = submission != null
+                ? judgeScoreRepository.findByJudgeUserIdAndSubmissionId(judgeId, submission.getId())
+                : Optional.empty();
+
+        String scoringStatus = "NOT_STARTED";
+        if (myScore.isPresent()) {
+            scoringStatus = switch (myScore.get().getStatus()) {
+                case IN_PROGRESS -> "IN_PROGRESS";
+                case COMPLETED -> "COMPLETED";
+                case LOCKED -> "LOCKED";
+            };
+        }
+
+        return JudgeScoringAssignmentResponse.builder()
+                .teamId(a.getTeamId())
+                .teamName(team != null ? team.getName() : "Unknown")
+                .roundId(a.getRoundId())
+                .roundName(round != null ? round.getName() : "Unknown")
+                .eventId(event != null ? event.getId() : null)
+                .eventName(event != null ? event.getName() : null)
+                .trackId(team != null ? team.getTrackId() : null)
+                .trackName(track != null ? track.getName() : null)
+                .submissionId(submission != null ? submission.getId() : null)
+                .scoringStatus(scoringStatus)
+                .scoringDeadline(round != null ? round.getScoringDeadline() : null)
+                .build();
+    }
+
+    private boolean isJudgeAssignedToTeam(UUID judgeId, UUID submissionId, UUID roundId) {
+        UUID teamId = submissionPublicService.getSubmission(submissionId)
+                .map(s -> s.getTeamId())
+                .orElseThrow(() -> new ResourceNotFoundException("Submission", "id", submissionId));
+
+        return teamJudgeAssignmentRepository.existsByTeamIdAndRoundIdAndJudgeUserId(
+                teamId, roundId, judgeId);
+    }
+
+    private void assertScoreReadAccess(JudgeScore score, UUID requesterId, UserType requesterRole) {
+        if (requesterRole == UserType.SYSTEM_ADMIN || requesterRole == UserType.EVENT_COORDINATOR) {
+            return;
+        }
+        if (requesterRole == UserType.LECTURER && !score.getJudgeUserId().equals(requesterId)) {
+            throw new BusinessException("You can only view your own scores", HttpStatus.FORBIDDEN) {};
+        }
+    }
+
+    private void assertScoringWindowOpen(UUID roundId) {
+        LocalDateTime scoringDeadline = eventPublicService.getScoringDeadline(roundId);
+        if (LocalDateTime.now().isAfter(scoringDeadline)) {
+            throw new BusinessException("Scoring deadline has passed", HttpStatus.BAD_REQUEST) {};
+        }
+    }
 
     private JudgeScoreResponse createNewScore(UUID judgeId, UUID roundId,
                                                ScoreSubmissionRequest request,
-                                               List<CriteriaSnapshot> roundCriteria) {
+                                               List<CriteriaSnapshot> roundCriteria,
+                                               boolean completing) {
+        UUID teamId = resolveTeamId(request.getSubmissionId());
+        LocalDateTime now = LocalDateTime.now();
+
         JudgeScore score = JudgeScore.builder()
                 .judgeUserId(judgeId)
                 .submissionId(request.getSubmissionId())
                 .roundId(roundId)
-                .status(ScoreStatus.COMPLETED)
-                .startedAt(LocalDateTime.now())
-                .completedAt(LocalDateTime.now())
+                .status(completing ? ScoreStatus.COMPLETED : ScoreStatus.IN_PROGRESS)
+                .startedAt(now)
+                .completedAt(completing ? now : null)
                 .build();
 
-        Map<UUID, String> criteriaNames = roundCriteria.stream()
-                .collect(Collectors.toMap(CriteriaSnapshot::getId, CriteriaSnapshot::getName));
+        applyScoreDetails(score, request.getScores());
+        score = judgeScoreRepository.save(score);
 
+        eventPublisher.publishEvent(new ScoreCreatedEvent(
+                score.getId(), judgeId, request.getSubmissionId(), roundId, teamId));
+
+        if (completing) {
+            checkScoringComplete(request.getSubmissionId());
+        }
+
+        return toResponse(score);
+    }
+
+    private JudgeScoreResponse saveScore(JudgeScore score,
+                                          ScoreSubmissionRequest request,
+                                          List<CriteriaSnapshot> roundCriteria,
+                                          boolean completing) {
+        UUID teamId = resolveTeamId(score.getSubmissionId());
+        List<ScoreChangeDetail> changes = new ArrayList<>();
+
+        Map<UUID, JudgeScoreDetail> existingDetails = score.getDetails().stream()
+                .collect(Collectors.toMap(JudgeScoreDetail::getCriteriaId, d -> d));
+
+        Map<UUID, JudgeComment> existingComments = score.getComments().stream()
+                .collect(Collectors.toMap(JudgeComment::getCriteriaId, c -> c));
+
+        for (ScoreDetailDto dto : request.getScores()) {
+            JudgeScoreDetail detail = existingDetails.get(dto.getCriteriaId());
+            if (detail != null) {
+                if (!detail.getScore().equals(dto.getScore())) {
+                    changes.add(new ScoreChangeDetail(dto.getCriteriaId(), detail.getScore(), dto.getScore()));
+                    detail.setScore(dto.getScore());
+                }
+            } else {
+                changes.add(new ScoreChangeDetail(dto.getCriteriaId(), null, dto.getScore()));
+                score.getDetails().add(JudgeScoreDetail.builder()
+                        .judgeScore(score)
+                        .criteriaId(dto.getCriteriaId())
+                        .score(dto.getScore())
+                        .build());
+            }
+
+            if (dto.getComment() != null && !dto.getComment().isBlank()) {
+                JudgeComment comment = existingComments.get(dto.getCriteriaId());
+                if (comment != null) {
+                    comment.setComment(dto.getComment());
+                } else {
+                    score.getComments().add(JudgeComment.builder()
+                            .judgeScore(score)
+                            .criteriaId(dto.getCriteriaId())
+                            .comment(dto.getComment())
+                            .build());
+                }
+            }
+        }
+
+        if (completing) {
+            score.setStatus(ScoreStatus.COMPLETED);
+            score.setCompletedAt(LocalDateTime.now());
+            checkScoringComplete(score.getSubmissionId());
+        } else {
+            score.setStatus(ScoreStatus.IN_PROGRESS);
+        }
+
+        score = judgeScoreRepository.save(score);
+
+        if (!changes.isEmpty()) {
+            eventPublisher.publishEvent(new ScoreUpdatedEvent(
+                    score.getId(), score.getJudgeUserId(),
+                    score.getSubmissionId(), score.getRoundId(), teamId, changes));
+        }
+
+        return toResponse(score);
+    }
+
+    private void applyScoreDetails(JudgeScore score, List<ScoreDetailDto> scores) {
         List<JudgeScoreDetail> details = new ArrayList<>();
         List<JudgeComment> comments = new ArrayList<>();
 
-        for (ScoreDetailDto dto : request.getScores()) {
+        for (ScoreDetailDto dto : scores) {
             details.add(JudgeScoreDetail.builder()
                     .judgeScore(score)
                     .criteriaId(dto.getCriteriaId())
@@ -212,72 +406,16 @@ public class JudgingService {
 
         score.setDetails(details);
         score.setComments(comments);
-        score = judgeScoreRepository.save(score);
-
-        eventPublisher.publishEvent(new ScoreCreatedEvent(
-                score.getId(), judgeId, request.getSubmissionId(), roundId));
-
-        checkScoringComplete(request.getSubmissionId());
-
-        return toResponse(score);
     }
 
-    private JudgeScoreResponse updateExistingScore(JudgeScore score,
-                                                    ScoreSubmissionRequest request,
-                                                    List<CriteriaSnapshot> roundCriteria) {
-        List<UUID> changedCriteria = new ArrayList<>();
-
-        Map<UUID, JudgeScoreDetail> existingDetails = score.getDetails().stream()
-                .collect(Collectors.toMap(JudgeScoreDetail::getCriteriaId, d -> d));
-
-        Map<UUID, JudgeComment> existingComments = score.getComments().stream()
-                .collect(Collectors.toMap(JudgeComment::getCriteriaId, c -> c));
-
-        for (ScoreDetailDto dto : request.getScores()) {
-            JudgeScoreDetail detail = existingDetails.get(dto.getCriteriaId());
-            if (detail != null) {
-                if (!detail.getScore().equals(dto.getScore())) {
-                    detail.setScore(dto.getScore());
-                    changedCriteria.add(dto.getCriteriaId());
-                }
-            } else {
-                score.getDetails().add(JudgeScoreDetail.builder()
-                        .judgeScore(score)
-                        .criteriaId(dto.getCriteriaId())
-                        .score(dto.getScore())
-                        .build());
-                changedCriteria.add(dto.getCriteriaId());
-            }
-
-            JudgeComment comment = existingComments.get(dto.getCriteriaId());
-            if (dto.getComment() != null && !dto.getComment().isBlank()) {
-                if (comment != null) {
-                    comment.setComment(dto.getComment());
-                } else {
-                    score.getComments().add(JudgeComment.builder()
-                            .judgeScore(score)
-                            .criteriaId(dto.getCriteriaId())
-                            .comment(dto.getComment())
-                            .build());
-                }
-            }
-        }
-
-        score.setCompletedAt(LocalDateTime.now());
-        score.setStatus(ScoreStatus.COMPLETED);
-        score = judgeScoreRepository.save(score);
-
-        if (!changedCriteria.isEmpty()) {
-            eventPublisher.publishEvent(new ScoreUpdatedEvent(
-                    score.getId(), score.getJudgeUserId(),
-                    score.getSubmissionId(), score.getRoundId(), changedCriteria));
-        }
-
-        return toResponse(score);
+    private UUID resolveTeamId(UUID submissionId) {
+        return submissionPublicService.getSubmission(submissionId)
+                .map(s -> s.getTeamId())
+                .orElseThrow(() -> new ResourceNotFoundException("Submission", "id", submissionId));
     }
 
-    private void validateCriteriaMatch(List<ScoreDetailDto> scores,
-                                       List<CriteriaSnapshot> roundCriteria) {
+    private void validateCriteriaBelongToRound(List<ScoreDetailDto> scores,
+                                               List<CriteriaSnapshot> roundCriteria) {
         var validIds = roundCriteria.stream()
                 .map(CriteriaSnapshot::getId)
                 .collect(Collectors.toSet());
@@ -289,33 +427,54 @@ public class JudgingService {
                         HttpStatus.BAD_REQUEST) {};
             }
         }
+    }
 
-        if (scores.size() != roundCriteria.size()) {
+    private void validateAllCriteriaPresent(List<ScoreDetailDto> scores,
+                                            List<CriteriaSnapshot> roundCriteria) {
+        Set<UUID> submittedIds = scores.stream()
+                .map(ScoreDetailDto::getCriteriaId)
+                .collect(Collectors.toSet());
+
+        if (submittedIds.size() != scores.size()) {
             throw new BusinessException(
-                    "Must provide scores for all " + roundCriteria.size() + " criteria. Got: " + scores.size(),
+                    "Duplicate criteria in score submission",
+                    HttpStatus.BAD_REQUEST) {};
+        }
+
+        Set<UUID> requiredIds = roundCriteria.stream()
+                .map(CriteriaSnapshot::getId)
+                .collect(Collectors.toSet());
+
+        if (!submittedIds.equals(requiredIds)) {
+            throw new BusinessException(
+                    "Must provide scores for all " + requiredIds.size() + " criteria. Got: " + submittedIds.size(),
                     HttpStatus.BAD_REQUEST) {};
         }
     }
 
     private void validateExtremeScoreComments(List<ScoreDetailDto> scores) {
         for (ScoreDetailDto dto : scores) {
-            if ((dto.getScore() < 50 || dto.getScore() > 90)
+            if ((dto.getScore() < 3 || dto.getScore() > 8)
                     && (dto.getComment() == null || dto.getComment().isBlank())) {
                 throw new BusinessException(
                         "Comment is required for criteria " + dto.getCriteriaId() +
-                                " because score " + dto.getScore() + " is below 50 or above 90",
+                                " because score " + dto.getScore() + " is below 3 or above 8",
                         HttpStatus.BAD_REQUEST) {};
             }
         }
     }
 
     private void checkScoringComplete(UUID submissionId) {
-        int totalJudges = judgeScoreRepository.countBySubmissionId(submissionId);
+        Submission submission = submissionRepository.findById(submissionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Submission", "id", submissionId));
+
+        long totalAssignedJudges = teamJudgeAssignmentRepository.countByTeamIdAndRoundId(
+                submission.getTeamId(), submission.getRoundId());
         int completedJudges = judgeScoreRepository.countBySubmissionIdAndStatus(
                 submissionId, ScoreStatus.COMPLETED);
 
-        if (completedJudges > 0 && completedJudges == totalJudges) {
-            eventPublisher.publishEvent(new ScoringCompletedEvent(submissionId, totalJudges));
+        if (totalAssignedJudges > 0 && completedJudges >= totalAssignedJudges) {
+            eventPublisher.publishEvent(new ScoringCompletedEvent(submissionId, (int) totalAssignedJudges));
         }
     }
 

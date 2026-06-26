@@ -90,7 +90,7 @@ public class ScoringTemplateService {
 
     @Transactional(readOnly = true)
     public List<ScoringTemplateResponse> listTemplates() {
-        return templateRepository.findAll().stream()
+        return templateRepository.findAllByOrderByCreatedAtDesc().stream()
                 .map(this::toResponse)
                 .toList();
     }
@@ -108,7 +108,46 @@ public class ScoringTemplateService {
         templateRepository.delete(template);
     }
 
+    @Transactional
+    public ScoringTemplateResponse deleteCriterion(UUID templateId, UUID criterionId) {
+        ScoringTemplate template = getTemplateEntity(templateId);
+
+        ScoringTemplateCriterion criterion = template.getCriteria().stream()
+                .filter(c -> c.getId().equals(criterionId))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("ScoringTemplateCriterion", "id", criterionId));
+
+        if (template.getCriteria().size() <= 1) {
+            throw new BusinessException(
+                    "Cannot delete the last criterion. A template must have at least one criterion.",
+                    HttpStatus.BAD_REQUEST) {};
+        }
+
+        int remainingSum = template.getCriteria().stream()
+                .filter(c -> !c.getId().equals(criterionId))
+                .mapToInt(ScoringTemplateCriterion::getWeight)
+                .sum();
+
+        if (remainingSum != 100) {
+            throw new BusinessException(
+                    "Cannot delete criterion: remaining criteria would total " + remainingSum
+                            + "%. Weights must sum to 100%. Adjust weights before deleting.",
+                    HttpStatus.BAD_REQUEST) {};
+        }
+
+        template.getCriteria().remove(criterion);
+        return toResponse(templateRepository.save(template));
+    }
+
     private void validateWeightSum(List<CreateScoringTemplateRequest.CriterionRequest> criteria) {
+        for (CreateScoringTemplateRequest.CriterionRequest criterion : criteria) {
+            if (criterion.getWeight() == null || criterion.getWeight() <= 0) {
+                throw new BusinessException(
+                        "Weight must be a positive integer greater than 0",
+                        HttpStatus.BAD_REQUEST) {};
+            }
+        }
+
         int sum = criteria.stream()
                 .mapToInt(CreateScoringTemplateRequest.CriterionRequest::getWeight)
                 .sum();
@@ -120,7 +159,7 @@ public class ScoringTemplateService {
     }
 
     private ScoringTemplate getTemplateEntity(UUID templateId) {
-        return templateRepository.findById(templateId)
+        return templateRepository.findWithCriteriaById(templateId)
                 .orElseThrow(() -> new ResourceNotFoundException("ScoringTemplate", "id", templateId));
     }
 

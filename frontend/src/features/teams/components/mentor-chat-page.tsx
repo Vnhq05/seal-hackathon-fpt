@@ -6,6 +6,7 @@ import { useMyTeamsAllEvents, type MyEventTeam } from "@/features/teams/hooks/us
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { mentorInvitationApi, mentorChatApi } from "@/lib/api";
 import type { MentorInvitationResponse, MentorRoomResponse, ChatMessageResponse } from "@/lib/api";
+import { useMentorChatWebSocket } from "@/features/teams/hooks/use-mentor-chat-websocket";
 
 // ═══ Icons ═══
 
@@ -90,7 +91,7 @@ export function MentorChatPage() {
 
 function StudentView() {
   const { data: allTeams, isLoading } = useMyTeamsAllEvents();
-  const activeTeams = (allTeams ?? []).filter((mt) => mt.event.status !== "COMPLETED");
+  const activeTeams = (allTeams ?? []).filter((mt) => mt.event.status !== "COMPLETED" && mt.team);
   const [selectedIdx, setSelectedIdx] = useState(0);
   const selected = activeTeams[selectedIdx] ?? null;
 
@@ -170,7 +171,18 @@ function StudentTeamPanel({ eventId, teamId, teamName, isLeader }: {
   if (room) {
     return (
       <div className="rounded-lg border border-seal-border bg-seal-surface flex flex-col h-[calc(100vh-220px)]">
-        <ChatRoom eventId={eventId} teamId={teamId} peerName={`Mentor`} pill={teamName} />
+        <ChatRoom eventId={eventId} teamId={teamId} peerName="Mentor" pill={teamName} />
+      </div>
+    );
+  }
+
+  if (!isLeader) {
+    return (
+      <div className="rounded-lg border border-dashed border-seal-border bg-seal-surface p-10 text-center">
+        <p className="font-semibold text-seal-text">Chưa có mentor</p>
+        <p className="mt-1 text-sm text-seal-text-muted">
+          Team chưa được gán mentor. Leader sẽ gửi lời mời.
+        </p>
       </div>
     );
   }
@@ -187,21 +199,29 @@ function InvitePanel({ eventId, teamId, teamName, isLeader }: {
   eventId: string; teamId: string; teamName: string; isLeader: boolean;
 }) {
   const qc = useQueryClient();
-  const [email, setEmail] = useState("");
+  const [mentorUserId, setMentorUserId] = useState("");
   const [note, setNote] = useState("");
 
+  const { data: mentors = [] } = useQuery({
+    queryKey: ["available-mentors", eventId],
+    queryFn: () => mentorInvitationApi.getAvailableMentors(eventId),
+    enabled: isLeader,
+  });
+
   const { mutate: send, isPending } = useMutation({
-    mutationFn: () => mentorInvitationApi.send(eventId, teamId, { mentorEmail: email.trim(), message: note.trim() || undefined }),
+    mutationFn: () => mentorInvitationApi.send(eventId, teamId, {
+      mentorUserId,
+      message: note.trim() || undefined,
+    }),
     onSuccess: () => {
-      setEmail("");
+      setMentorUserId("");
       setNote("");
       qc.invalidateQueries({ queryKey: ["mentor-invitations", eventId, teamId] });
     },
   });
 
   const handleSend = () => {
-    if (!isLeader) return;
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return;
+    if (!isLeader || !mentorUserId) return;
     send();
   };
 
@@ -209,25 +229,30 @@ function InvitePanel({ eventId, teamId, teamName, isLeader }: {
     <div className="rounded-lg border border-seal-border bg-seal-surface p-5 self-start">
       <div className="flex items-center gap-2 mb-1 text-seal-text">
         <MailIcon />
-        <h3 className="font-semibold text-sm">Invite a mentor by email</h3>
+        <h3 className="font-semibold text-sm">Mời Mentor</h3>
       </div>
       <p className="text-xs text-seal-text-muted mb-4">
-        Send an invitation to a mentor. They&apos;ll see it and can accept to join your team.
+        Chọn mentor từ danh sách event. Mentor sẽ nhận lời mời và có thể chấp nhận hoặc từ chối.
       </p>
       <div className="flex flex-col gap-3">
         <div>
-          <label className="text-xs text-seal-text-secondary">Mentor&apos;s email</label>
-          <input
-            type="email"
-            placeholder="mentor@example.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+          <label className="text-xs text-seal-text-secondary">Chọn mentor</label>
+          <select
+            value={mentorUserId}
+            onChange={(e) => setMentorUserId(e.target.value)}
             disabled={!isLeader}
             className="mt-1 w-full rounded-lg border border-seal-border bg-seal-surface px-3 py-2 text-sm text-seal-text outline-none focus:border-seal-cyan/40"
-          />
+          >
+            <option value="">-- Chọn mentor --</option>
+            {mentors.map((m) => (
+              <option key={m.mentorUserId} value={m.mentorUserId}>
+                {m.mentorFullName ?? m.mentorEmail}
+              </option>
+            ))}
+          </select>
         </div>
         <div>
-          <label className="text-xs text-seal-text-secondary">Personal note (optional)</label>
+          <label className="text-xs text-seal-text-secondary">Ghi chú (tuỳ chọn)</label>
           <textarea
             placeholder={`Hi! We're ${teamName} — would love your guidance.`}
             value={note}
@@ -239,12 +264,12 @@ function InvitePanel({ eventId, teamId, teamName, isLeader }: {
         </div>
         <button
           onClick={handleSend}
-          disabled={!isLeader || isPending}
+          disabled={!isLeader || isPending || !mentorUserId}
           className="w-full rounded-lg bg-seal-cyan py-2.5 text-sm font-semibold text-white transition-colors hover:bg-seal-cyan-dark disabled:opacity-50"
         >
-          <span className="inline-flex items-center gap-2"><SendIcon /> {isPending ? "Sending..." : "Send invitation"}</span>
+          <span className="inline-flex items-center gap-2"><SendIcon /> {isPending ? "Đang gửi..." : "Gửi lời mời"}</span>
         </button>
-        {!isLeader && <p className="text-xs text-seal-text-muted">Only the team leader can invite a mentor.</p>}
+        {!isLeader && <p className="text-xs text-seal-text-muted">Chỉ Leader mới được mời mentor.</p>}
       </div>
     </div>
   );
@@ -278,22 +303,15 @@ function SentInvitations({ invitations }: { invitations: MentorInvitationRespons
 // ═══ Lecturer/Mentor View ═══
 
 function LecturerMentorView() {
-  const { user } = useAuthStore();
-  const { data: allTeams } = useMyTeamsAllEvents();
-  const activeEvent = (allTeams ?? []).find((mt) => mt.event.status === "ACTIVE" || mt.event.status === "OPEN");
-  const eventId = activeEvent?.event.id ?? "";
-
   const { data: pending = [] } = useQuery({
-    queryKey: ["mentor-pending", eventId],
-    queryFn: () => mentorInvitationApi.getPendingForMentor(eventId),
-    enabled: !!eventId,
+    queryKey: ["mentor-pending-all"],
+    queryFn: () => mentorInvitationApi.getAllPendingForMentor(),
     refetchInterval: 5000,
   });
 
   const { data: rooms = [] } = useQuery({
-    queryKey: ["mentor-rooms", eventId],
-    queryFn: () => mentorInvitationApi.getMentorActiveRooms(eventId),
-    enabled: !!eventId,
+    queryKey: ["mentor-rooms-all"],
+    queryFn: () => mentorInvitationApi.getAllMentorActiveRooms(),
     refetchInterval: 5000,
   });
 
@@ -302,24 +320,13 @@ function LecturerMentorView() {
   const qc = useQueryClient();
 
   const { mutate: respond } = useMutation({
-    mutationFn: ({ id, decision }: { id: string; decision: "ACCEPTED" | "DENIED" }) =>
+    mutationFn: ({ id, eventId, decision }: { id: string; eventId: string; decision: "ACCEPTED" | "DENIED" }) =>
       mentorInvitationApi.respond(eventId, id, { decision }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["mentor-pending", eventId] });
-      qc.invalidateQueries({ queryKey: ["mentor-rooms", eventId] });
+      qc.invalidateQueries({ queryKey: ["mentor-pending-all"] });
+      qc.invalidateQueries({ queryKey: ["mentor-rooms-all"] });
     },
   });
-
-  if (!eventId) {
-    return (
-      <div className="flex flex-col gap-5">
-        <h1 className="text-[28px] font-bold tracking-tight text-seal-text">MentorHub</h1>
-        <div className="rounded-lg border border-seal-border bg-seal-surface p-10 text-center text-sm text-seal-text-muted">
-          No active event found.
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="flex flex-col gap-5">
@@ -328,7 +335,6 @@ function LecturerMentorView() {
         <p className="mt-1 text-sm text-seal-text-secondary">Your teams — {rooms.length} active</p>
       </div>
 
-      {/* Pending Invitations */}
       {pending.length > 0 && (
         <div className="rounded-lg border border-seal-border bg-seal-surface">
           <div className="flex items-center gap-2 border-b border-seal-border px-5 py-3">
@@ -340,7 +346,7 @@ function LecturerMentorView() {
             {pending.map((req) => (
               <div key={req.id} className="flex items-start gap-3 px-5 py-4">
                 <div className="flex-1 min-w-0">
-                  <div className="font-medium text-seal-text">Team #{req.teamId}</div>
+                  <div className="font-medium text-seal-text">{req.teamName ?? `Team ${req.teamId}`}</div>
                   <div className="text-xs text-seal-text-muted">
                     {req.createdAt ? new Date(req.createdAt).toLocaleString() : ""}
                   </div>
@@ -348,13 +354,13 @@ function LecturerMentorView() {
                 </div>
                 <div className="flex gap-2 flex-shrink-0">
                   <button
-                    onClick={() => respond({ id: req.id, decision: "ACCEPTED" })}
+                    onClick={() => respond({ id: req.id, eventId: req.eventId, decision: "ACCEPTED" })}
                     className="flex items-center gap-1 rounded-lg bg-seal-cyan px-3 py-1.5 text-xs font-semibold text-white hover:bg-seal-cyan-dark"
                   >
                     <CheckIcon /> Accept
                   </button>
                   <button
-                    onClick={() => respond({ id: req.id, decision: "DENIED" })}
+                    onClick={() => respond({ id: req.id, eventId: req.eventId, decision: "DENIED" })}
                     className="flex items-center gap-1 rounded-lg border border-seal-border bg-seal-surface px-3 py-1.5 text-xs font-semibold text-seal-text hover:bg-seal-surface-elevated"
                   >
                     <XSmallIcon /> Decline
@@ -380,8 +386,8 @@ function LecturerMentorView() {
                 onClick={() => setSelectedRoomIdx(idx)}
                 className={`w-full border-b border-seal-border-light px-4 py-3 text-left text-sm transition-colors ${idx === selectedRoomIdx ? "bg-seal-cyan/5" : "hover:bg-seal-surface-sunken"}`}
               >
-                <div className="font-medium text-seal-text">Team #{r.teamId}</div>
-                <div className="text-xs text-seal-text-muted">Room #{r.id}</div>
+                <div className="font-medium text-seal-text">{r.teamName ?? `Team ${r.teamId}`}</div>
+                <div className="text-xs text-seal-text-muted">Mentor room</div>
               </button>
             ))
           )}
@@ -389,7 +395,12 @@ function LecturerMentorView() {
 
         <div className="rounded-lg border border-seal-border bg-seal-surface flex flex-col min-h-0">
           {selectedRoom ? (
-            <ChatRoom eventId={eventId} teamId={selectedRoom.teamId} peerName={`Team #${selectedRoom.teamId}`} pill="Mentor" />
+            <ChatRoom
+              eventId={selectedRoom.eventId}
+              teamId={selectedRoom.teamId}
+              peerName={selectedRoom.teamName ?? `Team ${selectedRoom.teamId}`}
+              pill="Mentor"
+            />
           ) : (
             <EmptyPanel message="Select a team to start chatting." />
           )}
@@ -406,18 +417,35 @@ function ChatRoom({ eventId, teamId, peerName, pill }: {
 }) {
   const { user } = useAuthStore();
   const [text, setText] = useState("");
+  const [messages, setMessages] = useState<ChatMessageResponse[]>([]);
   const endRef = useRef<HTMLDivElement>(null);
+  const { connected, subscribe, sendMessage: sendWs } = useMentorChatWebSocket(teamId);
 
-  const { data: messages = [] } = useQuery({
+  const { data: history = [] } = useQuery({
     queryKey: ["mentor-messages", eventId, teamId],
     queryFn: () => mentorChatApi.getMessages(eventId, teamId),
-    refetchInterval: 3000,
   });
 
+  useEffect(() => {
+    setMessages(history);
+  }, [history]);
+
+  useEffect(() => {
+    return subscribe((msg) => {
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === msg.id)) return prev;
+        return [...prev, msg];
+      });
+    });
+  }, [subscribe]);
+
   const qc = useQueryClient();
-  const { mutate: send } = useMutation({
+  const { mutate: sendRest } = useMutation({
     mutationFn: (msg: string) => mentorChatApi.sendMessage(eventId, teamId, { message: msg }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["mentor-messages", eventId, teamId] }),
+    onSuccess: (msg) => {
+      setMessages((prev) => (prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]));
+      qc.invalidateQueries({ queryKey: ["mentor-messages", eventId, teamId] });
+    },
   });
 
   useEffect(() => {
@@ -428,7 +456,9 @@ function ChatRoom({ eventId, teamId, peerName, pill }: {
     const content = text.trim();
     if (!content) return;
     setText("");
-    send(content);
+    if (!sendWs(content)) {
+      sendRest(content);
+    }
   };
 
   return (
@@ -438,7 +468,11 @@ function ChatRoom({ eventId, teamId, peerName, pill }: {
           <div className="font-semibold text-sm text-seal-text">{peerName}</div>
           <div className="text-xs text-seal-text-muted">Chat</div>
         </div>
-        {pill && <span className="rounded-full border border-seal-border px-2.5 py-1 text-xs text-seal-text-muted">{pill}</span>}
+        {pill && (
+          <span className="rounded-full border border-seal-border px-2.5 py-1 text-xs text-seal-text-muted">
+            {pill} {connected ? "• live" : "• connecting..."}
+          </span>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-3">

@@ -18,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -28,6 +29,7 @@ import java.util.UUID;
 public class EventPublicServiceImpl implements EventPublicService {
 
     private final HackathonEventRepository eventRepository;
+    private final EventService eventService;
     private final RoundRepository roundRepository;
     private final CriteriaRepository criteriaRepository;
     private final TrackRepository trackRepository;
@@ -83,7 +85,11 @@ public class EventPublicServiceImpl implements EventPublicService {
     public LocalDateTime getRegistrationDeadline(UUID eventId) {
         HackathonEvent event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Event", "id", eventId));
-        return event.getRegistrationDeadline().atStartOfDay();
+        LocalDate deadline = event.getRegistrationDeadline();
+        if (deadline == null) {
+            return null;
+        }
+        return deadline.atTime(23, 59, 59);
     }
 
     @Override
@@ -136,8 +142,17 @@ public class EventPublicServiceImpl implements EventPublicService {
     @Transactional(readOnly = true)
     public boolean isEventActive(UUID eventId) {
         return eventRepository.findById(eventId)
-                .map(e -> e.getStatus() == EventStatus.ACTIVE)
+                .map(e -> eventService.resolveStatus(e) == EventStatus.ACTIVE)
                 .orElse(false);
+    }
+
+    @Override
+    @Transactional
+    public void setLeaderboardPublic(UUID eventId, boolean enabled) {
+        HackathonEvent event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Event", "id", eventId));
+        event.setLeaderboardPublic(enabled);
+        eventRepository.save(event);
     }
 
     private EventSnapshot toEventSnapshot(HackathonEvent event) {
@@ -150,9 +165,11 @@ public class EventPublicServiceImpl implements EventPublicService {
                 .endDate(event.getEndDate())
                 .registrationDeadline(event.getRegistrationDeadline())
                 .registrationOpenDate(event.getRegistrationOpenDate())
-                .status(event.getStatus())
+                .status(eventService.resolveStatus(event))
                 .semesterMin(event.getSemesterMin())
                 .semesterMax(event.getSemesterMax())
+                .leaderboardPublic(event.isLeaderboardPublic())
+                .tiebreakerCriteria(event.getTiebreakerCriteria())
                 .build();
     }
 
@@ -167,6 +184,7 @@ public class EventPublicServiceImpl implements EventPublicService {
                 .submissionDeadline(round.getSubmissionDeadline())
                 .scoringDeadline(round.getScoringDeadline())
                 .advancementCutoff(round.getAdvancementCutoff())
+                .roundWeight(round.getRoundWeight())
                 .build();
     }
 }

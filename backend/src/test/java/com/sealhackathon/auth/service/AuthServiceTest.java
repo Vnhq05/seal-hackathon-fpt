@@ -26,6 +26,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -58,7 +59,7 @@ class AuthServiceTest {
         when(userPublicService.existsByEmail(anyString())).thenReturn(false);
         when(passwordEncoder.encode(anyString())).thenReturn("hashed");
         when(userPublicService.createParticipant(
-                anyString(), anyString(), anyString(), any(), anyString(), any(), eq(UserType.FPT_STUDENT), any()))
+                anyString(), anyString(), anyString(), any(), anyString(), any(), eq(UserType.FPT_STUDENT), any(), anyBoolean()))
                 .thenReturn(expectedId);
 
         UUID result = authService.register(request);
@@ -84,14 +85,14 @@ class AuthServiceTest {
     @Test
     void register_shouldThrowDuplicate_whenEmailExists() {
         RegisterRequest request = RegisterRequest.builder()
-                .email("exists@test.com")
+                .email("exists@fpt.edu.vn")
                 .password("password123")
                 .fullName("Test")
                 .studentId("SE123456")
                 .userType(UserType.FPT_STUDENT)
                 .build();
 
-        when(userPublicService.existsByEmail("exists@test.com")).thenReturn(true);
+        when(userPublicService.existsByEmail("exists@fpt.edu.vn")).thenReturn(true);
 
         assertThatThrownBy(() -> authService.register(request))
                 .isInstanceOf(DuplicateResourceException.class);
@@ -182,5 +183,42 @@ class AuthServiceTest {
 
         assertThatThrownBy(() -> authService.register(request))
                 .hasMessageContaining("University name is required");
+    }
+
+    @Test
+    void register_shouldAllowGmail_whenValidFptStudent() {
+        RegisterRequest request = RegisterRequest.builder()
+                .email("student@gmail.com")
+                .password("password123")
+                .fullName("Nguyen Van A")
+                .studentId("SE123456")
+                .userType(UserType.FPT_STUDENT)
+                .build();
+
+        UUID expectedId = UUID.randomUUID();
+        when(userPublicService.existsByEmail(anyString())).thenReturn(false);
+        when(passwordEncoder.encode(anyString())).thenReturn("hashed");
+        when(userPublicService.createParticipant(
+                anyString(), anyString(), anyString(), any(), anyString(), any(), eq(UserType.FPT_STUDENT), any(), anyBoolean()))
+                .thenReturn(expectedId);
+
+        UUID result = authService.register(request);
+
+        assertThat(result).isEqualTo(expectedId);
+    }
+
+    @Test
+    void register_shouldThrow_whenExternalStudentMissingStudentId() {
+        RegisterRequest request = RegisterRequest.builder()
+                .email("ext@test.com")
+                .password("password123")
+                .fullName("External")
+                .studentId("   ")
+                .universityName("HUST")
+                .userType(UserType.EXTERNAL_STUDENT)
+                .build();
+
+        assertThatThrownBy(() -> authService.register(request))
+                .hasMessageContaining("Student ID is required");
     }
 }

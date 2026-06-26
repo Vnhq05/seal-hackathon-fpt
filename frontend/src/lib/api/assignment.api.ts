@@ -1,4 +1,7 @@
 import { api } from "./api-client";
+import type { TeamJudgeAssignmentResponse } from "./team-judge-assignment.api";
+
+export type { TeamJudgeAssignmentResponse };
 
 // ═══ Types ═══
 
@@ -58,4 +61,55 @@ export const assignmentApi = {
   removeMentor(eventId: string, assignmentId: string): Promise<void> {
     return api.delete<void>(`/events/${eventId}/mentors/${assignmentId}`);
   },
+
+  // ── Team judge assignments (overview) ──
+
+  getTeamAssignments(
+    eventId: string,
+    params: { roundId: string; season?: string; year?: number; trackId?: string },
+  ): Promise<EventAssignmentsOverviewResponse> {
+    return api.get<EventAssignmentsOverviewResponse>(`/events/${eventId}/assignments`, { params });
+  },
+
+  assignTeamJudges(body: CreateTeamAssignmentsRequest): Promise<TeamJudgeAssignmentResponse[]> {
+    return api.post<TeamJudgeAssignmentResponse[]>("/assignments", body);
+  },
+
+  removeTeamJudgeAssignment(assignmentId: string): Promise<void> {
+    return api.delete<void>(`/assignments/${assignmentId}`);
+  },
 };
+
+export interface EventJudgeOption {
+  id: string;
+  judgeUserId: string;
+  judgeFullName: string | null;
+  judgeEmail: string | null;
+}
+
+export interface TeamAssignmentOverview {
+  teamId: string;
+  teamName: string;
+  trackId: string | null;
+  trackName: string | null;
+  memberCount: number;
+  mentorUserId: string | null;
+  mentorFullName: string | null;
+  submissionStatus: string | null;
+  judges: TeamJudgeAssignmentResponse[];
+  judgeCount: number;
+}
+
+export interface EventAssignmentsOverviewResponse {
+  eventId: string;
+  roundId: string;
+  eligibleJudges: EventJudgeOption[];
+  teams: TeamAssignmentOverview[];
+}
+
+export interface CreateTeamAssignmentsRequest {
+  eventId: string;
+  roundId: string;
+  teamId: string;
+  judgeUserIds: string[];
+}

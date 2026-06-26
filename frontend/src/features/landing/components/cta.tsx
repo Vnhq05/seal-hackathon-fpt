@@ -49,7 +49,7 @@ export function CTA() {
             </a>
             <Link
               href="/register"
-              className="inline-flex h-12 items-center rounded-lg border border-seal-text-secondary/20 px-7 text-sm font-semibold text-seal-text transition-colors hover:border-seal-cyan/40 hover:bg-seal-cyan/5 focus:ring-2 focus:ring-seal-cyan/20 focus:outline-none"
+              className="inline-flex h-12 items-center rounded-lg bg-seal-purple px-7 text-sm font-bold text-white transition-colors hover:bg-seal-purple-dark focus:ring-2 focus:ring-seal-purple/40 focus:outline-none"
             >
               Create Account
             </Link>

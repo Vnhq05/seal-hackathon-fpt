@@ -13,4 +13,6 @@ public interface MentorAssignmentRepository extends JpaRepository<MentorAssignme
     List<MentorAssignment> findByHackathonEventId(UUID eventId);
 
     boolean existsByHackathonEventIdAndMentorUserId(UUID eventId, UUID mentorUserId);
+
+    long countByMentorUserId(UUID mentorUserId);
 }

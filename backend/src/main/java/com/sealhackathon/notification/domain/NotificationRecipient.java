@@ -7,6 +7,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
@@ -27,7 +28,9 @@ import java.util.UUID;
  * References User by ID — cross-module, no JPA relationship.
  */
 @Entity
-@Table(name = "notification_recipients")
+@Table(name = "notification_recipients", indexes = {
+        @Index(name = "idx_notif_recipient_user_id", columnList = "user_id")
+})
 @Getter
 @Setter
 @NoArgsConstructor

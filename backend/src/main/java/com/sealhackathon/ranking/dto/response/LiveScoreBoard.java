@@ -20,8 +20,10 @@ public class LiveScoreBoard {
     private Integer year;
     private UUID roundId;
     private String roundName;
-    private List<String> tracks;
+    private List<TrackInfo> tracks;
     private List<LiveScoreEntry> rankings;
     private boolean scoresLocked;
     private boolean resultsPublished;
+    private boolean leaderboardPublic;
+    private boolean canManageLeaderboard;
 }

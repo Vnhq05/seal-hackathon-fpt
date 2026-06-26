@@ -83,6 +83,12 @@ public class Round extends BaseEntity {
     @Column(name = "advancement_cutoff", nullable = false)
     private Integer advancementCutoff;
 
+    @NotNull
+    @Min(1)
+    @Column(name = "round_weight", nullable = false, columnDefinition = "INT NOT NULL DEFAULT 100")
+    @Builder.Default
+    private Integer roundWeight = 100;
+
     // ── Child: criteria for this round ──
     @OneToMany(mappedBy = "round", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @Builder.Default

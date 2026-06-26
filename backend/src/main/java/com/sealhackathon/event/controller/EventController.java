@@ -3,8 +3,10 @@ package com.sealhackathon.event.controller;
 import com.sealhackathon.common.response.ApiResponse;
 import com.sealhackathon.event.domain.enums.EventStatus;
 import com.sealhackathon.event.dto.request.CreateEventRequest;
+import com.sealhackathon.event.dto.request.PublishEventRequest;
 import com.sealhackathon.event.dto.request.UpdateEventRequest;
 import com.sealhackathon.event.dto.response.EventResponse;
+import com.sealhackathon.event.service.EventPublishService;
 import com.sealhackathon.event.service.EventService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -29,6 +31,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -39,6 +43,7 @@ import java.util.UUID;
 public class EventController {
 
     private final EventService eventService;
+    private final EventPublishService eventPublishService;
 
     @PostMapping
     @PreAuthorize("hasAnyRole('SYSTEM_ADMIN', 'EVENT_COORDINATOR')")
@@ -48,6 +53,17 @@ public class EventController {
         EventResponse response = eventService.createEvent(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Event created successfully", response));
+    }
+
+    @PostMapping("/publish")
+    @PreAuthorize("hasAnyRole('SYSTEM_ADMIN', 'EVENT_COORDINATOR')")
+    @Operation(summary = "Create event with rounds, judge assignments, and activation in one transaction")
+    public ResponseEntity<ApiResponse<EventResponse>> publishEvent(
+            @Valid @RequestBody PublishEventRequest request,
+            HttpServletRequest httpRequest) {
+        EventResponse response = eventPublishService.publishEvent(request, httpRequest.getRemoteAddr());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success("Event published successfully", response));
     }
 
     @PutMapping("/{eventId}")
@@ -99,13 +115,25 @@ public class EventController {
     }
 
     @GetMapping
-    @Operation(summary = "List events — Admin sees all, Coordinator sees own. Filter by season/year/status.")
+    @Operation(summary = "List events — filter by season/year/status (comma-separated: UPCOMING,OPEN)")
     public ResponseEntity<ApiResponse<Page<EventResponse>>> listEvents(
-            @RequestParam(required = false) EventStatus status,
+            @RequestParam(required = false) String status,
             @RequestParam(required = false) String season,
             @RequestParam(required = false) Integer year,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        Page<EventResponse> page = eventService.listEvents(status, season, year, pageable);
+        List<EventStatus> statuses = parseStatuses(status);
+        Page<EventResponse> page = eventService.listEvents(statuses, season, year, pageable);
         return ResponseEntity.ok(ApiResponse.success(page));
+    }
+
+    private List<EventStatus> parseStatuses(String status) {
+        if (status == null || status.isBlank()) {
+            return List.of();
+        }
+        return Arrays.stream(status.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .map(EventStatus::valueOf)
+                .toList();
     }
 }

@@ -107,6 +107,10 @@ public class HackathonEvent extends BaseEntity {
     @Column(name = "tiebreaker_criteria", length = 1000)
     private String tiebreakerCriteria;
 
+    @Column(name = "leaderboard_public", nullable = false, columnDefinition = "BIT NOT NULL DEFAULT 0")
+    @Builder.Default
+    private boolean leaderboardPublic = false;
+
     // ── BR-08: Draft → Active → Completed | Cancelled ──
     @NotNull
     @Enumerated(EnumType.STRING)
@@ -122,6 +126,10 @@ public class HackathonEvent extends BaseEntity {
     @OneToMany(mappedBy = "hackathonEvent", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @Builder.Default
     private List<MentorAssignment> mentorAssignments = new ArrayList<>();
+
+    @OneToMany(mappedBy = "hackathonEvent", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @Builder.Default
+    private List<EventJudgeAssignment> eventJudgeAssignments = new ArrayList<>();
 
     @OneToMany(mappedBy = "hackathonEvent", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @Builder.Default

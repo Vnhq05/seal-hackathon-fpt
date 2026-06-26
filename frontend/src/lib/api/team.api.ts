@@ -20,6 +20,9 @@ export interface TeamResponse {
   status: TeamStatus;
   trackId: string | null;
   memberCount: number;
+  minTeamMembers: number;
+  maxTeamMembers: number;
+  canSelectTrack: boolean;
   members: TeamMemberResponse[];
   createdAt: string;
 }
@@ -75,6 +78,10 @@ export const teamApi = {
 
   transferLeadership(eventId: string, teamId: string, newLeaderId: string): Promise<TeamResponse> {
     return api.put<TeamResponse>(`/events/${eventId}/teams/${teamId}/leader/${newLeaderId}`);
+  },
+
+  selectTrack(eventId: string, teamId: string, body: { trackId: string }): Promise<TeamResponse> {
+    return api.put<TeamResponse>(`/events/${eventId}/teams/${teamId}/track`, body);
   },
 
   assignMentorToTeam(eventId: string, body: AssignMentorTeamRequest): Promise<void> {

@@ -53,4 +53,8 @@ public class Prize extends BaseEntity {
     @Min(1)
     @Column(name = "quantity", nullable = false)
     private Integer quantity;
+
+    @Size(max = 100)
+    @Column(name = "label", length = 100)
+    private String label;
 }

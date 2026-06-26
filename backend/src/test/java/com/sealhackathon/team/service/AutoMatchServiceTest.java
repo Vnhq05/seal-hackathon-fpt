@@ -1,9 +1,11 @@
 package com.sealhackathon.team.service;
 
+import com.sealhackathon.common.service.SystemConfigService;
 import com.sealhackathon.team.domain.Team;
 import com.sealhackathon.team.domain.enums.TeamStatus;
 import com.sealhackathon.team.repository.TeamMemberRepository;
 import com.sealhackathon.team.repository.TeamRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -25,8 +27,15 @@ class AutoMatchServiceTest {
     @Mock private TeamRepository teamRepository;
     @Mock private TeamMemberRepository teamMemberRepository;
     @Mock private ApplicationEventPublisher eventPublisher;
+    @Mock private SystemConfigService systemConfigService;
 
     @InjectMocks private AutoMatchService autoMatchService;
+
+    @BeforeEach
+    void setUp() {
+        when(systemConfigService.getMinTeamMembers()).thenReturn(3);
+        when(systemConfigService.getMaxTeamMembers()).thenReturn(4);
+    }
 
     @Test
     void autoMatch_shouldCreateTeams_fromUnassignedUsers() {

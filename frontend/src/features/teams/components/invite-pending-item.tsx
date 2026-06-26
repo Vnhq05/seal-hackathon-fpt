@@ -120,6 +120,23 @@ export function InvitePendingItem({ invite, teamId }: InvitePendingItemProps) {
           Declined
         </span>
       )}
+
+      {invite.status === "CANCELLED" && (
+        <span
+          className="rounded"
+          style={{
+            backgroundColor: "rgba(148,163,184,0.15)",
+            padding: "2px 8px",
+            fontSize: 12,
+            fontWeight: 500,
+            color: "#64748b",
+            letterSpacing: "0.24px",
+            lineHeight: "12px",
+          }}
+        >
+          Cancelled
+        </span>
+      )}
     </div>
   );
 }

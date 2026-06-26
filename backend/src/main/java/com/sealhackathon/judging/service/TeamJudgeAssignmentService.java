@@ -3,10 +3,11 @@ package com.sealhackathon.judging.service;
 import com.sealhackathon.common.exception.BusinessException;
 import com.sealhackathon.common.exception.DuplicateResourceException;
 import com.sealhackathon.common.exception.ResourceNotFoundException;
-import com.sealhackathon.event.service.EventPublicService;
+import com.sealhackathon.event.service.EventJudgeService;
 import com.sealhackathon.judging.domain.TeamJudgeAssignment;
 import com.sealhackathon.judging.dto.request.AssignJudgeToTeamRequest;
 import com.sealhackathon.judging.dto.response.TeamJudgeAssignmentResponse;
+import com.sealhackathon.judging.repository.JudgeScoreRepository;
 import com.sealhackathon.judging.repository.TeamJudgeAssignmentRepository;
 import com.sealhackathon.team.service.TeamPublicService;
 import com.sealhackathon.user.service.UserPublicService;
@@ -24,26 +25,18 @@ import java.util.UUID;
 public class TeamJudgeAssignmentService {
 
     private final TeamJudgeAssignmentRepository assignmentRepository;
-    private final EventPublicService eventPublicService;
+    private final JudgeScoreRepository judgeScoreRepository;
+    private final EventJudgeService eventJudgeService;
     private final TeamPublicService teamPublicService;
     private final UserPublicService userPublicService;
 
     @Transactional
-    public TeamJudgeAssignmentResponse assignJudgeToTeam(UUID roundId, UUID teamId, AssignJudgeToTeamRequest request) {
-        UUID judgeUserId = request.getJudgeUserId();
+    public TeamJudgeAssignmentResponse assignJudgeToTeam(
+            UUID eventId, UUID roundId, UUID teamId, AssignJudgeToTeamRequest request) {
+        validateJudgeCandidate(eventId, teamId, request.getJudgeUserId());
 
-        if (!eventPublicService.isJudgeAssignedToRound(judgeUserId, roundId)) {
-            throw new BusinessException("Judge is not assigned to this round", HttpStatus.BAD_REQUEST) {};
-        }
-
-        if (teamPublicService.isMentorOfTeam(judgeUserId, teamId)) {
-            throw new BusinessException(
-                    "Cannot assign judge who is the mentor of this team (conflict of interest)",
-                    HttpStatus.CONFLICT) {};
-        }
-
-        if (assignmentRepository.existsByTeamIdAndRoundIdAndJudgeUserId(teamId, roundId, judgeUserId)) {
-            throw new DuplicateResourceException("TeamJudgeAssignment", "judge", judgeUserId.toString());
+        if (assignmentRepository.existsByTeamIdAndRoundIdAndJudgeUserId(teamId, roundId, request.getJudgeUserId())) {
+            throw new DuplicateResourceException("TeamJudgeAssignment", "judge", request.getJudgeUserId().toString());
         }
 
         long currentCount = assignmentRepository.countByTeamIdAndRoundId(teamId, roundId);
@@ -51,13 +44,17 @@ public class TeamJudgeAssignmentService {
             throw new BusinessException("Each team can have at most 3 judges per round", HttpStatus.BAD_REQUEST) {};
         }
 
+        return createAssignment(roundId, teamId, request.getJudgeUserId());
+    }
+
+    @Transactional
+    TeamJudgeAssignmentResponse createAssignment(UUID roundId, UUID teamId, UUID judgeUserId) {
         TeamJudgeAssignment assignment = TeamJudgeAssignment.builder()
                 .teamId(teamId)
                 .roundId(roundId)
                 .judgeUserId(judgeUserId)
                 .assignedAt(LocalDateTime.now())
                 .build();
-
         return toResponse(assignmentRepository.save(assignment));
     }
 
@@ -79,10 +76,33 @@ public class TeamJudgeAssignmentService {
     public void removeAssignment(UUID assignmentId) {
         TeamJudgeAssignment assignment = assignmentRepository.findById(assignmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("TeamJudgeAssignment", "id", assignmentId));
+
+        boolean hasScores = judgeScoreRepository.existsByJudgeUserIdAndRoundIdAndTeamId(
+                assignment.getJudgeUserId(), assignment.getRoundId(), assignment.getTeamId());
+        if (hasScores) {
+            throw new BusinessException(
+                    "Cannot remove assignment: judge has already submitted scores",
+                    HttpStatus.BAD_REQUEST) {};
+        }
+
         assignmentRepository.delete(assignment);
     }
 
-    private TeamJudgeAssignmentResponse toResponse(TeamJudgeAssignment assignment) {
+    void validateJudgeCandidate(UUID eventId, UUID teamId, UUID judgeUserId) {
+        if (!eventJudgeService.isEventJudge(eventId, judgeUserId)) {
+            throw new BusinessException(
+                    "Judge must be assigned to the event with role JUDGE or BOTH",
+                    HttpStatus.BAD_REQUEST) {};
+        }
+
+        if (teamPublicService.isMentorOfTeam(judgeUserId, teamId)) {
+            throw new BusinessException(
+                    "Cannot assign judge who is the mentor of this team (conflict of interest)",
+                    HttpStatus.CONFLICT) {};
+        }
+    }
+
+    TeamJudgeAssignmentResponse toResponse(TeamJudgeAssignment assignment) {
         String judgeName = userPublicService.findById(assignment.getJudgeUserId())
                 .map(u -> u.getFullName())
                 .orElse("Unknown");

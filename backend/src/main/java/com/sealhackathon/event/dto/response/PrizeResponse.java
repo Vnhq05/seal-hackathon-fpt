@@ -19,4 +19,5 @@ public class PrizeResponse {
     private PrizeRank rank;
     private String value;
     private Integer quantity;
+    private String label;
 }

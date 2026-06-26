@@ -1,5 +1,6 @@
 package com.sealhackathon.common.config;
 
+import com.sealhackathon.auth.security.UserPrincipal;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.domain.AuditorAware;
@@ -20,6 +21,9 @@ public class JpaAuditingConfig {
             if (authentication == null || !authentication.isAuthenticated()
                     || "anonymousUser".equals(authentication.getPrincipal())) {
                 return Optional.of("system");
+            }
+            if (authentication.getPrincipal() instanceof UserPrincipal principal) {
+                return Optional.of(principal.email());
             }
             return Optional.of(authentication.getName());
         };

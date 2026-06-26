@@ -1,6 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { useHackathonPage } from "@/features/events/hooks/use-hackathon-page";
+import { useHackathonRounds } from "@/features/events/hooks/use-hackathon-rounds";
+import { HackathonRounds } from "@/features/events/components/hackathon-rounds";
+import { HackathonCriteriaTable } from "@/features/events/components/hackathon-criteria-table";
+import type { RoundResponse } from "@/lib/api/round.api";
+import type { CompetitionRound, JudgingCriterion } from "@/features/events/types/hackathon-detail.types";
 
 interface HackathonDetailPageProps {
   hackathonId: string;
@@ -46,20 +52,31 @@ function PageSkeleton() {
   );
 }
 
-/**
- * TODO: The old HackathonDetailPage relied on fields (longDescription, tracks,
- * timeline, judgingCriteria, rounds, keyDates, registration, bannerUrl) that do
- * not exist in the backend EventResponse. Those sub-components (HackathonHero,
- * HackathonAbout, HackathonTracks, HackathonTimeline, HackathonCriteriaTable,
- * HackathonRounds, HackathonDetailSidebar) need redesigning to use the actual
- * EventResponse shape plus separate API calls (criteriaApi, roundApi, etc.).
- *
- * For now this page shows a minimal view of the event data that actually exists.
- */
-export function HackathonDetailPage({ hackathonId }: HackathonDetailPageProps) {
-  const { data: event, isLoading } = useHackathonPage(hackathonId);
+function mapRounds(rounds: RoundResponse[]): CompetitionRound[] {
+  return rounds.map((round) => ({
+    id: round.id,
+    title: `Round ${round.roundNumber}: ${round.name}`,
+    description: `Submission deadline: ${new Date(round.submissionDeadline).toLocaleString()} · Scoring deadline: ${new Date(round.scoringDeadline).toLocaleString()}`,
+  }));
+}
 
-  if (isLoading) return <PageSkeleton />;
+function mapCriteria(rounds: RoundResponse[]): JudgingCriterion[] {
+  const criteriaRound = [...rounds].sort((a, b) => a.roundNumber - b.roundNumber)[0];
+  if (!criteriaRound?.criteria?.length) return [];
+
+  return criteriaRound.criteria.map((criterion) => ({
+    id: criterion.id,
+    name: criterion.name,
+    description: criterion.description ?? "",
+    weight: criterion.weight,
+  }));
+}
+
+export function HackathonDetailPage({ hackathonId }: HackathonDetailPageProps) {
+  const { data: event, isLoading: eventLoading } = useHackathonPage(hackathonId);
+  const { data: rounds = [], isLoading: roundsLoading } = useHackathonRounds(hackathonId);
+
+  if (eventLoading || roundsLoading) return <PageSkeleton />;
 
   if (!event) {
     return (
@@ -74,9 +91,11 @@ export function HackathonDetailPage({ hackathonId }: HackathonDetailPageProps) {
     );
   }
 
+  const competitionRounds = mapRounds(rounds);
+  const judgingCriteria = mapCriteria(rounds);
+
   return (
     <div className="flex flex-col">
-      {/* Hero placeholder -- EventResponse does not include bannerUrl */}
       <div
         className="relative flex flex-col items-start justify-end"
         style={{
@@ -118,10 +137,42 @@ export function HackathonDetailPage({ hackathonId }: HackathonDetailPageProps) {
 
       <div
         className="grid grid-cols-12 gap-8"
-        style={{ padding: "32px 24px" }}
+        style={{ padding: "32px 24px", maxWidth: 1280, margin: "0 auto", width: "100%" }}
       >
-        {/* Main content */}
         <div className="col-span-8 flex flex-col gap-8">
+          {event.description && (
+            <div
+              className="rounded-lg"
+              style={{
+                backgroundColor: "#ffffff",
+                border: "1px solid rgba(223,226,236,0.8)",
+                padding: 24,
+              }}
+            >
+              <h2
+                style={{
+                  fontSize: 18,
+                  fontWeight: 600,
+                  color: "#0e1528",
+                  marginBottom: 16,
+                }}
+              >
+                About
+              </h2>
+              <p style={{ fontSize: 14, color: "#8891a5", lineHeight: "21px" }}>
+                {event.description}
+              </p>
+            </div>
+          )}
+
+          {competitionRounds.length > 0 && (
+            <HackathonRounds rounds={competitionRounds} />
+          )}
+
+          {judgingCriteria.length > 0 && (
+            <HackathonCriteriaTable criteria={judgingCriteria} />
+          )}
+
           <div
             className="rounded-lg"
             style={{
@@ -142,17 +193,13 @@ export function HackathonDetailPage({ hackathonId }: HackathonDetailPageProps) {
             </h2>
             <div className="flex flex-col gap-3">
               <div className="flex justify-between">
-                <span style={{ fontSize: 14, color: "#8891a5" }}>
-                  Start Date
-                </span>
+                <span style={{ fontSize: 14, color: "#8891a5" }}>Start Date</span>
                 <span style={{ fontSize: 14, color: "#0e1528" }}>
                   {new Date(event.startDate).toLocaleDateString()}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span style={{ fontSize: 14, color: "#8891a5" }}>
-                  End Date
-                </span>
+                <span style={{ fontSize: 14, color: "#8891a5" }}>End Date</span>
                 <span style={{ fontSize: 14, color: "#0e1528" }}>
                   {new Date(event.endDate).toLocaleDateString()}
                 </span>
@@ -166,9 +213,9 @@ export function HackathonDetailPage({ hackathonId }: HackathonDetailPageProps) {
                 </span>
               </div>
               <div className="flex justify-between">
-                <span style={{ fontSize: 14, color: "#8891a5" }}>Rounds</span>
+                <span style={{ fontSize: 14, color: "#8891a5" }}>Tracks</span>
                 <span style={{ fontSize: 14, color: "#0e1528" }}>
-                  {event.roundCount}
+                  {event.trackCount}
                 </span>
               </div>
               <div className="flex justify-between">
@@ -179,13 +226,8 @@ export function HackathonDetailPage({ hackathonId }: HackathonDetailPageProps) {
               </div>
             </div>
           </div>
-
-          {/* TODO: Add sections for criteria (criteriaApi), rounds (roundApi),
-              and other event details once the sub-components are updated to
-              use the correct API types. */}
         </div>
 
-        {/* Sidebar */}
         <div className="col-span-4">
           <div
             className="sticky top-8 rounded-lg"
@@ -205,7 +247,7 @@ export function HackathonDetailPage({ hackathonId }: HackathonDetailPageProps) {
             >
               Quick Info
             </h3>
-            <div className="flex flex-col gap-2">
+            <div className="mb-4 flex flex-col gap-2">
               <span style={{ fontSize: 14, color: "#8891a5" }}>
                 Season: {event.season}
               </span>
@@ -215,7 +257,27 @@ export function HackathonDetailPage({ hackathonId }: HackathonDetailPageProps) {
               <span style={{ fontSize: 14, color: "#8891a5" }}>
                 Status: {event.status}
               </span>
+              {event.location && (
+                <span style={{ fontSize: 14, color: "#8891a5" }}>
+                  Location: {event.location}
+                </span>
+              )}
             </div>
+            {(event.status === "OPEN" || event.status === "ACTIVE") && (
+              <Link
+                href={`/hackathons/${hackathonId}/register`}
+                className="flex items-center justify-center rounded-lg"
+                style={{
+                  backgroundColor: "#059669",
+                  color: "#ffffff",
+                  fontSize: 14,
+                  fontWeight: 600,
+                  padding: "10px 16px",
+                }}
+              >
+                Register now
+              </Link>
+            )}
           </div>
         </div>
       </div>

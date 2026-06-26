@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useEventRounds } from "@/features/dashboard/hooks/use-event-rounds";
 import { useEnroll, useWithdrawEnrollment } from "@/features/events/hooks/use-enrollment";
 import type { EventResponse, EnrollmentResponse } from "@/lib/api";
+import { getPrizeLabel } from "@/lib/prize.utils";
 
 function CloseIcon() {
   return (
@@ -38,6 +39,7 @@ export function EventDetailDialog({ event, onClose, canRegister, activeEnrollmen
   const [success, setSuccess] = useState<string | null>(null);
 
   const isEnrolledHere = activeEnrollment?.eventId === event.id;
+  const isPendingHere = isEnrolledHere && activeEnrollment?.status === "PENDING";
   const isEnrolledElsewhere = activeEnrollment != null && activeEnrollment.eventId !== event.id;
   const enrolledEventName = isEnrolledElsewhere
     ? allEvents?.find((e) => e.id === activeEnrollment.eventId)?.name ?? "another competition"
@@ -46,8 +48,12 @@ export function EventDetailDialog({ event, onClose, canRegister, activeEnrollmen
   const handleRegister = async () => {
     setError(null);
     try {
-      await enroll();
-      setSuccess("Successfully joined the competition!");
+      const result = await enroll();
+      if (result.status === "PENDING") {
+        setSuccess("Đăng ký thành công! Chờ Coordinator/Admin phê duyệt.");
+      } else {
+        setSuccess("Successfully joined the competition!");
+      }
       setTimeout(() => onClose(), 1500);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to register");
@@ -127,7 +133,7 @@ export function EventDetailDialog({ event, onClose, canRegister, activeEnrollmen
                   {event.prizes.map((p) => (
                     <div key={p.id} className="flex items-center justify-between rounded-lg border border-seal-border p-3">
                       <span className="text-sm font-medium text-seal-text">
-                        {p.rank} <span className="text-xs text-seal-text-muted">x{p.quantity}</span>
+                        {getPrizeLabel(p.rank, p.label)} <span className="text-xs text-seal-text-muted">x{p.quantity}</span>
                       </span>
                       <span className="text-sm text-seal-text-secondary">{p.value}</span>
                     </div>
@@ -170,8 +176,10 @@ export function EventDetailDialog({ event, onClose, canRegister, activeEnrollmen
           <div className="flex items-center justify-end gap-3">
             {isEnrolledHere ? (
               <>
-                <span className="rounded-lg bg-emerald-50 px-4 py-2 text-xs font-semibold text-emerald-700">
-                  Enrolled
+                <span className={`rounded-lg px-4 py-2 text-xs font-semibold ${
+                  isPendingHere ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"
+                }`}>
+                  {isPendingHere ? "Pending approval" : "Enrolled"}
                 </span>
                 <button
                   onClick={handleWithdraw}

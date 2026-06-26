@@ -1,6 +1,7 @@
 package com.sealhackathon.judging.controller;
 
 import com.sealhackathon.auth.service.AuthPublicService;
+import com.sealhackathon.common.enums.UserType;
 import com.sealhackathon.common.response.ApiResponse;
 import com.sealhackathon.judging.dto.request.ScoreSubmissionRequest;
 import com.sealhackathon.judging.dto.response.JudgeScoreResponse;
@@ -59,10 +60,14 @@ public class JudgingController {
     }
 
     @GetMapping("/submission/{submissionId}")
+    @PreAuthorize("hasAnyRole('SYSTEM_ADMIN', 'EVENT_COORDINATOR', 'LECTURER')")
     @Operation(summary = "Get all scores for a submission (BR-42 — coordinator view)")
     public ResponseEntity<ApiResponse<List<JudgeScoreResponse>>> getScoresBySubmission(
             @PathVariable UUID roundId, @PathVariable UUID submissionId) {
-        List<JudgeScoreResponse> scores = judgingService.getScoresBySubmission(submissionId);
+        UUID requesterId = authPublicService.getCurrentUserId();
+        UserType requesterRole = authPublicService.getCurrentUserRole();
+        List<JudgeScoreResponse> scores = judgingService.getScoresBySubmission(
+                submissionId, roundId, requesterId, requesterRole);
         return ResponseEntity.ok(ApiResponse.success(scores));
     }
 
@@ -96,10 +101,13 @@ public class JudgingController {
     }
 
     @GetMapping("/{judgeScoreId}")
+    @PreAuthorize("hasAnyRole('SYSTEM_ADMIN', 'EVENT_COORDINATOR', 'LECTURER')")
     @Operation(summary = "Get score by ID")
     public ResponseEntity<ApiResponse<JudgeScoreResponse>> getScoreById(
             @PathVariable UUID roundId, @PathVariable UUID judgeScoreId) {
-        JudgeScoreResponse response = judgingService.getScoreById(judgeScoreId);
+        UUID requesterId = authPublicService.getCurrentUserId();
+        UserType requesterRole = authPublicService.getCurrentUserRole();
+        JudgeScoreResponse response = judgingService.getScoreById(judgeScoreId, requesterId, requesterRole);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
@@ -116,7 +124,7 @@ public class JudgingController {
     @Operation(summary = "Delete a score (admin)")
     public ResponseEntity<ApiResponse<Void>> deleteScore(
             @PathVariable UUID roundId, @PathVariable UUID judgeScoreId) {
-        judgingService.deleteScore(judgeScoreId);
+        judgingService.deleteScore(judgeScoreId, roundId);
         return ResponseEntity.ok(ApiResponse.success("Score deleted", null));
     }
 }

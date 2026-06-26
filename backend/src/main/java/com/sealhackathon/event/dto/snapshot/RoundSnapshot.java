@@ -23,4 +23,5 @@ public class RoundSnapshot {
     private LocalDateTime submissionDeadline;
     private LocalDateTime scoringDeadline;
     private Integer advancementCutoff;
+    private Integer roundWeight;
 }

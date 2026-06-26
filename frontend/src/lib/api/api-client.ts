@@ -23,6 +23,10 @@ export const api = {
     return unwrap<T>(apiClient.put<ApiResponse<T>>(url, body, config));
   },
 
+  patch<T>(url: string, body?: unknown, config?: AxiosRequestConfig): Promise<T> {
+    return unwrap<T>(apiClient.patch<ApiResponse<T>>(url, body, config));
+  },
+
   delete<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
     return unwrap<T>(apiClient.delete<ApiResponse<T>>(url, config));
   },

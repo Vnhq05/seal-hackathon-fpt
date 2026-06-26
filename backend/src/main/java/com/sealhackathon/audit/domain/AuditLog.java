@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -31,7 +32,10 @@ import java.util.UUID;
  * BR-55  Only System Admin can export (CSV/JSON). Export itself logged.
  */
 @Entity
-@Table(name = "audit_logs")
+@Table(name = "audit_logs", indexes = {
+        @Index(name = "idx_audit_actor_id", columnList = "actor_id"),
+        @Index(name = "idx_audit_timestamp", columnList = "timestamp")
+})
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor

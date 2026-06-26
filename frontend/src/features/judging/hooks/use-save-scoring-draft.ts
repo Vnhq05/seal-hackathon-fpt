@@ -18,10 +18,12 @@ interface SaveDraftInput {
 export function useSaveScoringDraft() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ roundId, body, existingScoreId }: SaveDraftInput) =>
-      existingScoreId
-        ? judgingApi.updateScore(roundId, existingScoreId, body)
-        : judgingApi.submitScore(roundId, body),
+    mutationFn: ({ roundId, body, existingScoreId }: SaveDraftInput) => {
+      const draftBody = { ...body, complete: false };
+      return existingScoreId
+        ? judgingApi.updateScore(roundId, existingScoreId, draftBody)
+        : judgingApi.submitScore(roundId, draftBody);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [SUBMISSION_SCORING_KEY] });
     },

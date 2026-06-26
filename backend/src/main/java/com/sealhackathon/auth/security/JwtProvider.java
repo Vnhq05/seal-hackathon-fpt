@@ -33,6 +33,7 @@ public class JwtProvider {
                 .subject(userId.toString())
                 .claim("email", email)
                 .claim("role", role)
+                .issuer("seal-hackathon")
                 .issuedAt(now)
                 .expiration(expiry)
                 .signWith(signingKey)
@@ -67,6 +68,7 @@ public class JwtProvider {
     private Claims parseClaims(String token) {
         return Jwts.parser()
                 .verifyWith(signingKey)
+                .requireIssuer("seal-hackathon")
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();

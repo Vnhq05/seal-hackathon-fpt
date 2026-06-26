@@ -52,7 +52,7 @@ function formatDate(dateStr: string) {
 function EventCard({ event, index }: { event: EventResponse; index: number }) {
   const accentKey = ACCENT_KEYS[index % ACCENT_KEYS.length];
   const accent = ACCENT_MAP[accentKey];
-  const isOpen = new Date(event.registrationDeadline) >= new Date();
+  const isOpen = event.status === "OPEN";
 
   return (
     <article

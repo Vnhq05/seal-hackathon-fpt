@@ -24,6 +24,7 @@ public class RoundResponse {
     private LocalDateTime submissionDeadline;
     private LocalDateTime scoringDeadline;
     private Integer advancementCutoff;
+    private Integer roundWeight;
     private List<CriteriaResponse> criteria;
     private int judgeCount;
 }

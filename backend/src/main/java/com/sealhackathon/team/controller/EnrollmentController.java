@@ -1,6 +1,7 @@
 package com.sealhackathon.team.controller;
 
 import com.sealhackathon.auth.service.AuthPublicService;
+import com.sealhackathon.common.enums.UserType;
 import com.sealhackathon.common.response.ApiResponse;
 import com.sealhackathon.team.domain.enums.EnrollmentStatus;
 import com.sealhackathon.team.dto.response.EnrollmentResponse;
@@ -61,10 +62,14 @@ public class EnrollmentController {
     }
 
     @GetMapping("/waiting-list")
-    @PreAuthorize("hasAnyRole('SYSTEM_ADMIN', 'EVENT_COORDINATOR')")
     @Operation(summary = "Get waiting list (approved but not yet in a team)")
     public ResponseEntity<ApiResponse<List<EnrollmentResponse>>> getWaitingList(
             @PathVariable UUID eventId) {
+        UUID userId = authPublicService.getCurrentUserId();
+        UserType role = authPublicService.getCurrentUserRole();
+        if (role != UserType.SYSTEM_ADMIN && role != UserType.EVENT_COORDINATOR) {
+            enrollmentService.requireCanViewWaitingList(userId, eventId);
+        }
         return ResponseEntity.ok(ApiResponse.success(enrollmentService.getWaitingList(eventId)));
     }
 

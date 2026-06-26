@@ -8,7 +8,7 @@ export function useDashboardHackathons() {
   return useQuery({
     queryKey: [DASHBOARD_HACKATHONS_KEY],
     queryFn: async (): Promise<EventResponse[]> => {
-      const page = await eventApi.list({ size: 10 });
+      const page = await eventApi.list({ status: ["UPCOMING", "OPEN"], size: 50 });
       return page.content;
     },
   });

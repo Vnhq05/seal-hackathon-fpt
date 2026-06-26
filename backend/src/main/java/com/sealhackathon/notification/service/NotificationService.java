@@ -1,5 +1,6 @@
 package com.sealhackathon.notification.service;
 
+import com.sealhackathon.common.exception.BusinessException;
 import com.sealhackathon.common.exception.ResourceNotFoundException;
 import com.sealhackathon.notification.domain.Notification;
 import com.sealhackathon.notification.domain.NotificationRecipient;
@@ -11,6 +12,7 @@ import com.sealhackathon.notification.repository.NotificationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -79,10 +81,15 @@ public class NotificationService {
     }
 
     @Transactional
-    public void markAsRead(UUID recipientId) {
+    public void markAsRead(UUID recipientId, UUID currentUserId) {
         NotificationRecipient recipient = recipientRepository.findById(recipientId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "NotificationRecipient", "id", recipientId));
+        if (!recipient.getUserId().equals(currentUserId)) {
+            throw new BusinessException(
+                    "You can only mark your own notifications as read",
+                    HttpStatus.FORBIDDEN) {};
+        }
         if (recipient.getReadAt() == null) {
             recipient.setReadAt(LocalDateTime.now());
             recipientRepository.save(recipient);

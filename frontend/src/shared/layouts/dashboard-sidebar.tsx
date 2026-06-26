@@ -3,7 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { performLogout } from "@/features/auth/lib/logout";
 import { useAuthStore } from "@/features/auth/store/auth.store";
+import { isPortalNavActive, PortalNavLink } from "@/shared/layouts/portal-nav-link";
 
 interface NavItem {
   href: string;
@@ -45,7 +48,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/student", label: "Dashboard", icon: <DashboardIcon /> },
   { href: "/student/teams", label: "Teams", icon: <TeamIcon /> },
   { href: "/student/submissions", label: "Submissions", icon: <SubmissionsIcon /> },
-  { href: "/student/leaderboard", label: "Leaderboard", icon: <LeaderboardIcon /> },
+  { href: "/ranking", label: "Rankings", icon: <LeaderboardIcon /> },
   { href: "/student/mentor-hub", label: "MentorHub", icon: <MentorHubIcon /> },
   { href: "/student/settings", label: "Settings", icon: <SettingsIcon /> },
 ];
@@ -53,12 +56,11 @@ const NAV_ITEMS: NavItem[] = [
 export function DashboardSidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, clearAuth } = useAuthStore();
+  const queryClient = useQueryClient();
+  const { user } = useAuthStore();
 
-  const handleLogout = () => {
-    clearAuth();
-    if (typeof window !== "undefined") localStorage.removeItem("access_token");
-    router.push("/login");
+  const handleLogout = async () => {
+    await performLogout(router, queryClient);
   };
 
   const initials = user?.fullName
@@ -104,25 +106,16 @@ export function DashboardSidebar() {
       {/* Nav */}
       <nav className="flex flex-1 flex-col gap-1" aria-label="Main navigation">
         {NAV_ITEMS.map((item) => {
-          const isActive =
-            item.href === "/student"
-              ? pathname === "/student"
-              : pathname.startsWith(item.href) ||
-                (item.href === "/student/settings" && pathname.startsWith("/student/profile"));
+          const isActive = isPortalNavActive(pathname, item.href);
           return (
-            <Link
+            <PortalNavLink
               key={item.href}
               href={item.href}
-              aria-current={isActive ? "page" : undefined}
-              className={`flex items-center gap-3 ${
-                isActive
-                  ? "seal-sidebar-item-active bg-white/[0.08] rounded-lg px-3 py-2.5 text-[13px] font-medium tracking-wide transition-colors duration-200 text-seal-cyan"
-                  : "rounded-lg px-3 py-2.5 text-[13px] font-medium tracking-wide transition-colors duration-200 text-slate-400 hover:bg-white/[0.04] hover:text-slate-200"
-              }`}
-            >
-              <span className={isActive ? "text-seal-cyan" : "text-slate-500"}>{item.icon}</span>
-              {item.label}
-            </Link>
+              label={item.label}
+              icon={item.icon}
+              isActive={isActive}
+              accent="cyan"
+            />
           );
         })}
       </nav>

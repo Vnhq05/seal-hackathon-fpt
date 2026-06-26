@@ -19,6 +19,9 @@ public class RankingResponse {
     private UUID teamId;
     private String teamName;
     private UUID roundId;
+    private String roundName;
+    private UUID trackId;
+    private String trackName;
     private BigDecimal finalScore;
     private Integer rank;
     private Integer version;

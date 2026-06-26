@@ -5,12 +5,10 @@ import { useAuthStore } from "@/features/auth/store/auth.store";
 import { useDashboardSummary } from "@/features/dashboard/hooks/use-dashboard-summary";
 import { useDashboardHackathons } from "@/features/dashboard/hooks/use-dashboard-hackathons";
 import { useDashboardTeam } from "@/features/dashboard/hooks/use-dashboard-team";
+import { useMyActiveEnrollment } from "@/features/events/hooks/use-enrollment";
 import { useQuery } from "@tanstack/react-query";
 import { notificationApi } from "@/lib/api";
 import type { NotificationResponse, TeamResponse, EventResponse } from "@/lib/api";
-import { useState } from "react";
-import { EventDetailDialog } from "@/features/dashboard/components/event-detail-dialog";
-import { useMyActiveEnrollment } from "@/features/events/hooks/use-enrollment";
 
 function ArrowRightIcon() {
   return (
@@ -161,67 +159,118 @@ function StatsRow({ summary, team }: { summary: DashboardSummaryData | undefined
   );
 }
 
-const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
-  OPEN:      { bg: "bg-blue-50",    text: "text-blue-700" },
-  ACTIVE:    { bg: "bg-emerald-50", text: "text-emerald-700" },
-  UPCOMING:  { bg: "bg-sky-50",     text: "text-sky-700" },
-  COMPLETED: { bg: "bg-gray-100",   text: "text-gray-500" },
-  CANCELLED: { bg: "bg-red-50",     text: "text-red-700" },
-};
+function formatDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+}
 
-function EventCard({ event, onClickDetail }: { event: EventResponse; onClickDetail: (e: EventResponse) => void }) {
-  const sc = STATUS_COLORS[event.status] ?? STATUS_COLORS.UPCOMING;
-  const trackNames = event.tracks.map((t) => t.name).join(", ");
+function DashboardEventCard({
+  event,
+  activeEnrollment,
+}: {
+  event: EventResponse;
+  activeEnrollment: { eventId: string; status: string } | null | undefined;
+}) {
+  const isEnrolled = activeEnrollment?.eventId === event.id;
+  const isPending = isEnrolled && activeEnrollment?.status === "PENDING";
+  const isApproved = isEnrolled && activeEnrollment?.status === "APPROVED";
 
   return (
-    <button
-      type="button"
-      onClick={() => onClickDetail(event)}
-      className="flex w-full items-center justify-between rounded-lg border border-seal-border bg-seal-surface p-5 text-left shadow-sm transition-all duration-200 hover:shadow-md"
-    >
-      <div className="flex-1">
-        <div className="flex items-center gap-3">
-          <h3 className="text-base font-semibold text-seal-text">{event.name}</h3>
-          <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${sc.bg} ${sc.text}`}>
-            {event.status}
-          </span>
-        </div>
-        <div className="mt-2 flex flex-wrap items-center gap-4 text-xs text-seal-text-secondary">
+    <div className="flex w-full items-center justify-between gap-4 rounded-lg border border-seal-border bg-seal-surface p-5 shadow-sm transition-all duration-200 hover:shadow-md">
+      <div className="flex-1 min-w-0">
+        <h3 className="text-base font-semibold text-seal-text">{event.name}</h3>
+        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-seal-text-secondary">
           <span>{event.season} {event.year}</span>
-          <span>{event.startDate} — {event.endDate}</span>
-          {event.roundCount > 0 && <span>{event.roundCount} round{event.roundCount > 1 ? "s" : ""}</span>}
-          {trackNames && <span>{trackNames}</span>}
+          <span>{event.trackCount} track{event.trackCount !== 1 ? "s" : ""}</span>
+          <span>Đăng ký đến: {formatDate(event.registrationDeadline)}</span>
         </div>
-        {event.description && (
-          <p className="mt-2 line-clamp-2 text-xs text-seal-text-muted">{event.description}</p>
+      </div>
+
+      <div className="flex-shrink-0">
+        {isApproved ? (
+          <span className="inline-flex items-center rounded-lg bg-emerald-50 px-4 py-2 text-xs font-semibold text-emerald-700">
+            Đang tham gia
+          </span>
+        ) : isPending ? (
+          <span className="inline-flex items-center rounded-lg bg-amber-50 px-4 py-2 text-xs font-semibold text-amber-700">
+            Chờ phê duyệt
+          </span>
+        ) : (
+          <Link
+            href={`/hackathons/${event.id}/register`}
+            className="inline-flex items-center rounded-lg bg-seal-cyan px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-seal-cyan-dark"
+          >
+            Register
+          </Link>
         )}
       </div>
-    </button>
+    </div>
   );
 }
 
-function HackathonEvents({ hackathons, onClickDetail }: { hackathons: EventResponse[]; onClickDetail: (e: EventResponse) => void }) {
-  const visibleEvents = hackathons.filter(
-    (e) => e.status !== "CANCELLED"
-  );
+function EventSection({
+  title,
+  description,
+  events,
+  activeEnrollment,
+}: {
+  title: string;
+  description: string;
+  events: EventResponse[];
+  activeEnrollment: { eventId: string; status: string } | null | undefined;
+}) {
+  if (events.length === 0) return null;
 
   return (
     <div className="rounded-lg border border-seal-border bg-seal-surface p-6 shadow-sm">
-      <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-2 text-seal-text">
-          <CalendarIcon />
-          <h2 className="text-xl font-semibold tracking-tight">Hackathon Events</h2>
-        </div>
+      <div className="mb-4">
+        <h2 className="text-xl font-semibold tracking-tight text-seal-text">{title}</h2>
+        <p className="mt-1 text-sm text-seal-text-muted">{description}</p>
       </div>
-      {visibleEvents.length === 0 ? (
-        <p className="py-4 text-sm text-seal-text-muted">No events available right now.</p>
-      ) : (
-        <div className="flex flex-col gap-3">
-          {visibleEvents.map((e) => (
-            <EventCard key={e.id} event={e} onClickDetail={onClickDetail} />
-          ))}
-        </div>
-      )}
+      <div className="flex flex-col gap-3">
+        {events.map((e) => (
+          <DashboardEventCard key={e.id} event={e} activeEnrollment={activeEnrollment} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function HackathonEvents({
+  hackathons,
+  activeEnrollment,
+}: {
+  hackathons: EventResponse[];
+  activeEnrollment: { eventId: string; status: string } | null | undefined;
+}) {
+  const openEvents = hackathons.filter((e) => e.status === "OPEN");
+  const upcomingEvents = hackathons.filter((e) => e.status === "UPCOMING");
+
+  if (openEvents.length === 0 && upcomingEvents.length === 0) {
+    return (
+      <div className="rounded-lg border border-seal-border bg-seal-surface p-6 shadow-sm">
+        <p className="py-4 text-sm text-seal-text-muted">Hiện chưa có sự kiện nào mở đăng ký hoặc sắp diễn ra.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-6">
+      <EventSection
+        title="Đang mở đăng ký"
+        description="Các sự kiện đang nhận đăng ký tham gia."
+        events={openEvents}
+        activeEnrollment={activeEnrollment}
+      />
+      <EventSection
+        title="Sắp diễn ra"
+        description="Các sự kiện sẽ mở đăng ký trong thời gian tới."
+        events={upcomingEvents}
+        activeEnrollment={activeEnrollment}
+      />
     </div>
   );
 }
@@ -378,7 +427,6 @@ export function DashboardPage() {
   });
 
   const { data: activeEnrollment } = useMyActiveEnrollment();
-  const [detailEvent, setDetailEvent] = useState<EventResponse | null>(null);
 
   const notifications = notifData?.content ?? [];
   const firstName = user?.fullName?.split(" ")[0] ?? "there";
@@ -405,7 +453,7 @@ export function DashboardPage() {
       ) : (
         <HackathonEvents
           hackathons={hackathons ?? []}
-          onClickDetail={(e) => setDetailEvent(e)}
+          activeEnrollment={activeEnrollment}
         />
       )}
 
@@ -413,16 +461,6 @@ export function DashboardPage() {
         <RecentUpdates notifications={notifications} />
         <TeamQuickCard team={team} />
       </div>
-
-      {detailEvent && (
-        <EventDetailDialog
-          event={detailEvent}
-          onClose={() => setDetailEvent(null)}
-          canRegister={user?.userType === "FPT_STUDENT" || user?.userType === "EXTERNAL_STUDENT"}
-          activeEnrollment={activeEnrollment}
-          allEvents={hackathons}
-        />
-      )}
     </div>
   );
 }

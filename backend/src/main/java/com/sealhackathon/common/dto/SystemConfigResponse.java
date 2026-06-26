@@ -17,4 +17,6 @@ public class SystemConfigResponse {
     private Integer minTeamMembers;
     private Integer maxTeamMembers;
     private String defaultRules;
+    private Integer minTeams;
+    private Integer maxTeams;
 }

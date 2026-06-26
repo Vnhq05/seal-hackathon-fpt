@@ -24,5 +24,6 @@ public class UserProfileResponse {
     private String universityName;
     private UserType userType;
     private AccountStatus status;
+    private boolean temporaryAccount;
     private LocalDateTime createdAt;
 }

@@ -85,3 +85,12 @@ export function useDeleteCriteriaTemplate() {
     onSuccess: () => qc.invalidateQueries({ queryKey: [SCORING_TEMPLATES_KEY] }),
   });
 }
+
+export function useDeleteTemplateCriterion() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ templateId, criterionId }: { templateId: string; criterionId: string }) =>
+      scoringTemplateApi.deleteCriterion(templateId, criterionId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [SCORING_TEMPLATES_KEY] }),
+  });
+}

@@ -10,6 +10,7 @@ import com.sealhackathon.event.dto.request.AssignJudgeRequest;
 import com.sealhackathon.event.dto.response.JudgeAssignmentResponse;
 import com.sealhackathon.event.event.JudgeAssignedEvent;
 import com.sealhackathon.event.repository.JudgeAssignmentRepository;
+import com.sealhackathon.judging.repository.JudgeScoreRepository;
 import com.sealhackathon.user.dto.snapshot.UserSnapshot;
 import com.sealhackathon.user.service.UserPublicService;
 import lombok.RequiredArgsConstructor;
@@ -27,7 +28,9 @@ import java.util.UUID;
 public class JudgeAssignmentService {
 
     private final JudgeAssignmentRepository judgeAssignmentRepository;
+    private final JudgeScoreRepository judgeScoreRepository;
     private final RoundService roundService;
+    private final EventJudgeService eventJudgeService;
     private final UserPublicService userPublicService;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -41,6 +44,13 @@ public class JudgeAssignmentService {
         if (judge.getUserType() != UserType.LECTURER) {
             throw new BusinessException(
                     "User " + judge.getEmail() + " is not a LECTURER. Role: " + judge.getUserType(),
+                    HttpStatus.BAD_REQUEST) {};
+        }
+
+        UUID eventId = round.getHackathonEvent().getId();
+        if (!eventJudgeService.isEventJudge(eventId, request.getJudgeUserId())) {
+            throw new BusinessException(
+                    "Judge must be assigned to the event with role JUDGE or BOTH",
                     HttpStatus.BAD_REQUEST) {};
         }
 
@@ -79,6 +89,16 @@ public class JudgeAssignmentService {
     public void removeJudgeAssignment(UUID assignmentId) {
         JudgeAssignment assignment = judgeAssignmentRepository.findById(assignmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("JudgeAssignment", "id", assignmentId));
+
+        UUID roundId = assignment.getRound().getId();
+        UUID judgeUserId = assignment.getJudgeUserId();
+        long scoreCount = judgeScoreRepository.countByRoundIdAndJudgeUserId(roundId, judgeUserId);
+        if (scoreCount > 0) {
+            throw new BusinessException(
+                    "Cannot remove judge assignment: judge has already submitted scores for this round",
+                    HttpStatus.BAD_REQUEST) {};
+        }
+
         judgeAssignmentRepository.delete(assignment);
     }
 

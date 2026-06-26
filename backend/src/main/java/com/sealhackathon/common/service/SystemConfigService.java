@@ -17,6 +17,16 @@ public class SystemConfigService {
     private final SystemConfigRepository configRepository;
 
     @Transactional(readOnly = true)
+    public int getMinTeamMembers() {
+        return getConfig().getMinTeamMembers();
+    }
+
+    @Transactional(readOnly = true)
+    public int getMaxTeamMembers() {
+        return getConfig().getMaxTeamMembers();
+    }
+
+    @Transactional(readOnly = true)
     public SystemConfigResponse getConfig() {
         SystemConfig config = configRepository.findFirstBy()
                 .orElseGet(this::createDefaultConfig);
@@ -30,13 +40,23 @@ public class SystemConfigService {
                     "Minimum team members cannot exceed maximum team members",
                     HttpStatus.BAD_REQUEST) {};
         }
+        if (request.getMinTeams() != null && request.getMaxTeams() != null
+                && request.getMinTeams() > request.getMaxTeams()) {
+            throw new BusinessException(
+                    "Minimum teams cannot exceed maximum teams",
+                    HttpStatus.BAD_REQUEST) {};
+        }
 
         SystemConfig config = configRepository.findFirstBy()
                 .orElseGet(this::createDefaultConfig);
 
         config.setMinTeamMembers(request.getMinTeamMembers());
         config.setMaxTeamMembers(request.getMaxTeamMembers());
-        config.setDefaultRules(request.getDefaultRules());
+        config.setMinTeams(request.getMinTeams());
+        config.setMaxTeams(request.getMaxTeams());
+        if (request.getDefaultRules() != null) {
+            config.setDefaultRules(request.getDefaultRules().isBlank() ? null : request.getDefaultRules());
+        }
 
         return toResponse(configRepository.save(config));
     }
@@ -51,6 +71,8 @@ public class SystemConfigService {
                 .minTeamMembers(config.getMinTeamMembers())
                 .maxTeamMembers(config.getMaxTeamMembers())
                 .defaultRules(config.getDefaultRules())
+                .minTeams(config.getMinTeams())
+                .maxTeams(config.getMaxTeams())
                 .build();
     }
 }

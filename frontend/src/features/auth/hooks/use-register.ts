@@ -6,14 +6,14 @@ import type { RegisterFormValues } from "@/features/auth/schemas/register.schema
 
 function toRegisterRequest(values: RegisterFormValues): RegisterRequest {
   return {
-    fullName: values.fullName,
-    email: values.email,
+    fullName: values.fullName.trim(),
+    email: values.email.trim(),
     password: values.password,
     userType: values.userType,
-    studentId: values.studentId,
+    studentId: values.studentId?.trim().toUpperCase(),
     universityName:
       values.userType === "EXTERNAL_STUDENT"
-        ? values.universityName
+        ? values.universityName?.trim()
         : undefined,
     semester: values.semester,
   };

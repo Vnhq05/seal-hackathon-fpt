@@ -40,4 +40,7 @@ public class CreateRoundRequest {
     @NotNull(message = "Advancement cutoff is required")
     @Min(value = 1, message = "Advancement cutoff must be at least 1")
     private Integer advancementCutoff;
+
+    @Min(value = 1, message = "Round weight must be at least 1")
+    private Integer roundWeight;
 }

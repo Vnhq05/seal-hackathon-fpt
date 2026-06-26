@@ -1,16 +1,43 @@
 import { useQuery } from "@tanstack/react-query";
-import type { AssignedRoundsResponse } from "@/features/judging/types/judge.types";
+import { judgingApi } from "@/lib/api/judging.api";
+import type { AssignedRoundsResponse, AssignedRound } from "@/features/judging/types/judge.types";
 
 export const ASSIGNED_ROUNDS_KEY = "judge-assigned-rounds" as const;
 
-// TODO: backend endpoint not implemented yet — /judge/rounds does not exist.
-// The backend has assignmentApi.listJudges(eventId, roundId) but no endpoint
-// that returns "rounds assigned to the current judge". Replace when available.
 export function useAssignedRounds() {
   return useQuery<AssignedRoundsResponse>({
     queryKey: [ASSIGNED_ROUNDS_KEY],
     queryFn: async (): Promise<AssignedRoundsResponse> => {
-      return { data: [] };
+      const assignments = await judgingApi.getMyAssignments();
+      const byRound = new Map<string, typeof assignments>();
+
+      for (const a of assignments) {
+        const list = byRound.get(a.roundId) ?? [];
+        list.push(a);
+        byRound.set(a.roundId, list);
+      }
+
+      const data: AssignedRound[] = Array.from(byRound.entries()).map(([roundId, items]) => {
+        const first = items[0];
+        const scored = items.filter(
+          (i) => i.scoringStatus === "COMPLETED" || i.scoringStatus === "LOCKED",
+        ).length;
+        const deadline = first.scoringDeadline ?? "";
+        const isClosed = deadline ? new Date(deadline) < new Date() : false;
+
+        return {
+          id: roundId,
+          hackathonName: first.eventName ?? "",
+          roundName: first.roundName ?? "",
+          status: isClosed ? "closed" : "open",
+          deadline,
+          criteria: [],
+          scored,
+          total: items.length,
+        };
+      });
+
+      return { data };
     },
   });
 }

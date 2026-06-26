@@ -5,6 +5,7 @@ import com.sealhackathon.user.dto.snapshot.LockState;
 import com.sealhackathon.user.dto.snapshot.UserSnapshot;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -13,6 +14,8 @@ public interface UserPublicService {
     Optional<UserSnapshot> findByEmail(String email);
 
     Optional<UserSnapshot> findById(UUID userId);
+
+    List<UserSnapshot> findAllByIds(List<UUID> ids);
 
     boolean existsByEmail(String email);
 
@@ -28,7 +31,9 @@ public interface UserPublicService {
 
     UUID createParticipant(String email, String passwordHash, String fullName,
                            String phone, String studentId, String universityName,
-                           UserType userType, Integer semester);
+                           UserType userType, Integer semester, boolean temporaryAccount);
+
+    void activateParticipant(UUID userId);
 
     Optional<UserSnapshot> getUser(UUID userId);
 

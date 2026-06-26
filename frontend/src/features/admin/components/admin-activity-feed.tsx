@@ -79,8 +79,8 @@ export function AdminActivityFeed() {
       </div>
 
       <div style={{ borderTop: "1px solid rgba(223,226,236,0.8)", marginTop: 16, paddingTop: 12 }}>
-        <Link href="/admin/analytics" style={{ fontSize: 13, fontWeight: 600, color: "#38bdf8" }}>
-          View Full Audit Log
+        <Link href="/admin/export" style={{ fontSize: 13, fontWeight: 600, color: "#38bdf8" }}>
+          View audit export
         </Link>
       </div>
     </div>

@@ -21,6 +21,10 @@ import com.sealhackathon.ranking.event.ResultsPublishedEvent;
 import com.sealhackathon.submission.event.SubmissionCreatedEvent;
 import com.sealhackathon.submission.event.SubmissionUpdatedEvent;
 import com.sealhackathon.team.event.InvitationSentEvent;
+import com.sealhackathon.team.event.JoinRequestCreatedEvent;
+import com.sealhackathon.team.event.JoinRequestResolvedEvent;
+import com.sealhackathon.team.event.LeaveRequestCreatedEvent;
+import com.sealhackathon.team.event.LeaveRequestResolvedEvent;
 import com.sealhackathon.team.event.MemberJoinedEvent;
 import com.sealhackathon.team.event.MemberLeftEvent;
 import com.sealhackathon.team.event.MentorTeamAssignedEvent;
@@ -31,6 +35,7 @@ import com.sealhackathon.user.event.AccountRejectedEvent;
 import com.sealhackathon.user.event.InternalAccountCreatedEvent;
 import com.sealhackathon.user.event.ProfileUpdatedEvent;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionalEventListener;
 
@@ -38,6 +43,7 @@ import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class AuditEventListener {
 
     private final AuditService auditService;
@@ -173,6 +179,32 @@ public class AuditEventListener {
     }
 
     @TransactionalEventListener
+    public void onJoinRequestCreated(JoinRequestCreatedEvent e) {
+        safeLog(e.requesterId(), "JOIN_REQUEST_CREATED", e.joinRequestId(), "TeamJoinRequest",
+                null, "{\"teamId\":\"" + e.teamId() + "\"}", null);
+    }
+
+    @TransactionalEventListener
+    public void onJoinRequestResolved(JoinRequestResolvedEvent e) {
+        safeLog(SYSTEM_ACTOR, e.accepted() ? "JOIN_REQUEST_ACCEPTED" : "JOIN_REQUEST_REJECTED",
+                e.joinRequestId(), "TeamJoinRequest",
+                null, "{\"requesterId\":\"" + e.requesterId() + "\"}", null);
+    }
+
+    @TransactionalEventListener
+    public void onLeaveRequestCreated(LeaveRequestCreatedEvent e) {
+        auditService.log(e.userId(), "LEAVE_REQUEST_CREATED", e.leaveRequestId(), "TeamLeaveRequest",
+                null, "{\"teamId\":\"" + e.teamId() + "\"}", null);
+    }
+
+    @TransactionalEventListener
+    public void onLeaveRequestResolved(LeaveRequestResolvedEvent e) {
+        auditService.log(SYSTEM_ACTOR, e.approved() ? "LEAVE_REQUEST_APPROVED" : "LEAVE_REQUEST_REJECTED",
+                e.leaveRequestId(), "TeamLeaveRequest",
+                null, "{\"userId\":\"" + e.userId() + "\"}", null);
+    }
+
+    @TransactionalEventListener
     public void onMentorTeamAssigned(MentorTeamAssignedEvent e) {
         auditService.log(SYSTEM_ACTOR, "MENTOR_TEAM_ASSIGNED", e.teamId(), "MentorTeam",
                 null, "{\"mentorId\":\"" + e.mentorId() + "\"}", null);
@@ -200,14 +232,24 @@ public class AuditEventListener {
 
     @TransactionalEventListener
     public void onScoreCreated(ScoreCreatedEvent e) {
+        String payload = String.format(
+                "{\"judgeId\":\"%s\",\"teamId\":\"%s\",\"roundId\":\"%s\",\"submissionId\":\"%s\",\"timestamp\":\"%s\"}",
+                e.judgeId(), e.teamId(), e.roundId(), e.submissionId(), java.time.LocalDateTime.now());
         auditService.log(e.judgeId(), "SCORE_CREATED", e.judgeScoreId(), "JudgeScore",
-                null, "{\"submissionId\":\"" + e.submissionId() + "\"}", null);
+                null, payload, null);
     }
 
     @TransactionalEventListener
     public void onScoreUpdated(ScoreUpdatedEvent e) {
-        auditService.log(e.judgeId(), "SCORE_UPDATED", e.judgeScoreId(), "JudgeScore",
-                null, "{\"changedCriteria\":" + e.changedCriteria() + "}", null);
+        for (var change : e.changes()) {
+            String oldVal = change.oldScore() != null ? change.oldScore().toString() : "null";
+            String payload = String.format(
+                    "{\"judgeId\":\"%s\",\"teamId\":\"%s\",\"roundId\":\"%s\",\"criteriaId\":\"%s\",\"oldScore\":%s,\"newScore\":%s,\"timestamp\":\"%s\"}",
+                    e.judgeId(), e.teamId(), e.roundId(), change.criteriaId(),
+                    oldVal, change.newScore(), java.time.LocalDateTime.now());
+            auditService.log(e.judgeId(), "SCORE_UPDATED", e.judgeScoreId(), "JudgeScore",
+                    "{\"oldScore\":" + oldVal + "}", payload, null);
+        }
     }
 
     @TransactionalEventListener
@@ -248,5 +290,14 @@ public class AuditEventListener {
     public void onDisputeResolved(DisputeResolvedEvent e) {
         auditService.log(e.resolvedBy(), "DISPUTE_RESOLVED", e.disputeId(), "Dispute",
                 null, "{\"resolution\":\"" + e.resolution() + "\"}", null);
+    }
+
+    private void safeLog(UUID actorId, String action, UUID targetId, String targetType,
+                         String oldValue, String newValue, String ipAddress) {
+        try {
+            auditService.log(actorId, action, targetId, targetType, oldValue, newValue, ipAddress);
+        } catch (Exception e) {
+            log.error("Failed to write audit log for action {}", action, e);
+        }
     }
 }

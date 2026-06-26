@@ -6,6 +6,7 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -45,6 +46,7 @@ public class CreateScoringTemplateRequest {
         private String description;
 
         @NotNull(message = "Weight is required")
+        @Positive(message = "Weight must be a positive integer greater than 0")
         @Min(value = 1, message = "Weight must be at least 1")
         @Max(value = 100, message = "Weight must be at most 100")
         private Integer weight;

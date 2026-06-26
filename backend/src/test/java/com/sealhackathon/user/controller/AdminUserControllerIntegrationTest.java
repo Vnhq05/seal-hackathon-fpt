@@ -9,11 +9,23 @@ import org.springframework.http.MediaType;
 
 import static org.hamcrest.Matchers.is;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 class AdminUserControllerIntegrationTest extends BaseIntegrationTest {
+
+    @Test
+    void approveByPatch_shouldActivateAccount() throws Exception {
+        User admin = createAdmin();
+        User pending = createUser("patch@test.com", UserType.FPT_STUDENT, AccountStatus.PENDING);
+
+        mockMvc.perform(patch("/api/admin/users/{userId}/approve", pending.getId())
+                        .header("Authorization", "Bearer " + tokenFor(admin)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status", is("ACTIVE")));
+    }
 
     // ── BR-01: Approve pending account ──
 
@@ -55,16 +67,16 @@ class AdminUserControllerIntegrationTest extends BaseIntegrationTest {
     void createInternal_shouldCreateActiveAccount() throws Exception {
         User admin = createAdmin();
 
-        mockMvc.perform(post("/api/admin/users/internal")
+        mockMvc.perform(post("/api/admin/users")
                         .header("Authorization", "Bearer " + tokenFor(admin))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"email":"newjudge@test.com","password":"pass123",
-                                 "fullName":"New Judge","userType":"JUDGE"}
+                                {"email":"newlecturer@test.com","password":"pass123",
+                                 "fullName":"New Lecturer","userType":"LECTURER"}
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.status", is("ACTIVE")))
-                .andExpect(jsonPath("$.data.userType", is("JUDGE")));
+                .andExpect(jsonPath("$.data.userType", is("LECTURER")));
     }
 
     // ── BR-02: Reject FPT_STUDENT as internal ──

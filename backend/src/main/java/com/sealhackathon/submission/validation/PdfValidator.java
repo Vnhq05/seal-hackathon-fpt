@@ -9,15 +9,22 @@ import org.springframework.web.multipart.MultipartFile;
 public class PdfValidator {
 
     private static final long MAX_FILE_SIZE = 5_242_880L;
-    private static final int MAX_PAGE_COUNT = 2;
     private static final String PDF_CONTENT_TYPE = "application/pdf";
 
     public void validate(MultipartFile file, Integer pageCount) {
+        validate(file, pageCount, true);
+    }
+
+    public void validate(MultipartFile file, Integer pageCount, boolean required) {
         if (file == null || file.isEmpty()) {
-            throw new BusinessException("PDF file is required", HttpStatus.BAD_REQUEST) {};
+            if (required) {
+                throw new BusinessException("PDF file is required", HttpStatus.BAD_REQUEST) {};
+            }
+            return;
         }
 
-        if (!PDF_CONTENT_TYPE.equals(file.getContentType())) {
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.equalsIgnoreCase(PDF_CONTENT_TYPE)) {
             throw new BusinessException("File must be a PDF document", HttpStatus.BAD_REQUEST) {};
         }
 
@@ -28,14 +35,8 @@ public class PdfValidator {
                     HttpStatus.BAD_REQUEST) {};
         }
 
-        if (pageCount == null) {
-            throw new BusinessException("PDF page count is required", HttpStatus.BAD_REQUEST) {};
-        }
-
-        if (pageCount < 1 || pageCount > MAX_PAGE_COUNT) {
-            throw new BusinessException(
-                    "PDF must have between 1 and " + MAX_PAGE_COUNT + " pages. Found: " + pageCount,
-                    HttpStatus.BAD_REQUEST) {};
+        if (pageCount != null && pageCount < 1) {
+            throw new BusinessException("PDF page count must be at least 1", HttpStatus.BAD_REQUEST) {};
         }
     }
 }

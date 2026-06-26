@@ -1,5 +1,6 @@
 package com.sealhackathon.team.service;
 
+import com.sealhackathon.common.service.SystemConfigService;
 import com.sealhackathon.team.domain.Team;
 import com.sealhackathon.team.domain.TeamMember;
 import com.sealhackathon.team.domain.enums.TeamMemberRole;
@@ -27,13 +28,14 @@ public class AutoMatchService {
     private final TeamRepository teamRepository;
     private final TeamMemberRepository teamMemberRepository;
     private final ApplicationEventPublisher eventPublisher;
-
-    private static final int TARGET_TEAM_SIZE = 4;
-    private static final int MIN_TEAM_SIZE = 3;
+    private final SystemConfigService systemConfigService;
 
     @Transactional
     public List<Team> autoMatch(UUID eventId, List<UUID> unassignedUserIds) {
-        if (unassignedUserIds.size() < MIN_TEAM_SIZE) {
+        int targetSize = systemConfigService.getMaxTeamMembers();
+        int minSize = systemConfigService.getMinTeamMembers();
+
+        if (unassignedUserIds.size() < minSize) {
             return List.of();
         }
 
@@ -43,15 +45,15 @@ public class AutoMatchService {
         List<Team> created = new ArrayList<>();
         int i = 0;
 
-        while (i + MIN_TEAM_SIZE <= shuffled.size()) {
+        while (i + minSize <= shuffled.size()) {
             int remaining = shuffled.size() - i;
-            int groupSize = Math.min(TARGET_TEAM_SIZE, remaining);
+            int groupSize = Math.min(targetSize, remaining);
 
-            // Avoid leaving < MIN_TEAM_SIZE stragglers
-            if (remaining - groupSize > 0 && remaining - groupSize < MIN_TEAM_SIZE) {
+            // Avoid leaving < minSize stragglers
+            if (remaining - groupSize > 0 && remaining - groupSize < minSize) {
                 groupSize = remaining / 2;
-                if (groupSize < MIN_TEAM_SIZE) {
-                    groupSize = MIN_TEAM_SIZE;
+                if (groupSize < minSize) {
+                    groupSize = minSize;
                 }
             }
 
@@ -62,7 +64,7 @@ public class AutoMatchService {
                     .eventId(eventId)
                     .name("Auto Team " + (created.size() + 1))
                     .leaderId(leaderId)
-                    .status(groupSize >= MIN_TEAM_SIZE ? TeamStatus.CONFIRMED : TeamStatus.FORMING)
+                    .status(groupSize >= minSize ? TeamStatus.CONFIRMED : TeamStatus.FORMING)
                     .build();
             team = teamRepository.save(team);
 

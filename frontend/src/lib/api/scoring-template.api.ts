@@ -53,4 +53,10 @@ export const scoringTemplateApi = {
   delete(templateId: string): Promise<void> {
     return api.delete<void>(`/admin/scoring-templates/${templateId}`);
   },
+
+  deleteCriterion(templateId: string, criterionId: string): Promise<ScoringTemplateResponse> {
+    return api.delete<ScoringTemplateResponse>(
+      `/admin/scoring-templates/${templateId}/criteria/${criterionId}`
+    );
+  },
 };

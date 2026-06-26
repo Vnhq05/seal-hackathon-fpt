@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { eventApi, teamApi } from "@/lib/api";
+import { enrollmentApi, eventApi, teamApi } from "@/lib/api";
 import type { EventResponse, TeamResponse } from "@/lib/api";
 
 export interface MyEventTeam {
@@ -8,20 +8,18 @@ export interface MyEventTeam {
 }
 
 async function fetchMyTeamsAllEvents(): Promise<MyEventTeam[]> {
-  const eventsPage = await eventApi.list({ size: 50 });
-  const events = eventsPage.content;
-
-  const results: MyEventTeam[] = [];
-  for (const event of events) {
-    try {
-      const team = await teamApi.getMyTeam(event.id);
-      results.push({ event, team });
-    } catch {
-      results.push({ event, team: null });
-    }
+  const enrollment = await enrollmentApi.getMyActiveEnrollment();
+  if (!enrollment || enrollment.status === "REJECTED" || enrollment.status === "WITHDRAWN") {
+    return [];
   }
 
-  return results.filter((r) => r.team !== null);
+  const event = await eventApi.getById(enrollment.eventId);
+  try {
+    const team = await teamApi.getMyTeam(event.id);
+    return [{ event, team }];
+  } catch {
+    return [{ event, team: null }];
+  }
 }
 
 export function useMyTeamsAllEvents() {

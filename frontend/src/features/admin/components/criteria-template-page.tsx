@@ -4,6 +4,7 @@ import { useState } from "react";
 import {
   useCriteriaTemplates,
   useCreateCriteriaTemplate,
+  useUpdateCriteriaTemplate,
   useDeleteCriteriaTemplate,
 } from "@/features/admin/hooks/use-admin-criteria";
 import type { ScoringTemplateResponse, ScoringTemplateCriterionResponse } from "@/lib/api";
@@ -20,12 +21,35 @@ const inputStyle: React.CSSProperties = {
 };
 
 function blockInvalidKeys(e: React.KeyboardEvent<HTMLInputElement>) {
-  if (["-", "+", "e", "E", "."].includes(e.key)) e.preventDefault();
+  if (["-", "+", "e", "E", ".", ","].includes(e.key)) e.preventDefault();
 }
 
-function TemplateRow({ t, onDelete, expanded, onToggle }: {
+function parsePositiveWeight(value: string): number | undefined {
+  const digits = value.replace(/\D/g, "");
+  if (!digits) return undefined;
+  const parsed = parseInt(digits, 10);
+  if (parsed <= 0) return undefined;
+  return Math.min(parsed, 100);
+}
+
+interface CriterionForm { name: string; description: string; weight?: number }
+
+function emptyCriterion(): CriterionForm {
+  return { name: "", description: "", weight: undefined };
+}
+
+function criteriaFromTemplate(template: ScoringTemplateResponse): CriterionForm[] {
+  return template.criteria.map((c) => ({
+    name: c.name,
+    description: c.description ?? "",
+    weight: c.weight,
+  }));
+}
+
+function TemplateRow({ t, onDelete, onEdit, expanded, onToggle }: {
   t: ScoringTemplateResponse;
   onDelete: (id: string) => void;
+  onEdit: (template: ScoringTemplateResponse) => void;
   expanded: boolean;
   onToggle: () => void;
 }) {
@@ -38,12 +62,20 @@ function TemplateRow({ t, onDelete, expanded, onToggle }: {
           {t.criteria.reduce((sum: number, c: ScoringTemplateCriterionResponse) => sum + c.weight, 0)}%
         </td>
         <td style={bodyCell}>
-          <button
-            onClick={(e) => { e.stopPropagation(); onDelete(t.id); }}
-            style={{ fontSize: 12, fontWeight: 600, color: "#991b1b", background: "none", border: "none", cursor: "pointer" }}
-          >
-            Delete
-          </button>
+          <div className="flex gap-3" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => onEdit(t)}
+              style={{ fontSize: 12, fontWeight: 600, color: "#1e40af", background: "none", border: "none", cursor: "pointer" }}
+            >
+              Edit
+            </button>
+            <button
+              onClick={() => onDelete(t.id)}
+              style={{ fontSize: 12, fontWeight: 600, color: "#991b1b", background: "none", border: "none", cursor: "pointer" }}
+            >
+              Delete
+            </button>
+          </div>
         </td>
       </tr>
       {expanded && (
@@ -75,41 +107,97 @@ function TemplateRow({ t, onDelete, expanded, onToggle }: {
   );
 }
 
-interface CriterionForm { name: string; description: string; weight: number }
+function TemplateForm({
+  template,
+  onClose,
+}: {
+  template?: ScoringTemplateResponse;
+  onClose: () => void;
+}) {
+  const isEdit = !!template;
+  const { mutate: create, isPending: isCreating } = useCreateCriteriaTemplate();
+  const { mutate: update, isPending: isUpdating } = useUpdateCriteriaTemplate();
 
-function CreateForm({ onClose }: { onClose: () => void }) {
-  const { mutate: create, isPending } = useCreateCriteriaTemplate();
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [criteria, setCriteria] = useState<CriterionForm[]>([
-    { name: "", description: "", weight: 0 },
-  ]);
+  const [name, setName] = useState(template?.name ?? "");
+  const [description, setDescription] = useState(template?.description ?? "");
+  const [criteria, setCriteria] = useState<CriterionForm[]>(
+    template ? criteriaFromTemplate(template) : [emptyCriterion()]
+  );
+  const [deleteWarning, setDeleteWarning] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const totalWeight = criteria.reduce((sum, c) => sum + (c.weight || 0), 0);
-  const isWeightValid = totalWeight === 100;
+  const isPending = isCreating || isUpdating;
+  const totalWeight = criteria.reduce((sum, c) => sum + (c.weight ?? 0), 0);
+  const allWeightsPositive = criteria.every((c) => c.weight !== undefined && c.weight > 0);
+  const isWeightValid = totalWeight === 100 && allWeightsPositive;
 
-  const addCriterion = () => setCriteria([...criteria, { name: "", description: "", weight: 0 }]);
+  const addCriterion = () => setCriteria([...criteria, emptyCriterion()]);
 
-  const updateCriterion = (idx: number, field: keyof CriterionForm, value: string | number) => {
+  const updateCriterion = (idx: number, field: keyof CriterionForm, value: string | number | undefined) => {
+    setDeleteWarning(null);
     setCriteria(criteria.map((c, i) => (i === idx ? { ...c, [field]: value } : c)));
   };
 
   const removeCriterion = (idx: number) => {
     if (criteria.length <= 1) return;
-    setCriteria(criteria.filter((_, i) => i !== idx));
+
+    const remaining = criteria.filter((_, i) => i !== idx);
+    const newTotal = remaining.reduce((sum, c) => sum + (c.weight ?? 0), 0);
+
+    if (newTotal !== 100) {
+      setDeleteWarning(
+        `Sau khi xóa, tổng weight sẽ là ${newTotal}% (khác 100%). Vui lòng điều chỉnh weight các tiêu chí còn lại trước khi lưu.`
+      );
+    } else {
+      setDeleteWarning(null);
+    }
+
+    setCriteria(remaining);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!isWeightValid) return;
-    create(
-      { name, description: description || undefined, criteria: criteria.map((c, i) => ({ ...c, sortOrder: i })) },
-      { onSuccess: onClose }
-    );
+
+    setSubmitError(null);
+
+    const payload = {
+      name,
+      description: description || undefined,
+      criteria: criteria.map((c, i) => ({
+        name: c.name,
+        description: c.description || undefined,
+        weight: c.weight!,
+        sortOrder: i,
+      })),
+    };
+
+    const onError = (err: unknown) => {
+      setSubmitError(err instanceof Error ? err.message : "Failed to save template.");
+    };
+
+    if (isEdit) {
+      update({ id: template.id, ...payload }, { onSuccess: onClose, onError });
+    } else {
+      create(payload, { onSuccess: onClose, onError });
+    }
   };
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4 rounded-lg" style={{ backgroundColor: "#ffffff", border: "1px solid rgba(198,198,205,0.5)", padding: 24, marginBottom: 24 }}>
+      <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0e1528" }}>
+        {isEdit ? "Edit Template" : "Create Template"}
+      </h2>
+
+      {submitError && (
+        <div style={{
+          backgroundColor: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8,
+          padding: "10px 14px", fontSize: 13, color: "#991b1b",
+        }}>
+          {submitError}
+        </div>
+      )}
+
       <div className="flex flex-col">
         <label style={{ fontSize: 14, fontWeight: 600, color: "#0e1528", marginBottom: 4 }}>Template Name</label>
         <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} placeholder="Template name" required />
@@ -136,7 +224,17 @@ function CreateForm({ onClose }: { onClose: () => void }) {
             backgroundColor: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8,
             padding: "8px 12px", marginBottom: 8, fontSize: 13, color: "#991b1b",
           }}>
-            Total weight must equal exactly 100%. Currently: {totalWeight}%
+            Tổng weight phải bằng đúng 100%. Hiện tại: {totalWeight}%
+            {!allWeightsPositive && " — mỗi tiêu chí cần weight là số nguyên dương > 0."}
+          </div>
+        )}
+
+        {deleteWarning && (
+          <div style={{
+            backgroundColor: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 8,
+            padding: "8px 12px", marginBottom: 8, fontSize: 13, color: "#9a3412",
+          }}>
+            {deleteWarning}
           </div>
         )}
 
@@ -150,14 +248,14 @@ function CreateForm({ onClose }: { onClose: () => void }) {
             </div>
             <div className="col-span-2">
               <input
-                type="number"
-                value={c.weight || ""}
-                onChange={(e) => updateCriterion(idx, "weight", Math.max(0, parseInt(e.target.value) || 0))}
+                type="text"
+                inputMode="numeric"
+                pattern="[1-9][0-9]*"
+                value={c.weight ?? ""}
+                onChange={(e) => updateCriterion(idx, "weight", parsePositiveWeight(e.target.value))}
                 onKeyDown={blockInvalidKeys}
                 style={inputStyle}
                 placeholder="Weight %"
-                min={1}
-                max={100}
                 required
               />
             </div>
@@ -187,7 +285,7 @@ function CreateForm({ onClose }: { onClose: () => void }) {
             opacity: isPending ? 0.7 : 1,
           }}
         >
-          {isPending ? "Creating..." : "Create Template"}
+          {isPending ? "Saving..." : isEdit ? "Save Changes" : "Create Template"}
         </button>
         <button type="button" onClick={onClose} className="rounded-lg" style={{ backgroundColor: "#ffffff", padding: "10px 24px", color: "#0e1528", fontSize: 14, fontWeight: 600, border: "1px solid rgba(223,226,236,0.8)", cursor: "pointer" }}>
           Cancel
@@ -198,10 +296,16 @@ function CreateForm({ onClose }: { onClose: () => void }) {
 }
 
 export function CriteriaTemplatePage() {
-  const { data: templates = [], isLoading } = useCriteriaTemplates();
+  const { data: templates = [], isLoading, isError, error, refetch } = useCriteriaTemplates();
   const { mutate: remove } = useDeleteCriteriaTemplate();
-  const [showForm, setShowForm] = useState(false);
+  const [formMode, setFormMode] = useState<"closed" | "create" | "edit">("closed");
+  const [editingTemplate, setEditingTemplate] = useState<ScoringTemplateResponse | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const closeForm = () => {
+    setFormMode("closed");
+    setEditingTemplate(null);
+  };
 
   return (
     <div style={{ padding: 24 }}>
@@ -214,9 +318,9 @@ export function CriteriaTemplatePage() {
             Create and manage scoring criteria templates. Weights must sum to 100%.
           </p>
         </div>
-        {!showForm && (
+        {formMode === "closed" && (
           <button
-            onClick={() => setShowForm(true)}
+            onClick={() => setFormMode("create")}
             className="flex items-center justify-center rounded-lg"
             style={{ backgroundColor: "#38bdf8", padding: "10px 20px", color: "#ffffff", fontSize: 14, fontWeight: 600, border: "none", cursor: "pointer" }}
           >
@@ -225,7 +329,30 @@ export function CriteriaTemplatePage() {
         )}
       </div>
 
-      {showForm && <CreateForm onClose={() => setShowForm(false)} />}
+      {formMode === "create" && <TemplateForm onClose={closeForm} />}
+      {formMode === "edit" && editingTemplate && (
+        <TemplateForm template={editingTemplate} onClose={closeForm} />
+      )}
+
+      {isError && (
+        <div className="flex items-center justify-between" style={{
+          backgroundColor: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8,
+          padding: "12px 16px", marginBottom: 16, fontSize: 13, color: "#991b1b",
+        }}>
+          <span>{error?.message || "Failed to load scoring templates."}</span>
+          <button
+            type="button"
+            onClick={() => refetch()}
+            style={{
+              fontSize: 13, fontWeight: 600, color: "#991b1b",
+              backgroundColor: "#ffffff", border: "1px solid #fecaca",
+              borderRadius: 6, padding: "6px 12px", cursor: "pointer",
+            }}
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
       <div className="overflow-hidden rounded-lg" style={{ backgroundColor: "#ffffff", border: "1px solid rgba(198,198,205,0.5)" }}>
         <table className="w-full" style={{ borderCollapse: "collapse" }}>
@@ -234,7 +361,7 @@ export function CriteriaTemplatePage() {
               <th style={headerCell}>Template Name</th>
               <th style={{ ...headerCell, width: 120 }}>Criteria Count</th>
               <th style={{ ...headerCell, width: 120 }}>Total Weight</th>
-              <th style={{ ...headerCell, width: 100 }}>Actions</th>
+              <th style={{ ...headerCell, width: 140 }}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -248,17 +375,21 @@ export function CriteriaTemplatePage() {
                     ))}
                   </tr>
                 ))
-              : (templates as ScoringTemplateResponse[]).map((t) => (
+              : !isError && (templates as ScoringTemplateResponse[]).map((t) => (
                   <TemplateRow
                     key={t.id}
                     t={t}
                     onDelete={(id) => remove(id)}
+                    onEdit={(template) => {
+                      setEditingTemplate(template);
+                      setFormMode("edit");
+                    }}
                     expanded={expandedId === t.id}
                     onToggle={() => setExpandedId(expandedId === t.id ? null : t.id)}
                   />
                 ))
             }
-            {!isLoading && templates.length === 0 && (
+            {!isLoading && !isError && templates.length === 0 && (
               <tr>
                 <td colSpan={4} style={{ ...bodyCell, textAlign: "center", color: "#8891a5", padding: "48px 16px" }}>
                   No templates yet. Create one to get started.

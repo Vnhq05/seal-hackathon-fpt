@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import { useEventWizardStore } from "@/features/admin/store/event-wizard.store";
+import { blockNonLetterNameInput } from "@/features/admin/utils/event-wizard.utils";
+
+const SEASONS = ["Spring", "Summer", "Fall", "Winter"] as const;
 
 const inputStyle: React.CSSProperties = {
   border: "1px solid rgba(223,226,236,0.8)", borderRadius: 8, padding: "11px 16px", fontSize: 14, width: "100%", outline: "none",
@@ -17,10 +20,10 @@ export function Step1Name({ onNext }: { onNext: () => void }) {
   const validate = () => {
     const errs: Record<string, string> = {};
     if (!data.season.trim()) errs.season = "Season is required";
-    else if (!/^[a-zA-Z\s]+$/.test(data.season)) errs.season = "Season must contain only letters";
     if (!data.year) errs.year = "Year is required";
     else if (data.year < currentYear) errs.year = `Year must be ${currentYear} or later`;
     if (!data.name.trim()) errs.name = "Event name is required";
+    else if (!/^[a-zA-Z\s]+$/.test(data.name.trim())) errs.name = "Event name must contain only letters and spaces";
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -35,12 +38,16 @@ export function Step1Name({ onNext }: { onNext: () => void }) {
 
       <div>
         <label style={labelStyle}>Season</label>
-        <input
+        <select
           value={data.season}
           onChange={(e) => updateData({ season: e.target.value })}
           style={{ ...inputStyle, borderColor: errors.season ? "#ef4444" : undefined }}
-          placeholder="e.g. Spring, Fall, Summer"
-        />
+        >
+          <option value="">Select season...</option>
+          {SEASONS.map((s) => (
+            <option key={s} value={s}>{s}</option>
+          ))}
+        </select>
         {errors.season && <p style={errorStyle}>{errors.season}</p>}
       </div>
 
@@ -62,7 +69,7 @@ export function Step1Name({ onNext }: { onNext: () => void }) {
         <label style={labelStyle}>Event Name</label>
         <input
           value={data.name}
-          onChange={(e) => updateData({ name: e.target.value })}
+          onChange={(e) => updateData({ name: blockNonLetterNameInput(e.target.value) })}
           style={{ ...inputStyle, borderColor: errors.name ? "#ef4444" : undefined }}
           placeholder="Hackathon event name"
         />

@@ -51,20 +51,22 @@ export function EnrollmentManagementPage({ eventId }: { eventId: string }) {
 
       <div className="overflow-hidden rounded-lg" style={{ backgroundColor: "#ffffff", border: "1px solid rgba(198,198,205,0.5)" }}>
         <table className="w-full" style={{ borderCollapse: "collapse" }}>
-          <thead>
-            <tr style={{ backgroundColor: "#eef0f6" }}>
-              <th style={headerCell}>Name</th>
-              <th style={headerCell}>Email</th>
-              <th style={{ ...headerCell, width: 120 }}>Status</th>
-              <th style={{ ...headerCell, width: 160 }}>Enrolled At</th>
-              <th style={{ ...headerCell, width: 160 }}>Actions</th>
-            </tr>
-          </thead>
+            <thead>
+              <tr style={{ backgroundColor: "#eef0f6" }}>
+                <th style={headerCell}>Name</th>
+                <th style={headerCell}>Email</th>
+                <th style={headerCell}>Student ID</th>
+                <th style={headerCell}>University</th>
+                <th style={{ ...headerCell, width: 120 }}>Status</th>
+                <th style={{ ...headerCell, width: 160 }}>Enrolled At</th>
+                <th style={{ ...headerCell, width: 160 }}>Actions</th>
+              </tr>
+            </thead>
           <tbody>
             {isLoading ? (
               Array.from({ length: 3 }).map((_, i) => (
                 <tr key={i}>
-                  {Array.from({ length: 5 }).map((_, j) => (
+                  {Array.from({ length: 7 }).map((_, j) => (
                     <td key={j} style={{ padding: "14px 16px" }}>
                       <div className="animate-pulse rounded" style={{ height: 14, backgroundColor: "rgba(223,226,236,0.8)", width: "70%" }} />
                     </td>
@@ -78,6 +80,8 @@ export function EnrollmentManagementPage({ eventId }: { eventId: string }) {
                   <tr key={e.id} style={{ borderTop: "1px solid rgba(198,198,205,0.3)" }}>
                     <td style={{ ...bodyCell, fontWeight: 600 }}>{e.userFullName}</td>
                     <td style={bodyCell}>{e.userEmail}</td>
+                    <td style={bodyCell}>{e.userStudentId ?? "—"}</td>
+                    <td style={bodyCell}>{e.userUniversityName ?? "—"}</td>
                     <td style={bodyCell}>
                       <span style={{ fontSize: 12, fontWeight: 600, padding: "3px 8px", borderRadius: 4, backgroundColor: colors.bg, color: colors.text }}>
                         {e.status}
@@ -100,7 +104,7 @@ export function EnrollmentManagementPage({ eventId }: { eventId: string }) {
             )}
             {!isLoading && enrollments.length === 0 && (
               <tr>
-                <td colSpan={5} style={{ ...bodyCell, textAlign: "center", color: "#8891a5", padding: "48px 16px" }}>
+                <td colSpan={7} style={{ ...bodyCell, textAlign: "center", color: "#8891a5", padding: "48px 16px" }}>
                   No enrollments found.
                 </td>
               </tr>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -9,6 +10,7 @@ import {
   useCreateEvent,
   useUpdateEvent,
 } from "@/features/admin/hooks/use-admin-hackathons";
+import type { EventResponse, UpdateEventRequest } from "@/lib/api";
 
 const inputStyle: React.CSSProperties = {
   border: "1px solid rgba(223,226,236,0.8)",
@@ -32,9 +34,60 @@ const errorStyle: React.CSSProperties = {
   marginTop: 4,
 };
 
+const bannerErrorStyle: React.CSSProperties = {
+  fontSize: 13,
+  color: "#991b1b",
+  backgroundColor: "#fef2f2",
+  border: "1px solid #fecaca",
+  borderRadius: 8,
+  padding: "10px 14px",
+};
+
+const SEASONS = ["Spring", "Summer", "Fall", "Winter"] as const;
+
+function toDateInput(value: string | null | undefined): string {
+  return value ? value.split("T")[0] : "";
+}
+
+function buildUpdatePayload(
+  values: HackathonFormValues,
+  existing: EventResponse,
+): UpdateEventRequest {
+  return {
+    name: values.name,
+    season: values.season,
+    year: values.year,
+    startDate: values.startDate,
+    endDate: values.endDate,
+    registrationOpenDate: values.registrationOpenDate,
+    registrationDeadline: values.registrationDeadline,
+    description: existing.description ?? undefined,
+    location: existing.location ?? undefined,
+    format: existing.format ?? undefined,
+    minTeam: existing.minTeam ?? undefined,
+    maxTeam: existing.maxTeam ?? undefined,
+    semesterMin: existing.semesterMin ?? undefined,
+    semesterMax: existing.semesterMax ?? undefined,
+    scoringTemplateId: existing.scoringTemplateId ?? undefined,
+    tiebreakerCriteria: existing.tiebreakerCriteria ?? undefined,
+    prizes: existing.prizes.map((p) => ({
+      trackId: p.trackId ?? undefined,
+      rank: p.rank,
+      value: p.value,
+      quantity: p.quantity,
+      label: p.label ?? undefined,
+    })),
+    honoredGuests: existing.honoredGuests.map((g) => ({
+      fullName: g.fullName,
+      title: g.title ?? undefined,
+    })),
+  };
+}
+
 export function HackathonFormPage({ hackathonId }: { hackathonId?: string }) {
   const router = useRouter();
   const isEdit = !!hackathonId;
+  const [saveError, setSaveError] = useState<string | null>(null);
   const { data: existing, isLoading: loadingExisting } = useAdminEvent(hackathonId ?? "");
   const { mutate: create, isPending: creating } = useCreateEvent();
   const { mutate: update, isPending: updating } = useUpdateEvent();
@@ -51,18 +104,30 @@ export function HackathonFormPage({ hackathonId }: { hackathonId?: string }) {
           name: existing.name,
           season: existing.season,
           year: existing.year,
-          startDate: existing.startDate.split("T")[0],
-          endDate: existing.endDate.split("T")[0],
-          registrationDeadline: existing.registrationDeadline.split("T")[0],
+          startDate: toDateInput(existing.startDate),
+          endDate: toDateInput(existing.endDate),
+          registrationOpenDate: toDateInput(existing.registrationOpenDate),
+          registrationDeadline: toDateInput(existing.registrationDeadline),
         }
       : undefined,
   });
 
   const onSubmit = (values: HackathonFormValues) => {
-    if (isEdit && hackathonId) {
-      update({ eventId: hackathonId, ...values }, { onSuccess: () => router.push("/admin/hackathons") });
+    setSaveError(null);
+
+    if (isEdit && hackathonId && existing) {
+      update(
+        { eventId: hackathonId, ...buildUpdatePayload(values, existing) },
+        {
+          onSuccess: () => router.push("/admin/hackathons"),
+          onError: (err) => setSaveError(err instanceof Error ? err.message : "Failed to save event"),
+        },
+      );
     } else {
-      create(values, { onSuccess: () => router.push("/admin/hackathons") });
+      create(values, {
+        onSuccess: () => router.push("/admin/hackathons"),
+        onError: (err) => setSaveError(err instanceof Error ? err.message : "Failed to save event"),
+      });
     }
   };
 
@@ -99,7 +164,12 @@ export function HackathonFormPage({ hackathonId }: { hackathonId?: string }) {
         <div className="grid grid-cols-2 gap-4">
           <div className="flex flex-col">
             <label style={labelStyle}>Season</label>
-            <input {...register("season")} style={inputStyle} placeholder="e.g. SPRING, FALL" />
+            <select {...register("season")} style={inputStyle} defaultValue="">
+              <option value="">Select season...</option>
+              {SEASONS.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
             {errors.season && <span style={errorStyle}>{errors.season.message}</span>}
           </div>
           <div className="flex flex-col">
@@ -122,11 +192,20 @@ export function HackathonFormPage({ hackathonId }: { hackathonId?: string }) {
           </div>
         </div>
 
-        <div className="flex flex-col">
-          <label style={labelStyle}>Registration Deadline</label>
-          <input type="date" {...register("registrationDeadline")} style={inputStyle} />
-          {errors.registrationDeadline && <span style={errorStyle}>{errors.registrationDeadline.message}</span>}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="flex flex-col">
+            <label style={labelStyle}>Registration Open Date</label>
+            <input type="date" {...register("registrationOpenDate")} style={inputStyle} />
+            {errors.registrationOpenDate && <span style={errorStyle}>{errors.registrationOpenDate.message}</span>}
+          </div>
+          <div className="flex flex-col">
+            <label style={labelStyle}>Registration Deadline</label>
+            <input type="date" {...register("registrationDeadline")} style={inputStyle} />
+            {errors.registrationDeadline && <span style={errorStyle}>{errors.registrationDeadline.message}</span>}
+          </div>
         </div>
+
+        {saveError && <div style={bannerErrorStyle}>{saveError}</div>}
 
         <div className="flex gap-3" style={{ marginTop: 8 }}>
           <button

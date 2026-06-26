@@ -41,15 +41,30 @@ export function RegisterForm() {
   if (isSuccess) {
     return (
       <div className="flex flex-col items-center gap-4 py-8">
-        <div style={{ width: 48, height: 48, borderRadius: "50%", backgroundColor: "#d1fae5", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <svg width="24" height="24" fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" /></svg>
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50">
+          <svg
+            width="24"
+            height="24"
+            fill="none"
+            stroke="#10b981"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path d="M20 6 9 17l-5-5" />
+          </svg>
         </div>
-        <h2 className="text-xl font-semibold text-seal-text">Account Created</h2>
-        <p className="text-center text-sm text-seal-text-secondary" style={{ maxWidth: 360 }}>
-          Your account has been submitted for review. You will be notified once an admin approves your registration.
+        <h2 className="text-xl font-semibold text-seal-text">Đăng ký thành công</h2>
+        <p className="max-w-[360px] text-center text-sm text-seal-text-muted">
+          Chờ Admin phê duyệt. Bạn sẽ nhận thông báo khi tài khoản được kích hoạt.
         </p>
-        <Link href="/login" className="mt-4 font-medium text-seal-cyan hover:underline">
-          Back to Sign In
+        <Link
+          href="/login"
+          className="mt-4 font-medium text-seal-purple hover:text-seal-purple-dark hover:underline"
+        >
+          Quay lại đăng nhập
         </Link>
       </div>
     );
@@ -102,11 +117,11 @@ export function RegisterForm() {
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="email">Email Address</Label>
+          <Label htmlFor="email">Email</Label>
           <Input
             id="email"
             type="email"
-            placeholder="alex.chen@example.com"
+            placeholder="email@example.com"
             autoComplete="email"
             error={errors.email?.message}
             {...register("email")}
@@ -129,11 +144,11 @@ export function RegisterForm() {
 
         {userType === "EXTERNAL_STUDENT" && (
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="universityName">University Name</Label>
+            <Label htmlFor="universityName">Tên trường</Label>
             <Input
               id="universityName"
               type="text"
-              placeholder="e.g. Hanoi University of Technology"
+              placeholder="VD: Đại học Bách Khoa Hà Nội"
               autoComplete="organization"
               error={errors.universityName?.message}
               {...register("universityName")}
@@ -198,6 +213,14 @@ export function RegisterForm() {
           {isPending ? "Creating account..." : "Create account"}
         </Button>
       </form>
+
+      <p className="mt-4 text-center text-xs text-seal-text-muted">
+        Joining a hackathon as an external student without a permanent account? Use{" "}
+        <Link href="/" className="font-medium text-seal-text">
+          Register Now
+        </Link>{" "}
+        on the event from the home page instead.
+      </p>
 
       <div className="my-6 h-px bg-seal-border" />
 

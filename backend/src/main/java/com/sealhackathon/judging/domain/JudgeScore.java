@@ -8,9 +8,11 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.Index;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import jakarta.persistence.Version;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -39,6 +41,10 @@ import java.util.UUID;
 @Entity
 @Table(name = "judge_scores", uniqueConstraints = {
         @UniqueConstraint(columnNames = {"judge_user_id", "submission_id"})
+}, indexes = {
+        @Index(name = "idx_judge_score_round_id", columnList = "round_id"),
+        @Index(name = "idx_judge_score_submission_id", columnList = "submission_id"),
+        @Index(name = "idx_judge_score_judge_user_id", columnList = "judge_user_id")
 })
 @Getter
 @Setter
@@ -76,6 +82,10 @@ public class JudgeScore extends BaseEntity {
 
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
+
+    @Version
+    @Column(name = "version")
+    private Long version;
 
     // ── Child: one detail per criteria ──
     @OneToMany(mappedBy = "judgeScore", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)

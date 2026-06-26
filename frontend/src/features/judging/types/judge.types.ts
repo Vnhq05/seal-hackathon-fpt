@@ -110,16 +110,26 @@ export interface SubmissionLink {
 
 export interface SubmissionForScoring {
   id: string;
+  teamId: string;
   teamName: string;
   hackathonName: string;
   roundName: string;
+  trackName: string | null;
   roundId: string;
   deadline: string;
   description: string;
+  githubUrl: string | null;
+  demoUrl: string | null;
+  pdfUrl: string | null;
+  pdfFileName: string | null;
   links: SubmissionLink[];
   criteria: ScoringCriterion[];
   existingScores: CriterionScore[] | null;
+  scoreStatus: string | null;
+  judgeScoreId: string | null;
   isDraft: boolean;
+  isLocked: boolean;
+  isCompleted: boolean;
 }
 
 /* ── Score submission ── */

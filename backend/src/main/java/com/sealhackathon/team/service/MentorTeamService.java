@@ -68,4 +68,12 @@ public class MentorTeamService {
                 .orElseThrow(() -> new ResourceNotFoundException("MentorTeam", "id", assignmentId));
         mentorTeamRepository.delete(mt);
     }
+
+    public void requireMentorAssignedToTeam(UUID mentorUserId, UUID teamId) {
+        if (!mentorTeamRepository.existsByMentorUserIdAndTeamId(mentorUserId, teamId)) {
+            throw new BusinessException(
+                    "You are not assigned as mentor for this team",
+                    HttpStatus.FORBIDDEN) {};
+        }
+    }
 }

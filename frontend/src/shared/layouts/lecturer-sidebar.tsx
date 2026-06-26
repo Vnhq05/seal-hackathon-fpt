@@ -3,7 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { performLogout } from "@/features/auth/lib/logout";
 import { useAuthStore } from "@/features/auth/store/auth.store";
+import { isPortalNavActive, PortalNavLink } from "@/shared/layouts/portal-nav-link";
 
 interface NavItem {
   href: string;
@@ -52,7 +55,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/lecturer/rounds", label: "Assigned Rounds", icon: <RoundsIcon /> },
   { href: "/lecturer/scoring", label: "Submissions to Score", icon: <ScoringIcon /> },
   { href: "/lecturer/history", label: "Score History", icon: <HistoryIcon /> },
-  { href: "/lecturer/teams", label: "Teams", icon: <TeamsIcon /> },
+  { href: "/lecturer/teams", label: "My Teams", icon: <TeamsIcon /> },
   { href: "/lecturer/mentor-hub", label: "MentorHub", icon: <MentorHubIcon /> },
   { href: "/lecturer/notifications", label: "Notifications", icon: <BellIcon /> },
 ];
@@ -60,12 +63,11 @@ const NAV_ITEMS: NavItem[] = [
 export function LecturerSidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, clearAuth } = useAuthStore();
+  const queryClient = useQueryClient();
+  const { user } = useAuthStore();
 
-  const handleLogout = () => {
-    clearAuth();
-    if (typeof window !== "undefined") localStorage.removeItem("access_token");
-    router.push("/login");
+  const handleLogout = async () => {
+    await performLogout(router, queryClient);
   };
 
   const initials = user?.fullName
@@ -106,26 +108,16 @@ export function LecturerSidebar() {
 
       {/* Nav */}
       <nav className="flex flex-1 flex-col gap-1" aria-label="Lecturer navigation">
-        {NAV_ITEMS.map((item) => {
-          const isActive = item.href === "/lecturer"
-            ? pathname === "/lecturer"
-            : pathname === item.href || pathname.startsWith(item.href + "/");
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              aria-current={isActive ? "page" : undefined}
-              className={`flex items-center gap-3 ${
-                isActive
-                  ? "seal-sidebar-item-active bg-white/[0.08] rounded-lg px-3 py-2.5 text-[13px] font-medium tracking-wide transition-colors duration-200 text-violet-400"
-                  : "rounded-lg px-3 py-2.5 text-[13px] font-medium tracking-wide transition-colors duration-200 text-slate-400 hover:bg-white/[0.04] hover:text-slate-200"
-              }`}
-            >
-              <span className={isActive ? "text-violet-400" : "text-slate-500"}>{item.icon}</span>
-              {item.label}
-            </Link>
-          );
-        })}
+        {NAV_ITEMS.map((item) => (
+          <PortalNavLink
+            key={item.href}
+            href={item.href}
+            label={item.label}
+            icon={item.icon}
+            isActive={isPortalNavActive(pathname, item.href)}
+            accent="violet"
+          />
+        ))}
       </nav>
 
       {/* Bottom */}

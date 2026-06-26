@@ -13,6 +13,7 @@ import com.sealhackathon.submission.repository.SubmissionVersionRepository;
 import com.sealhackathon.submission.validation.DemoUrlWhitelistValidator;
 import com.sealhackathon.submission.validation.GitHubUrlValidator;
 import com.sealhackathon.submission.validation.PdfValidator;
+import com.sealhackathon.common.storage.FileStorageService;
 import com.sealhackathon.team.dto.snapshot.TeamSnapshot;
 import com.sealhackathon.team.service.TeamPublicService;
 import org.junit.jupiter.api.Test;
@@ -31,6 +32,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -46,6 +48,7 @@ class SubmissionServiceTest {
     @Mock private GitHubUrlValidator gitHubUrlValidator;
     @Mock private DemoUrlWhitelistValidator demoUrlValidator;
     @Mock private PdfValidator pdfValidator;
+    @Mock private FileStorageService fileStorageService;
     @Mock private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks private SubmissionService submissionService;
@@ -147,28 +150,28 @@ class SubmissionServiceTest {
     // ── BR-32: Deadline passed ──
 
     @Test
-    void submit_shouldThrow_whenDeadlinePassed() {
+    void submit_shouldThrow_whenRoundEnded() {
         RoundSnapshot round = RoundSnapshot.builder()
-                .id(ROUND_ID).eventId(EVENT_ID).build();
+                .id(ROUND_ID).eventId(EVENT_ID)
+                .startDate(LocalDateTime.now().minusDays(10))
+                .endDate(LocalDateTime.now().minusDays(1))
+                .build();
         when(eventPublicService.getRound(ROUND_ID)).thenReturn(Optional.of(round));
 
         TeamSnapshot team = TeamSnapshot.builder().id(TEAM_ID).eventId(EVENT_ID).build();
         when(teamPublicService.getTeamByParticipantAndEvent(USER_ID, EVENT_ID))
                 .thenReturn(Optional.of(team));
         when(teamPublicService.isTeamLeader(USER_ID, TEAM_ID)).thenReturn(true);
-        when(eventPublicService.getSubmissionDeadline(ROUND_ID))
-                .thenReturn(LocalDateTime.now().minusDays(1));
 
         CreateSubmissionRequest request = CreateSubmissionRequest.builder()
                 .githubUrl("https://github.com/user/repo")
                 .demoUrl("https://youtube.com/watch?v=abc")
-                .pdfPageCount(1)
                 .build();
         MockMultipartFile pdf = new MockMultipartFile("pdf", "doc.pdf", "application/pdf", new byte[100]);
 
         assertThatThrownBy(() -> submissionService.submit(USER_ID, ROUND_ID, request, pdf))
                 .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("deadline");
+                .hasMessageContaining("ended");
     }
 
     // ── BR-29: Invalid GitHub URL ──
@@ -232,7 +235,10 @@ class SubmissionServiceTest {
 
     private void setupValidSubmissionContext() {
         RoundSnapshot round = RoundSnapshot.builder()
-                .id(ROUND_ID).eventId(EVENT_ID).build();
+                .id(ROUND_ID).eventId(EVENT_ID)
+                .startDate(LocalDateTime.now().minusDays(1))
+                .endDate(LocalDateTime.now().plusDays(7))
+                .build();
         when(eventPublicService.getRound(ROUND_ID)).thenReturn(Optional.of(round));
 
         TeamSnapshot team = TeamSnapshot.builder()
@@ -240,7 +246,7 @@ class SubmissionServiceTest {
         when(teamPublicService.getTeamByParticipantAndEvent(USER_ID, EVENT_ID))
                 .thenReturn(Optional.of(team));
         when(teamPublicService.isTeamLeader(USER_ID, TEAM_ID)).thenReturn(true);
-        when(eventPublicService.getSubmissionDeadline(ROUND_ID))
-                .thenReturn(LocalDateTime.now().plusDays(7));
+        when(fileStorageService.storeSubmissionPdf(any(), any(), anyInt()))
+                .thenReturn("/api/files/submissions/test.pdf");
     }
 }

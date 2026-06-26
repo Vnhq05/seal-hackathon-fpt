@@ -16,6 +16,6 @@ public class JudgingEventListener {
     @TransactionalEventListener
     public void onScoringWindowReopened(ScoringWindowReopenedEvent event) {
         judgeScoreRepository.updateStatusByRoundId(
-                event.roundId(), ScoreStatus.LOCKED, ScoreStatus.IN_PROGRESS);
+                event.roundId(), ScoreStatus.LOCKED, ScoreStatus.COMPLETED);
     }
 }

@@ -3,37 +3,12 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
-import { z } from "zod";
 import { useHackathonRegistration } from "@/features/events/hooks/use-hackathon-registration";
+import {
+  hackathonRegistrationSchema,
+  type HackathonRegistrationFormValues,
+} from "@/features/events/schemas/hackathon-registration.schema";
 import { Button } from "@/shared/ui/button";
-
-/**
- * Extended registration schema that includes a team name (required by teamApi.create)
- * plus the original agreement checkboxes.
- */
-const registrationSchema = z.object({
-  teamName: z
-    .string()
-    .min(1, "Team name is required.")
-    .max(100, "Team name must be 100 characters or less."),
-  confirmStudent: z
-    .boolean()
-    .refine((v) => v === true, "You must confirm your student status."),
-  agreeCodeOfConduct: z
-    .boolean()
-    .refine(
-      (v) => v === true,
-      "You must agree to the Code of Conduct and Rules.",
-    ),
-  agreeTeamFormation: z
-    .boolean()
-    .refine(
-      (v) => v === true,
-      "You must acknowledge the team formation requirement.",
-    ),
-});
-
-type RegistrationFormValues = z.infer<typeof registrationSchema>;
 
 function ArrowRightIcon() {
   return (
@@ -82,10 +57,9 @@ export function RegistrationForm({ hackathonId }: RegistrationFormProps) {
     register: registerField,
     handleSubmit,
     formState: { errors },
-  } = useForm<RegistrationFormValues>({
-    resolver: zodResolver(registrationSchema),
+  } = useForm<HackathonRegistrationFormValues>({
+    resolver: zodResolver(hackathonRegistrationSchema),
     defaultValues: {
-      teamName: "",
       confirmStudent: false,
       agreeCodeOfConduct: false,
       agreeTeamFormation: false,
@@ -95,8 +69,8 @@ export function RegistrationForm({ hackathonId }: RegistrationFormProps) {
   const { register, isPending, isError, error } =
     useHackathonRegistration(hackathonId);
 
-  const onSubmit = (values: RegistrationFormValues) => {
-    register(values.teamName);
+  const onSubmit = () => {
+    register();
   };
 
   return (
@@ -104,46 +78,6 @@ export function RegistrationForm({ hackathonId }: RegistrationFormProps) {
       onSubmit={handleSubmit(onSubmit)}
       className="flex w-full flex-col gap-6"
     >
-      {/* Team name input */}
-      <div className="flex flex-col gap-2">
-        <div
-          style={{
-            borderBottom: "1px solid rgba(223,226,236,0.8)",
-            paddingBottom: 5,
-          }}
-        >
-          <h2
-            style={{
-              fontSize: 18,
-              fontWeight: 600,
-              color: "#0e1528",
-              lineHeight: "25.2px",
-              margin: 0,
-            }}
-          >
-            Team Name
-          </h2>
-        </div>
-        <input
-          type="text"
-          placeholder="Enter your team name"
-          {...registerField("teamName")}
-          className="w-full rounded"
-          style={{
-            border: "1px solid rgba(223,226,236,0.8)",
-            backgroundColor: "#eef0f6",
-            padding: "11px 14px",
-            fontSize: 14,
-            color: "#0e1528",
-            outline: "none",
-          }}
-        />
-        {errors.teamName && (
-          <span style={errorStyle}>{errors.teamName.message}</span>
-        )}
-      </div>
-
-      {/* Agreements */}
       <div className="flex flex-col gap-4">
         <div
           style={{
@@ -203,7 +137,7 @@ export function RegistrationForm({ hackathonId }: RegistrationFormProps) {
           />
           <span style={labelTextStyle}>
             I understand that teams must be formed prior to the hacking phase
-            commencement.
+            commencement. You can create your team later from the Teams page.
           </span>
         </label>
         {errors.agreeTeamFormation && (

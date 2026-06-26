@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { submissionApi } from "@/lib/api";
 import type { EventResponse, RoundResponse, SubmissionResponse } from "@/lib/api";
+import { isRoundOpen, roundLockMessage, validatePdfFile } from "@/features/submissions/utils/round.utils";
 
 function CloseIcon() {
   return (
@@ -12,6 +13,8 @@ function CloseIcon() {
     </svg>
   );
 }
+
+const GITHUB_RE = /^https:\/\/github\.com\/[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+\/?$/;
 
 interface InlineSubmissionFormProps {
   event: EventResponse;
@@ -31,12 +34,14 @@ export function InlineSubmissionForm({ event, round, teamId, existing, onClose }
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  const roundOpen = isRoundOpen(round);
+  const locked = !roundOpen;
+
   const { mutate: submit, isPending } = useMutation({
-    mutationFn: (data: { github: string; demo: string; pdf: File }) =>
+    mutationFn: (data: { github: string; demo: string; pdf: File | null }) =>
       submissionApi.submit(round.id, {
         githubUrl: data.github,
         demoUrl: data.demo,
-        pdfPageCount: 0,
       }, data.pdf),
     onSuccess: () => {
       setSuccess("Submission saved!");
@@ -48,11 +53,36 @@ export function InlineSubmissionForm({ event, round, teamId, existing, onClose }
 
   const handleSubmit = () => {
     setError(null);
-    if (!github.trim()) { setError("GitHub URL is required"); return; }
-    if (!pdfFile && !existing) { setError("PDF file is required"); return; }
-
-    const pdf = pdfFile ?? new File([], "existing.pdf");
-    submit({ github: github.trim(), demo: demo.trim(), pdf });
+    if (!roundOpen) {
+      setError(roundLockMessage(round));
+      return;
+    }
+    if (!github.trim() || !GITHUB_RE.test(github.trim())) {
+      setError("Invalid GitHub URL");
+      return;
+    }
+    if (!demo.trim()) {
+      setError("Demo URL is required");
+      return;
+    }
+    try {
+      new URL(demo.trim());
+    } catch {
+      setError("Invalid Demo URL");
+      return;
+    }
+    if (!pdfFile && !existing) {
+      setError("PDF file is required");
+      return;
+    }
+    if (pdfFile) {
+      const pdfErr = validatePdfFile(pdfFile);
+      if (pdfErr) {
+        setError(pdfErr);
+        return;
+      }
+    }
+    submit({ github: github.trim(), demo: demo.trim(), pdf: pdfFile });
   };
 
   return (
@@ -64,9 +94,9 @@ export function InlineSubmissionForm({ event, round, teamId, existing, onClose }
       >
         <div className="flex items-center justify-between border-b border-seal-border p-5">
           <div>
-            <h2 className="text-lg font-bold text-seal-text">{existing ? "Edit Submission" : "Submit Work"}</h2>
+            <h2 className="text-lg font-bold text-seal-text">{existing ? "Cập nhật bài nộp" : "Nộp bài"}</h2>
             <p className="text-xs text-seal-text-muted">
-              {event.name} — {round.name} | Due {round.submissionDeadline?.slice(0, 16).replace("T", " ")}
+              {event.name} — {round.name} | {round.startDate.slice(0, 16).replace("T", " ")} — {round.endDate.slice(0, 16).replace("T", " ")}
             </p>
           </div>
           <button onClick={onClose} className="rounded-lg p-2 text-seal-text-muted hover:bg-seal-surface-elevated hover:text-seal-text">
@@ -74,30 +104,36 @@ export function InlineSubmissionForm({ event, round, teamId, existing, onClose }
           </button>
         </div>
 
-        <div className="p-5 flex flex-col gap-4">
+        {locked && (
+          <div className="mx-5 mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+            {roundLockMessage(round)}
+          </div>
+        )}
+
+        <div className={`p-5 flex flex-col gap-4 ${locked ? "opacity-60 pointer-events-none" : ""}`}>
           <div>
             <label className="text-xs font-medium text-seal-text-secondary">GitHub Repository URL *</label>
             <input
               value={github}
               onChange={(e) => setGithub(e.target.value)}
               placeholder="https://github.com/team/project"
-              className="mt-1.5 w-full rounded-lg border border-seal-border bg-seal-surface px-3 py-2 text-sm text-seal-text outline-none focus:border-seal-cyan/40 focus:ring-2 focus:ring-seal-cyan/10"
+              className="mt-1.5 w-full rounded-lg border border-seal-border bg-seal-surface px-3 py-2 text-sm text-seal-text outline-none focus:border-seal-cyan/40"
             />
           </div>
 
           <div>
-            <label className="text-xs font-medium text-seal-text-secondary">Demo URL</label>
+            <label className="text-xs font-medium text-seal-text-secondary">Demo Video URL *</label>
             <input
               value={demo}
               onChange={(e) => setDemo(e.target.value)}
-              placeholder="https://your-demo.vercel.app"
-              className="mt-1.5 w-full rounded-lg border border-seal-border bg-seal-surface px-3 py-2 text-sm text-seal-text outline-none focus:border-seal-cyan/40 focus:ring-2 focus:ring-seal-cyan/10"
+              placeholder="https://youtube.com/watch?v=..."
+              className="mt-1.5 w-full rounded-lg border border-seal-border bg-seal-surface px-3 py-2 text-sm text-seal-text outline-none focus:border-seal-cyan/40"
             />
           </div>
 
           <div>
             <label className="text-xs font-medium text-seal-text-secondary">
-              Project PDF {existing ? "(upload new to replace)" : "*"}
+              PDF {existing ? "(optional on update)" : "*"}
             </label>
             <div
               onClick={() => fileRef.current?.click()}
@@ -106,17 +142,24 @@ export function InlineSubmissionForm({ event, round, teamId, existing, onClose }
               {pdfFile ? (
                 <span className="text-seal-text">{pdfFile.name}</span>
               ) : existing ? (
-                <span>Current: v{existing.currentVersion} — click to upload new</span>
+                <span>Current: v{existing.currentVersion} — click to upload new PDF</span>
               ) : (
-                <span>Click to select PDF file</span>
+                <span>Click to select PDF (max 5MB)</span>
               )}
             </div>
             <input
               ref={fileRef}
               type="file"
-              accept=".pdf"
+              accept=".pdf,application/pdf"
               className="hidden"
-              onChange={(e) => setPdfFile(e.target.files?.[0] ?? null)}
+              onChange={(e) => {
+                const f = e.target.files?.[0] ?? null;
+                if (f) {
+                  const err = validatePdfFile(f);
+                  if (err) { setError(err); return; }
+                }
+                setPdfFile(f);
+              }}
             />
           </div>
 
@@ -134,10 +177,10 @@ export function InlineSubmissionForm({ event, round, teamId, existing, onClose }
           </button>
           <button
             onClick={handleSubmit}
-            disabled={isPending}
+            disabled={isPending || locked}
             className="rounded-lg bg-seal-cyan px-5 py-2 text-xs font-semibold text-white hover:bg-seal-cyan-dark disabled:opacity-50"
           >
-            {isPending ? "Submitting..." : existing ? "Update submission" : "Submit"}
+            {isPending ? "Submitting..." : existing ? "Cập nhật bài nộp" : "Nộp bài"}
           </button>
         </div>
       </div>

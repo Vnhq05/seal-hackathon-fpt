@@ -11,6 +11,7 @@ import {
 import { useSubmitProject } from "@/features/submissions/hooks/use-submit-project";
 import { useGitHubRepo } from "@/features/submissions/hooks/use-github-repo";
 import { GitHubRepoPreview } from "@/features/submissions/components/github-repo-preview";
+import { validatePdfFile } from "@/features/submissions/utils/round.utils";
 
 /* ── Icons ─────────────────────────────────────────────────── */
 
@@ -105,6 +106,7 @@ interface SubmitProjectFormProps {
 export function SubmitProjectForm({ roundId, roundName }: SubmitProjectFormProps) {
   const router = useRouter();
   const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [pdfError, setPdfError] = useState<string | null>(null);
 
   const {
     register,
@@ -116,8 +118,6 @@ export function SubmitProjectForm({ roundId, roundName }: SubmitProjectFormProps
     defaultValues: {
       repositoryUrl: "",
       demoUrl: "",
-      documentationUrl: "",
-      slideUrl: "",
     },
   });
 
@@ -136,12 +136,17 @@ export function SubmitProjectForm({ roundId, roundName }: SubmitProjectFormProps
 
   const onSubmit = (values: SubmitProjectFormValues) => {
     if (!pdfFile) return;
+    const err = validatePdfFile(pdfFile);
+    if (err) {
+      setPdfError(err);
+      return;
+    }
+    setPdfError(null);
     submit({
       roundId,
       request: {
         githubUrl: values.repositoryUrl,
         demoUrl: values.demoUrl,
-        pdfPageCount: 0,
       },
       pdfFile,
     });
@@ -210,7 +215,9 @@ export function SubmitProjectForm({ roundId, roundName }: SubmitProjectFormProps
 
       {/* Demo URL */}
       <div>
-        <label style={labelStyle}>Demo URL</label>
+        <label style={labelStyle}>
+          Demo URL <span style={{ color: "#dc2626" }}>*</span>
+        </label>
         <input
           type="url"
           placeholder="https://your-demo.vercel.app"
@@ -234,14 +241,26 @@ export function SubmitProjectForm({ roundId, roundName }: SubmitProjectFormProps
           type="file"
           accept="application/pdf"
           onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) setPdfFile(file);
+            const file = e.target.files?.[0] ?? null;
+            setPdfError(null);
+            if (!file) {
+              setPdfFile(null);
+              return;
+            }
+            const err = validatePdfFile(file);
+            if (err) {
+              setPdfError(err);
+              setPdfFile(null);
+              return;
+            }
+            setPdfFile(file);
           }}
           style={{
             ...inputStyle,
             padding: "9px",
           }}
         />
+        {pdfError && <p style={errorStyle}>{pdfError}</p>}
         {pdfFile && (
           <p style={{ fontSize: 12, color: "#8891a5", marginTop: 4 }}>
             Selected: {pdfFile.name}

@@ -293,7 +293,7 @@ class UserServiceTest {
             return u;
         });
 
-        for (UserType role : List.of(UserType.LECTURER, UserType.EVENT_COORDINATOR)) {
+        for (UserType role : List.of(UserType.LECTURER, UserType.EVENT_COORDINATOR, UserType.SYSTEM_ADMIN)) {
             CreateInternalAccountRequest request = CreateInternalAccountRequest.builder()
                     .email(role.name().toLowerCase() + "@test.com")
                     .password("password")

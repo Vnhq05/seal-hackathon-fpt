@@ -21,7 +21,7 @@ public class ScoreDetailDto {
 
     @NotNull(message = "Score is required")
     @Min(value = 0, message = "Score must be at least 0")
-    @Max(value = 100, message = "Score must be at most 100")
+    @Max(value = 10, message = "Score must be at most 10")
     private Integer score;
 
     private String comment;

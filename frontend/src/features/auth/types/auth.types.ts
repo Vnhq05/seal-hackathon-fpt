@@ -14,7 +14,9 @@ export type { UserType, AccountStatus } from "@/lib/api/types";
 export interface AuthState {
   user: import("@/lib/api/auth.api").UserInfo | null;
   accessToken: string | null;
+  refreshToken: string | null;
   isAuthenticated: boolean;
   setAuth: (user: import("@/lib/api/auth.api").UserInfo, accessToken: string) => void;
+  setRefreshToken: (token: string) => void;
   clearAuth: () => void;
 }

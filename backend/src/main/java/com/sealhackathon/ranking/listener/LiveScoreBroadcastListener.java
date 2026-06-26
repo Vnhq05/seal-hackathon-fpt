@@ -46,6 +46,15 @@ public class LiveScoreBroadcastListener {
                 "/topic/events/" + eventId + "/leaderboard",
                 Map.of("type", "LEADERBOARD_UPDATED", "roundId", roundId, "version", version));
 
+        RankingEventDto updatedDto = RankingEventDto.builder()
+                .type("LEADERBOARD_UPDATED")
+                .eventId(eventId)
+                .roundId(roundId)
+                .timestamp(LocalDateTime.now())
+                .build();
+        messagingTemplate.convertAndSend(
+                "/topic/events/" + eventId + "/ranking-events", updatedDto);
+
         if (version <= 1) return;
 
         List<Ranking> current = rankingRepository.findByRoundIdAndVersionOrderByRankAsc(roundId, version);
@@ -110,8 +119,10 @@ public class LiveScoreBroadcastListener {
                 .build();
 
         messagingTemplate.convertAndSend(
-                "/topic/events/" + eventId + "/final-results", dto);
+                "/topic/events/" + eventId + "/leaderboard", dto);
         messagingTemplate.convertAndSend(
                 "/topic/events/" + eventId + "/ranking-events", dto);
+        messagingTemplate.convertAndSend(
+                "/topic/events/" + eventId + "/final-results", dto);
     }
 }

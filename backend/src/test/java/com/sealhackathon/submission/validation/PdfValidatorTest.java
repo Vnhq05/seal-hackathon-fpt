@@ -54,12 +54,15 @@ class PdfValidatorTest {
     }
 
     @Test
-    void shouldRejectMoreThan2Pages() {
+    void shouldAcceptAnyPositivePageCount() {
         MockMultipartFile file = new MockMultipartFile(
                 "pdf", "long.pdf", "application/pdf", new byte[100]);
-        assertThatThrownBy(() -> validator.validate(file, 3))
-                .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("2 pages");
+        assertThatNoException().isThrownBy(() -> validator.validate(file, 10));
+    }
+
+    @Test
+    void shouldAllowMissingPdfWhenNotRequired() {
+        assertThatNoException().isThrownBy(() -> validator.validate(null, null, false));
     }
 
     @Test

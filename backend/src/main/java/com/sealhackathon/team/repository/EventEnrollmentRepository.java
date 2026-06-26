@@ -18,6 +18,8 @@ public interface EventEnrollmentRepository extends JpaRepository<EventEnrollment
 
     boolean existsByUserIdAndEventId(UUID userId, UUID eventId);
 
+    long countByUserId(UUID userId);
+
     List<EventEnrollment> findByEventIdAndStatus(UUID eventId, EnrollmentStatus status);
 
     List<EventEnrollment> findByEventId(UUID eventId);
@@ -31,4 +33,10 @@ public interface EventEnrollmentRepository extends JpaRepository<EventEnrollment
 
     @Query("SELECT e FROM EventEnrollment e WHERE e.userId = :userId AND e.status IN :statuses")
     Optional<EventEnrollment> findByUserIdAndStatusIn(@Param("userId") UUID userId, @Param("statuses") List<EnrollmentStatus> statuses);
+
+    @Query("SELECT COUNT(e) > 0 FROM EventEnrollment e WHERE e.userId = :userId AND e.status IN :statuses AND e.eventId <> :eventId")
+    boolean existsActiveEnrollmentInOtherEvent(
+            @Param("userId") UUID userId,
+            @Param("eventId") UUID eventId,
+            @Param("statuses") List<EnrollmentStatus> statuses);
 }

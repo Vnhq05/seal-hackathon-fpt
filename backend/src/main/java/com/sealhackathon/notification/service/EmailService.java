@@ -10,6 +10,7 @@ import com.sealhackathon.user.service.UserPublicService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -23,6 +24,7 @@ public class EmailService {
     private final UserPublicService userPublicService;
     private final NotificationRecipientRepository recipientRepository;
 
+    @Transactional
     public void sendEmailsForNotification(Notification notification) {
         List<NotificationRecipient> emailRecipients = notification.getRecipients().stream()
                 .filter(r -> r.getChannel() == NotificationChannel.EMAIL)
