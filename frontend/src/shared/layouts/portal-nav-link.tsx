@@ -3,31 +3,46 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-export type PortalAccent = "cyan" | "purple" | "violet" | "blue";
+export type PortalAccent = "royal" | "success" | "blue" | "error" | "yellow";
 
 const accentStyles: Record<
   PortalAccent,
-  { activeText: string; activeIcon: string; ring: string }
+  { activeText: string; activeIcon: string; border: string; label: string; divider: string }
 > = {
-  cyan: {
-    activeText: "text-seal-cyan",
-    activeIcon: "text-seal-cyan",
-    ring: "shadow-[inset_3px_0_0_0] shadow-seal-cyan/80",
+  royal: {
+    activeText: "text-royal-light",
+    activeIcon: "text-royal-light",
+    border: "border-l-seal-yellow",
+    label: "text-royal/60",
+    divider: "via-royal/20",
   },
-  purple: {
-    activeText: "text-seal-purple-light",
-    activeIcon: "text-seal-purple-light",
-    ring: "shadow-[inset_3px_0_0_0] shadow-seal-purple-light/80",
-  },
-  violet: {
-    activeText: "text-violet-400",
-    activeIcon: "text-violet-400",
-    ring: "shadow-[inset_3px_0_0_0] shadow-violet-400/80",
+  success: {
+    activeText: "text-seal-success",
+    activeIcon: "text-seal-success",
+    border: "border-l-seal-yellow",
+    label: "text-seal-success/60",
+    divider: "via-seal-success/20",
   },
   blue: {
     activeText: "text-seal-blue-light",
     activeIcon: "text-seal-blue-light",
-    ring: "shadow-[inset_3px_0_0_0] shadow-seal-blue-light/80",
+    border: "border-l-seal-yellow",
+    label: "text-seal-blue/60",
+    divider: "via-seal-blue/20",
+  },
+  error: {
+    activeText: "text-seal-error",
+    activeIcon: "text-seal-error",
+    border: "border-l-seal-yellow",
+    label: "text-seal-error/60",
+    divider: "via-seal-error/20",
+  },
+  yellow: {
+    activeText: "text-seal-yellow",
+    activeIcon: "text-seal-yellow",
+    border: "border-l-seal-yellow",
+    label: "text-seal-yellow/60",
+    divider: "via-seal-yellow/20",
   },
 };
 
@@ -44,7 +59,7 @@ export function PortalNavLink({
   label,
   icon,
   isActive,
-  accent = "cyan",
+  accent = "royal",
 }: PortalNavLinkProps) {
   const styles = accentStyles[accent];
 
@@ -52,13 +67,13 @@ export function PortalNavLink({
     <Link
       href={href}
       aria-current={isActive ? "page" : undefined}
-      className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium tracking-wide transition-colors duration-200 ${
+      className={`flex items-center gap-3 border-l-2 px-3 py-2.5 font-mono text-xs font-semibold uppercase tracking-wide transition-colors ${
         isActive
-          ? `seal-sidebar-item-active bg-white/[0.08] ${styles.activeText} ${styles.ring}`
-          : "text-slate-400 hover:bg-white/[0.04] hover:text-slate-200"
+          ? `border-seal-yellow bg-white/5 ${styles.activeText}`
+          : `border-transparent text-white/50 hover:bg-white/5 hover:text-white/80`
       }`}
     >
-      <span className={isActive ? styles.activeIcon : "text-slate-500"}>{icon}</span>
+      <span className={isActive ? styles.activeIcon : "text-white/40"}>{icon}</span>
       {label}
     </Link>
   );

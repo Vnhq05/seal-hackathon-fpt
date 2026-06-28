@@ -39,7 +39,7 @@ export function JudgeScoringListPage() {
       ) : assignments.length === 0 ? (
         <p className="text-sm text-seal-text-muted">Chưa có team nào được phân công.</p>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-seal-border bg-seal-surface">
+        <div className="overflow-hidden border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]">
           <table className="w-full text-left">
             <thead className="bg-seal-surface-elevated text-xs font-semibold uppercase tracking-wider text-seal-text-muted">
               <tr>
@@ -65,7 +65,7 @@ export function JudgeScoringListPage() {
                     {a.submissionId ? (
                       <Link
                         href={`${portalBase}/scoring/${a.teamId}/${a.roundId}`}
-                        className="text-xs font-semibold text-seal-cyan hover:underline"
+                        className="text-xs font-semibold text-royal hover:underline"
                       >
                         {a.scoringStatus === "COMPLETED" || a.scoringStatus === "LOCKED" ? "Xem" : "Chấm"}
                       </Link>

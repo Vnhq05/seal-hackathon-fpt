@@ -17,9 +17,15 @@ import lombok.Setter;
 @AllArgsConstructor
 public class CreateSubmissionRequest {
 
-    @NotBlank(message = "GitHub URL is required")
     @Size(max = 500)
     private String githubUrl;
+
+    /** Alias for githubUrl — preferred for SEAL format submissions. */
+    @Size(max = 500)
+    private String sourceCodeUrl;
+
+    @Size(max = 500)
+    private String slideUrl;
 
     @NotBlank(message = "Demo URL is required")
     @Size(max = 500)

@@ -96,6 +96,11 @@ function getLegacyRedirect(pathname: string): string | null {
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Allow static assets from /public (logo, images, etc.)
+  if (/\.(?:svg|png|jpe?g|gif|webp|ico|woff2?|ttf|eot)$/i.test(pathname)) {
+    return NextResponse.next();
+  }
+
   const legacyTarget = getLegacyRedirect(pathname);
   if (legacyTarget) {
     return NextResponse.redirect(new URL(legacyTarget, request.url));
@@ -119,5 +124,7 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|api|swagger).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|api|swagger|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?|ttf|eot)$).*)",
+  ],
 };

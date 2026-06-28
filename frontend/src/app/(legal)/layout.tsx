@@ -7,13 +7,13 @@ export default function LegalLayout({ children }: { children: React.ReactNode })
       <header className="flex items-center justify-between border-b border-seal-border px-8 py-4">
         <Link href="/" className="flex items-center gap-2">
           <Image src="/logo-removebg-preview.png" alt="SEAL Hackathon" width={32} height={32} className="rounded" />
-          <span className="text-base font-extrabold text-seal-text">
+          <span className="font-mono text-base font-bold text-navy">
             SEAL <span className="text-seal-cyan">Hackathon</span>
           </span>
         </Link>
         <Link
           href="/login"
-          className="rounded-lg border border-seal-border px-4 py-2 text-sm font-medium text-seal-text transition-colors hover:bg-seal-surface-elevated"
+          className="border border-seal-border px-4 py-2 text-sm font-medium text-seal-text transition-colors hover:bg-seal-surface-elevated border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]"
         >
           Sign in
         </Link>

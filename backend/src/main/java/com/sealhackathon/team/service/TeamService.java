@@ -10,6 +10,7 @@ import com.sealhackathon.event.domain.enums.EventStatus;
 import com.sealhackathon.event.dto.snapshot.EventSnapshot;
 import com.sealhackathon.event.repository.HackathonEventRepository;
 import com.sealhackathon.event.repository.TrackRepository;
+import com.sealhackathon.event.service.FormatRuleEngine;
 import com.sealhackathon.event.service.EventPublicService;
 import com.sealhackathon.team.domain.Team;
 import com.sealhackathon.team.domain.TeamMember;
@@ -57,6 +58,7 @@ public class TeamService {
     private final EventEnrollmentService enrollmentService;
     private final SystemConfigService systemConfigService;
     private final TrackRepository trackRepository;
+    private final FormatRuleEngine formatRuleEngine;
 
     private int getMinTeamSize() {
         return systemConfigService.getConfig().getMinTeamMembers();
@@ -125,6 +127,7 @@ public class TeamService {
     @Transactional
     public TeamResponse selectTrack(UUID leaderId, UUID teamId, SelectTrackRequest request) {
         Team team = getTeam(teamId);
+        formatRuleEngine.validateLeaderCannotSelectTrack(team.getEventId());
         guardLeader(team, leaderId);
 
         int size = teamMemberRepository.countByTeamId(teamId);
@@ -140,6 +143,8 @@ public class TeamService {
         if (!track.getHackathonEvent().getId().equals(team.getEventId())) {
             throw new BusinessException("Track does not belong to this event", HttpStatus.BAD_REQUEST) {};
         }
+
+        formatRuleEngine.validateTrackCapacity(team.getEventId(), request.getTrackId());
 
         team.setTrackId(request.getTrackId());
         teamRepository.save(team);

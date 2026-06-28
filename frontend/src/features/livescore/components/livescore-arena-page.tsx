@@ -209,7 +209,8 @@ function ResultReveal({ segments, onDone }: { segments: RevealSegment[]; onDone:
         const t = setTimeout(() => setCountdown(countdown - 1), 1000);
         return () => clearTimeout(t);
       }
-      setPhase(1);
+      const t = setTimeout(() => setPhase(1), 0);
+      return () => clearTimeout(t);
     } else if (phase >= 1 && phase <= 3) {
       const t = setTimeout(() => setPhase(phase + 1), 3000);
       return () => clearTimeout(t);
@@ -330,40 +331,39 @@ export function LiveScoreArenaPage({ eventId }: LiveScoreArenaPageProps) {
   const publicMutation = useToggleLeaderboardPublic(eventId);
 
   const allRankings = fullBoard?.rankings ?? board?.rankings ?? [];
+  const revealVisible = showReveal || Boolean(finalResults && board?.resultsPublished);
 
   useEffect(() => {
-    if (finalResults && board?.resultsPublished) {
-      setShowReveal(true);
-    }
-  }, [finalResults, board?.resultsPublished]);
-
-  useEffect(() => {
-    for (const ev of rankingEvents) {
-      if (ev.type === "NEW_LEADER" && ev.teamName) {
-        setLeaderToast(ev.teamName);
-      }
-      if (ev.type === "RANK_CHANGED" && ev.teamId && ev.newRank != null && ev.oldRank != null) {
-        const delta = ev.oldRank - ev.newRank;
-        if (delta !== 0) {
-          setRowAnimations((prev) => {
-            const next = new Map(prev);
-            next.set(ev.teamId!, {
-              direction: delta > 0 ? "up" : "down",
-              delta: Math.abs(delta),
-              enteredTop3: ev.oldRank! > 3 && ev.newRank! <= 3,
-            });
-            return next;
-          });
-          setTimeout(() => {
+    if (rankingEvents.length === 0) return;
+    const timer = window.setTimeout(() => {
+      for (const ev of rankingEvents) {
+        if (ev.type === "NEW_LEADER" && ev.teamName) {
+          setLeaderToast(ev.teamName);
+        }
+        if (ev.type === "RANK_CHANGED" && ev.teamId && ev.newRank != null && ev.oldRank != null) {
+          const delta = ev.oldRank - ev.newRank;
+          if (delta !== 0) {
             setRowAnimations((prev) => {
               const next = new Map(prev);
-              next.delete(ev.teamId!);
+              next.set(ev.teamId!, {
+                direction: delta > 0 ? "up" : "down",
+                delta: Math.abs(delta),
+                enteredTop3: ev.oldRank! > 3 && ev.newRank! <= 3,
+              });
               return next;
             });
-          }, 2500);
+            setTimeout(() => {
+              setRowAnimations((prev) => {
+                const next = new Map(prev);
+                next.delete(ev.teamId!);
+                return next;
+              });
+            }, 2500);
+          }
         }
       }
-    }
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [rankingEvents]);
 
   useEffect(() => {
@@ -423,7 +423,7 @@ export function LiveScoreArenaPage({ eventId }: LiveScoreArenaPageProps) {
 
       {leaderToast && <LeaderToast teamName={leaderToast} onDismiss={dismissLeaderToast} />}
 
-      {showReveal && board.resultsPublished && revealSegments.length > 0 && (
+      {revealVisible && board.resultsPublished && revealSegments.length > 0 && (
         <ResultReveal segments={revealSegments} onDone={() => setShowReveal(false)} />
       )}
 
@@ -487,7 +487,7 @@ export function LiveScoreArenaPage({ eventId }: LiveScoreArenaPageProps) {
           <div style={{ flex: 1 }}>
             {filteredRankings.length === 0 ? (
               <div
-                className="flex flex-col items-center justify-center rounded-lg py-16"
+                className="flex flex-col items-center justify-center py-16 border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]"
                 style={{ border: "1px dashed rgba(223,226,236,0.8)", backgroundColor: "#fafafa" }}
               >
                 <p style={{ fontSize: 16, fontWeight: 600, color: "#0e1528" }}>No rankings yet</p>

@@ -3,13 +3,14 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { livescoreApi } from "@/lib/api/livescore.api";
 import type { LiveScoreBoard, RankingEvent } from "@/lib/api/livescore.api";
+import type { RoundType } from "@/lib/api/types";
 import { useStompWebSocket } from "./use-websocket";
 import { useEffect, useState, useCallback } from "react";
 
-export function useLiveScoreBoard(eventId: string, trackId?: string, roundId?: string) {
+export function useLiveScoreBoard(eventId: string, trackId?: string, roundId?: string, roundType?: RoundType) {
   return useQuery<LiveScoreBoard>({
-    queryKey: ["livescore", eventId, trackId, roundId],
-    queryFn: () => livescoreApi.getLeaderboard(eventId, { trackId, roundId }),
+    queryKey: ["livescore", eventId, trackId, roundId, roundType],
+    queryFn: () => livescoreApi.getLeaderboard(eventId, { trackId, roundId, roundType }),
     enabled: !!eventId,
     refetchInterval: 15000,
   });

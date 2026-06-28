@@ -19,31 +19,27 @@ function GearIcon() {
 export function AdminQuickActions() {
   return (
     <div
-      className="rounded-lg"
-      style={{ backgroundColor: "#ffffff", border: "1px solid rgba(198,198,205,0.5)", padding: 24, marginBottom: 16 }}
+      className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-6 mb-4"
     >
       <h3 style={{ fontSize: 16, fontWeight: 700, color: "#0e1528", marginBottom: 16 }}>Quick Actions</h3>
       <div className="flex flex-col gap-3">
         <Link
           href="/admin/hackathons/new"
-          className="flex items-center gap-3 rounded-lg"
-          style={{ padding: "10px 16px", backgroundColor: "#38bdf8", color: "#ffffff", fontSize: 13, fontWeight: 600 }}
+          className="flex items-center gap-3 border-2 border-navy bg-seal-yellow px-4 py-2.5 text-[13px] text-navy font-mono font-bold"
         >
           <PlusCircleIcon />
           Create New Event
         </Link>
         <Link
           href="/admin/users"
-          className="flex items-center gap-3 rounded-lg"
-          style={{ padding: "10px 16px", backgroundColor: "#eef0f6", border: "1px solid rgba(223,226,236,0.8)", color: "#0e1528", fontSize: 13, fontWeight: 500 }}
+          className="flex items-center gap-3 border-2 border-navy bg-white px-4 py-2.5 text-[13px] font-medium text-navy"
         >
           <UsersIcon />
           Manage Users
         </Link>
         <Link
           href="/admin/system"
-          className="flex items-center gap-3 rounded-lg"
-          style={{ padding: "10px 16px", backgroundColor: "#eef0f6", border: "1px solid rgba(223,226,236,0.8)", color: "#0e1528", fontSize: 13, fontWeight: 500 }}
+          className="flex items-center gap-3 border-2 border-navy bg-white px-4 py-2.5 text-[13px] font-medium text-navy"
         >
           <GearIcon />
           System Settings

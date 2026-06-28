@@ -1,11 +1,11 @@
 import * as React from "react";
 
-interface LabelProps extends React.LabelHTMLAttributes<HTMLLabelElement> {}
+type LabelProps = React.LabelHTMLAttributes<HTMLLabelElement>;
 
 export function Label({ children, className = "", ...props }: LabelProps) {
   return (
     <label
-      className={`block text-sm font-medium text-seal-text ${className}`}
+      className={`block font-mono text-xs font-bold uppercase tracking-wide text-navy ${className}`}
       {...props}
     >
       {children}

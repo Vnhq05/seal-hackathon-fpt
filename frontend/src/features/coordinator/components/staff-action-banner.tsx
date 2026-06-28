@@ -28,7 +28,7 @@ export function StaffActionBanner({ pendingApprovals, flaggedTeams }: StaffActio
 
   return (
     <div
-      className="flex items-start gap-3 rounded-lg"
+      className="flex items-start gap-3 border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]"
       style={{ backgroundColor: "#fef3c7", borderLeft: "4px solid #f59e0b", padding: "14px 20px", marginBottom: 24 }}
     >
       <WarningIcon />

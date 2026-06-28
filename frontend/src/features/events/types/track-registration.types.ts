@@ -6,6 +6,7 @@ export interface TrackMentor {
   avatarUrl: string | null;
 }
 
+/** @deprecated Legacy shape for track-card — use TrackRegistrationTrack */
 export interface Track {
   id: string;
   name: string;
@@ -17,12 +18,22 @@ export interface Track {
   maxParticipants: number;
 }
 
+export interface TrackRegistrationTrack {
+  id: string;
+  name: string;
+  description: string;
+  topic: string | null;
+  maxTeams: number;
+}
+
 export interface TrackRegistrationData {
   hackathonId: string;
   hackathonName: string;
   teamId: string;
   teamName: string;
-  tracks: Track[];
+  assignedTrackId: string | null;
+  competitionFormat: "GENERIC" | "SEAL_RAG_2026";
+  tracks: TrackRegistrationTrack[];
 }
 
 export interface TrackRegistrationRequest {

@@ -2,6 +2,7 @@ package com.sealhackathon.team.domain;
 
 import com.sealhackathon.common.entity.BaseEntity;
 import com.sealhackathon.team.domain.enums.TeamStatus;
+import com.sealhackathon.team.domain.enums.TrackAssignmentMethod;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -75,6 +76,16 @@ public class Team extends BaseEntity {
 
     @Column(name = "track_id")
     private UUID trackId;
+
+    @Column(name = "track_assigned_at")
+    private java.time.LocalDateTime trackAssignedAt;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "track_assignment_method")
+    private TrackAssignmentMethod trackAssignmentMethod;
+
+    @Column(name = "track_assigned_by")
+    private UUID trackAssignedBy;
 
     // ── Child entities ──
     @OneToMany(mappedBy = "team", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)

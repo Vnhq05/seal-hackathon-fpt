@@ -1,5 +1,6 @@
 package com.sealhackathon.event.dto.request;
 
+import com.sealhackathon.event.domain.enums.CompetitionFormat;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -50,6 +51,8 @@ public class CreateEventRequest {
 
     @Size(max = 50)
     private String format;
+
+    private CompetitionFormat competitionFormat;
 
     private LocalDate registrationOpenDate;
 

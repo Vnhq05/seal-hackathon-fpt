@@ -24,14 +24,13 @@ export function StaffPendingApprovals() {
 
   return (
     <div
-      className="rounded-lg"
-      style={{ backgroundColor: "#ffffff", border: "1px solid rgba(223,226,236,0.8)", padding: 24, flex: 1 }}
+      className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] flex-1 p-6"
     >
       <div className="flex items-center justify-between" style={{ marginBottom: 16 }}>
         <h3 style={{ fontSize: 16, fontWeight: 700, color: "#0e1528" }}>Pending Approvals</h3>
         <Link
           href="/coordinator/user-approval"
-          style={{ fontSize: 13, fontWeight: 600, color: "#38bdf8" }}
+          className="text-[13px] font-semibold text-royal"
         >
           View all
         </Link>

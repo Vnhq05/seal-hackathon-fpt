@@ -9,13 +9,13 @@ export const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
     return (
       <label
         htmlFor={id}
-        className="flex cursor-pointer select-none items-center gap-2 text-sm text-seal-text-secondary transition-colors hover:text-seal-text"
+        className="flex cursor-pointer select-none items-center gap-2 font-mono text-sm text-seal-text-secondary transition-colors hover:text-navy"
       >
         <input
           ref={ref}
           id={id}
           type="checkbox"
-          className={`h-4 w-4 cursor-pointer rounded-sm border-seal-border-dark accent-seal-cyan transition-colors ${className}`}
+          className={`h-4 w-4 cursor-pointer border-2 border-navy accent-royal ${className}`}
           {...props}
         />
         <span>{label}</span>

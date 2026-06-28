@@ -1,4 +1,5 @@
 import { api } from "./api-client";
+import type { RoundType } from "./types";
 
 export interface TrackInfo {
   id: string;
@@ -45,8 +46,14 @@ export interface RankingEvent {
   timestamp: string;
 }
 
+export interface LeaderboardParams {
+  trackId?: string;
+  roundId?: string;
+  roundType?: RoundType;
+}
+
 export const livescoreApi = {
-  getLeaderboard(eventId: string, params?: { trackId?: string; roundId?: string }): Promise<LiveScoreBoard> {
+  getLeaderboard(eventId: string, params?: LeaderboardParams): Promise<LiveScoreBoard> {
     return api.get<LiveScoreBoard>(`/events/${eventId}/leaderboard`, { params });
   },
 

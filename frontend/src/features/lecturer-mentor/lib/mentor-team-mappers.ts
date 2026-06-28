@@ -84,7 +84,6 @@ export function mapTeamToMentorTeam(
   team: TeamResponse,
   rounds: RoundResponse[],
   submissionsByRound: Map<string, SubmissionResponse | null>,
-  trackName: string | null,
 ): MentorTeam {
   const eliminated = team.status === "DISBANDED";
   const roundStatuses: MentorTeamRound[] = rounds.map((round) => ({

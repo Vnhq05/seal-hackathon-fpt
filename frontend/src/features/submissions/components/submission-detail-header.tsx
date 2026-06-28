@@ -1,4 +1,5 @@
 import type { SubmissionDetail } from "@/features/submissions/types/submission-detail.types";
+import Image from "next/image";
 
 interface SubmissionDetailHeaderProps {
   submission: SubmissionDetail;
@@ -126,9 +127,12 @@ export function SubmissionDetailHeader({ submission }: SubmissionDetailHeaderPro
               style={{ width: 40, height: 40, border: "1px solid rgba(223,226,236,0.8)" }}
             >
               {submitter.avatarUrl ? (
-                <img
+                <Image
                   src={submitter.avatarUrl}
                   alt={submitter.name}
+                  width={40}
+                  height={40}
+                  unoptimized
                   className="h-full w-full object-cover"
                 />
               ) : (

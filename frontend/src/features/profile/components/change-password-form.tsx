@@ -1,6 +1,6 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/shared/ui/button";
 import { ErrorBanner } from "@/features/auth/components/error-banner";
@@ -31,14 +31,14 @@ export function ChangePasswordForm() {
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     reset: resetForm,
     formState: { errors },
   } = useForm<ChangePasswordFormValues>({
     resolver: zodResolver(changePasswordSchema),
   });
 
-  const newPassword = watch("newPassword") ?? "";
+  const newPassword = useWatch({ control, name: "newPassword" }) ?? "";
 
   const onSubmit = (values: ChangePasswordFormValues) => {
     resetStatus();
@@ -50,7 +50,7 @@ export function ChangePasswordForm() {
 
   return (
     <section
-      className="rounded-lg bg-seal-surface"
+      className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]"
       style={{
         border: "1px solid rgba(223,226,236,0.8)",
         boxShadow: "0px 1px 2px rgba(0, 0, 0, 0.05)",

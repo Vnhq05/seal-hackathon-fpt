@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { SubmissionVideo as SubmissionVideoType } from "@/features/submissions/types/submission-detail.types";
 
 interface SubmissionVideoProps {
@@ -35,10 +36,12 @@ export function SubmissionVideo({ video }: SubmissionVideoProps) {
         }}
       >
         {video.thumbnailUrl && (
-          <img
+          <Image
             src={video.thumbnailUrl}
             alt="Demo walkthrough thumbnail"
-            className="absolute inset-0 h-full w-full object-cover opacity-80"
+            fill
+            unoptimized
+            className="object-cover opacity-80"
           />
         )}
 

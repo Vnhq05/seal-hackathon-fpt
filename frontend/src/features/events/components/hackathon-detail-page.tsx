@@ -23,14 +23,14 @@ function PageSkeleton() {
         <div className="grid grid-cols-12 gap-8">
           <div className="col-span-8 flex flex-col gap-8">
             <div
-              className="animate-pulse rounded-lg"
+              className="animate-pulse"
               style={{
                 height: 200,
                 backgroundColor: "rgba(223,226,236,0.8)",
               }}
             />
             <div
-              className="animate-pulse rounded-lg"
+              className="animate-pulse"
               style={{
                 height: 280,
                 backgroundColor: "rgba(223,226,236,0.8)",
@@ -39,7 +39,7 @@ function PageSkeleton() {
           </div>
           <div className="col-span-4">
             <div
-              className="animate-pulse rounded-lg"
+              className="animate-pulse"
               style={{
                 height: 350,
                 backgroundColor: "rgba(223,226,236,0.8)",
@@ -142,7 +142,7 @@ export function HackathonDetailPage({ hackathonId }: HackathonDetailPageProps) {
         <div className="col-span-8 flex flex-col gap-8">
           {event.description && (
             <div
-              className="rounded-lg"
+              className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]"
               style={{
                 backgroundColor: "#ffffff",
                 border: "1px solid rgba(223,226,236,0.8)",
@@ -174,7 +174,7 @@ export function HackathonDetailPage({ hackathonId }: HackathonDetailPageProps) {
           )}
 
           <div
-            className="rounded-lg"
+            className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]"
             style={{
               backgroundColor: "#ffffff",
               border: "1px solid rgba(223,226,236,0.8)",
@@ -230,7 +230,7 @@ export function HackathonDetailPage({ hackathonId }: HackathonDetailPageProps) {
 
         <div className="col-span-4">
           <div
-            className="sticky top-8 rounded-lg"
+            className="sticky top-8 border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]"
             style={{
               backgroundColor: "#ffffff",
               border: "1px solid rgba(223,226,236,0.8)",
@@ -266,7 +266,7 @@ export function HackathonDetailPage({ hackathonId }: HackathonDetailPageProps) {
             {(event.status === "OPEN" || event.status === "ACTIVE") && (
               <Link
                 href={`/hackathons/${hackathonId}/register`}
-                className="flex items-center justify-center rounded-lg"
+                className="flex items-center justify-center border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]"
                 style={{
                   backgroundColor: "#059669",
                   color: "#ffffff",

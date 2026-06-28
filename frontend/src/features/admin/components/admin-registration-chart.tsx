@@ -4,7 +4,7 @@ export function AdminRegistrationChart({ trend }: { trend?: { date: string; coun
   if (!trend || trend.length === 0) {
     return (
       <div
-        className="flex flex-col items-center justify-center rounded-lg"
+        className="flex flex-col items-center justify-center border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]"
         style={{ backgroundColor: "#ffffff", border: "1px solid rgba(198,198,205,0.5)", padding: 48, minHeight: 340, flex: 1 }}
       >
         <svg width="48" height="48" viewBox="0 0 48 48" fill="none" aria-hidden="true">
@@ -28,7 +28,7 @@ export function AdminRegistrationChart({ trend }: { trend?: { date: string; coun
 
   return (
     <div
-      className="rounded-lg"
+      className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]"
       style={{ backgroundColor: "#ffffff", border: "1px solid rgba(198,198,205,0.5)", padding: 24, flex: 1 }}
     >
       <div className="flex items-center justify-between" style={{ marginBottom: 20 }}>

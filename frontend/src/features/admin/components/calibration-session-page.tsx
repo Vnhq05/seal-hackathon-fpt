@@ -58,7 +58,7 @@ function CreateForm({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4 rounded-lg" style={{ backgroundColor: "#ffffff", border: "1px solid rgba(198,198,205,0.5)", padding: 24, marginBottom: 24 }}>
+    <form onSubmit={handleSubmit} className="flex flex-col gap-4 p-6 mb-6 border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]">
       <div className="grid grid-cols-2 gap-4">
         <div className="flex flex-col">
           <label style={{ fontSize: 14, fontWeight: 600, color: "#0e1528", marginBottom: 4 }}>Session Name</label>
@@ -78,10 +78,10 @@ function CreateForm({ onClose }: { onClose: () => void }) {
         <input value={submissionIds} onChange={(e) => setSubmissionIds(e.target.value)} style={inputStyle} placeholder="id1, id2" required />
       </div>
       <div className="flex gap-3">
-        <button type="submit" disabled={isPending} className="rounded-lg" style={{ backgroundColor: "#38bdf8", padding: "10px 24px", color: "#ffffff", fontSize: 14, fontWeight: 600, border: "none", cursor: "pointer", opacity: isPending ? 0.7 : 1 }}>
+        <button type="submit" disabled={isPending} className="border-2 border-navy bg-seal-yellow px-6 py-2.5 text-sm text-navy font-mono font-bold cursor-pointer">
           {isPending ? "Creating..." : "Create Session"}
         </button>
-        <button type="button" onClick={onClose} className="rounded-lg" style={{ backgroundColor: "#ffffff", padding: "10px 24px", color: "#0e1528", fontSize: 14, fontWeight: 600, border: "1px solid rgba(223,226,236,0.8)", cursor: "pointer" }}>
+        <button type="button" onClick={onClose} className="border-2 border-navy bg-white px-6 py-2.5 text-sm font-medium text-navy cursor-pointer">
           Cancel
         </button>
       </div>
@@ -109,8 +109,7 @@ export function CalibrationSessionPage() {
         {!showForm && (
           <button
             onClick={() => setShowForm(true)}
-            className="flex items-center justify-center rounded-lg"
-            style={{ backgroundColor: "#38bdf8", padding: "10px 20px", color: "#ffffff", fontSize: 14, fontWeight: 600, border: "none", cursor: "pointer" }}
+            className="flex items-center justify-center border-2 border-navy bg-seal-yellow px-6 py-2.5 text-sm text-navy font-mono font-bold cursor-pointer"
           >
             Create Session
           </button>
@@ -119,7 +118,7 @@ export function CalibrationSessionPage() {
 
       {showForm && <CreateForm onClose={() => setShowForm(false)} />}
 
-      <div className="overflow-hidden rounded-lg" style={{ backgroundColor: "#ffffff", border: "1px solid rgba(198,198,205,0.5)" }}>
+      <div className="overflow-hidden border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]">
         <table className="w-full" style={{ borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ backgroundColor: "#eef0f6" }}>

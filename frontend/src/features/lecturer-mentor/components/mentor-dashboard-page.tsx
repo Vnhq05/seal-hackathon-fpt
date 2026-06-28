@@ -9,12 +9,12 @@ import { MentorDashboardActivity } from "@/features/lecturer-mentor/components/m
 function PageSkeleton() {
   return (
     <div className="flex flex-col gap-6" style={{ padding: 32, maxWidth: 1440 }}>
-      <div className="animate-pulse rounded-lg" style={{ height: 140, backgroundColor: "rgba(223,226,236,0.8)" }} />
+      <div className="animate-pulse border-2 border-navy/10 bg-seal-surface-sunken" style={{ height: 140 }} />
       <div className="grid grid-cols-3 gap-6">
         <div className="col-span-2">
-          <div className="animate-pulse rounded-lg" style={{ height: 300, backgroundColor: "rgba(223,226,236,0.8)" }} />
+          <div className="animate-pulse border-2 border-navy/10 bg-seal-surface-sunken" style={{ height: 300 }} />
         </div>
-        <div className="animate-pulse rounded-lg" style={{ height: 400, backgroundColor: "rgba(223,226,236,0.8)" }} />
+        <div className="animate-pulse border-2 border-navy/10 bg-seal-surface-sunken" style={{ height: 400 }} />
       </div>
     </div>
   );

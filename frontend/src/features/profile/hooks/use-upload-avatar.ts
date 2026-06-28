@@ -5,7 +5,8 @@
  */
 export function useUploadAvatar() {
   return {
-    uploadAvatar: (_file: File) => {
+    uploadAvatar: (file: File) => {
+      void file;
       console.warn("Avatar upload is not supported by the backend.");
     },
     isPending: false,

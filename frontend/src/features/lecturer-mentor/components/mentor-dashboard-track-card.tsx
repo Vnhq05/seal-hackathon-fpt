@@ -30,7 +30,7 @@ export function MentorDashboardTrackCard({ summary, portalBase = "/lecturer" }: 
 
   return (
     <div
-      className="flex flex-col overflow-hidden rounded-lg"
+      className="flex flex-col overflow-hidden border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]"
       style={{ backgroundColor: "#eef0f6", border: "1px solid rgba(223,226,236,0.8)", boxShadow: "0px 1px 2px rgba(0,0,0,0.05)" }}
     >
       <div className="flex items-center justify-between" style={{ borderBottom: "1px solid rgba(223,226,236,0.8)", padding: "20px 24px" }}>
@@ -48,7 +48,7 @@ export function MentorDashboardTrackCard({ summary, portalBase = "/lecturer" }: 
 
       <div style={{ padding: 24 }}>
         <div
-          className="flex flex-col gap-4 rounded-lg"
+          className="flex flex-col gap-4 border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]"
           style={{ backgroundColor: "#ffffff", border: "1px solid rgba(223,226,236,0.8)", padding: 21 }}
         >
           <div className="flex items-center gap-2">

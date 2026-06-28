@@ -1,5 +1,6 @@
 package com.sealhackathon.event.dto.snapshot;
 
+import com.sealhackathon.event.domain.enums.RoundType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -24,4 +25,5 @@ public class RoundSnapshot {
     private LocalDateTime scoringDeadline;
     private Integer advancementCutoff;
     private Integer roundWeight;
+    private RoundType roundType;
 }

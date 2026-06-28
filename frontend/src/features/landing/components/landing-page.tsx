@@ -1,25 +1,31 @@
-import { Header } from "./header";
-import { Hero } from "./hero";
-import { Hackathons } from "./hackathons";
-import { HowItWorks } from "./how-it-works";
-import { Tracks } from "./tracks";
+import { LandingNavbar } from "./landing-navbar";
+import { HeroSection } from "./hero-section";
+import { StatsSection } from "./stats-section";
+import { FeaturedEvent } from "./featured-event";
+import { HackathonSeries } from "./hackathon-series";
 import { PlatformFeatures } from "./platform-features";
-import { Stats } from "./stats";
-import { CTA } from "./cta";
+import { RoleCards } from "./role-cards";
+import { HowItWorks } from "./how-it-works";
+import { ScoringCriteria } from "./scoring-criteria";
+import { FaqSection } from "./faq-section";
+import { CTASection } from "./cta-section";
 import { Footer } from "./footer";
 
 export function LandingPage() {
   return (
-    <div className="min-h-full bg-seal-bg">
-      <Header />
+    <div className="min-h-full bg-white">
+      <LandingNavbar />
       <main>
-        <Hero />
-        <Hackathons />
-        <HowItWorks />
-        <Tracks />
+        <HeroSection />
+        <StatsSection />
+        <FeaturedEvent />
+        <HackathonSeries />
         <PlatformFeatures />
-        <Stats />
-        <CTA />
+        <RoleCards />
+        <HowItWorks />
+        <ScoringCriteria />
+        <FaqSection />
+        <CTASection />
       </main>
       <Footer />
     </div>

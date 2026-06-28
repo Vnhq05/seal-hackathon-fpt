@@ -16,7 +16,7 @@ export function StaffEventTimeline({ phase }: { phase: Phase }) {
 
   return (
     <div
-      className="rounded-lg"
+      className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]"
       style={{ backgroundColor: "#ffffff", border: "1px solid rgba(223,226,236,0.8)", padding: "24px 32px", marginBottom: 24 }}
     >
       <h3 style={{ fontSize: 16, fontWeight: 700, color: "#0e1528", marginBottom: 20 }}>

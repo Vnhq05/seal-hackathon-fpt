@@ -4,8 +4,10 @@ import com.sealhackathon.common.enums.UserType;
 import com.sealhackathon.common.exception.BusinessException;
 import com.sealhackathon.common.exception.ResourceNotFoundException;
 import com.sealhackathon.common.storage.FileStorageService;
+import com.sealhackathon.event.domain.enums.RoundType;
 import com.sealhackathon.event.dto.snapshot.RoundSnapshot;
 import com.sealhackathon.event.service.EventPublicService;
+import com.sealhackathon.ranking.service.FinalistSelectionService;
 import com.sealhackathon.judging.repository.TeamJudgeAssignmentRepository;
 import com.sealhackathon.submission.domain.Submission;
 import com.sealhackathon.submission.domain.SubmissionAttachment;
@@ -23,6 +25,7 @@ import com.sealhackathon.submission.repository.SubmissionVersionRepository;
 import com.sealhackathon.submission.validation.DemoUrlWhitelistValidator;
 import com.sealhackathon.submission.validation.GitHubUrlValidator;
 import com.sealhackathon.submission.validation.PdfValidator;
+import com.sealhackathon.submission.validation.SourceCodeUrlValidator;
 import com.sealhackathon.team.dto.snapshot.TeamSnapshot;
 import com.sealhackathon.team.service.TeamPublicService;
 import lombok.RequiredArgsConstructor;
@@ -48,8 +51,10 @@ public class SubmissionService {
     private final TeamPublicService teamPublicService;
     private final EventPublicService eventPublicService;
     private final GitHubUrlValidator gitHubUrlValidator;
+    private final SourceCodeUrlValidator sourceCodeUrlValidator;
     private final DemoUrlWhitelistValidator demoUrlValidator;
     private final PdfValidator pdfValidator;
+    private final FinalistSelectionService finalistSelectionService;
     private final FileStorageService fileStorageService;
     private final TeamJudgeAssignmentRepository teamJudgeAssignmentRepository;
     private final ApplicationEventPublisher eventPublisher;
@@ -58,13 +63,12 @@ public class SubmissionService {
     @Transactional
     public SubmissionResponse submit(UUID currentUserId, UUID roundId,
                                      CreateSubmissionRequest request, MultipartFile pdfFile) {
-        // BR-29: GitHub URL validation
-        gitHubUrlValidator.validate(request.getGithubUrl());
+        // Resolve source URL (sourceCodeUrl alias supported)
+        String sourceUrl = resolveSourceUrl(request);
+        sourceCodeUrlValidator.validate(sourceUrl);
 
         // BR-28: Demo URL whitelist
         demoUrlValidator.validate(request.getDemoUrl());
-
-        // BR-26, BR-27: PDF validated after isNew is determined
 
         // Resolve team from current user via round's event
         RoundSnapshot roundSnapshot = eventPublicService.getRound(roundId)
@@ -79,6 +83,13 @@ public class SubmissionService {
         // BR-31: only team leader can submit
         if (!teamPublicService.isTeamLeader(currentUserId, team.getId())) {
             throw new BusinessException("Only the team leader can submit",
+                    HttpStatus.FORBIDDEN) {};
+        }
+
+        if (roundSnapshot.getRoundType() == RoundType.FINAL
+                && !finalistSelectionService.isFinalist(roundSnapshot.getEventId(), team.getId())) {
+            throw new BusinessException(
+                    "Only finalists can submit for the final round",
                     HttpStatus.FORBIDDEN) {};
         }
 
@@ -110,7 +121,8 @@ public class SubmissionService {
         SubmissionVersion version = SubmissionVersion.builder()
                 .submission(submission)
                 .versionNumber(nextVersion)
-                .githubUrl(request.getGithubUrl().trim())
+                .githubUrl(sourceUrl)
+                .slideUrl(request.getSlideUrl() != null ? request.getSlideUrl().trim() : null)
                 .demoUrl(request.getDemoUrl().trim())
                 .submittedAt(LocalDateTime.now())
                 .build();
@@ -298,9 +310,21 @@ public class SubmissionService {
                 .id(v.getId())
                 .versionNumber(v.getVersionNumber())
                 .githubUrl(v.getGithubUrl())
+                .sourceCodeUrl(v.getGithubUrl())
+                .slideUrl(v.getSlideUrl())
                 .demoUrl(v.getDemoUrl())
                 .submittedAt(v.getSubmittedAt())
                 .attachments(attachments)
                 .build();
+    }
+
+    private String resolveSourceUrl(CreateSubmissionRequest request) {
+        if (request.getSourceCodeUrl() != null && !request.getSourceCodeUrl().isBlank()) {
+            return request.getSourceCodeUrl().trim();
+        }
+        if (request.getGithubUrl() != null && !request.getGithubUrl().isBlank()) {
+            return request.getGithubUrl().trim();
+        }
+        throw new BusinessException("Source code URL is required", HttpStatus.BAD_REQUEST);
     }
 }

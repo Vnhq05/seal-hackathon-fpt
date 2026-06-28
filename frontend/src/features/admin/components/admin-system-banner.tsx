@@ -3,12 +3,7 @@
 export function AdminSystemBanner({ operational }: { operational: boolean }) {
   return (
     <div
-      className="flex items-center gap-2 rounded-lg"
-      style={{
-        backgroundColor: operational ? "#ecfdf5" : "#fef2f2",
-        padding: "10px 20px",
-        marginBottom: 24,
-      }}
+      className={`mb-6 flex items-center gap-2 border-2 border-navy px-5 py-2.5 shadow-[2px_2px_0_0_#0c1228] ${operational ? "bg-emerald-50" : "bg-red-50"}`}
     >
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
         <circle cx="9" cy="9" r="8" stroke={operational ? "#047857" : "#dc2626"} strokeWidth="1.5" />

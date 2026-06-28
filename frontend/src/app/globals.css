@@ -76,7 +76,7 @@
   --color-seal-border-light: #eef0f6;
   --color-seal-border-dark: #c5c9d8;
 
-  /* Sidebar — modern slate */
+  /* Sidebar — modern slate (legacy; prefer bg-navy pixel sidebar in portals) */
   --color-seal-sidebar: #0f172a;
   --color-seal-sidebar-hover: rgba(14, 165, 233, 0.08);
   --color-seal-sidebar-active: rgba(14, 165, 233, 0.14);
@@ -86,7 +86,7 @@
   /* Typography */
   --font-sans: var(--font-inter), Inter, system-ui, sans-serif;
   --font-heading: var(--font-space-grotesk), system-ui, sans-serif;
-  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+  --font-mono: var(--font-space-mono), var(--font-jetbrains-mono), ui-monospace, monospace;
 
   /* Radius */
   --radius-sm: 6px;
@@ -350,7 +350,7 @@ body {
   overflow: hidden;
 }
 
-/* ── Premium top nav ── */
+/* ── Premium top nav (legacy; portals use border-b-2 border-navy/10 bg-white) ── */
 
 @utility seal-topnav {
   background: rgba(255, 255, 255, 0.85);
@@ -377,6 +377,22 @@ body {
 
 @utility seal-noise {
   position: relative;
+}
+
+/* ── SEAL Pixel UI (default app style — landing page is source of truth) ── */
+
+@utility seal-page-card {
+  border-width: 2px;
+  border-color: #0c1228;
+  background-color: #ffffff;
+  box-shadow: 4px 4px 0 0 #0c1228;
+}
+
+@utility seal-page-card-lg {
+  border-width: 2px;
+  border-color: #0c1228;
+  background-color: #ffffff;
+  box-shadow: 6px 6px 0 0 #0c1228;
 }
 
 /* ── Reduced motion ── */

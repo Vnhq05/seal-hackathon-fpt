@@ -68,8 +68,7 @@ export function RoundManagementPage() {
         </div>
         <Link
           href="/admin/rounds/new"
-          className="flex items-center justify-center rounded-lg"
-          style={{ backgroundColor: "#38bdf8", padding: "10px 20px", color: "#ffffff", fontSize: 14, fontWeight: 600 }}
+          className="flex items-center justify-center border-2 border-navy bg-seal-yellow px-6 py-2.5 text-sm text-navy font-mono font-bold cursor-pointer"
         >
           Add Round
         </Link>
@@ -88,7 +87,7 @@ export function RoundManagementPage() {
         </select>
       </div>
 
-      <div className="overflow-hidden rounded-lg" style={{ backgroundColor: "#ffffff", border: "1px solid rgba(198,198,205,0.5)" }}>
+      <div className="overflow-hidden border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]">
         <table className="w-full" style={{ borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ backgroundColor: "#eef0f6" }}>

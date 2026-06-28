@@ -36,71 +36,34 @@ export function NotificationItem({ notification }: NotificationItemProps) {
       tabIndex={0}
       onClick={handleClick}
       onKeyDown={(e) => e.key === "Enter" && handleClick()}
-      className="flex cursor-pointer items-start gap-4 transition-colors"
-      style={{
-        backgroundColor: isUnread ? "#0e1528" : "#eef0f6",
-        border: isUnread ? "1px solid #38bdf8" : "1px solid rgba(223,226,236,0.8)",
-        borderLeftWidth: isUnread ? "3px" : "1px",
-        borderRadius: "8px",
-        padding: "25px 25px 25px 27px",
-        opacity: isUnread ? 1 : 0.8,
-      }}
+      className={`flex cursor-pointer items-start gap-4 border-2 p-6 transition-colors shadow-[2px_2px_0_0_#0c1228] ${
+        isUnread
+          ? "border-navy bg-navy text-white"
+          : "border-navy/30 bg-white opacity-80"
+      }`}
     >
       <NotificationIcon type={notification.type} isRead={notification.read} />
 
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-4">
           <p
-            className="whitespace-nowrap"
-            style={{
-              fontSize: "18px",
-              fontWeight: 600,
-              color: isUnread ? "#ffffff" : "#0e1528",
-              lineHeight: "25.2px",
-              fontFamily: "Inter, sans-serif",
-            }}
+            className={`whitespace-nowrap text-lg font-semibold ${isUnread ? "text-white" : "text-navy"}`}
           >
             {notification.title}
           </p>
-          <span
-            className="flex-shrink-0 whitespace-nowrap"
-            style={{
-              fontSize: "12px",
-              fontWeight: 500,
-              color: "#8891a5",
-              lineHeight: "12px",
-              letterSpacing: "0.24px",
-            }}
-          >
+          <span className="flex-shrink-0 whitespace-nowrap text-xs font-medium text-seal-text-muted">
             {formatRelativeTime(notification.createdAt)}
           </span>
         </div>
 
-        <p
-          className="mt-1"
-          style={{
-            fontSize: "14px",
-            fontWeight: 400,
-            color: "#8891a5",
-            lineHeight: "21px",
-            fontFamily: "Inter, sans-serif",
-          }}
-        >
+        <p className="mt-1 text-sm text-seal-text-muted">
           {notification.message}
         </p>
       </div>
 
       {isUnread && (
         <div className="flex flex-shrink-0 flex-col items-start pt-2">
-          <span
-            className="rounded-full"
-            style={{
-              width: 8,
-              height: 8,
-              backgroundColor: "#38bdf8",
-              display: "block",
-            }}
-          />
+          <span className="block h-2 w-2 rounded-full bg-royal" />
         </div>
       )}
     </div>

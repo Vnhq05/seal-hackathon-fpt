@@ -39,12 +39,12 @@ export function EnrollmentApprovalPage() {
         </p>
       </div>
 
-      <div className="rounded-xl border border-seal-border/50 bg-white p-5 shadow-sm">
+      <div className="border-2 border-navy bg-white p-5 shadow-[4px_4px_0_0_#0c1228]">
         <label className="mb-2 block text-sm font-medium text-seal-text">Select event</label>
         <select
           value={eventId}
           onChange={(e) => setEventId(e.target.value)}
-          className="w-full max-w-md rounded-lg border border-seal-border px-3 py-2 text-sm text-seal-text outline-none focus:border-seal-purple"
+          className="w-full max-w-md border-2 border-navy bg-white px-3 py-2 text-sm text-seal-text outline-none focus:border-royal"
         >
           <option value="">Choose an event...</option>
           {events.map((event) => (
@@ -59,12 +59,12 @@ export function EnrollmentApprovalPage() {
         <p className="text-sm text-seal-text-muted">Select an event to view pending enrollments.</p>
       ) : isLoading ? (
         <div className="flex justify-center p-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-seal-purple border-t-transparent" />
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-royal border-t-transparent" />
         </div>
       ) : enrollments.length === 0 ? (
         <p className="text-sm text-seal-text-muted">No pending enrollments for this event.</p>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-seal-border/50 bg-white shadow-sm">
+        <div className="overflow-hidden border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]">
           <table className="w-full text-left text-sm">
             <thead className="bg-seal-bg text-seal-text-muted">
               <tr>
@@ -92,7 +92,7 @@ export function EnrollmentApprovalPage() {
                         type="button"
                         onClick={() => approveMutation.mutate(row.id)}
                         disabled={approveMutation.isPending}
-                        className="rounded-lg bg-seal-purple px-3 py-1.5 text-xs font-semibold text-white hover:bg-seal-purple-dark disabled:opacity-50"
+                        className="border-2 border-navy bg-seal-yellow px-3 py-1.5 text-xs text-navy font-mono font-bold shadow-[4px_4px_0_0_#0c1228] disabled:opacity-50"
                       >
                         Approve
                       </button>
@@ -100,7 +100,7 @@ export function EnrollmentApprovalPage() {
                         type="button"
                         onClick={() => rejectMutation.mutate(row.id)}
                         disabled={rejectMutation.isPending}
-                        className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50"
+                        className="border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50"
                       >
                         Reject
                       </button>

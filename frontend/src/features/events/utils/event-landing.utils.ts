@@ -29,14 +29,24 @@ const STATUS_META: Record<
     className: "bg-seal-mint/15 text-seal-mint border-seal-mint/30",
     glow: "shadow-seal-mint/20",
   },
+  CLOSED_REGISTRATION: {
+    label: "Registration Closed",
+    className: "bg-amber-500/15 text-amber-600 border-amber-500/30",
+    glow: "",
+  },
   ACTIVE: {
     label: "Live Now",
     className: "bg-seal-cyan/15 text-seal-cyan border-seal-cyan/30",
     glow: "shadow-seal-cyan/20",
   },
+  SCORING: {
+    label: "Scoring",
+    className: "bg-violet-500/15 text-violet-600 border-violet-500/30",
+    glow: "",
+  },
   UPCOMING: {
     label: "Coming Soon",
-    className: "bg-seal-purple/15 text-seal-purple border-seal-purple/30",
+    className: "bg-royal/15 text-royal border-royal/30",
     glow: "shadow-seal-purple/20",
   },
   COMPLETED: {

@@ -13,11 +13,12 @@ export function useRegisterTrack(hackathonId: string) {
   const router = useRouter();
 
   const mutation = useMutation({
-    mutationFn: async (_payload: {
+    mutationFn: async (payload: {
       hackathonId: string;
       teamId: string;
       trackId: string;
     }) => {
+      void payload;
       // TODO: Replace with criteriaApi call when tracks are redesigned as criteria
       // The old endpoint POST /hackathons/{hackathonId}/tracks/register does not exist.
       console.warn(

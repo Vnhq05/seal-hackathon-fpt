@@ -63,7 +63,7 @@ export function MentorAssignmentPage() {
         </p>
       </div>
 
-      <div className="flex items-end gap-3 rounded-lg" style={{ backgroundColor: "#ffffff", border: "1px solid rgba(198,198,205,0.5)", padding: 20, marginBottom: 24 }}>
+      <div className="flex items-end gap-3 p-5 mb-6 border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]">
         <div className="flex flex-col">
           <label style={{ fontSize: 12, fontWeight: 600, color: "#8891a5", marginBottom: 4 }}>Event</label>
           <select value={eventId} onChange={(e) => setEventId(e.target.value)} style={inputStyle}>
@@ -78,14 +78,13 @@ export function MentorAssignmentPage() {
         <button
           onClick={handleAssign}
           disabled={isPending || !mentorUserId || !eventId}
-          className="rounded-lg"
-          style={{ backgroundColor: "#38bdf8", padding: "9px 20px", color: "#ffffff", fontSize: 14, fontWeight: 600, border: "none", cursor: "pointer", opacity: isPending ? 0.7 : 1 }}
+          className="border-2 border-navy bg-seal-yellow px-6 py-2.5 text-sm text-navy font-mono font-bold cursor-pointer"
         >
           Assign
         </button>
       </div>
 
-      <div className="overflow-hidden rounded-lg" style={{ backgroundColor: "#ffffff", border: "1px solid rgba(198,198,205,0.5)" }}>
+      <div className="overflow-hidden border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]">
         <table className="w-full" style={{ borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ backgroundColor: "#eef0f6" }}>

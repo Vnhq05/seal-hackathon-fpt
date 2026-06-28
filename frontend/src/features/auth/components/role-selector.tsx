@@ -58,17 +58,17 @@ export function RoleSelector({ value, onChange }: RoleSelectorProps) {
             key={type}
             type="button"
             onClick={() => onChange(type)}
-            className={`flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 bg-seal-surface px-4 py-4 text-center transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-seal-cyan/40 ${
+            className={`flex cursor-pointer flex-col items-center gap-2 border-2 bg-white px-4 py-4 text-center transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-royal/40 ${
               isActive
-                ? "border-seal-cyan bg-seal-cyan/5 shadow-sm shadow-seal-cyan/10"
-                : "border-seal-border hover:border-seal-border-dark hover:bg-seal-surface-elevated"
+                ? "border-navy bg-seal-yellow shadow-[4px_4px_0_0_#0c1228]"
+                : "border-navy/30 hover:border-navy hover:bg-seal-surface-sunken"
             }`}
             aria-pressed={isActive}
           >
-            <Icon color={isActive ? "var(--color-seal-cyan)" : "var(--color-seal-text-muted)"} />
+            <Icon color={isActive ? "var(--color-royal)" : "var(--color-seal-text-muted)"} />
             <span
               className={`text-[13px] leading-snug ${
-                isActive ? "font-semibold text-seal-cyan" : "text-seal-text-secondary"
+                isActive ? "font-mono font-bold text-navy" : "text-seal-text-secondary"
               }`}
             >
               {label}

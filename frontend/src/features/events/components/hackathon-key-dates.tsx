@@ -60,7 +60,7 @@ function DateItem({ date }: { date: KeyDate }) {
 export function HackathonKeyDates({ dates }: HackathonKeyDatesProps) {
   return (
     <div
-      className="flex flex-col gap-4 rounded-lg"
+      className="flex flex-col gap-4 border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]"
       style={{
         backgroundColor: "#ffffff",
         border: "1px solid rgba(223,226,236,0.8)",

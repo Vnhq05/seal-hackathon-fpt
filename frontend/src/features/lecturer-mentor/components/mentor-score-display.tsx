@@ -8,7 +8,7 @@ export function MentorScoreDisplay({ score, maxScore }: MentorScoreDisplayProps)
 
   return (
     <div
-      className="flex flex-col items-center justify-center rounded-lg"
+      className="flex flex-col items-center justify-center border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]"
       style={{
         backgroundColor: "#eef0f6",
         border: "1px solid #0b1715",

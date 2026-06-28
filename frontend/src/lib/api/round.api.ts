@@ -1,5 +1,8 @@
 import { api } from "./api-client";
 import type { CriteriaResponse } from "./criteria.api";
+import type { RoundType } from "./types";
+
+export type { RoundType };
 
 // ═══ Types ═══
 
@@ -13,6 +16,8 @@ export interface RoundResponse {
   submissionDeadline: string;
   scoringDeadline: string;
   advancementCutoff: number;
+  roundWeight?: number;
+  roundType?: RoundType | null;
   criteria: CriteriaResponse[];
   judgeCount: number;
 }

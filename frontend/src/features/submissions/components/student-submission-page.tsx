@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMyTeamsAllEvents } from "@/features/teams/hooks/use-my-teams-all-events";
 import { useAuthStore } from "@/features/auth/store/auth.store";
 import { roundApi, submissionApi } from "@/lib/api";
-import type { RoundResponse, SubmissionResponse } from "@/lib/api";
+import type { SubmissionResponse } from "@/lib/api";
 import {
   findCurrentRound,
   isRoundOpen,
@@ -13,7 +13,6 @@ import {
   validatePdfFile,
 } from "@/features/submissions/utils/round.utils";
 
-const GITHUB_RE = /^https:\/\/github\.com\/[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+\/?$/;
 
 function isValidUrl(value: string): boolean {
   try {
@@ -47,12 +46,24 @@ export function StudentSubmissionPage() {
     enabled: !!currentRound?.id && !!team?.id,
   });
 
-  const [github, setGithub] = useState("");
+  const [source, setSource] = useState("");
+  const [slide, setSlide] = useState("");
   const [demo, setDemo] = useState("");
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [pdfError, setPdfError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!existing?.latestVersion) return;
+    const version = existing.latestVersion;
+    const timer = window.setTimeout(() => {
+      setSource(version.sourceCodeUrl ?? version.githubUrl ?? "");
+      setSlide(version.slideUrl ?? "");
+      setDemo(version.demoUrl ?? "");
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [existing?.id, existing?.currentVersion, existing?.latestVersion]);
 
   const roundOpen = currentRound ? isRoundOpen(currentRound) : false;
   const locked = !roundOpen || !isLeader;
@@ -71,7 +82,11 @@ export function StudentSubmissionPage() {
       if (!currentRound || !team) throw new Error("Missing round or team");
       return submissionApi.submit(
         currentRound.id,
-        { githubUrl: github.trim(), demoUrl: demo.trim() },
+        {
+          sourceCodeUrl: source.trim(),
+          slideUrl: slide.trim() || undefined,
+          demoUrl: demo.trim(),
+        },
         pdfFile,
       );
     },
@@ -82,13 +97,6 @@ export function StudentSubmissionPage() {
     },
     onError: (err: Error) => setFormError(err.message),
   });
-
-  useEffect(() => {
-    if (existing?.latestVersion) {
-      setGithub(existing.latestVersion.githubUrl ?? "");
-      setDemo(existing.latestVersion.demoUrl ?? "");
-    }
-  }, [existing?.id]);
 
   const handlePdfChange = (file: File | null) => {
     setPdfError(null);
@@ -112,8 +120,12 @@ export function StudentSubmissionPage() {
       setFormError(lockReason);
       return;
     }
-    if (!github.trim() || !GITHUB_RE.test(github.trim())) {
-      setFormError("GitHub URL không hợp lệ (https://github.com/owner/repo)");
+    if (!source.trim() || !isValidUrl(source)) {
+      setFormError("Source code URL không hợp lệ (GitHub, Jira, Confluence, Notion)");
+      return;
+    }
+    if (source.toLowerCase().includes("drive.google.com")) {
+      setFormError("Không dùng Google Drive làm nơi chứa source code");
       return;
     }
     if (!demo.trim() || !isValidUrl(demo)) {
@@ -140,13 +152,13 @@ export function StudentSubmissionPage() {
       <div>
         <h1 className="text-[28px] font-bold tracking-tight text-seal-text">Nộp bài</h1>
         <p className="mt-1 text-sm text-seal-text-secondary">
-          GitHub, PDF và Demo Video cho round hiện tại.
+          Slide, source code và demo cho round hiện tại.
         </p>
       </div>
 
       {/* Team + Round info */}
       <div className="grid gap-3 sm:grid-cols-2">
-        <div className="rounded-lg border border-seal-border bg-seal-surface p-4">
+        <div className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-4">
           <div className="text-[11px] font-medium uppercase tracking-wider text-seal-text-muted">Team</div>
           {team && event ? (
             <>
@@ -158,7 +170,7 @@ export function StudentSubmissionPage() {
             <p className="mt-1 text-sm text-seal-text-muted">Chưa có team</p>
           )}
         </div>
-        <div className="rounded-lg border border-seal-border bg-seal-surface p-4">
+        <div className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-4">
           <div className="text-[11px] font-medium uppercase tracking-wider text-seal-text-muted">Round hiện tại</div>
           {currentRound ? (
             <>
@@ -194,26 +206,37 @@ export function StudentSubmissionPage() {
         </div>
       )}
 
-      <div className={`rounded-lg border border-seal-border bg-seal-surface p-6 flex flex-col gap-4 ${locked ? "opacity-60 pointer-events-none" : ""}`}>
+      <div className={`border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-6 flex flex-col gap-4 ${locked ? "opacity-60 pointer-events-none" : ""}`}>
         <div>
-          <label className="text-xs font-medium text-seal-text-secondary">GitHub URL *</label>
+          <label className="text-xs font-medium text-seal-text-secondary">Slide URL</label>
           <input
-            value={github}
-            onChange={(e) => setGithub(e.target.value)}
+            value={slide}
+            onChange={(e) => setSlide(e.target.value)}
             disabled={locked}
-            placeholder="https://github.com/team/project"
-            className="mt-1.5 w-full rounded-lg border border-seal-border bg-seal-surface px-3 py-2 text-sm outline-none focus:border-seal-cyan/40"
+            placeholder="https://docs.google.com/presentation/..."
+            className="mt-1.5 w-full border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] px-3 py-2 text-sm outline-none focus:border-royal/40"
           />
         </div>
 
         <div>
-          <label className="text-xs font-medium text-seal-text-secondary">Demo Video URL *</label>
+          <label className="text-xs font-medium text-seal-text-secondary">Source Code URL *</label>
+          <input
+            value={source}
+            onChange={(e) => setSource(e.target.value)}
+            disabled={locked}
+            placeholder="https://github.com/team/project"
+            className="mt-1.5 w-full border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] px-3 py-2 text-sm outline-none focus:border-royal/40"
+          />
+        </div>
+
+        <div>
+          <label className="text-xs font-medium text-seal-text-secondary">Demo URL *</label>
           <input
             value={demo}
             onChange={(e) => setDemo(e.target.value)}
             disabled={locked}
             placeholder="https://youtube.com/watch?v=..."
-            className="mt-1.5 w-full rounded-lg border border-seal-border bg-seal-surface px-3 py-2 text-sm outline-none focus:border-seal-cyan/40"
+            className="mt-1.5 w-full border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] px-3 py-2 text-sm outline-none focus:border-royal/40"
           />
         </div>
 
@@ -244,7 +267,7 @@ export function StudentSubmissionPage() {
           type="button"
           onClick={handleSubmit}
           disabled={locked || isPending}
-          className="rounded-lg bg-seal-cyan py-2.5 text-sm font-semibold text-white hover:bg-seal-cyan-dark disabled:opacity-50"
+          className="border-2 border-navy bg-seal-yellow py-2.5 text-navy font-mono font-bold shadow-[4px_4px_0_0_#0c1228] disabled:opacity-50"
         >
           {isPending ? "Đang gửi..." : existing ? "Cập nhật bài nộp" : "Nộp bài"}
         </button>

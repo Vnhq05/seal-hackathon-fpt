@@ -4,7 +4,6 @@ import { mentorInvitationApi } from "@/lib/api/mentor-invitation.api";
 import { roundApi } from "@/lib/api/round.api";
 import { submissionApi } from "@/lib/api/submission.api";
 import { teamApi } from "@/lib/api/team.api";
-import { trackApi } from "@/lib/api/track.api";
 import type { MentorTeamsParams, MentorTeamsResponse } from "@/features/lecturer-mentor/types/mentor.types";
 import {
   findCurrentRound,
@@ -64,17 +63,7 @@ export function useMentorTeams(params?: MentorTeamsParams) {
             ),
           );
 
-          let trackName = team.trackId ? trackNames.get(team.trackId) ?? null : null;
-          if (!trackName && team.trackId) {
-            try {
-              const track = await trackApi.getById(room.eventId, team.trackId);
-              trackName = track.name;
-            } catch {
-              trackName = null;
-            }
-          }
-
-          return mapTeamToMentorTeam(team, eventRounds, submissionsByRound, trackName);
+          return mapTeamToMentorTeam(team, eventRounds, submissionsByRound);
         }),
       );
 

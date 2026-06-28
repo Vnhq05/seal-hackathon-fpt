@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useDeferredValue } from "react";
+import { useState } from "react";
 import { useHackathons } from "@/features/events/hooks/use-hackathons";
 import { HackathonCard } from "@/features/events/components/hackathon-card";
 import { HackathonFilters } from "@/features/events/components/hackathon-filters";
@@ -10,7 +10,7 @@ import type { EventStatus } from "@/lib/api";
 
 function CardSkeleton() {
   return (
-    <div className="animate-pulse overflow-hidden rounded-lg" style={{ border: "1px solid rgba(198, 198, 205, 0.3)" }}>
+    <div className="animate-pulse overflow-hidden border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]" style={{ border: "1px solid rgba(198, 198, 205, 0.3)" }}>
       <div style={{ height: 128, backgroundColor: "rgba(223,226,236,0.8)" }} />
       <div className="flex flex-col gap-3 p-6">
         <div className="rounded" style={{ height: 20, width: "60%", backgroundColor: "rgba(223,226,236,0.8)" }} />
@@ -27,7 +27,6 @@ function CardSkeleton() {
 export function HackathonListPage() {
   const [activeTab, setActiveTab] = useState<HackathonFilterTab>("all");
   const [search, setSearch] = useState("");
-  const deferredSearch = useDeferredValue(search);
 
   // Map UI filter tabs to backend EventStatus values
   const statusMap: Record<string, EventStatus | undefined> = {
@@ -70,7 +69,7 @@ export function HackathonListPage() {
               placeholder="Search hackathons..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full rounded-lg"
+              className="w-full border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]"
               style={{
                 border: "1px solid rgba(223,226,236,0.8)",
                 backgroundColor: "#ffffff",

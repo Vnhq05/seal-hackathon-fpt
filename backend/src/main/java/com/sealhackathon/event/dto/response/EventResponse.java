@@ -1,5 +1,6 @@
 package com.sealhackathon.event.dto.response;
 
+import com.sealhackathon.event.domain.enums.CompetitionFormat;
 import com.sealhackathon.event.domain.enums.EventStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -29,6 +30,7 @@ public class EventResponse {
     private String description;
     private String location;
     private String format;
+    private CompetitionFormat competitionFormat;
     private Integer minTeam;
     private Integer maxTeam;
     private Integer semesterMin;

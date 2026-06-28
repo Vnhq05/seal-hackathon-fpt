@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useAuthStore } from "@/features/auth/store/auth.store";
-import { useMyTeamsAllEvents, type MyEventTeam } from "@/features/teams/hooks/use-my-teams-all-events";
+import { useMyTeamsAllEvents } from "@/features/teams/hooks/use-my-teams-all-events";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { mentorInvitationApi, mentorChatApi } from "@/lib/api";
-import type { MentorInvitationResponse, MentorRoomResponse, ChatMessageResponse } from "@/lib/api";
+import type { MentorInvitationResponse, ChatMessageResponse } from "@/lib/api";
 import { useMentorChatWebSocket } from "@/features/teams/hooks/use-mentor-chat-websocket";
 
 // ═══ Icons ═══
@@ -101,7 +101,7 @@ function StudentView() {
 
   if (activeTeams.length === 0) {
     return (
-      <div className="rounded-lg border border-seal-border bg-seal-surface p-10 text-center text-sm text-seal-text-muted">
+      <div className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-10 text-center text-sm text-seal-text-muted">
         You haven&apos;t joined a team yet. Register for an event from the Dashboard first.
       </div>
     );
@@ -118,7 +118,7 @@ function StudentView() {
 
       <div className="grid gap-4 min-h-[calc(100vh-220px)]" style={{ gridTemplateColumns: "280px 1fr" }}>
         {/* Sidebar */}
-        <div className="rounded-lg border border-seal-border bg-seal-surface overflow-y-auto self-start max-h-full">
+        <div className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] overflow-y-auto self-start max-h-full">
           <div className="border-b border-seal-border-light px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-seal-text-muted">
             Your teams
           </div>
@@ -170,7 +170,7 @@ function StudentTeamPanel({ eventId, teamId, teamName, isLeader }: {
 
   if (room) {
     return (
-      <div className="rounded-lg border border-seal-border bg-seal-surface flex flex-col h-[calc(100vh-220px)]">
+      <div className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] flex flex-col h-[calc(100vh-220px)]">
         <ChatRoom eventId={eventId} teamId={teamId} peerName="Mentor" pill={teamName} />
       </div>
     );
@@ -178,7 +178,7 @@ function StudentTeamPanel({ eventId, teamId, teamName, isLeader }: {
 
   if (!isLeader) {
     return (
-      <div className="rounded-lg border border-dashed border-seal-border bg-seal-surface p-10 text-center">
+      <div className="border-2 border-dashed border-navy bg-seal-surface p-10 text-center">
         <p className="font-semibold text-seal-text">Chưa có mentor</p>
         <p className="mt-1 text-sm text-seal-text-muted">
           Team chưa được gán mentor. Leader sẽ gửi lời mời.
@@ -226,7 +226,7 @@ function InvitePanel({ eventId, teamId, teamName, isLeader }: {
   };
 
   return (
-    <div className="rounded-lg border border-seal-border bg-seal-surface p-5 self-start">
+    <div className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-5 self-start">
       <div className="flex items-center gap-2 mb-1 text-seal-text">
         <MailIcon />
         <h3 className="font-semibold text-sm">Mời Mentor</h3>
@@ -241,7 +241,7 @@ function InvitePanel({ eventId, teamId, teamName, isLeader }: {
             value={mentorUserId}
             onChange={(e) => setMentorUserId(e.target.value)}
             disabled={!isLeader}
-            className="mt-1 w-full rounded-lg border border-seal-border bg-seal-surface px-3 py-2 text-sm text-seal-text outline-none focus:border-seal-cyan/40"
+            className="mt-1 w-full border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] px-3 py-2 text-sm text-seal-text outline-none focus:border-royal/40"
           >
             <option value="">-- Chọn mentor --</option>
             {mentors.map((m) => (
@@ -259,13 +259,13 @@ function InvitePanel({ eventId, teamId, teamName, isLeader }: {
             onChange={(e) => setNote(e.target.value)}
             disabled={!isLeader}
             rows={3}
-            className="mt-1 w-full rounded-lg border border-seal-border bg-seal-surface px-3 py-2 text-sm text-seal-text outline-none focus:border-seal-cyan/40"
+            className="mt-1 w-full border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] px-3 py-2 text-sm text-seal-text outline-none focus:border-royal/40"
           />
         </div>
         <button
           onClick={handleSend}
           disabled={!isLeader || isPending || !mentorUserId}
-          className="w-full rounded-lg bg-seal-cyan py-2.5 text-sm font-semibold text-white transition-colors hover:bg-seal-cyan-dark disabled:opacity-50"
+          className="w-full border-2 border-navy bg-seal-yellow py-2.5 text-navy font-mono font-bold shadow-[4px_4px_0_0_#0c1228] disabled:opacity-50"
         >
           <span className="inline-flex items-center gap-2"><SendIcon /> {isPending ? "Đang gửi..." : "Gửi lời mời"}</span>
         </button>
@@ -277,14 +277,14 @@ function InvitePanel({ eventId, teamId, teamName, isLeader }: {
 
 function SentInvitations({ invitations }: { invitations: MentorInvitationResponse[] }) {
   return (
-    <div className="rounded-lg border border-seal-border bg-seal-surface p-5 self-start">
+    <div className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-5 self-start">
       <h3 className="font-semibold text-sm text-seal-text mb-4">Sent invitations</h3>
       {invitations.length === 0 ? (
         <p className="text-sm text-seal-text-muted">No invitations sent yet.</p>
       ) : (
         <div className="flex flex-col gap-2">
           {invitations.map((inv) => (
-            <div key={inv.id} className="flex items-center gap-3 rounded-lg border border-seal-border p-3">
+            <div key={inv.id} className="flex items-center gap-3 border-2 border-navy bg-white p-3 shadow-[2px_2px_0_0_#0c1228]">
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium text-seal-text truncate">{inv.mentorEmail ?? inv.mentorName ?? `Mentor`}</div>
                 <div className="text-xs text-seal-text-muted">
@@ -336,7 +336,7 @@ function LecturerMentorView() {
       </div>
 
       {pending.length > 0 && (
-        <div className="rounded-lg border border-seal-border bg-seal-surface">
+        <div className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]">
           <div className="flex items-center gap-2 border-b border-seal-border px-5 py-3">
             <MailIcon />
             <span className="font-semibold text-sm text-seal-text">Mentorship invitations</span>
@@ -355,13 +355,13 @@ function LecturerMentorView() {
                 <div className="flex gap-2 flex-shrink-0">
                   <button
                     onClick={() => respond({ id: req.id, eventId: req.eventId, decision: "ACCEPTED" })}
-                    className="flex items-center gap-1 rounded-lg bg-seal-cyan px-3 py-1.5 text-xs font-semibold text-white hover:bg-seal-cyan-dark"
+                    className="flex items-center gap-1 border-2 border-navy bg-seal-yellow px-3 py-1.5 text-navy font-mono font-bold shadow-[4px_4px_0_0_#0c1228]"
                   >
                     <CheckIcon /> Accept
                   </button>
                   <button
                     onClick={() => respond({ id: req.id, eventId: req.eventId, decision: "DENIED" })}
-                    className="flex items-center gap-1 rounded-lg border border-seal-border bg-seal-surface px-3 py-1.5 text-xs font-semibold text-seal-text hover:bg-seal-surface-elevated"
+                    className="flex items-center gap-1 border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] px-3 py-1.5 text-xs font-semibold text-seal-text hover:bg-seal-surface-elevated"
                   >
                     <XSmallIcon /> Decline
                   </button>
@@ -374,7 +374,7 @@ function LecturerMentorView() {
 
       {/* Rooms + Chat */}
       <div className="grid gap-4 h-[calc(100vh-320px)]" style={{ gridTemplateColumns: "280px 1fr" }}>
-        <div className="rounded-lg border border-seal-border bg-seal-surface overflow-y-auto">
+        <div className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] overflow-y-auto">
           {rooms.length === 0 ? (
             <div className="p-6 text-center text-sm text-seal-text-muted">
               No teams assigned yet. Accept an invitation above to start mentoring.
@@ -393,7 +393,7 @@ function LecturerMentorView() {
           )}
         </div>
 
-        <div className="rounded-lg border border-seal-border bg-seal-surface flex flex-col min-h-0">
+        <div className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] flex flex-col min-h-0">
           {selectedRoom ? (
             <ChatRoom
               eventId={selectedRoom.eventId}
@@ -417,7 +417,7 @@ function ChatRoom({ eventId, teamId, peerName, pill }: {
 }) {
   const { user } = useAuthStore();
   const [text, setText] = useState("");
-  const [messages, setMessages] = useState<ChatMessageResponse[]>([]);
+  const [liveMessages, setLiveMessages] = useState<ChatMessageResponse[]>([]);
   const endRef = useRef<HTMLDivElement>(null);
   const { connected, subscribe, sendMessage: sendWs } = useMentorChatWebSocket(teamId);
 
@@ -426,24 +426,26 @@ function ChatRoom({ eventId, teamId, peerName, pill }: {
     queryFn: () => mentorChatApi.getMessages(eventId, teamId),
   });
 
-  useEffect(() => {
-    setMessages(history);
-  }, [history]);
+  const messages = useMemo(() => {
+    const historyIds = new Set(history.map((m) => m.id));
+    const extras = liveMessages.filter((m) => !historyIds.has(m.id));
+    return [...history, ...extras];
+  }, [history, liveMessages]);
 
   useEffect(() => {
     return subscribe((msg) => {
-      setMessages((prev) => {
-        if (prev.some((m) => m.id === msg.id)) return prev;
+      setLiveMessages((prev) => {
+        if (prev.some((m) => m.id === msg.id) || history.some((m) => m.id === msg.id)) return prev;
         return [...prev, msg];
       });
     });
-  }, [subscribe]);
+  }, [subscribe, history]);
 
   const qc = useQueryClient();
   const { mutate: sendRest } = useMutation({
     mutationFn: (msg: string) => mentorChatApi.sendMessage(eventId, teamId, { message: msg }),
     onSuccess: (msg) => {
-      setMessages((prev) => (prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]));
+      setLiveMessages((prev) => (prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]));
       qc.invalidateQueries({ queryKey: ["mentor-messages", eventId, teamId] });
     },
   });
@@ -503,9 +505,9 @@ function ChatRoom({ eventId, teamId, peerName, pill }: {
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSend()}
           placeholder="Type a message..."
-          className="flex-1 rounded-lg border border-seal-border bg-seal-surface px-3 py-2.5 text-sm text-seal-text outline-none focus:border-seal-cyan/40"
+          className="flex-1 border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] px-3 py-2.5 text-sm text-seal-text outline-none focus:border-royal/40"
         />
-        <button onClick={handleSend} className="rounded-lg bg-seal-cyan px-4 py-2.5 text-white hover:bg-seal-cyan-dark">
+        <button onClick={handleSend} className="border-2 border-navy bg-seal-yellow px-4 py-2.5 text-navy font-mono font-bold shadow-[4px_4px_0_0_#0c1228]">
           <SendIcon />
         </button>
       </div>

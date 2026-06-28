@@ -70,7 +70,7 @@ public class LiveScoreService {
     }
 
     @Transactional(readOnly = true)
-    public LiveScoreBoard getLeaderboard(UUID eventId, UUID trackId, UUID roundId) {
+    public LiveScoreBoard getLeaderboard(UUID eventId, UUID trackId, UUID roundId, String roundType) {
         EventSnapshot event = eventPublicService.getEvent(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Event", "id", eventId));
 
@@ -85,6 +85,13 @@ public class LiveScoreService {
                     .filter(r -> r.getId().equals(roundId))
                     .findFirst()
                     .orElseThrow(() -> new ResourceNotFoundException("Round", "id", roundId));
+        } else if (roundType != null && !roundType.isBlank()) {
+            round = rounds.stream()
+                    .filter(r -> r.getRoundType() != null
+                            && r.getRoundType().name().equalsIgnoreCase(roundType))
+                    .findFirst()
+                    .orElseThrow(() -> new BusinessException(
+                            "No round found for type: " + roundType, HttpStatus.NOT_FOUND));
         } else {
             round = rounds.get(rounds.size() - 1);
         }

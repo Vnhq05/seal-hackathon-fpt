@@ -3,6 +3,7 @@
 import { useTeamInvitation } from "@/features/teams/hooks/use-team-invitation";
 import { useRespondInvitation } from "@/features/teams/hooks/use-respond-invitation";
 import { InvitationDetailCard } from "./invitation-detail-card";
+import type { InvitationResponse } from "@/lib/api";
 import {
   TeamGroupIcon,
   WarningTriangleIcon,
@@ -35,7 +36,7 @@ export function JoinTeamPage({ invitationId }: JoinTeamPageProps) {
   // When called with an invitationId, the hook returns a single InvitationResponse | null.
   // TypeScript infers a union because the hook can also return InvitationResponse[].
   const invitation = (Array.isArray(rawData) ? rawData[0] : rawData) as
-    | import("@/lib/api").InvitationResponse
+    | InvitationResponse
     | null
     | undefined;
   const { respond, isPending } = useRespondInvitation(invitationId);

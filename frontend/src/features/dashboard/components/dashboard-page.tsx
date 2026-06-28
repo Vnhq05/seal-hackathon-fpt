@@ -67,19 +67,19 @@ function SkeletonBlock({ height }: { height: number }) {
 
 function WelcomeBanner({ userName }: { userName: string }) {
   return (
-    <div className="flex items-center justify-between overflow-hidden rounded-lg bg-seal-cyan p-8">
+    <div className="flex items-center justify-between overflow-hidden border-2 border-navy bg-seal-yellow p-8 shadow-[4px_4px_0_0_#0c1228]">
       <div>
-        <h1 className="text-[32px] font-bold leading-tight tracking-tight text-white">
+        <h1 className="font-mono text-[32px] font-bold leading-tight tracking-tight text-navy">
           Welcome back, {userName}
         </h1>
-        <p className="mt-1 max-w-lg text-sm leading-relaxed text-white/70">
+        <p className="mt-1 max-w-lg text-sm leading-relaxed text-navy/70">
           Check your dashboard for the latest updates on your hackathon progress.
         </p>
       </div>
 
       <Link
         href="/student/submissions"
-        className="flex flex-shrink-0 items-center gap-2 rounded-lg bg-white/15 px-6 py-2.5 text-sm font-semibold text-white backdrop-blur-sm transition-all duration-200 hover:bg-white/25"
+        className="flex flex-shrink-0 items-center gap-2 border-2 border-navy bg-white px-6 py-2.5 font-mono text-sm font-bold text-navy shadow-[3px_3px_0_0_#0c1228] transition-transform hover:translate-x-[-1px] hover:translate-y-[-1px]"
       >
         View my submission
         <ArrowRightIcon />
@@ -100,15 +100,15 @@ function StatCard({
   badge?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col justify-between rounded-lg border border-seal-border bg-seal-surface p-6 shadow-sm transition-all duration-200 hover:shadow-md" style={{ minHeight: 160 }}>
+    <div className="flex min-h-[160px] flex-col justify-between border-2 border-navy bg-white p-6 shadow-[4px_4px_0_0_#0c1228]">
       <div className="flex items-start justify-between pb-4">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-seal-surface-elevated text-seal-text-muted">
+        <div className="flex h-10 w-10 items-center justify-center border-2 border-navy/20 bg-seal-surface-sunken text-navy">
           {icon}
         </div>
         {badge}
       </div>
       <div>
-        <p className="text-xs font-medium tracking-wide text-seal-text-secondary">{label}</p>
+        <p className="font-mono text-[10px] font-bold uppercase tracking-wide text-seal-text-muted">{label}</p>
         <div className="mt-1">{value}</div>
       </div>
     </div>
@@ -129,7 +129,7 @@ function StatsRow({ summary, team }: { summary: DashboardSummaryData | undefined
         label="Active Events"
         badge={
           summary && summary.activeHackathons > 0 ? (
-            <span className="rounded-lg bg-seal-cyan/10 px-2.5 py-1 text-xs font-medium text-seal-cyan-dark">Active</span>
+            <span className="border border-royal/30 bg-royal/10 px-2.5 py-1 font-mono text-[10px] font-bold uppercase text-royal">Active</span>
           ) : undefined
         }
         value={
@@ -179,9 +179,9 @@ function DashboardEventCard({
   const isApproved = isEnrolled && activeEnrollment?.status === "APPROVED";
 
   return (
-    <div className="flex w-full items-center justify-between gap-4 rounded-lg border border-seal-border bg-seal-surface p-5 shadow-sm transition-all duration-200 hover:shadow-md">
-      <div className="flex-1 min-w-0">
-        <h3 className="text-base font-semibold text-seal-text">{event.name}</h3>
+    <div className="flex w-full items-center justify-between gap-4 border-2 border-navy bg-white p-5 shadow-[4px_4px_0_0_#0c1228]">
+      <div className="min-w-0 flex-1">
+        <h3 className="font-mono text-base font-bold text-navy">{event.name}</h3>
         <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-seal-text-secondary">
           <span>{event.season} {event.year}</span>
           <span>{event.trackCount} track{event.trackCount !== 1 ? "s" : ""}</span>
@@ -201,7 +201,7 @@ function DashboardEventCard({
         ) : (
           <Link
             href={`/hackathons/${event.id}/register`}
-            className="inline-flex items-center rounded-lg bg-seal-cyan px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-seal-cyan-dark"
+            className="inline-flex items-center border-2 border-navy bg-seal-yellow px-4 py-2 text-xs text-navy font-mono font-bold shadow-[4px_4px_0_0_#0c1228]"
           >
             Register
           </Link>
@@ -225,7 +225,7 @@ function EventSection({
   if (events.length === 0) return null;
 
   return (
-    <div className="rounded-lg border border-seal-border bg-seal-surface p-6 shadow-sm">
+    <div className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-6">
       <div className="mb-4">
         <h2 className="text-xl font-semibold tracking-tight text-seal-text">{title}</h2>
         <p className="mt-1 text-sm text-seal-text-muted">{description}</p>
@@ -251,7 +251,7 @@ function HackathonEvents({
 
   if (openEvents.length === 0 && upcomingEvents.length === 0) {
     return (
-      <div className="rounded-lg border border-seal-border bg-seal-surface p-6 shadow-sm">
+      <div className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-6">
         <p className="py-4 text-sm text-seal-text-muted">Hiện chưa có sự kiện nào mở đăng ký hoặc sắp diễn ra.</p>
       </div>
     );
@@ -318,7 +318,7 @@ function formatRelativeTime(isoDate: string): string {
 
 function RecentUpdates({ notifications }: { notifications: NotificationResponse[] }) {
   return (
-    <div className="rounded-lg border border-seal-border bg-seal-surface p-6 shadow-sm">
+    <div className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-6">
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2 text-seal-text">
           <BellSmallIcon />
@@ -326,7 +326,7 @@ function RecentUpdates({ notifications }: { notifications: NotificationResponse[
             Recent Updates
           </h2>
         </div>
-        <Link href="/student/notifications" className="text-xs font-semibold text-seal-cyan transition-colors hover:text-seal-cyan-dark">
+        <Link href="/student/notifications" className="text-xs font-semibold text-royal transition-colors hover:text-royal/80">
           See all
         </Link>
       </div>
@@ -348,7 +348,7 @@ function RecentUpdates({ notifications }: { notifications: NotificationResponse[
 function TeamQuickCard({ team }: { team: TeamResponse | null | undefined }) {
   if (!team) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-lg border border-seal-border bg-seal-surface p-6 text-center shadow-sm">
+      <div className="flex flex-col items-center justify-center border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-6 text-center shadow-sm">
         <div className="text-seal-text-muted">
           <TeamSmallIcon />
         </div>
@@ -358,7 +358,7 @@ function TeamQuickCard({ team }: { team: TeamResponse | null | undefined }) {
         </p>
         <Link
           href="/student/teams"
-          className="mt-4 inline-flex items-center justify-center rounded-lg border border-seal-border bg-seal-surface-elevated px-6 py-2.5 text-xs font-semibold text-seal-text transition-all duration-200 hover:border-seal-cyan/30 hover:bg-seal-cyan/5"
+          className="mt-4 inline-flex items-center justify-center border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] px-6 py-2.5 text-xs font-semibold text-seal-text transition-all duration-200 hover:border-royal/30 hover:bg-royal/5"
         >
           Browse Teams
         </Link>
@@ -376,7 +376,7 @@ function TeamQuickCard({ team }: { team: TeamResponse | null | undefined }) {
           : team.status;
 
   return (
-    <div className="overflow-hidden rounded-lg border border-seal-border bg-seal-surface shadow-sm">
+    <div className="overflow-hidden border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]">
       <div className="border-b border-seal-border-light p-6">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-xl font-semibold tracking-tight text-seal-text">
@@ -406,7 +406,7 @@ function TeamQuickCard({ team }: { team: TeamResponse | null | undefined }) {
       <div className="border-t border-seal-border-light bg-seal-surface-sunken p-4">
         <Link
           href="/student/teams"
-          className="flex w-full items-center justify-center rounded-lg border border-seal-border bg-seal-surface px-4 py-2.5 text-xs font-semibold text-seal-text transition-all duration-200 hover:border-seal-cyan/30 hover:bg-seal-cyan/5"
+          className="flex w-full items-center justify-center border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] px-4 py-2.5 text-xs font-semibold text-seal-text transition-all duration-200 hover:border-royal/30 hover:bg-royal/5"
         >
           View Team Details
         </Link>

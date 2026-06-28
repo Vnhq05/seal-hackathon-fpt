@@ -55,7 +55,7 @@ export function AuthGuard({ allowedRoles, children }: AuthGuardProps) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-seal-bg">
         <div
-          className="h-8 w-8 animate-spin rounded-full border-4 border-seal-purple border-t-transparent"
+          className="h-8 w-8 animate-spin rounded-full border-4 border-royal border-t-transparent"
           role="status"
           aria-label="Loading"
         />

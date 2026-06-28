@@ -1,6 +1,6 @@
 "use client";
 
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { Button } from "@/shared/ui/button";
@@ -28,15 +28,14 @@ export function RegisterForm() {
     register,
     handleSubmit,
     control,
-    watch,
     formState: { errors },
   } = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: { userType: "FPT_STUDENT", agreeToTerms: false },
   });
 
-  const userType = watch("userType");
-  const password = watch("password") ?? "";
+  const userType = useWatch({ control, name: "userType" });
+  const password = useWatch({ control, name: "password" }) ?? "";
 
   if (isSuccess) {
     return (
@@ -56,13 +55,13 @@ export function RegisterForm() {
             <path d="M20 6 9 17l-5-5" />
           </svg>
         </div>
-        <h2 className="text-xl font-semibold text-seal-text">Đăng ký thành công</h2>
+        <h2 className="font-mono text-xl font-semibold text-seal-text">Đăng ký thành công</h2>
         <p className="max-w-[360px] text-center text-sm text-seal-text-muted">
           Chờ Admin phê duyệt. Bạn sẽ nhận thông báo khi tài khoản được kích hoạt.
         </p>
         <Link
           href="/login"
-          className="mt-4 font-medium text-seal-purple hover:text-seal-purple-dark hover:underline"
+          className="mt-4 font-medium text-royal hover:text-royal/80 hover:underline"
         >
           Quay lại đăng nhập
         </Link>
@@ -72,12 +71,12 @@ export function RegisterForm() {
 
   return (
     <div className="flex flex-col">
-      <p className="mb-6 text-center text-xl font-bold tracking-wide text-seal-text">
+      <p className="mb-6 text-center font-mono text-xl font-bold tracking-wide text-seal-text">
         SEAL Hackathon
       </p>
 
       <div className="mb-6 text-center">
-        <h1 className="text-[22px] font-semibold text-seal-text">
+        <h1 className="font-mono text-[22px] font-semibold text-seal-text">
           Create your account
         </h1>
         <p className="mt-2 text-sm leading-relaxed text-seal-text-secondary">
@@ -194,11 +193,11 @@ export function RegisterForm() {
             />
             <span className="text-[13px] leading-relaxed text-seal-text-secondary">
               I agree to the{" "}
-              <Link href="/terms" className="text-seal-cyan hover:underline">
+              <Link href="/terms" className="text-royal hover:underline">
                 Terms of Service
               </Link>{" "}
               and{" "}
-              <Link href="/privacy" className="text-seal-cyan hover:underline">
+              <Link href="/privacy" className="text-royal hover:underline">
                 Privacy Policy
               </Link>
               .
@@ -226,7 +225,7 @@ export function RegisterForm() {
 
       <p className="text-center text-sm text-seal-text-secondary">
         Already have an account?{" "}
-        <Link href="/login" className="font-medium text-seal-cyan hover:underline">
+        <Link href="/login" className="font-medium text-royal hover:underline">
           Sign in
         </Link>
       </p>

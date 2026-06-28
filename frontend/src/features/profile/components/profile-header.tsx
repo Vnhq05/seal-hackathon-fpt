@@ -63,7 +63,7 @@ export function ProfileHeader({ profile, activeTab, onTabChange }: ProfileHeader
 
   return (
     <div
-      className="relative overflow-hidden rounded-lg bg-seal-surface"
+      className="relative overflow-hidden border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]"
       style={{
         border: "1px solid rgba(223,226,236,0.8)",
         boxShadow: "0px 1px 2px rgba(0, 0, 0, 0.05)",
@@ -106,7 +106,7 @@ export function ProfileHeader({ profile, activeTab, onTabChange }: ProfileHeader
           </div>
 
           <button
-            className="flex items-center gap-1 rounded-lg bg-seal-surface"
+            className="flex items-center gap-1 border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]"
             style={{
               border: "1px solid rgba(223,226,236,0.8)",
               padding: "9px 17px",

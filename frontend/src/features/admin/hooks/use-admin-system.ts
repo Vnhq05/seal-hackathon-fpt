@@ -76,7 +76,8 @@ export function useCalibrationSessions() {
 /** @deprecated Calibration endpoint does not exist. No-op mutation. */
 export function useCreateCalibrationSession() {
   return useMutation({
-    mutationFn: async (_payload: unknown) => {
+    mutationFn: async (payload: unknown) => {
+      void payload;
       return {} as never;
     },
   });
@@ -85,7 +86,8 @@ export function useCreateCalibrationSession() {
 /** @deprecated Research export endpoint does not exist. No-op mutation. */
 export function useDownloadResearchExport() {
   return useMutation({
-    mutationFn: async (_payload: unknown) => {
+    mutationFn: async (payload: unknown) => {
+      void payload;
       return new Blob();
     },
   });

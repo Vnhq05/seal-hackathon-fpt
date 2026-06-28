@@ -59,7 +59,7 @@ export function MentorDashboardActivity() {
 
   return (
     <div
-      className="flex flex-col overflow-hidden rounded-lg"
+      className="flex flex-col overflow-hidden border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]"
       style={{ backgroundColor: "#eef0f6", border: "1px solid rgba(223,226,236,0.8)", boxShadow: "0px 1px 2px rgba(0,0,0,0.05)", height: "100%" }}
     >
       <div style={{ borderBottom: "1px solid rgba(223,226,236,0.8)", padding: "20px 24px" }}>

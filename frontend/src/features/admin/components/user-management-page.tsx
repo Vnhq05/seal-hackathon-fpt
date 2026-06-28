@@ -104,7 +104,7 @@ function CreateAccountModal({ onClose }: { onClose: () => void }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={onClose}>
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
       <div
-        className="relative z-10 w-full max-w-md rounded-xl p-6 shadow-xl"
+        className="relative z-10 w-full max-w-md border-2 border-navy bg-white p-6 shadow-[4px_4px_0_0_#0c1228]"
         style={{ backgroundColor: "#ffffff", border: "1px solid rgba(198,198,205,0.5)" }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -352,7 +352,7 @@ export function UserManagementPage() {
         </button>
       </div>
 
-      <div className="overflow-hidden rounded-lg" style={{ backgroundColor: "#ffffff", border: "1px solid rgba(198,198,205,0.5)" }}>
+      <div className="overflow-hidden border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]">
         <table className="w-full" style={{ borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ backgroundColor: "#eef0f6" }}>

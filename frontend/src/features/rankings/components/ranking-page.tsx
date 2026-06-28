@@ -26,7 +26,7 @@ function MedalBadge({ rank }: { rank: number }) {
 
 function EventRankingSection({ board }: { board: EventRankingBoard }) {
   return (
-    <div className="rounded-lg border border-seal-border bg-seal-surface overflow-hidden">
+    <div className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-seal-border px-5 py-4">
         <div>
           <h2 className="text-lg font-semibold text-seal-text">{board.eventName}</h2>
@@ -117,7 +117,7 @@ export function RankingPage() {
         <select
           value={season}
           onChange={(e) => setSeason(e.target.value)}
-          className="rounded-lg border border-seal-border bg-seal-surface px-3 py-2 text-sm text-seal-text outline-none focus:border-seal-cyan/40"
+          className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] px-3 py-2 text-sm text-seal-text outline-none focus:border-royal/40"
           style={{ minWidth: 160 }}
         >
           <option value="">All seasons</option>
@@ -129,7 +129,7 @@ export function RankingPage() {
         <select
           value={year}
           onChange={(e) => setYear(e.target.value)}
-          className="rounded-lg border border-seal-border bg-seal-surface px-3 py-2 text-sm text-seal-text outline-none focus:border-seal-cyan/40"
+          className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] px-3 py-2 text-sm text-seal-text outline-none focus:border-royal/40"
           style={{ minWidth: 120 }}
         >
           <option value="">All years</option>
@@ -142,7 +142,7 @@ export function RankingPage() {
           <select
             value={trackId}
             onChange={(e) => setTrackId(e.target.value)}
-            className="rounded-lg border border-seal-border bg-seal-surface px-3 py-2 text-sm text-seal-text outline-none focus:border-seal-cyan/40"
+            className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] px-3 py-2 text-sm text-seal-text outline-none focus:border-royal/40"
             style={{ minWidth: 180 }}
           >
             <option value="">All tracks</option>
@@ -158,7 +158,7 @@ export function RankingPage() {
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-seal-cyan border-t-transparent" />
         </div>
       ) : boards.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-seal-border bg-seal-surface-sunken py-16">
+        <div className="flex flex-col items-center justify-center border-2 border-dashed border-navy bg-seal-surface-sunken py-16">
           <p className="text-base font-semibold text-seal-text">No rankings found</p>
           <p className="mt-1 text-sm text-seal-text-muted">Try adjusting season or year filters.</p>
         </div>

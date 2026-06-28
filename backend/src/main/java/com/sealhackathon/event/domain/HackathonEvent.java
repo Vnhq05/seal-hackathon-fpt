@@ -1,6 +1,7 @@
 package com.sealhackathon.event.domain;
 
 import com.sealhackathon.common.entity.BaseEntity;
+import com.sealhackathon.event.domain.enums.CompetitionFormat;
 import com.sealhackathon.event.domain.enums.EventStatus;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -117,6 +118,13 @@ public class HackathonEvent extends BaseEntity {
     @Column(name = "status", nullable = false)
     @Builder.Default
     private EventStatus status = EventStatus.UPCOMING;
+
+    /** SEAL-specific competition format; GENERIC preserves legacy multi-hackathon behaviour. */
+    @NotNull
+    @Enumerated(EnumType.STRING)
+    @Column(name = "competition_format", nullable = false)
+    @Builder.Default
+    private CompetitionFormat competitionFormat = CompetitionFormat.GENERIC;
 
     // ── Child entities ──
     @OneToMany(mappedBy = "hackathonEvent", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)

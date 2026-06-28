@@ -17,6 +17,7 @@ public class TrackResponse {
     private UUID eventId;
     private String name;
     private String description;
+    private String topic;
     private Integer maxTeams;
     private UUID scoringTemplateId;
 }

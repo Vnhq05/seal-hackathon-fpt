@@ -8,6 +8,7 @@ export function useSaveMentorNotes() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (payload: SaveMentorNotesRequest): Promise<SaveMentorNotesResponse> => {
+      void payload;
       // Placeholder — no backend endpoint for mentor notes
       return { message: "Notes saved (placeholder)" } as unknown as SaveMentorNotesResponse;
     },

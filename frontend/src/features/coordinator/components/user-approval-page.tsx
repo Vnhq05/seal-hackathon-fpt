@@ -59,14 +59,14 @@ function UserRow({
             <button
               type="button"
               onClick={() => onAction(user.id, "approve")}
-              className="rounded-lg bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-100"
+              className="bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-100"
             >
               Approve
             </button>
             <button
               type="button"
               onClick={() => onAction(user.id, "reject")}
-              className="rounded-lg bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 transition-colors hover:bg-red-100"
+              className="bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 transition-colors hover:bg-red-100"
             >
               Reject
             </button>
@@ -79,7 +79,7 @@ function UserRow({
 
 function EmptyState() {
   return (
-    <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-seal-border/80 bg-seal-bg py-16 text-center">
+    <div className="flex flex-col items-center justify-center border-2 border-dashed border-navy/30 bg-seal-surface-sunken py-16 text-center">
       <p className="text-base font-semibold text-seal-text">No pending approvals</p>
       <p className="mt-1 text-sm text-seal-text-muted">
         All user registrations have been processed.
@@ -105,7 +105,7 @@ export function UserApprovalPage() {
   return (
     <div className="mx-auto max-w-6xl">
       <div className="mb-8">
-        <h1 className="font-heading text-3xl font-bold tracking-tight text-seal-text">
+        <h1 className="font-mono text-3xl font-bold tracking-tight text-navy">
           User Approval
         </h1>
         <p className="mt-1 text-sm text-seal-text-muted">
@@ -122,14 +122,14 @@ export function UserApprovalPage() {
             setSearch(e.target.value);
             setPage(1);
           }}
-          className="w-full max-w-sm rounded-lg border border-seal-border/80 bg-white px-3 py-2 text-sm text-seal-text outline-none transition-colors focus:border-seal-purple"
+          className="w-full max-w-sm border-2 border-navy bg-white px-3 py-2 text-sm text-navy outline-none transition-colors focus:border-royal"
         />
       </div>
 
       {!isLoading && users.length === 0 ? (
         <EmptyState />
       ) : (
-        <div className="overflow-hidden rounded-xl border border-seal-border/50 bg-white shadow-sm">
+        <div className="overflow-hidden border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]">
           <table className="w-full border-collapse text-left">
             <thead className="bg-seal-bg">
               <tr>
@@ -162,7 +162,7 @@ export function UserApprovalPage() {
               type="button"
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page <= 1}
-              className="rounded-lg border border-seal-border/80 bg-white px-3 py-1.5 text-xs font-medium text-seal-text disabled:opacity-50"
+              className="border-2 border-navy bg-white px-3 py-1.5 text-xs font-medium text-navy disabled:opacity-50"
             >
               Previous
             </button>
@@ -170,7 +170,7 @@ export function UserApprovalPage() {
               type="button"
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page >= totalPages}
-              className="rounded-lg border border-seal-border/80 bg-white px-3 py-1.5 text-xs font-medium text-seal-text disabled:opacity-50"
+              className="border-2 border-navy bg-white px-3 py-1.5 text-xs font-medium text-navy disabled:opacity-50"
             >
               Next
             </button>

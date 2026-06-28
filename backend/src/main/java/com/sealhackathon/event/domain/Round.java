@@ -1,9 +1,12 @@
 package com.sealhackathon.event.domain;
 
 import com.sealhackathon.common.entity.BaseEntity;
+import com.sealhackathon.event.domain.enums.RoundType;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
@@ -88,6 +91,10 @@ public class Round extends BaseEntity {
     @Column(name = "round_weight", nullable = false, columnDefinition = "INT NOT NULL DEFAULT 100")
     @Builder.Default
     private Integer roundWeight = 100;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "round_type")
+    private RoundType roundType;
 
     // ── Child: criteria for this round ──
     @OneToMany(mappedBy = "round", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)

@@ -18,6 +18,8 @@ public class SubmissionVersionResponse {
     private UUID id;
     private Integer versionNumber;
     private String githubUrl;
+    private String sourceCodeUrl;
+    private String slideUrl;
     private String demoUrl;
     private LocalDateTime submittedAt;
     private List<AttachmentResponse> attachments;

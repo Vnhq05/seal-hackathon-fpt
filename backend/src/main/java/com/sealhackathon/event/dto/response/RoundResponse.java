@@ -1,5 +1,6 @@
 package com.sealhackathon.event.dto.response;
 
+import com.sealhackathon.event.domain.enums.RoundType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -25,6 +26,7 @@ public class RoundResponse {
     private LocalDateTime scoringDeadline;
     private Integer advancementCutoff;
     private Integer roundWeight;
+    private RoundType roundType;
     private List<CriteriaResponse> criteria;
     private int judgeCount;
 }

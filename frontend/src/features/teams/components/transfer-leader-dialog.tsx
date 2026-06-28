@@ -39,7 +39,7 @@ export function TransferLeaderDialog({ eventId, team, onClose }: TransferLeaderD
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-md rounded-lg border border-seal-border bg-seal-surface p-6 shadow-lg">
+      <div className="w-full max-w-md border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-6 shadow-lg">
         <h3 className="text-lg font-semibold text-seal-text">Transfer leadership</h3>
         <p className="mt-2 text-sm text-seal-text-muted">
           Chọn thành viên sẽ trở thành leader mới của team.
@@ -51,7 +51,7 @@ export function TransferLeaderDialog({ eventId, team, onClose }: TransferLeaderD
             {members.map((m) => (
               <label
                 key={m.id}
-                className="flex cursor-pointer items-center gap-3 rounded-lg border border-seal-border px-3 py-2 hover:bg-seal-surface-sunken"
+                className="flex cursor-pointer items-center gap-3 border-2 border-navy bg-white px-3 py-2 hover:bg-seal-surface-sunken"
               >
                 <input
                   type="radio"
@@ -70,14 +70,14 @@ export function TransferLeaderDialog({ eventId, team, onClose }: TransferLeaderD
           <button
             onClick={onClose}
             disabled={isPending}
-            className="rounded-lg border border-seal-border px-4 py-2 text-sm font-medium text-seal-text-secondary hover:bg-seal-surface-sunken"
+            className="border-2 border-navy bg-white px-4 py-2 text-sm font-medium text-seal-text-secondary hover:bg-seal-surface-sunken"
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
             disabled={isPending || !selectedId}
-            className="rounded-lg bg-seal-cyan px-4 py-2 text-sm font-semibold text-white hover:bg-seal-cyan-dark disabled:opacity-50"
+            className="border-2 border-navy bg-seal-yellow px-4 py-2 text-navy font-mono font-bold shadow-[4px_4px_0_0_#0c1228] disabled:opacity-50"
           >
             {isPending ? "Transferring..." : "Transfer"}
           </button>

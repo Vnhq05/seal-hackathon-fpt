@@ -7,6 +7,7 @@ export interface TrackResponse {
   eventId: string;
   name: string;
   description: string | null;
+  topic?: string | null;
   maxTeams: number;
   scoringTemplateId: string | null;
 }

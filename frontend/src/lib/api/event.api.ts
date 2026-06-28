@@ -1,5 +1,7 @@
 import { api } from "./api-client";
-import type { EventStatus, Page, PageParams } from "./types";
+import type { CompetitionFormat, EventStatus, Page, PageParams } from "./types";
+
+export type { CompetitionFormat };
 import type { TrackResponse } from "./track.api";
 import type { CreateRoundRequest } from "./round.api";
 
@@ -35,6 +37,7 @@ export interface EventResponse {
   description: string | null;
   location: string | null;
   format: string;
+  competitionFormat?: CompetitionFormat;
   minTeam: number | null;
   maxTeam: number | null;
   semesterMin: number | null;
@@ -67,6 +70,7 @@ export interface HonoredGuestRequest {
 export interface TrackRequest {
   name: string;
   description?: string;
+  topic?: string;
   maxTeams: number;
   scoringTemplateId?: string;
 }
@@ -81,6 +85,7 @@ export interface CreateEventRequest {
   description?: string;
   location?: string;
   format?: string;
+  competitionFormat?: CompetitionFormat;
   registrationOpenDate?: string;
   minTeam?: number;
   maxTeam?: number;

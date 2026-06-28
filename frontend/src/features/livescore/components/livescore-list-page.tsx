@@ -31,7 +31,7 @@ export function LiveScoreListPage({ portalBase = "/admin" }: { portalBase?: stri
         </div>
       ) : events.length === 0 ? (
         <div
-          className="flex flex-col items-center justify-center rounded-lg py-16"
+          className="flex flex-col items-center justify-center py-16 border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]"
           style={{ border: "1px dashed rgba(223,226,236,0.8)", backgroundColor: "#fafafa" }}
         >
           <p style={{ fontSize: 16, fontWeight: 600, color: "#0e1528" }}>No active events</p>
@@ -45,7 +45,7 @@ export function LiveScoreListPage({ portalBase = "/admin" }: { portalBase?: stri
             <Link
               key={event.id}
               href={`${portalBase}/livescore/${event.id}`}
-              className="flex items-center justify-between rounded-lg transition-colors hover:bg-slate-50"
+              className="flex items-center justify-between transition-colors hover:bg-slate-50 border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]"
               style={{
                 padding: "16px 20px",
                 backgroundColor: "#fff",

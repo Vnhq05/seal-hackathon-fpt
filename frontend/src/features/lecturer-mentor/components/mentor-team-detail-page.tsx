@@ -27,12 +27,12 @@ function ChevronRight() {
 function PageSkeleton() {
   return (
     <div className="flex flex-col gap-8" style={{ padding: 24 }}>
-      <div className="animate-pulse rounded-lg" style={{ height: 120, backgroundColor: "rgba(223,226,236,0.8)" }} />
+      <div className="animate-pulse border-2 border-navy/10 bg-seal-surface-sunken" style={{ height: 120 }} />
       <div className="grid grid-cols-3 gap-6">
-        <div className="animate-pulse rounded-lg" style={{ height: 400, backgroundColor: "rgba(223,226,236,0.8)" }} />
+        <div className="animate-pulse border-2 border-navy/10 bg-seal-surface-sunken" style={{ height: 400 }} />
         <div className="col-span-2 flex flex-col gap-4">
-          <div className="animate-pulse rounded-lg" style={{ height: 200, backgroundColor: "rgba(223,226,236,0.8)" }} />
-          <div className="animate-pulse rounded-lg" style={{ height: 180, backgroundColor: "rgba(223,226,236,0.8)" }} />
+          <div className="animate-pulse border-2 border-navy/10 bg-seal-surface-sunken" style={{ height: 200 }} />
+          <div className="animate-pulse border-2 border-navy/10 bg-seal-surface-sunken" style={{ height: 180 }} />
         </div>
       </div>
     </div>

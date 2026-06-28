@@ -67,7 +67,7 @@ export function MentorRoundCard({ round }: Props) {
   };
 
   return (
-    <div className="overflow-hidden rounded-lg" style={{ backgroundColor: "#eef0f6", border: "1px solid rgba(223,226,236,0.8)" }}>
+    <div className="overflow-hidden border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]" style={{ backgroundColor: "#eef0f6", border: "1px solid rgba(223,226,236,0.8)" }}>
       <div className="flex items-center justify-between" style={{ backgroundColor: "#eef0f6", borderBottom: "1px solid rgba(223,226,236,0.8)", padding: "15px 24px 17px" }}>
         <div className="flex items-center gap-2">
           <RoundIcon />

@@ -64,7 +64,7 @@ export function ExternalRegistrationForm({ eventId, eventName }: ExternalRegistr
   if (submitted) {
     return (
       <div className="flex flex-col gap-4 text-center">
-        <div className="rounded-lg bg-emerald-50 p-4 text-sm text-emerald-800">
+        <div className="bg-emerald-50 p-4 text-sm text-emerald-800">
           <p className="font-semibold">Registration submitted!</p>
           <p className="mt-2">
             Your request to join <strong>{eventName}</strong> is pending coordinator approval.
@@ -73,7 +73,7 @@ export function ExternalRegistrationForm({ eventId, eventName }: ExternalRegistr
         </div>
         <Link
           href="/login"
-          className="text-sm font-medium text-seal-cyan hover:underline"
+          className="text-sm font-medium text-royal hover:underline"
         >
           Already approved? Log in here
         </Link>
@@ -86,7 +86,7 @@ export function ExternalRegistrationForm({ eventId, eventName }: ExternalRegistr
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5">
-      <div className="rounded-lg bg-sky-50 p-4 text-sm text-sky-900">
+      <div className="bg-sky-50 p-4 text-sm text-sky-900 border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]">
         <p className="font-semibold">Event registration for external students</p>
         <p className="mt-1 text-sky-800">
           This is not the same as Create Account on the login page. Submit your details to request

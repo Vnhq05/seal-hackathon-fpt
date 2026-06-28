@@ -9,7 +9,7 @@ function StatCard({ label, value, href }: { label: string; value: number; href: 
   return (
     <Link
       href={href}
-      className="rounded-xl border border-seal-border/50 bg-white p-5 shadow-sm transition-colors hover:border-seal-purple/40"
+      className="border-2 border-navy bg-white p-5 shadow-[4px_4px_0_0_#0c1228] transition-colors hover:border-navy"
     >
       <p className="text-sm text-seal-text-muted">{label}</p>
       <p className="mt-2 text-3xl font-bold text-seal-text">{value}</p>
@@ -56,13 +56,13 @@ export function LecturerDashboardPage() {
         <div className="flex flex-wrap gap-3">
           <Link
             href="/lecturer/scoring"
-            className="rounded-lg bg-seal-purple px-4 py-2 text-sm font-semibold text-white hover:bg-seal-purple-dark"
+            className="border-2 border-navy bg-seal-yellow px-4 py-2 text-sm text-navy font-mono font-bold shadow-[4px_4px_0_0_#0c1228]"
           >
             Go to Scoring
           </Link>
           <Link
             href="/lecturer/rounds"
-            className="rounded-lg border border-seal-border px-4 py-2 text-sm font-semibold text-seal-text hover:bg-seal-bg"
+            className="border-2 border-navy bg-white px-4 py-2 text-sm font-mono font-bold text-navy shadow-[4px_4px_0_0_#0c1228] hover:bg-seal-surface-sunken"
           >
             Assigned Rounds
           </Link>
@@ -77,13 +77,13 @@ export function LecturerDashboardPage() {
         <div className="flex flex-wrap gap-3">
           <Link
             href="/lecturer/teams"
-            className="rounded-lg bg-seal-purple px-4 py-2 text-sm font-semibold text-white hover:bg-seal-purple-dark"
+            className="border-2 border-navy bg-seal-yellow px-4 py-2 text-sm text-navy font-mono font-bold shadow-[4px_4px_0_0_#0c1228]"
           >
             My Teams
           </Link>
           <Link
             href="/lecturer/mentor-hub"
-            className="rounded-lg border border-seal-border px-4 py-2 text-sm font-semibold text-seal-text hover:bg-seal-bg"
+            className="border-2 border-navy bg-white px-4 py-2 text-sm font-mono font-bold text-navy shadow-[4px_4px_0_0_#0c1228] hover:bg-seal-surface-sunken"
           >
             Mentor Hub
           </Link>

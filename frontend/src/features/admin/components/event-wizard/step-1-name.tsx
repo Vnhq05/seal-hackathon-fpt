@@ -66,6 +66,35 @@ export function Step1Name({ onNext }: { onNext: () => void }) {
       </div>
 
       <div>
+        <label style={labelStyle}>Competition Format</label>
+        <select
+          value={data.competitionFormat}
+          onChange={(e) => {
+            const fmt = e.target.value as "GENERIC" | "SEAL_RAG_2026";
+            updateData({
+              competitionFormat: fmt,
+              ...(fmt === "SEAL_RAG_2026"
+                ? {
+                    name: data.name || "SEAL Hackathon Spring",
+                    season: data.season || "Spring",
+                    year: data.year || 2026,
+                  }
+                : {}),
+            });
+          }}
+          style={inputStyle}
+        >
+          <option value="GENERIC">Generic Hackathon</option>
+          <option value="SEAL_RAG_2026">SEAL Spring 2026 (RAG Systems)</option>
+        </select>
+        {data.competitionFormat === "SEAL_RAG_2026" && (
+          <p style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>
+            Auto-creates 3 tracks, 2 rounds (preliminary + final), rubrics and prizes.
+          </p>
+        )}
+      </div>
+
+      <div>
         <label style={labelStyle}>Event Name</label>
         <input
           value={data.name}
@@ -77,7 +106,7 @@ export function Step1Name({ onNext }: { onNext: () => void }) {
       </div>
 
       <div className="flex justify-end" style={{ marginTop: 8 }}>
-        <button onClick={handleNext} className="rounded-lg" style={{ backgroundColor: "#38bdf8", padding: "10px 24px", color: "#ffffff", fontSize: 14, fontWeight: 600, border: "none", cursor: "pointer" }}>
+        <button onClick={handleNext} className="border-2 border-navy bg-seal-yellow px-6 py-2.5 text-sm text-navy font-mono font-bold cursor-pointer">
           Next
         </button>
       </div>

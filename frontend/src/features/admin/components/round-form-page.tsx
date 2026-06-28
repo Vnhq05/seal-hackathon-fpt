@@ -56,7 +56,15 @@ export function RoundFormPage({ roundId }: { roundId?: string }) {
   }
 
   const onSubmit = (values: RoundFormValues) => {
-    const { eventId: evId, ...roundData } = values;
+    const roundData = {
+      roundNumber: values.roundNumber,
+      name: values.name,
+      startDate: values.startDate,
+      endDate: values.endDate,
+      submissionDeadline: values.submissionDeadline,
+      scoringDeadline: values.scoringDeadline,
+      advancementCutoff: values.advancementCutoff,
+    };
     if (isEdit && roundId) {
       update({ roundId, ...roundData }, { onSuccess: () => router.push("/admin/hackathons") });
     } else {
@@ -82,8 +90,7 @@ export function RoundFormPage({ roundId }: { roundId?: string }) {
 
       <form
         onSubmit={handleSubmit(onSubmit)}
-        className="flex flex-col gap-6 rounded-lg"
-        style={{ backgroundColor: "#ffffff", border: "1px solid rgba(198,198,205,0.5)", padding: 32, maxWidth: 720 }}
+        className="flex flex-col gap-6 p-8 max-w-[720px] border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]"
       >
         <div className="flex flex-col">
           <label style={labelStyle}>Event</label>
@@ -152,16 +159,14 @@ export function RoundFormPage({ roundId }: { roundId?: string }) {
           <button
             type="submit"
             disabled={isPending}
-            className="rounded-lg"
-            style={{ backgroundColor: "#38bdf8", padding: "10px 24px", color: "#ffffff", fontSize: 14, fontWeight: 600, border: "none", cursor: "pointer", opacity: isPending ? 0.7 : 1 }}
+            className="border-2 border-navy bg-seal-yellow px-6 py-2.5 text-sm text-navy font-mono font-bold cursor-pointer"
           >
             {isPending ? "Saving..." : "Save"}
           </button>
           <button
             type="button"
             onClick={() => router.push("/admin/hackathons")}
-            className="rounded-lg"
-            style={{ backgroundColor: "#ffffff", padding: "10px 24px", color: "#0e1528", fontSize: 14, fontWeight: 600, border: "1px solid rgba(223,226,236,0.8)", cursor: "pointer" }}
+            className="border-2 border-navy bg-white px-6 py-2.5 text-sm font-medium text-navy cursor-pointer"
           >
             Cancel
           </button>

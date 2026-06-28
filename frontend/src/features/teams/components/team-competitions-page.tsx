@@ -80,14 +80,14 @@ export function TeamCompetitionsPage() {
             Manage your teams across hackathon events.
           </p>
         </div>
-        <span className="rounded-lg border border-seal-border bg-seal-surface-elevated px-3 py-1.5 text-xs font-medium text-seal-text-secondary">
+        <span className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] px-3 py-1.5 text-xs font-medium text-seal-text-secondary">
           {(allTeams?.length ?? 0)} event{(allTeams?.length ?? 0) === 1 ? "" : "s"}
         </span>
       </div>
 
       <PendingInvitationsBanner invitations={pendingInvitations as InvitationResponse[]} />
 
-      <div className="flex gap-1 rounded-lg border border-seal-border bg-seal-surface p-1 self-start">
+      <div className="flex gap-1 border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-1 self-start">
         {([
           { key: "current" as const, label: "Current" },
           { key: "past" as const, label: "Past participation" },
@@ -97,7 +97,7 @@ export function TeamCompetitionsPage() {
             onClick={() => setTab(t.key)}
             className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
               tab === t.key
-                ? "bg-seal-cyan/10 text-seal-cyan"
+                ? "bg-seal-yellow text-navy font-mono font-bold"
                 : "text-seal-text-muted hover:text-seal-text"
             }`}
           >
@@ -120,14 +120,14 @@ export function TeamCompetitionsPage() {
                   </p>
                 </div>
               ) : (
-                <div className="rounded-lg border border-seal-border bg-seal-surface p-8 text-center">
+                <div className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-8 text-center">
                   <p className="font-semibold text-seal-text">No active teams yet</p>
                   <p className="mt-1 text-sm text-seal-text-muted">
                     Register for an open event from the Dashboard to create your team.
                   </p>
                   <Link
                     href="/student"
-                    className="mt-4 inline-flex rounded-lg bg-seal-cyan px-4 py-2 text-xs font-semibold text-white hover:bg-seal-cyan-dark"
+                    className="mt-4 inline-flex border-2 border-navy bg-seal-yellow px-4 py-2 text-navy font-mono font-bold shadow-[4px_4px_0_0_#0c1228]"
                   >
                     Go to Dashboard
                   </Link>
@@ -136,7 +136,7 @@ export function TeamCompetitionsPage() {
             </div>
           ) : (
             <div className="grid gap-4 md:grid-cols-[280px_1fr]">
-              <div className="rounded-lg border border-seal-border bg-seal-surface overflow-hidden self-start">
+              <div className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] overflow-hidden self-start">
                 <div className="border-b border-seal-border-light px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-seal-text-muted">
                   Events you joined
                 </div>

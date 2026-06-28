@@ -77,7 +77,7 @@ export function CreateTeamPanel({ event, onCreated }: CreateTeamPanelProps) {
     : false;
 
   return (
-    <div className="rounded-lg border border-seal-border bg-seal-surface p-6">
+    <div className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-6">
       <h2 className="text-lg font-semibold text-seal-text">Create your team</h2>
       <p className="mt-1 text-sm text-seal-text-muted">
         You are enrolled in <span className="font-medium text-seal-text">{event.name}</span>.
@@ -92,7 +92,7 @@ export function CreateTeamPanel({ event, onCreated }: CreateTeamPanelProps) {
             onChange={(e) => setTeamName(e.target.value)}
             placeholder="Enter team name"
             maxLength={255}
-            className="mt-1.5 w-full rounded-lg border border-seal-border bg-seal-surface px-3 py-2 text-sm text-seal-text outline-none focus:border-seal-cyan/40"
+            className="mt-1.5 w-full border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] px-3 py-2 text-sm text-seal-text outline-none focus:border-royal/40"
           />
         </div>
 
@@ -105,7 +105,7 @@ export function CreateTeamPanel({ event, onCreated }: CreateTeamPanelProps) {
           ) : available.length === 0 ? (
             <p className="mt-2 text-sm text-seal-text-muted">Waiting list trống — bạn có thể mời sau khi tạo team.</p>
           ) : (
-            <div className="mt-2 max-h-48 overflow-y-auto rounded-lg border border-seal-border divide-y divide-seal-border-light">
+            <div className="mt-2 max-h-48 overflow-y-auto border-2 border-navy bg-white divide-y divide-navy/10 shadow-[2px_2px_0_0_#0c1228]">
               {available.map((e) => (
                 <label
                   key={e.userId}
@@ -146,7 +146,7 @@ export function CreateTeamPanel({ event, onCreated }: CreateTeamPanelProps) {
         <button
           onClick={handleSubmit}
           disabled={isPending || !teamName.trim() || registrationClosed}
-          className="rounded-lg bg-seal-cyan px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-seal-cyan-dark disabled:opacity-50"
+          className="border-2 border-navy bg-seal-yellow px-4 py-2.5 text-navy font-mono font-bold shadow-[4px_4px_0_0_#0c1228] disabled:opacity-50"
         >
           {isPending ? "Creating..." : "Invite"}
         </button>

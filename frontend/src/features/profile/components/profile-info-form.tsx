@@ -94,7 +94,7 @@ export function ProfileInfoForm({ profile }: ProfileInfoFormProps) {
 
   return (
     <section
-      className="rounded-lg bg-seal-surface"
+      className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]"
       style={{
         border: "1px solid rgba(223,226,236,0.8)",
         boxShadow: "0px 1px 2px rgba(0, 0, 0, 0.05)",
@@ -230,7 +230,7 @@ export function ProfileInfoForm({ profile }: ProfileInfoFormProps) {
           <button
             type="submit"
             disabled={!isDirty || isPending}
-            className="rounded-lg text-white transition-opacity disabled:cursor-not-allowed"
+            className="text-white transition-opacity disabled:cursor-not-allowed"
             style={{
               backgroundColor: isDirty ? "#38bdf8" : "rgba(99, 102, 241, 0.5)",
               padding: "8px 24px",

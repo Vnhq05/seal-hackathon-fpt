@@ -42,7 +42,7 @@ export function LoginForm() {
     <div className="flex w-full flex-col">
       {/* Header */}
       <div className="mb-8">
-        <h2 className="text-2xl font-semibold text-seal-text">
+        <h2 className="font-mono text-2xl font-bold text-navy">
           Welcome back
         </h2>
         <p className="mt-1 text-sm text-seal-text-secondary">
@@ -54,13 +54,13 @@ export function LoginForm() {
       {justRegistered && (
         <div
           role="status"
-          className="mb-6 flex items-center gap-3 rounded-[10px] border border-seal-cyan/20 bg-seal-cyan/10 px-4 py-3"
+          className="mb-6 flex items-center gap-3 border-2 border-seal-success/30 bg-seal-success/10 px-4 py-3"
         >
           <svg className="h-5 w-5 flex-shrink-0" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-            <circle cx="10" cy="10" r="9" fill="var(--color-seal-cyan)" />
+            <circle cx="10" cy="10" r="9" fill="var(--color-seal-success)" />
             <path d="M6.5 10.5L9 13L13.5 7.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
-          <p className="text-sm text-seal-cyan">
+          <p className="text-sm text-seal-success">
             Registration successful! Please wait for admin approval before signing in.
           </p>
         </div>
@@ -117,7 +117,7 @@ export function LoginForm() {
           <Checkbox id="rememberMe" label="Remember me" {...register("rememberMe")} />
           <Link
             href="/forgot-password"
-            className="text-xs font-semibold text-seal-cyan transition-colors duration-200 hover:text-seal-cyan-dark hover:underline"
+            className="font-mono text-xs font-bold text-royal transition-colors hover:text-royal-dark hover:underline"
           >
             Forgot password?
           </Link>
@@ -144,7 +144,7 @@ export function LoginForm() {
       {/* Register Link */}
       <p className="text-center text-sm text-seal-text-secondary">
         Don&apos;t have an account?{" "}
-        <Link href="/register" className="font-medium text-seal-cyan transition-colors duration-200 hover:text-seal-cyan-dark hover:underline">
+        <Link href="/register" className="font-mono font-bold text-royal transition-colors hover:text-royal-dark hover:underline">
           Register
         </Link>
       </p>

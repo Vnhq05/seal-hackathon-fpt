@@ -1,34 +1,5 @@
 import type { MentorSummary } from "@/features/lecturer-mentor/types/mentor.types";
 
-const cardStyle: React.CSSProperties = {
-  backdropFilter: "blur(5px)",
-  backgroundColor: "rgba(255,255,255,0.95)",
-  border: "1px solid rgba(223,226,236,0.8)",
-  borderRadius: 8,
-  padding: "24px 20px",
-  display: "flex",
-  flexDirection: "column",
-  justifyContent: "center",
-};
-
-const labelStyle: React.CSSProperties = {
-  fontSize: 12,
-  fontWeight: 500,
-  color: "#8891a5",
-  letterSpacing: "0.6px",
-  textTransform: "uppercase" as const,
-  lineHeight: "12px",
-};
-
-const valueStyle: React.CSSProperties = {
-  fontSize: 28,
-  fontWeight: 700,
-  color: "#0e1528",
-  letterSpacing: "-0.24px",
-  lineHeight: "36px",
-  marginTop: 4,
-};
-
 interface MentorDashboardStatsProps {
   summary: MentorSummary;
 }
@@ -36,7 +7,7 @@ interface MentorDashboardStatsProps {
 export function MentorDashboardStats({ summary }: MentorDashboardStatsProps) {
   return (
     <div
-      className="flex items-center justify-between overflow-hidden rounded-lg"
+      className="flex items-center justify-between overflow-hidden border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]"
       style={{
         background: "linear-gradient(135deg, #38bdf8 0%, #4338ca 100%)",
         padding: "28px 32px",

@@ -34,12 +34,11 @@ interface StatCardProps {
 
 function StatCard({ icon, label, value, sub, trend, loading }: StatCardProps) {
   if (loading) {
-    return <div className="animate-pulse rounded-lg" style={{ height: 130, backgroundColor: "rgba(223,226,236,0.8)", border: "1px solid rgba(198,198,205,0.3)" }} />;
+    return <div className="animate-pulse border-2 border-navy/10 bg-seal-surface-sunken" style={{ height: 130 }} />;
   }
   return (
     <div
-      className="flex flex-col rounded-lg"
-      style={{ backgroundColor: "#ffffff", border: "1px solid rgba(198,198,205,0.5)", padding: "20px 24px" }}
+      className="flex flex-col border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] px-6 py-5"
     >
       <div className="flex items-center justify-between" style={{ marginBottom: 16 }}>
         <span style={{ fontSize: 12, fontWeight: 600, color: "#8891a5", letterSpacing: "0.3px" }}>{label}</span>

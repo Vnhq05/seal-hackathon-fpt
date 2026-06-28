@@ -44,6 +44,9 @@ public class MentorAssignment extends BaseEntity {
     @Column(name = "mentor_user_id", nullable = false)
     private UUID mentorUserId;
 
+    @Column(name = "track_id")
+    private UUID trackId;
+
     @NotNull
     @Column(name = "assigned_at", nullable = false)
     private LocalDateTime assignedAt;

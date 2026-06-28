@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import {
@@ -29,21 +29,6 @@ function RocketIcon() {
         d="M9.41 14.59L2 22M14.5 9.5l5.5-5.5M22 2l-1 7.5-6.5 6.5-7-7L14 2.5 22 2z"
         stroke="#38bdf8"
         strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function ClockIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <circle cx="8" cy="8" r="6.5" stroke="#b45309" strokeWidth="1.2" />
-      <path
-        d="M8 4.5V8l2.5 1.5"
-        stroke="#b45309"
-        strokeWidth="1.2"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
@@ -82,20 +67,6 @@ const errorStyle: React.CSSProperties = {
   marginTop: 4,
 };
 
-const bannerStyle: React.CSSProperties = {
-  backgroundColor: "rgba(245,158,11,0.1)",
-  border: "1px solid rgba(245,158,11,0.3)",
-  borderRadius: 6,
-  padding: "10px 14px",
-};
-
-const bannerTextStyle: React.CSSProperties = {
-  fontSize: 13,
-  fontWeight: 500,
-  color: "#b45309",
-  lineHeight: "18px",
-};
-
 /* ── Component ─────────────────────────────────────────────── */
 
 interface SubmitProjectFormProps {
@@ -111,7 +82,7 @@ export function SubmitProjectForm({ roundId, roundName }: SubmitProjectFormProps
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     formState: { errors },
   } = useForm<SubmitProjectFormValues>({
     resolver: zodResolver(submitProjectSchema),
@@ -128,7 +99,7 @@ export function SubmitProjectForm({ roundId, roundName }: SubmitProjectFormProps
     submitError,
   } = useSubmitProject();
 
-  const repositoryUrl = watch("repositoryUrl");
+  const repositoryUrl = useWatch({ control, name: "repositoryUrl" });
   const { data: repoInfo, isLoading: isLoadingRepo } =
     useGitHubRepo(repositoryUrl);
 

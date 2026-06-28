@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { PrizeRank } from "@/lib/api/event.api";
+import type { PrizeRank, CompetitionFormat } from "@/lib/api/event.api";
 
 export interface WizardTrack {
   name: string;
@@ -45,6 +45,7 @@ export interface EventWizardData {
   name: string;
   season: string;
   year: number;
+  competitionFormat: CompetitionFormat;
   // Step 2
   description: string;
   location: string;
@@ -86,6 +87,7 @@ const initialData: EventWizardData = {
   name: "",
   season: "",
   year: new Date().getFullYear(),
+  competitionFormat: "GENERIC",
   description: "",
   location: "",
   format: "OFFLINE",

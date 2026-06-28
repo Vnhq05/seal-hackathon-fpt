@@ -35,6 +35,7 @@ public class TrackService {
                 .hackathonEvent(event)
                 .name(request.getName())
                 .description(request.getDescription())
+                .topic(request.getTopic())
                 .maxTeams(request.getMaxTeams())
                 .scoringTemplateId(request.getScoringTemplateId())
                 .build();
@@ -52,6 +53,7 @@ public class TrackService {
 
         track.setName(request.getName());
         track.setDescription(request.getDescription());
+        track.setTopic(request.getTopic());
         track.setMaxTeams(request.getMaxTeams());
         track.setScoringTemplateId(request.getScoringTemplateId());
 
@@ -91,6 +93,7 @@ public class TrackService {
                 .eventId(track.getHackathonEvent().getId())
                 .name(track.getName())
                 .description(track.getDescription())
+                .topic(track.getTopic())
                 .maxTeams(track.getMaxTeams())
                 .scoringTemplateId(track.getScoringTemplateId())
                 .build();

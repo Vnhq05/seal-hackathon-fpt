@@ -12,14 +12,6 @@ import type { EventResponse, EventStatus } from "@/lib/api";
 
 const SEASONS = ["Spring", "Summer", "Fall", "Winter"] as const;
 
-function getCurrentSeason(): string {
-  const month = new Date().getMonth();
-  if (month < 3) return "Spring";
-  if (month < 6) return "Summer";
-  if (month < 9) return "Fall";
-  return "Winter";
-}
-
 const headerCell: React.CSSProperties = {
   fontSize: 12, fontWeight: 600, color: "#8891a5",
   letterSpacing: "0.24px", lineHeight: "12px", padding: "12px 16px", textAlign: "left",
@@ -43,7 +35,9 @@ const selectStyle: React.CSSProperties = {
 const STATUS_STYLES: Record<EventStatus, React.CSSProperties> = {
   UPCOMING:  { backgroundColor: "#f0f9ff", color: "#0369a1" },
   OPEN:      { backgroundColor: "#e0f2fe", color: "#0284c7" },
+  CLOSED_REGISTRATION: { backgroundColor: "#fef3c7", color: "#b45309" },
   ACTIVE:    { backgroundColor: "#dcfce7", color: "#166534" },
+  SCORING:   { backgroundColor: "#ede9fe", color: "#6d28d9" },
   COMPLETED: { backgroundColor: "#eef0f6", color: "#8891a5" },
   CANCELLED: { backgroundColor: "#fef2f2", color: "#991b1b" },
 };
@@ -51,7 +45,9 @@ const STATUS_STYLES: Record<EventStatus, React.CSSProperties> = {
 const STATUS_LABELS: Record<EventStatus, string> = {
   UPCOMING:  "Upcoming",
   OPEN:      "Open",
+  CLOSED_REGISTRATION: "Registration Closed",
   ACTIVE:    "Active",
+  SCORING:   "Scoring",
   COMPLETED: "Closed",
   CANCELLED: "Cancelled",
 };
@@ -252,8 +248,7 @@ export function HackathonManagementPage() {
         </div>
         <Link
           href="/admin/hackathons/new"
-          className="flex items-center justify-center rounded-lg"
-          style={{ backgroundColor: "#38bdf8", padding: "10px 20px", color: "#ffffff", fontSize: 14, fontWeight: 600 }}
+          className="flex items-center justify-center border-2 border-navy bg-seal-yellow px-6 py-2.5 text-sm text-navy font-mono font-bold cursor-pointer"
         >
           Create Event
         </Link>
@@ -306,7 +301,7 @@ export function HackathonManagementPage() {
         </div>
       )}
 
-      <div className="overflow-hidden rounded-lg" style={{ backgroundColor: "#ffffff", border: "1px solid rgba(198,198,205,0.5)" }}>
+      <div className="overflow-hidden border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]">
         <table className="w-full" style={{ borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ backgroundColor: "#eef0f6" }}>

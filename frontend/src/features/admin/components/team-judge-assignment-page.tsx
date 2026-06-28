@@ -141,7 +141,7 @@ export function TeamJudgeAssignmentPage() {
       </div>
 
       {selectedEventId && selectedRoundId && (
-        <div className="overflow-hidden rounded-lg" style={{ backgroundColor: "#ffffff", border: "1px solid rgba(198,198,205,0.5)" }}>
+        <div className="overflow-hidden border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]">
           <table className="w-full" style={{ borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ backgroundColor: "#eef0f6" }}>

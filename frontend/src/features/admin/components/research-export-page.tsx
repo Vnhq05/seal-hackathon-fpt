@@ -73,7 +73,7 @@ export function ResearchExportPage() {
         </p>
       </div>
 
-      <div className="flex flex-col gap-6 rounded-lg" style={{ backgroundColor: "#ffffff", border: "1px solid rgba(198,198,205,0.5)", padding: 32, maxWidth: 720 }}>
+      <div className="flex flex-col gap-6 p-8 max-w-[720px] border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]">
         <div className="flex flex-col">
           <label style={labelStyle}>Event</label>
           <select value={eventId} onChange={(e) => setEventId(e.target.value)} style={inputStyle}>
@@ -115,8 +115,7 @@ export function ResearchExportPage() {
         <button
           onClick={handleDownload}
           disabled={isPending || !eventId}
-          className="rounded-lg"
-          style={{ backgroundColor: "#38bdf8", padding: "10px 24px", color: "#ffffff", fontSize: 14, fontWeight: 600, border: "none", cursor: "pointer", width: "fit-content", opacity: isPending || !eventId ? 0.5 : 1 }}
+          className="border-2 border-navy bg-seal-yellow px-6 py-2.5 text-sm text-navy font-mono font-bold cursor-pointer"
         >
           {isPending ? "Exporting..." : "Export Dataset"}
         </button>

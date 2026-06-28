@@ -3,10 +3,6 @@ import {
   eventApi,
   adminUserApi,
   auditApi,
-  type EventResponse,
-  type EventListParams,
-  type AuditLogResponse,
-  type Page,
 } from "@/lib/api";
 
 export const ADMIN_DASHBOARD_KEY = "admin-dashboard" as const;

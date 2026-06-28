@@ -18,35 +18,14 @@ export function NotificationPage() {
     <div className="flex flex-col gap-6">
       <div className="pt-4">
         <div className="flex items-center justify-between">
-          <h1
-            style={{
-              fontSize: "32px",
-              fontWeight: 700,
-              color: "#0e1528",
-              lineHeight: "38.4px",
-              letterSpacing: "-0.64px",
-              fontFamily: "Inter, sans-serif",
-            }}
-          >
+          <h1 className="font-mono text-3xl font-bold tracking-tight text-navy">
             Notifications
           </h1>
 
           <button
             onClick={() => markAllRead()}
             disabled={isMarkingAll || !hasUnread}
-            className="focus:outline-none disabled:cursor-not-allowed disabled:opacity-40"
-            style={{
-              fontSize: "12px",
-              fontWeight: 500,
-              color: "#8891a5",
-              letterSpacing: "0.24px",
-              lineHeight: "12px",
-              textDecoration: "underline",
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              fontFamily: "Inter, sans-serif",
-            }}
+            className="text-xs font-medium text-seal-text-muted underline focus:outline-none disabled:cursor-not-allowed disabled:opacity-40"
           >
             {isMarkingAll ? "Marking..." : "Mark all as read"}
           </button>

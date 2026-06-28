@@ -16,6 +16,8 @@ export interface SubmissionVersionResponse {
   id: string;
   versionNumber: number;
   githubUrl: string;
+  sourceCodeUrl?: string;
+  slideUrl?: string | null;
   demoUrl: string;
   submittedAt: string;
   attachments: AttachmentResponse[];
@@ -34,7 +36,9 @@ export interface SubmissionResponse {
 }
 
 export interface CreateSubmissionRequest {
-  githubUrl: string;
+  githubUrl?: string;
+  sourceCodeUrl?: string;
+  slideUrl?: string;
   demoUrl: string;
   pdfPageCount?: number;
 }
@@ -56,12 +60,15 @@ export const submissionApi = {
       formData.append("pdf", pdfFile);
     }
 
-    const { data } = await apiClient.post<ApiResponse<SubmissionResponse>>(
+    const { data: wrapper } = await apiClient.post<ApiResponse<SubmissionResponse>>(
       `/rounds/${roundId}/submissions`,
       formData,
       { headers: { "Content-Type": "multipart/form-data" } },
     );
-    return data.data;
+    if (!wrapper.success) {
+      throw new Error(wrapper.message);
+    }
+    return wrapper.data;
   },
 
   async getByTeamOptional(roundId: string, teamId: string): Promise<SubmissionResponse | null> {

@@ -45,6 +45,10 @@ public class Track extends BaseEntity {
     @Column(name = "description", length = 1000)
     private String description;
 
+    @Size(max = 1000)
+    @Column(name = "topic", length = 1000)
+    private String topic;
+
     @NotNull
     @Min(1)
     @Column(name = "max_teams", nullable = false)

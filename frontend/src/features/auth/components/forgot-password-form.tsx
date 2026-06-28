@@ -88,7 +88,7 @@ export function ForgotPasswordForm() {
       <div className="mb-7 flex flex-col items-center gap-4 text-center">
         <ForgotPasswordIcon />
         <div className="flex flex-col gap-2">
-          <h1 className="text-2xl font-bold text-seal-text">
+          <h1 className="font-mono text-2xl font-bold text-seal-text">
             Forgot password?
           </h1>
           <p className="text-sm text-seal-text-secondary">

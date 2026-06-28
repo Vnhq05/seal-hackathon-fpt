@@ -57,6 +57,10 @@ public class SubmissionVersion extends BaseEntity {
     @Column(name = "github_url", nullable = false)
     private String githubUrl;
 
+    @Size(max = 500)
+    @Column(name = "slide_url")
+    private String slideUrl;
+
     // ── BR-28: validated against domain whitelist ──
     @NotBlank
     @Size(max = 500)

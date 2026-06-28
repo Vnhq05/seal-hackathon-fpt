@@ -65,7 +65,7 @@ export function EventCriteriaPage() {
         </p>
       </div>
 
-      <div className="flex flex-col gap-6 rounded-lg" style={{ backgroundColor: "#ffffff", border: "1px solid rgba(198,198,205,0.5)", padding: 32, maxWidth: 720 }}>
+      <div className="flex flex-col gap-6 p-8 max-w-[720px] border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]">
         <div className="grid grid-cols-2 gap-4">
           <div className="flex flex-col">
             <label style={labelStyle}>Event</label>
@@ -86,7 +86,7 @@ export function EventCriteriaPage() {
         {overrides.length > 0 && (
           <div>
             <p style={{ fontSize: 14, fontWeight: 600, color: "#0e1528", marginBottom: 12 }}>Weight Overrides</p>
-            <div className="overflow-hidden rounded-lg" style={{ border: "1px solid rgba(198,198,205,0.5)" }}>
+            <div className="overflow-hidden border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]" style={{ border: "1px solid rgba(198,198,205,0.5)" }}>
               <table className="w-full" style={{ borderCollapse: "collapse" }}>
                 <thead>
                   <tr style={{ backgroundColor: "#eef0f6" }}>
@@ -118,8 +118,7 @@ export function EventCriteriaPage() {
         <button
           onClick={handleSave}
           disabled={isPending || !roundId || overrides.length === 0}
-          className="rounded-lg"
-          style={{ backgroundColor: "#38bdf8", padding: "10px 24px", color: "#ffffff", fontSize: 14, fontWeight: 600, border: "none", cursor: "pointer", opacity: isPending ? 0.7 : 1, width: "fit-content" }}
+          className="border-2 border-navy bg-seal-yellow px-6 py-2.5 text-sm text-navy font-mono font-bold cursor-pointer"
         >
           {isPending ? "Saving..." : "Save Configuration"}
         </button>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useEventWizardStore, type WizardGuest, type WizardPrize } from "@/features/admin/store/event-wizard.store";
 import {
   DEFAULT_CONSOLATION_LABEL,
@@ -160,6 +160,17 @@ function PrizeForm({
 }
 
 export function Step5Prizes({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
+  const { data } = useEventWizardStore();
+  const syncKey = [
+    data.applyPrizesToAllTracks,
+    data.tracks.length,
+    data.prizes.map((p) => `${p.rank}:${p.value}:${p.trackIndex ?? ""}`).join("|"),
+  ].join(":");
+
+  return <Step5PrizesBody key={syncKey} onNext={onNext} onBack={onBack} />;
+}
+
+function Step5PrizesBody({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
   const { data, updateData } = useEventWizardStore();
 
   const [guestName, setGuestName] = useState("");
@@ -176,18 +187,6 @@ export function Step5Prizes({ onNext, onBack }: { onNext: () => void; onBack: ()
     });
     return map;
   });
-
-  useEffect(() => {
-    if (data.applyPrizesToAllTracks) {
-      setSharedRows(rowsFromPrizes(data.prizes));
-    } else {
-      const map: Record<number, PrizeRow[]> = {};
-      data.tracks.forEach((_, idx) => {
-        map[idx] = rowsFromPrizes(data.prizes, idx);
-      });
-      setTrackRows(map);
-    }
-  }, [data.applyPrizesToAllTracks, data.prizes, data.tracks.length]);
 
   const handleModeChange = (applyAll: boolean) => {
     setFormError(null);
@@ -384,8 +383,8 @@ export function Step5Prizes({ onNext, onBack }: { onNext: () => void; onBack: ()
       </div>
 
       <div className="flex justify-between" style={{ marginTop: 8 }}>
-        <button onClick={onBack} className="rounded-lg" style={{ backgroundColor: "#ffffff", padding: "10px 24px", color: "#0e1528", fontSize: 14, fontWeight: 600, border: "1px solid rgba(223,226,236,0.8)", cursor: "pointer" }}>Back</button>
-        <button onClick={() => { if (validate()) onNext(); }} className="rounded-lg" style={{ backgroundColor: "#38bdf8", padding: "10px 24px", color: "#ffffff", fontSize: 14, fontWeight: 600, border: "none", cursor: "pointer" }}>Next</button>
+        <button onClick={onBack} className="border-2 border-navy bg-white px-6 py-2.5 text-sm font-medium text-navy cursor-pointer">Back</button>
+        <button onClick={() => { if (validate()) onNext(); }} className="border-2 border-navy bg-seal-yellow px-6 py-2.5 text-sm text-navy font-mono font-bold cursor-pointer">Next</button>
       </div>
     </div>
   );

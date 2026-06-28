@@ -1,5 +1,6 @@
 package com.sealhackathon.event.dto.snapshot;
 
+import com.sealhackathon.event.domain.enums.CompetitionFormat;
 import com.sealhackathon.event.domain.enums.EventStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -24,6 +25,7 @@ public class EventSnapshot {
     private LocalDate registrationDeadline;
     private LocalDate registrationOpenDate;
     private EventStatus status;
+    private CompetitionFormat competitionFormat;
     private Integer semesterMin;
     private Integer semesterMax;
     private boolean leaderboardPublic;

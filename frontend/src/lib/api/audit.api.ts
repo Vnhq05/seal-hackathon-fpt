@@ -1,6 +1,6 @@
 import { api } from "./api-client";
 import { apiClient } from "@/lib/axios";
-import type { ApiResponse, Page, PageParams } from "./types";
+import type { Page, PageParams } from "./types";
 
 // ═══ Types ═══
 

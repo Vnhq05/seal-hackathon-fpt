@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { Header } from "@/features/landing/components/header";
+import { LandingNavbar } from "@/features/landing/components/landing-navbar";
 import { Footer } from "@/features/landing/components/footer";
 import { usePublicEvent, usePublicEventRounds } from "@/features/events/hooks/use-public-event";
 import {
@@ -30,7 +30,7 @@ const SECTION_LINKS = [
 const TRACK_ACCENTS = [
   { border: "border-seal-cyan/30", text: "text-seal-cyan", bg: "from-seal-cyan/10 to-transparent" },
   { border: "border-seal-mint/30", text: "text-seal-mint", bg: "from-seal-mint/10 to-transparent" },
-  { border: "border-seal-purple/30", text: "text-seal-purple", bg: "from-seal-purple/10 to-transparent" },
+  { border: "border-royal/30", text: "text-royal", bg: "from-royal/10 to-transparent" },
   { border: "border-seal-blue/30", text: "text-seal-blue", bg: "from-seal-blue/10 to-transparent" },
 ];
 
@@ -61,17 +61,17 @@ function PageSkeleton() {
 function NotFoundState() {
   return (
     <div className="flex min-h-screen flex-col bg-seal-bg">
-      <Header />
+      <LandingNavbar />
       <main className="flex flex-1 items-center justify-center px-4">
         <div className="max-w-md text-center">
           <p className="font-mono text-xs uppercase tracking-widest text-seal-cyan">404</p>
-          <h1 className="mt-3 font-heading text-3xl font-bold text-seal-text">Event not found</h1>
+          <h1 className="mt-3 font-mono text-3xl font-bold text-navy">Event not found</h1>
           <p className="mt-3 text-seal-text-secondary">
             This hackathon may have been removed or is not yet published.
           </p>
           <Link
             href="/#featured"
-            className="mt-8 inline-flex h-11 items-center rounded-lg bg-gradient-to-r from-seal-cyan to-seal-mint px-6 text-sm font-bold text-seal-bg"
+            className="mt-8 inline-flex h-11 items-center border-2 border-navy bg-seal-yellow px-6 text-sm font-mono font-bold text-navy shadow-[4px_4px_0_0_#0c1228]"
           >
             Explore Events
           </Link>
@@ -84,8 +84,8 @@ function NotFoundState() {
 
 function StatPill({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="seal-glass rounded-xl border border-white/10 px-4 py-3 text-center backdrop-blur-md">
-      <p className="font-heading text-2xl font-bold text-white">{value}</p>
+    <div className="border-2 border-white/20 bg-white/10 px-4 py-3 text-center">
+      <p className="font-mono text-2xl font-bold text-white">{value}</p>
       <p className="mt-0.5 font-mono text-[10px] uppercase tracking-wider text-seal-cyan/70">{label}</p>
     </div>
   );
@@ -109,7 +109,7 @@ function HeroSection({ event }: { event: EventResponse }) {
         aria-hidden="true"
       />
       <div className="pointer-events-none absolute -top-24 left-1/4 h-96 w-96 rounded-full bg-seal-cyan/10 blur-[120px]" aria-hidden="true" />
-      <div className="pointer-events-none absolute right-0 bottom-0 h-80 w-80 rounded-full bg-seal-purple/10 blur-[100px]" aria-hidden="true" />
+      <div className="pointer-events-none absolute right-0 bottom-0 h-80 w-80 rounded-full bg-royal/10/10 blur-[100px]" aria-hidden="true" />
       <div className="pointer-events-none absolute top-1/2 left-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-seal-cyan/5 seal-glow" aria-hidden="true" />
 
       <div className="relative mx-auto max-w-7xl px-4 pb-20 sm:px-6 lg:px-8">
@@ -124,7 +124,7 @@ function HeroSection({ event }: { event: EventResponse }) {
           </span>
         </div>
 
-        <h1 className="mt-6 max-w-4xl font-heading text-4xl font-extrabold leading-[1.05] tracking-tight text-white sm:text-5xl lg:text-6xl">
+        <h1 className="mt-6 max-w-4xl font-mono text-4xl font-extrabold leading-[1.05] tracking-tight text-white sm:text-5xl lg:text-6xl">
           <span className="seal-gradient-text">{event.name}</span>
         </h1>
 
@@ -161,26 +161,26 @@ function HeroSection({ event }: { event: EventResponse }) {
           {isOpen ? (
             <Link
               href={`/hackathons/${event.id}/register`}
-              className="inline-flex h-12 items-center rounded-lg bg-gradient-to-r from-seal-cyan to-seal-mint px-8 text-sm font-bold text-seal-bg transition-opacity hover:opacity-90"
+              className="inline-flex h-12 items-center border-2 border-navy bg-seal-yellow px-8 text-sm font-mono font-bold text-navy shadow-[4px_4px_0_0_#0c1228] transition-opacity hover:opacity-90"
             >
               Register Now
             </Link>
           ) : (
-            <span className="inline-flex h-12 cursor-not-allowed items-center rounded-lg bg-white/10 px-8 text-sm font-semibold text-slate-400">
+            <span className="inline-flex h-12 cursor-not-allowed items-center bg-white/10 px-8 text-sm font-semibold text-slate-400">
               Registration Closed
             </span>
           )}
           {(event.status === "ACTIVE" || event.status === "COMPLETED") && (
             <Link
               href={`/hackathons/${event.id}/livescore`}
-              className="inline-flex h-12 items-center rounded-lg border border-seal-cyan/30 bg-seal-cyan/10 px-8 text-sm font-bold text-seal-cyan transition-colors hover:bg-seal-cyan/20"
+              className="inline-flex h-12 items-center border-2 border-navy bg-seal-yellow px-8 text-sm font-mono font-bold text-navy shadow-[4px_4px_0_0_#0c1228]"
             >
               Live Scoreboard
             </Link>
           )}
           <a
             href="#about"
-            className="inline-flex h-12 items-center rounded-lg border border-white/15 px-8 text-sm font-semibold text-white transition-colors hover:bg-white/5"
+            className="inline-flex h-12 items-center border border-white/15 px-8 text-sm font-semibold text-white transition-colors hover:bg-white/5"
           >
             Explore Details
           </a>
@@ -217,7 +217,7 @@ function SectionNav({ active, links }: { active: string; links: typeof SECTION_L
             href={`#${link.id}`}
             className={`shrink-0 rounded-lg px-4 py-2 font-mono text-xs font-semibold uppercase tracking-wider transition-colors ${
               active === link.id
-                ? "bg-seal-cyan/10 text-seal-cyan"
+                ? "bg-seal-yellow text-navy font-mono font-bold"
                 : "text-seal-text-secondary hover:bg-seal-surface-elevated hover:text-seal-text"
             }`}
           >
@@ -240,7 +240,7 @@ function SectionHeader({
 }) {
   return (
     <div className="mb-10">
-      <h2 className={`font-heading text-3xl font-bold tracking-tight sm:text-4xl ${dark ? "text-white" : "text-seal-text"}`}>
+      <h2 className={`font-mono text-3xl font-bold tracking-tight sm:text-4xl ${dark ? "text-white" : "text-seal-text"}`}>
         {title}
       </h2>
       {subtitle && (
@@ -263,7 +263,7 @@ function AboutSection({ event }: { event: EventResponse }) {
         />
         <div className="grid gap-8 lg:grid-cols-3">
           <div className="lg:col-span-2">
-            <div className="rounded-2xl border border-seal-border bg-seal-surface p-8 shadow-sm seal-card-shadow">
+            <div className="border-2 border-navy bg-white p-8 shadow-[4px_4px_0_0_#0c1228]">
               <p className="whitespace-pre-line text-base leading-relaxed text-seal-text-secondary">
                 {event.description ?? "Join innovators, builders, and creators for an unforgettable hackathon experience. Form your team, pick a track, and ship something remarkable."}
               </p>
@@ -288,7 +288,7 @@ function AboutSection({ event }: { event: EventResponse }) {
 
 function InfoCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-seal-border bg-seal-surface p-5">
+    <div className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-5">
       <p className="font-mono text-[10px] font-semibold uppercase tracking-wider text-seal-cyan">{label}</p>
       <p className="mt-2 text-sm font-semibold text-seal-text">{value}</p>
     </div>
@@ -318,7 +318,7 @@ function TracksSection({ event }: { event: EventResponse }) {
                   <span className={`font-mono text-[10px] font-bold uppercase tracking-widest ${accent.text}`}>
                     Track {String(i + 1).padStart(2, "0")}
                   </span>
-                  <h3 className="mt-2 font-heading text-xl font-bold text-seal-text">{track.name}</h3>
+                  <h3 className="mt-2 font-mono text-xl font-bold text-seal-text">{track.name}</h3>
                   {track.description && (
                     <p className="mt-3 text-sm leading-relaxed text-seal-text-secondary">{track.description}</p>
                   )}
@@ -357,8 +357,8 @@ function ScheduleSection({ rounds }: { rounds: RoundResponse[] }) {
                 <div className="absolute left-3 top-1 flex h-7 w-7 items-center justify-center rounded-full border-2 border-seal-cyan bg-seal-bg font-mono text-xs font-bold text-seal-cyan">
                   {round.roundNumber}
                 </div>
-                <div className="rounded-2xl border border-seal-border bg-seal-surface p-6 seal-card-shadow">
-                  <h3 className="font-heading text-lg font-bold text-seal-text">{round.name}</h3>
+                <div className="border-2 border-navy bg-white p-6 shadow-[4px_4px_0_0_#0c1228]">
+                  <h3 className="font-mono text-lg font-bold text-seal-text">{round.name}</h3>
                   <div className="mt-4 grid gap-3 sm:grid-cols-2">
                     <DeadlineRow label="Round Period" value={`${formatEventDateTime(round.startDate)} → ${formatEventDateTime(round.endDate)}`} />
                     <DeadlineRow label="Submission Deadline" value={formatEventDateTime(round.submissionDeadline)} highlight />
@@ -429,7 +429,7 @@ function PrizesSection({ event }: { event: EventResponse }) {
                     <span className={`font-mono text-[10px] font-bold uppercase ${style.text}`}>
                       {getPrizeLabel(prize.rank, prize.label)}
                     </span>
-                    <span className="mt-1 text-center font-heading text-sm font-bold text-white sm:text-base">
+                    <span className="mt-1 text-center font-mono text-sm font-bold text-white sm:text-base">
                       {formatPrizeAmount(prize.value)}
                     </span>
                     {prize.quantity > 1 && (
@@ -450,12 +450,12 @@ function PrizesSection({ event }: { event: EventResponse }) {
               return (
                 <div
                   key={prize.id}
-                  className="rounded-xl border border-white/10 bg-white/5 p-5 backdrop-blur-sm"
+                  className="border border-white/10 bg-white/5 p-5 backdrop-blur-sm"
                 >
                   <p className="font-mono text-[10px] uppercase tracking-wider text-seal-cyan">
                     {trackName ?? "Overall"}
                   </p>
-                  <p className="mt-1 font-heading text-lg font-bold text-white">
+                  <p className="mt-1 font-mono text-lg font-bold text-white">
                     {getPrizeLabel(prize.rank, prize.label)}
                   </p>
                   <p className="mt-2 text-2xl font-bold text-seal-mint">{formatPrizeAmount(prize.value)}</p>
@@ -490,13 +490,13 @@ function GuestsSection({ event }: { event: EventResponse }) {
             return (
               <div
                 key={guest.id}
-                className="flex items-center gap-4 rounded-2xl border border-seal-border bg-seal-bg p-5 transition-shadow hover:shadow-md"
+                className="flex items-center gap-4 border-2 border-navy bg-white p-5 shadow-[4px_4px_0_0_#0c1228] transition-shadow hover:shadow-[6px_6px_0_0_#0c1228]"
               >
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-seal-cyan/20 to-seal-purple/20 font-heading text-lg font-bold text-seal-cyan">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center bg-gradient-to-br from-seal-cyan/20 to-royal/20 font-mono text-lg font-bold text-seal-cyan">
                   {initials}
                 </div>
                 <div>
-                  <p className="font-heading text-base font-bold text-seal-text">{guest.fullName}</p>
+                  <p className="font-mono text-base font-bold text-seal-text">{guest.fullName}</p>
                   {guest.title && <p className="mt-0.5 text-sm text-seal-text-secondary">{guest.title}</p>}
                 </div>
               </div>
@@ -522,7 +522,7 @@ function RegisterCta({ event }: { event: EventResponse }) {
           className="rounded-2xl border-2 border-seal-cyan/20 px-6 py-14 sm:px-12"
           style={{ clipPath: "polygon(0 0, 95% 0, 100% 5%, 100% 100%, 5% 100%, 0 95%)" }}
         >
-          <h2 className="font-heading text-3xl font-bold text-seal-text sm:text-4xl">
+          <h2 className="font-mono text-3xl font-bold text-navy sm:text-4xl">
             Ready to <span className="seal-gradient-text">compete</span>?
           </h2>
           <p className="mx-auto mt-4 max-w-lg text-seal-text-secondary">
@@ -534,14 +534,14 @@ function RegisterCta({ event }: { event: EventResponse }) {
             {isOpen ? (
               <Link
                 href={`/hackathons/${event.id}/register`}
-                className="inline-flex h-12 items-center rounded-lg bg-gradient-to-r from-seal-cyan to-seal-mint px-8 text-sm font-bold text-seal-bg"
+                className="inline-flex h-12 items-center border-2 border-navy bg-seal-yellow px-8 text-sm font-mono font-bold text-navy shadow-[4px_4px_0_0_#0c1228]"
               >
                 Register Now
               </Link>
             ) : null}
             <Link
               href="/#featured"
-              className="inline-flex h-12 items-center rounded-lg border border-seal-border bg-seal-surface px-8 text-sm font-semibold text-seal-text"
+              className="inline-flex h-12 items-center border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] px-8 text-sm font-semibold text-seal-text"
             >
               More Events
             </Link>
@@ -639,7 +639,7 @@ export function EventLandingPage({ eventId }: EventLandingPageProps) {
 
   return (
     <div className="min-h-full bg-seal-bg">
-      <Header />
+      <LandingNavbar />
       <main>
         <HeroSection event={event} />
         <SectionNav active={activeSection} links={visibleSections} />

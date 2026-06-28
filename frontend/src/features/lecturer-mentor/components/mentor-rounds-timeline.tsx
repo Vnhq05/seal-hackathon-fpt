@@ -23,7 +23,7 @@ interface Props {
 export function MentorRoundsTimeline({ rounds }: Props) {
   return (
     <div
-      className="rounded-lg"
+      className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]"
       style={{
         backdropFilter: "blur(5px)",
         backgroundColor: "#ffffff",

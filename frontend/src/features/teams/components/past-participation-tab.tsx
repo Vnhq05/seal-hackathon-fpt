@@ -30,7 +30,7 @@ function PastCard({ mt }: { mt: MyEventTeam }) {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="flex w-full items-center gap-4 rounded-lg border border-seal-border bg-seal-surface p-4 text-left transition-colors hover:bg-seal-surface-sunken"
+        className="flex w-full items-center gap-4 border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-4 text-left transition-colors hover:bg-seal-surface-sunken"
       >
         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-seal-surface-elevated text-seal-text-muted flex-shrink-0">
           <TrophyIcon highlight={data?.outcome === "Champion"} />
@@ -70,7 +70,7 @@ function PastDetailDialog({ mt, data, onClose }: {
     <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={onClose}>
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
       <div
-        className="relative z-10 w-full max-w-2xl rounded-xl border border-seal-border bg-seal-surface shadow-xl"
+        className="relative z-10 w-full max-w-2xl border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between border-b border-seal-border p-5">
@@ -98,7 +98,7 @@ function PastDetailDialog({ mt, data, onClose }: {
 
         <div className="max-h-[65vh] overflow-y-auto p-5 flex flex-col gap-4">
           {/* Members */}
-          <div className="rounded-lg border border-seal-border bg-seal-surface p-4">
+          <div className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-4">
             <div className="text-[11px] font-medium uppercase tracking-wider text-seal-text-muted mb-2">Members</div>
             {team.members.length === 0 ? (
               <div className="text-sm text-seal-text-muted">—</div>
@@ -107,7 +107,7 @@ function PastDetailDialog({ mt, data, onClose }: {
                 {team.members.map((m) => (
                   <li key={m.id} className="text-sm text-seal-text truncate">
                     {m.fullName ?? m.email ?? `User ${m.userId}`}
-                    {m.role === "LEADER" && <span className="text-seal-cyan ml-1">— Leader</span>}
+                    {m.role === "LEADER" && <span className="text-royal ml-1">— Leader</span>}
                   </li>
                 ))}
               </ul>
@@ -115,7 +115,7 @@ function PastDetailDialog({ mt, data, onClose }: {
           </div>
 
           {/* Round scores */}
-          <div className="rounded-lg border border-seal-border bg-seal-surface p-4">
+          <div className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-4">
             <div className="text-[11px] font-medium uppercase tracking-wider text-seal-text-muted mb-3">Scores by Round</div>
             {data.roundScores.length === 0 ? (
               <div className="text-sm text-seal-text-muted">No rounds scored yet.</div>
@@ -135,7 +135,7 @@ function PastDetailDialog({ mt, data, onClose }: {
         <div className="flex justify-end border-t border-seal-border p-4">
           <button
             onClick={onClose}
-            className="rounded-lg border border-seal-border bg-seal-surface px-5 py-2 text-xs font-semibold text-seal-text hover:bg-seal-surface-elevated"
+            className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] px-5 py-2 text-xs font-semibold text-seal-text hover:bg-seal-surface-elevated"
           >
             Close
           </button>
@@ -152,7 +152,7 @@ interface PastParticipationTabProps {
 export function PastParticipationTab({ pastTeams }: PastParticipationTabProps) {
   if (pastTeams.length === 0) {
     return (
-      <div className="rounded-lg border border-seal-border bg-seal-surface p-10 text-center text-sm text-seal-text-muted">
+      <div className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-10 text-center text-sm text-seal-text-muted">
         No past competitions yet. Completed events you joined will appear here.
       </div>
     );

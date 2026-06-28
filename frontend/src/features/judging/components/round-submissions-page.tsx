@@ -42,7 +42,7 @@ function StatusBadge({ status }: { status: "scored" | "unscored" }) {
   );
 }
 
-function SubmissionRow({ submission, roundId }: { submission: RoundSubmission; roundId: string }) {
+function SubmissionRow({ submission }: { submission: RoundSubmission }) {
   const portalBase = usePortalBase();
   return (
     <tr style={{ borderBottom: "1px solid rgba(198,198,205,0.3)" }}>
@@ -83,7 +83,6 @@ function SubmissionRow({ submission, roundId }: { submission: RoundSubmission; r
 }
 
 export function RoundSubmissionsPage({ roundId }: { roundId: string }) {
-  const portalBase = usePortalBase();
   const [activeTab, setActiveTab] = useState<SubmissionFilterTab>("all");
   const { data, isLoading } = useRoundSubmissions(roundId, { filter: activeTab });
 
@@ -166,7 +165,7 @@ export function RoundSubmissionsPage({ roundId }: { roundId: string }) {
               </tr>
             ) : (
               submissions.map((s) => (
-                <SubmissionRow key={s.id} submission={s} roundId={roundId} />
+                <SubmissionRow key={s.id} submission={s} />
               ))
             )}
           </tbody>

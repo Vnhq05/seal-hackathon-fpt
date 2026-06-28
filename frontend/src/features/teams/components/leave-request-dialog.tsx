@@ -27,7 +27,7 @@ export function LeaveRequestDialog({ eventId, teamId, teamName, onClose }: Leave
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-md rounded-lg border border-seal-border bg-seal-surface p-6 shadow-lg">
+      <div className="w-full max-w-md border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-6 shadow-lg">
         <h3 className="text-lg font-semibold text-seal-text">Yêu cầu rời team</h3>
         <p className="mt-2 text-sm text-seal-text-muted">
           Gửi yêu cầu rời <strong className="text-seal-text">{teamName}</strong> tới ban tổ chức.
@@ -39,7 +39,7 @@ export function LeaveRequestDialog({ eventId, teamId, teamName, onClose }: Leave
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             rows={3}
-            className="mt-1.5 w-full rounded-lg border border-seal-border bg-seal-surface px-3 py-2 text-sm text-seal-text outline-none focus:border-seal-cyan/40"
+            className="mt-1.5 w-full border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] px-3 py-2 text-sm text-seal-text outline-none focus:border-royal/40"
             placeholder="Nêu lý do rời team..."
           />
         </div>
@@ -48,7 +48,7 @@ export function LeaveRequestDialog({ eventId, teamId, teamName, onClose }: Leave
           <button
             onClick={onClose}
             disabled={create.isPending}
-            className="rounded-lg border border-seal-border px-4 py-2 text-sm font-medium text-seal-text-secondary hover:bg-seal-surface-sunken disabled:opacity-50"
+            className="border-2 border-navy bg-white px-4 py-2 text-sm font-medium text-seal-text-secondary hover:bg-seal-surface-sunken disabled:opacity-50"
           >
             Hủy
           </button>

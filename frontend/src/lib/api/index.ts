@@ -4,6 +4,8 @@ export type {
   UserType,
   AccountStatus,
   EventStatus,
+  CompetitionFormat,
+  RoundType,
   TeamStatus,
   TeamMemberRole,
   InvitationStatus,
@@ -27,7 +29,19 @@ export { adminUserApi } from "./admin-user.api";
 export type { UserListItem, UserListParams, ApprovalRequest, CreateInternalAccountRequest } from "./admin-user.api";
 
 export { eventApi } from "./event.api";
-export type { EventResponse, CreateEventRequest, UpdateEventRequest, EventListParams } from "./event.api";
+export type {
+  EventResponse,
+  CreateEventRequest,
+  UpdateEventRequest,
+  PublishEventRequest,
+  EventListParams,
+  PrizeRank,
+  PrizeResponse,
+  PrizeRequest,
+  HonoredGuestResponse,
+  HonoredGuestRequest,
+  TrackRequest,
+} from "./event.api";
 
 export { roundApi } from "./round.api";
 export type { RoundResponse, CreateRoundRequest } from "./round.api";
@@ -99,4 +113,19 @@ export { trackApi } from "./track.api";
 export type { TrackResponse, CreateTrackRequest } from "./track.api";
 
 export { livescoreApi } from "./livescore.api";
-export type { LiveScoreBoard, LiveScoreEntry, RankingEvent } from "./livescore.api";
+export type { LiveScoreBoard, LiveScoreEntry, RankingEvent, LeaderboardParams, TrackInfo } from "./livescore.api";
+
+export { trackAssignmentApi } from "./track-assignment.api";
+export type {
+  TrackAssignmentMethod,
+  TrackAssignmentResponse,
+  TrackAssignRequest,
+  TrackDrawResultResponse,
+  TrackDrawRequest,
+} from "./track-assignment.api";
+
+export { finalistApi } from "./finalist.api";
+export type { FinalistResponse } from "./finalist.api";
+
+export { awardApi } from "./award.api";
+export type { TeamAwardResponse } from "./award.api";

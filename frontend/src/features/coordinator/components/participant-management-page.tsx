@@ -62,7 +62,7 @@ function ParticipantRow({ p }: { p: Participant }) {
 function EmptyState() {
   return (
     <div
-      className="flex flex-col items-center justify-center rounded-lg py-16 text-center"
+      className="flex flex-col items-center justify-center py-16 text-center border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]"
       style={{ border: "1px dashed rgba(223,226,236,0.8)", backgroundColor: "#fafafa" }}
     >
       <p style={{ fontSize: 16, fontWeight: 600, color: "#0e1528" }}>No participants found</p>
@@ -112,7 +112,7 @@ export function ParticipantManagementPage() {
           placeholder="Search participants..."
           value={search}
           onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-          className="rounded-lg"
+          className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]"
           style={{ width: 320, padding: "8px 12px", fontSize: 14, border: "1px solid rgba(223,226,236,0.8)", outline: "none", color: "#0e1528", backgroundColor: "#ffffff" }}
         />
         <div className="flex gap-1">
@@ -136,7 +136,7 @@ export function ParticipantManagementPage() {
       {!isLoading && participants.length === 0 ? (
         <EmptyState />
       ) : (
-        <div className="overflow-hidden rounded-lg" style={{ backgroundColor: "#ffffff", border: "1px solid rgba(198,198,205,0.5)" }}>
+        <div className="overflow-hidden border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]">
           <table className="w-full" style={{ borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ backgroundColor: "#eef0f6" }}>

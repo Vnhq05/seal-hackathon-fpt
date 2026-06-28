@@ -24,8 +24,7 @@ export function AdminActivityFeed() {
 
   return (
     <div
-      className="rounded-lg"
-      style={{ backgroundColor: "#ffffff", border: "1px solid rgba(198,198,205,0.5)", padding: 24 }}
+      className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-6"
     >
       <div className="flex items-center justify-between" style={{ marginBottom: 16 }}>
         <h3 style={{ fontSize: 16, fontWeight: 700, color: "#0e1528" }}>System Activity</h3>
@@ -79,7 +78,7 @@ export function AdminActivityFeed() {
       </div>
 
       <div style={{ borderTop: "1px solid rgba(223,226,236,0.8)", marginTop: 16, paddingTop: 12 }}>
-        <Link href="/admin/export" style={{ fontSize: 13, fontWeight: 600, color: "#38bdf8" }}>
+        <Link href="/admin/export" className="text-[13px] font-semibold text-royal">
           View audit export
         </Link>
       </div>

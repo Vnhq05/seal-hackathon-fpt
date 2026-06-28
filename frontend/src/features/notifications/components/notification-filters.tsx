@@ -18,10 +18,9 @@ export function NotificationFilters({
 }: NotificationFiltersProps) {
   return (
     <div
-      className="flex gap-2 overflow-auto pb-[5px]"
+      className="flex gap-2 overflow-auto border-b-2 border-navy/20 pb-[5px]"
       role="tablist"
       aria-label="Notification filters"
-      style={{ borderBottom: "1px solid rgba(223,226,236,0.8)" }}
     >
       {TABS.map(({ key, label }) => {
         const isActive = activeTab === key;
@@ -32,17 +31,11 @@ export function NotificationFilters({
             role="tab"
             aria-selected={isActive}
             onClick={() => onTabChange(key)}
-            className="flex-shrink-0 whitespace-nowrap px-4 py-2 text-xs font-medium tracking-wide transition-colors focus:outline-none"
-            style={{
-              borderRadius: "9999px",
-              backgroundColor: isActive ? "#0e1528" : "#eef0f6",
-              color: isActive ? "#dfe2ec" : "#0e1528",
-              border: isActive ? "none" : "1px solid rgba(223,226,236,0.8)",
-              letterSpacing: "0.24px",
-              fontSize: "12px",
-              lineHeight: "12px",
-              padding: isActive ? "9px 16px" : "9px 17px",
-            }}
+            className={`flex-shrink-0 whitespace-nowrap border-2 px-4 py-2 text-xs font-medium tracking-wide transition-colors focus:outline-none ${
+              isActive
+                ? "border-navy bg-navy text-white shadow-[2px_2px_0_0_#0c1228]"
+                : "border-navy/30 bg-white text-navy hover:bg-seal-surface-sunken"
+            }`}
           >
             {label}
           </button>

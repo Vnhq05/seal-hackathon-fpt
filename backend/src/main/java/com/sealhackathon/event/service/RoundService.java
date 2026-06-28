@@ -278,6 +278,7 @@ public class RoundService {
                 .scoringDeadline(round.getScoringDeadline())
                 .advancementCutoff(round.getAdvancementCutoff())
                 .roundWeight(round.getRoundWeight())
+                .roundType(round.getRoundType())
                 .criteria(criteriaList)
                 .judgeCount(round.getJudgeAssignments().size())
                 .build();

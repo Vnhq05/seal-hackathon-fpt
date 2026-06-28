@@ -38,7 +38,7 @@ function JoinTeamCard({
   };
 
   return (
-    <div className="rounded-lg border border-seal-border bg-seal-surface-sunken/50 p-4">
+    <div className="border-2 border-navy bg-seal-surface-sunken/50 shadow-[4px_4px_0_0_#0c1228] p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="font-semibold text-seal-text truncate">{team.name}</div>
@@ -55,7 +55,7 @@ function JoinTeamCard({
         <button
           onClick={handleJoin}
           disabled={create.isPending || sent}
-          className="flex-shrink-0 rounded-lg bg-seal-cyan px-3 py-1.5 text-xs font-semibold text-white hover:bg-seal-cyan-dark disabled:opacity-50"
+          className="flex-shrink-0 border-2 border-navy bg-seal-yellow px-3 py-1.5 text-navy font-mono font-bold shadow-[4px_4px_0_0_#0c1228] disabled:opacity-50"
         >
           {sent ? "Request sent" : create.isPending ? "Sending..." : "Join team"}
         </button>
@@ -72,7 +72,7 @@ export function JoinTeamPanel({ event }: JoinTeamPanelProps) {
 
   if (pendingRequest) {
     return (
-      <div className="rounded-lg border border-seal-border bg-seal-surface p-6">
+      <div className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-6">
         <h2 className="text-lg font-semibold text-seal-text">Join a team</h2>
         <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
           You have a pending join request for team <strong>{pendingRequest.teamName}</strong>.
@@ -83,7 +83,7 @@ export function JoinTeamPanel({ event }: JoinTeamPanelProps) {
   }
 
   return (
-    <div className="rounded-lg border border-seal-border bg-seal-surface p-6">
+    <div className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-6">
       <h2 className="text-lg font-semibold text-seal-text">Join a team</h2>
       <p className="mt-1 text-sm text-seal-text-muted">
         Browse teams with available slots in <span className="font-medium text-seal-text">{event.name}</span>.

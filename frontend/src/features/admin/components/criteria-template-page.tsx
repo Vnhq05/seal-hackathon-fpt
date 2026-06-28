@@ -184,7 +184,7 @@ function TemplateForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4 rounded-lg" style={{ backgroundColor: "#ffffff", border: "1px solid rgba(198,198,205,0.5)", padding: 24, marginBottom: 24 }}>
+    <form onSubmit={handleSubmit} className="flex flex-col gap-4 p-6 mb-6 border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]">
       <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0e1528" }}>
         {isEdit ? "Edit Template" : "Create Template"}
       </h2>
@@ -277,7 +277,7 @@ function TemplateForm({
         <button
           type="submit"
           disabled={isPending || !isWeightValid}
-          className="rounded-lg"
+          className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]"
           style={{
             backgroundColor: isWeightValid ? "#38bdf8" : "#9ca3af",
             padding: "10px 24px", color: "#ffffff", fontSize: 14, fontWeight: 600,
@@ -287,7 +287,7 @@ function TemplateForm({
         >
           {isPending ? "Saving..." : isEdit ? "Save Changes" : "Create Template"}
         </button>
-        <button type="button" onClick={onClose} className="rounded-lg" style={{ backgroundColor: "#ffffff", padding: "10px 24px", color: "#0e1528", fontSize: 14, fontWeight: 600, border: "1px solid rgba(223,226,236,0.8)", cursor: "pointer" }}>
+        <button type="button" onClick={onClose} className="border-2 border-navy bg-white px-6 py-2.5 text-sm font-medium text-navy cursor-pointer">
           Cancel
         </button>
       </div>
@@ -321,8 +321,7 @@ export function CriteriaTemplatePage() {
         {formMode === "closed" && (
           <button
             onClick={() => setFormMode("create")}
-            className="flex items-center justify-center rounded-lg"
-            style={{ backgroundColor: "#38bdf8", padding: "10px 20px", color: "#ffffff", fontSize: 14, fontWeight: 600, border: "none", cursor: "pointer" }}
+            className="flex items-center justify-center border-2 border-navy bg-seal-yellow px-6 py-2.5 text-sm text-navy font-mono font-bold cursor-pointer"
           >
             Create Template
           </button>
@@ -354,7 +353,7 @@ export function CriteriaTemplatePage() {
         </div>
       )}
 
-      <div className="overflow-hidden rounded-lg" style={{ backgroundColor: "#ffffff", border: "1px solid rgba(198,198,205,0.5)" }}>
+      <div className="overflow-hidden border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]">
         <table className="w-full" style={{ borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ backgroundColor: "#eef0f6" }}>

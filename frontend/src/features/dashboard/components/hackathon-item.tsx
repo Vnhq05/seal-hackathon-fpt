@@ -4,7 +4,9 @@ import type { EventResponse, EventStatus } from "@/lib/api";
 const STATUS_CONFIG: Record<EventStatus, { bg: string; color: string; label: string }> = {
   UPCOMING:  { bg: "#f0f9ff", color: "#0369a1", label: "Upcoming" },
   OPEN:      { bg: "#e0f2fe", color: "#0284c7", label: "Open" },
+  CLOSED_REGISTRATION: { bg: "#fef3c7", color: "#b45309", label: "Registration Closed" },
   ACTIVE:    { bg: "#dcfce7", color: "#15803d", label: "Active" },
+  SCORING:   { bg: "#ede9fe", color: "#6d28d9", label: "Scoring" },
   COMPLETED: { bg: "#eef0f6", color: "#2dd4bf", label: "Completed" },
   CANCELLED: { bg: "#fef9c3", color: "#a16207", label: "Cancelled" },
 };

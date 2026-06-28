@@ -46,7 +46,7 @@ export function ExportReportPage() {
         </p>
       </div>
 
-      <div className="flex flex-col gap-6 rounded-lg" style={{ backgroundColor: "#ffffff", border: "1px solid rgba(198,198,205,0.5)", padding: 32, marginBottom: 24 }}>
+      <div className="flex flex-col gap-6 p-8 mb-6 border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]">
         <div className="grid grid-cols-3 gap-4">
           <div className="flex flex-col">
             <label style={labelStyle}>Start Date</label>
@@ -68,8 +68,7 @@ export function ExportReportPage() {
         <button
           onClick={handleDownload}
           disabled={downloading || !canExport}
-          className="rounded-lg"
-          style={{ backgroundColor: "#38bdf8", padding: "10px 24px", color: "#ffffff", fontSize: 14, fontWeight: 600, border: "none", cursor: "pointer", width: "fit-content", opacity: downloading || !canExport ? 0.5 : 1 }}
+          className="border-2 border-navy bg-seal-yellow px-6 py-2.5 text-sm text-navy font-mono font-bold cursor-pointer"
         >
           {downloading ? "Downloading..." : "Download"}
         </button>
@@ -77,7 +76,7 @@ export function ExportReportPage() {
 
       {/* Events summary for reference */}
       {eventsPage && eventsPage.content.length > 0 && (
-        <div className="rounded-lg" style={{ backgroundColor: "#ffffff", border: "1px solid rgba(198,198,205,0.5)", padding: 24 }}>
+        <div className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-6">
           <p style={{ fontSize: 14, fontWeight: 600, color: "#0e1528", marginBottom: 8 }}>
             Available Events ({eventsPage.totalElements} total)
           </p>

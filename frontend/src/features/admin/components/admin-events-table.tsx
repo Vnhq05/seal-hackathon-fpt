@@ -48,12 +48,11 @@ export function AdminEventsTable() {
 
   return (
     <div
-      className="rounded-lg"
-      style={{ backgroundColor: "#ffffff", border: "1px solid rgba(198,198,205,0.5)", flex: 1 }}
+      className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] flex-1"
     >
       <div className="flex items-center justify-between" style={{ padding: "20px 24px" }}>
         <h3 style={{ fontSize: 18, fontWeight: 700, color: "#0e1528" }}>Active & Upcoming Events</h3>
-        <Link href="/admin/hackathons" style={{ fontSize: 13, fontWeight: 600, color: "#38bdf8" }}>
+        <Link href="/admin/hackathons" className="text-[13px] font-semibold text-royal">
           View all
         </Link>
       </div>

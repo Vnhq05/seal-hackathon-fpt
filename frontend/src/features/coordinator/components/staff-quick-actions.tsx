@@ -23,14 +23,14 @@ const ACTIONS = [
 
 export function StaffQuickActions() {
   return (
-    <div className="rounded-xl border border-seal-border/50 bg-white p-6 shadow-sm">
+    <div className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-6">
       <h3 className="mb-4 text-sm font-bold text-seal-text">Quick Actions</h3>
       <div className="flex flex-col gap-2">
         {ACTIONS.map((action) => (
           <Link
             key={action.href}
             href={action.href}
-            className="flex items-center gap-3 rounded-lg border border-seal-border/50 bg-seal-bg px-3 py-2.5 text-[13px] font-medium text-seal-text transition-colors hover:border-seal-purple/30 hover:bg-seal-purple/5"
+            className="flex items-center gap-3 border-2 border-navy bg-white px-3 py-2.5 text-[13px] font-medium text-seal-text shadow-[2px_2px_0_0_#0c1228] transition-colors hover:border-navy hover:bg-seal-surface-sunken"
           >
             <span className="text-seal-text-muted">{action.icon}</span>
             {action.label}

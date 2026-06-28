@@ -8,19 +8,24 @@ import { StaffQuickActions } from "@/features/coordinator/components/staff-quick
 import { StaffPendingApprovals } from "@/features/coordinator/components/staff-pending-approvals";
 
 function SkeletonBlock({ height }: { height: number }) {
-  return <div className="animate-pulse rounded-lg" style={{ height, backgroundColor: "rgba(223,226,236,0.8)" }} />;
+  return (
+    <div
+      className="animate-pulse border-2 border-navy/10 bg-seal-surface-sunken"
+      style={{ height }}
+    />
+  );
 }
 
 export function StaffDashboardPage() {
   const { data: summary, isLoading } = useStaffDashboard();
 
   return (
-    <div style={{ padding: 32, maxWidth: 1440 }}>
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 32, fontWeight: 700, color: "#0e1528", letterSpacing: "-0.64px", lineHeight: "38.4px" }}>
+    <div className="mx-auto max-w-[1440px] p-8">
+      <div className="mb-6">
+        <h1 className="font-mono text-3xl font-bold tracking-tight text-navy">
           Staff Dashboard
         </h1>
-        <p style={{ fontSize: 14, color: "#8891a5", lineHeight: "21px", marginTop: 4 }}>
+        <p className="mt-1 text-sm text-seal-text-secondary">
           Command center for event operations.
         </p>
       </div>
@@ -34,7 +39,9 @@ export function StaffDashboardPage() {
           <SkeletonBlock height={100} />
           <div className="flex gap-4">
             <SkeletonBlock height={240} />
-            <div style={{ width: 320, flexShrink: 0 }}><SkeletonBlock height={240} /></div>
+            <div className="w-80 shrink-0">
+              <SkeletonBlock height={240} />
+            </div>
           </div>
         </div>
       ) : summary ? (
@@ -47,7 +54,7 @@ export function StaffDashboardPage() {
           <StaffEventTimeline phase={summary.timelinePhase || "submissions"} />
           <div className="flex gap-6">
             <StaffPendingApprovals />
-            <div style={{ width: 320, flexShrink: 0 }}>
+            <div className="w-80 shrink-0">
               <StaffQuickActions />
             </div>
           </div>

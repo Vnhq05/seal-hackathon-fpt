@@ -102,7 +102,7 @@ export function RegistrationDialog({ event, onClose }: RegistrationDialogProps) 
     <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={onClose}>
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
       <div
-        className="relative z-10 w-full max-w-lg rounded-xl border border-seal-border bg-seal-surface shadow-xl"
+        className="relative z-10 w-full max-w-lg border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -121,7 +121,7 @@ export function RegistrationDialog({ event, onClose }: RegistrationDialogProps) 
               onClick={() => setTab(t)}
               className={`rounded-t-lg px-4 py-2 text-sm font-medium transition-colors ${
                 tab === t
-                  ? "border-b-2 border-seal-cyan text-seal-cyan"
+                  ? "border-b-2 border-navy text-navy font-mono font-bold"
                   : "text-seal-text-muted hover:text-seal-text"
               }`}
             >
@@ -139,7 +139,7 @@ export function RegistrationDialog({ event, onClose }: RegistrationDialogProps) 
                 <input
                   value={teamName}
                   onChange={(e) => setTeamName(e.target.value)}
-                  className="mt-1.5 w-full rounded-lg border border-seal-border bg-seal-surface px-3 py-2 text-sm text-seal-text outline-none transition-colors focus:border-seal-cyan/40 focus:ring-2 focus:ring-seal-cyan/10"
+                  className="mt-1.5 w-full border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] px-3 py-2 text-sm text-seal-text outline-none transition-colors focus:border-royal/40 focus:ring-2 focus:ring-seal-cyan/10"
                 />
               </div>
 
@@ -148,7 +148,7 @@ export function RegistrationDialog({ event, onClose }: RegistrationDialogProps) 
                 <input
                   value={user?.email ?? ""}
                   disabled
-                  className="mt-1.5 w-full rounded-lg border border-seal-border bg-seal-surface-sunken px-3 py-2 text-sm text-seal-text-muted"
+                  className="mt-1.5 w-full border-2 border-navy bg-seal-surface-sunken shadow-[4px_4px_0_0_#0c1228] px-3 py-2 text-sm text-seal-text-muted"
                 />
               </div>
 
@@ -159,7 +159,7 @@ export function RegistrationDialog({ event, onClose }: RegistrationDialogProps) 
                   onChange={(e) => setMemberEmails(e.target.value)}
                   placeholder="alice@example.com, bob@example.com"
                   rows={3}
-                  className="mt-1.5 w-full rounded-lg border border-seal-border bg-seal-surface px-3 py-2 text-sm text-seal-text outline-none transition-colors focus:border-seal-cyan/40 focus:ring-2 focus:ring-seal-cyan/10"
+                  className="mt-1.5 w-full border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] px-3 py-2 text-sm text-seal-text outline-none transition-colors focus:border-royal/40 focus:ring-2 focus:ring-seal-cyan/10"
                 />
                 <p className="mt-1 text-[11px] text-seal-text-muted">
                   Comma-separated. Team size: {event.minTeam ?? 1}–{event.maxTeam ?? 10} including you.
@@ -169,7 +169,7 @@ export function RegistrationDialog({ event, onClose }: RegistrationDialogProps) 
               <button
                 onClick={handleSubmitTeam}
                 disabled={isPending}
-                className="w-full rounded-lg bg-seal-cyan py-2.5 text-sm font-semibold text-white transition-colors hover:bg-seal-cyan-dark disabled:opacity-50"
+                className="w-full border-2 border-navy bg-seal-yellow py-2.5 text-navy font-mono font-bold shadow-[4px_4px_0_0_#0c1228] disabled:opacity-50"
               >
                 {isPending ? "Submitting..." : "Submit team registration"}
               </button>

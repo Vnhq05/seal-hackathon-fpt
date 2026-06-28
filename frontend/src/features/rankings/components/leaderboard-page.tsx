@@ -4,7 +4,6 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { eventApi, roundApi, rankingApi } from "@/lib/api";
 import { useDownloadRanking } from "@/features/rankings/hooks/use-download-ranking";
-import type { RankingResponse, EventResponse, RoundResponse } from "@/lib/api";
 import { getPrizeLabel } from "@/lib/prize.utils";
 
 const MEDAL_COLORS: Record<number, string> = {
@@ -65,6 +64,7 @@ export function LeaderboardPage({ roundId: initialRoundId }: LeaderboardPageProp
   });
 
   const [roundId, setRoundId] = useState<string>(initialRoundId || "");
+  const [roundTypeFilter, setRoundTypeFilter] = useState<string>("");
   const activeRoundId = roundId || rounds[0]?.id || "";
 
   const { data: rankings, isLoading } = useQuery({
@@ -93,7 +93,7 @@ export function LeaderboardPage({ roundId: initialRoundId }: LeaderboardPageProp
             type="button"
             onClick={() => downloadMutation.mutate(activeRoundId)}
             disabled={downloadMutation.isPending}
-            className="rounded-lg border border-seal-border bg-seal-surface px-5 py-2.5 text-[13px] font-semibold text-seal-text transition-colors hover:bg-seal-surface-elevated disabled:opacity-50"
+            className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] px-5 py-2.5 text-[13px] font-semibold text-seal-text transition-colors hover:bg-seal-surface-elevated disabled:opacity-50"
           >
             {downloadMutation.isPending ? "Downloading..." : "Download CSV"}
           </button>
@@ -105,7 +105,7 @@ export function LeaderboardPage({ roundId: initialRoundId }: LeaderboardPageProp
         <select
           value={activeEventId}
           onChange={(e) => { setEventId(e.target.value); setRoundId(""); }}
-          className="rounded-lg border border-seal-border bg-seal-surface px-3 py-2 text-sm text-seal-text outline-none focus:border-seal-cyan/40"
+          className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] px-3 py-2 text-sm text-seal-text outline-none focus:border-royal/40"
           style={{ minWidth: 240 }}
         >
           {events.map((e) => (
@@ -115,13 +115,29 @@ export function LeaderboardPage({ roundId: initialRoundId }: LeaderboardPageProp
         </select>
 
         <select
+          value={roundTypeFilter}
+          onChange={(e) => {
+            setRoundTypeFilter(e.target.value);
+            const match = rounds.find((r) => r.roundType === e.target.value);
+            if (match) setRoundId(match.id);
+          }}
+          className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] px-3 py-2 text-sm text-seal-text outline-none focus:border-royal/40"
+        >
+          <option value="">All rounds</option>
+          <option value="PRELIMINARY">Vòng bảng</option>
+          <option value="FINAL">Chung kết</option>
+        </select>
+
+        <select
           value={activeRoundId}
           onChange={(e) => setRoundId(e.target.value)}
-          className="rounded-lg border border-seal-border bg-seal-surface px-3 py-2 text-sm text-seal-text outline-none focus:border-seal-cyan/40"
+          className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] px-3 py-2 text-sm text-seal-text outline-none focus:border-royal/40"
           style={{ minWidth: 180 }}
         >
           {rounds.map((r) => (
-            <option key={r.id} value={r.id}>{r.name}</option>
+            <option key={r.id} value={r.id}>
+              {r.name}{r.roundType ? ` (${r.roundType})` : ""}
+            </option>
           ))}
           {rounds.length === 0 && <option value="">No rounds</option>}
         </select>
@@ -137,7 +153,7 @@ export function LeaderboardPage({ roundId: initialRoundId }: LeaderboardPageProp
 
       {/* Awards Summary */}
       {selectedEvent && selectedEvent.prizes.length > 0 && sortedRankings.length > 0 && (
-        <div className="rounded-lg border border-seal-border bg-seal-surface overflow-hidden">
+        <div className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] overflow-hidden">
           <div className="flex items-center gap-2 border-b border-seal-border px-5 py-3">
             <TrophyIcon />
             <h3 className="text-sm font-semibold text-seal-text">Awards summary</h3>
@@ -187,12 +203,12 @@ export function LeaderboardPage({ roundId: initialRoundId }: LeaderboardPageProp
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-seal-cyan border-t-transparent" />
         </div>
       ) : sortedRankings.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-seal-border bg-seal-surface-sunken py-16">
+        <div className="flex flex-col items-center justify-center border-2 border-dashed border-navy bg-seal-surface-sunken py-16">
           <p className="text-base font-semibold text-seal-text">No rankings yet</p>
           <p className="mt-1 text-sm text-seal-text-muted">Rankings will appear here once teams have been scored.</p>
         </div>
       ) : (
-        <div className="rounded-lg border border-seal-border bg-seal-surface overflow-hidden">
+        <div className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] overflow-hidden">
           <table className="w-full text-sm" style={{ borderCollapse: "collapse" }}>
             <thead>
               <tr className="bg-seal-surface-sunken text-[11px] font-medium uppercase tracking-wider text-seal-text-muted">

@@ -65,7 +65,7 @@ interface TeamsGridProps {
 }
 
 export function TeamsGrid({ eventId }: TeamsGridProps) {
-  const { search, page } = useTeamFilterStore();
+  const { page } = useTeamFilterStore();
 
   const { data, isLoading } = useTeams(eventId, {
     page: page - 1,

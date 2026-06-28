@@ -26,7 +26,7 @@ export function AdminDashboardPage() {
 
       <div className="flex items-center justify-between" style={{ marginBottom: 24 }}>
         <div>
-          <h1 style={{ fontSize: 32, fontWeight: 700, color: "#0e1528", letterSpacing: "-0.64px", lineHeight: "38.4px" }}>
+          <h1 className="font-mono text-3xl font-bold tracking-tight text-navy">
             Overview
           </h1>
           <p style={{ fontSize: 14, color: "#8891a5", lineHeight: "21px", marginTop: 4 }}>
@@ -35,8 +35,7 @@ export function AdminDashboardPage() {
         </div>
         <Link
           href="/admin/export"
-          className="flex items-center gap-2 rounded-lg"
-          style={{ padding: "8px 16px", border: "1px solid rgba(223,226,236,0.8)", backgroundColor: "#ffffff", fontSize: 13, fontWeight: 600, color: "#0e1528" }}
+          className="flex items-center gap-2 border-2 border-navy bg-white px-4 py-2 text-[13px] font-semibold text-navy"
         >
           <ExportIcon />
           Export

@@ -1,6 +1,6 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { Button } from "@/shared/ui/button";
@@ -20,7 +20,7 @@ function SealLogo() {
     <div className="flex items-center gap-2">
       <Image src="/logo-removebg-preview.png" alt="SEAL Hackathon" width={32} height={32} className="rounded" />
       <span className="text-xl font-bold tracking-wide text-seal-text">
-        SEAL <span className="text-seal-cyan">Hackathon</span>
+        SEAL <span className="text-royal">Hackathon</span>
       </span>
     </div>
   );
@@ -41,13 +41,13 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     formState: { errors },
   } = useForm<ResetPasswordFormValues>({
     resolver: zodResolver(resetPasswordSchema),
   });
 
-  const password = watch("password") ?? "";
+  const password = useWatch({ control, name: "password" }) ?? "";
 
   const onSubmit = (values: ResetPasswordFormValues) => {
     submitReset(values.password);
@@ -62,7 +62,7 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
 
       {/* Heading */}
       <div className="mb-6 text-center">
-        <h1 className="text-[22px] font-bold text-seal-text">
+        <h1 className="font-mono text-[22px] font-bold text-seal-text">
           Set a new password
         </h1>
         <p className="mt-2 text-sm text-seal-text-secondary">

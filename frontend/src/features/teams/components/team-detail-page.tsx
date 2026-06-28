@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useTeamDetail } from "@/features/teams/hooks/use-team-detail";
 import { InviteDrawer } from "@/features/teams/components/invite-drawer";
 import { TeamDetailBreadcrumb } from "@/features/teams/components/team-detail-breadcrumb";
-import type { TeamResponse } from "@/lib/api";
 
 interface TeamDetailPageProps {
   eventId: string;

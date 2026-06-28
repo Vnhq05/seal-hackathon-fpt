@@ -119,7 +119,6 @@ function RoundCard({ round }: { round: AssignedRound }) {
 }
 
 export function AssignedRoundsPage() {
-  const portalBase = usePortalBase();
   const { data, isLoading } = useAssignedRounds();
   const rounds = data?.data ?? [];
 

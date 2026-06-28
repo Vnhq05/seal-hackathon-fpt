@@ -27,7 +27,18 @@ export type UserType =
 
 export type AccountStatus = "PENDING" | "ACTIVE" | "REJECTED" | "LOCKED";
 
-export type EventStatus = "UPCOMING" | "OPEN" | "ACTIVE" | "COMPLETED" | "CANCELLED";
+export type EventStatus =
+  | "UPCOMING"
+  | "OPEN"
+  | "CLOSED_REGISTRATION"
+  | "ACTIVE"
+  | "SCORING"
+  | "COMPLETED"
+  | "CANCELLED";
+
+export type CompetitionFormat = "GENERIC" | "SEAL_RAG_2026";
+
+export type RoundType = "PRELIMINARY" | "FINAL";
 
 export type TeamStatus = "FORMING" | "CONFIRMED" | "DISBANDED";
 

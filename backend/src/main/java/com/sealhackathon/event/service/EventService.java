@@ -13,6 +13,7 @@ import com.sealhackathon.event.domain.HonoredGuest;
 import com.sealhackathon.event.domain.MentorAssignment;
 import com.sealhackathon.event.domain.Prize;
 import com.sealhackathon.event.domain.Track;
+import com.sealhackathon.event.domain.enums.CompetitionFormat;
 import com.sealhackathon.event.domain.enums.EventStatus;
 import com.sealhackathon.event.domain.enums.PrizeRank;
 import com.sealhackathon.event.dto.request.CreateEventRequest;
@@ -23,6 +24,7 @@ import com.sealhackathon.event.dto.response.HonoredGuestResponse;
 import com.sealhackathon.event.dto.response.PrizeResponse;
 import com.sealhackathon.event.dto.response.TrackResponse;
 import com.sealhackathon.event.event.EventCreatedEvent;
+import com.sealhackathon.event.template.SealSpring2026Template;
 import com.sealhackathon.event.repository.HackathonEventRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -69,6 +71,10 @@ public class EventService {
             throw new DuplicateResourceException("Event", "name", request.getName());
         }
 
+        CompetitionFormat competitionFormat = request.getCompetitionFormat() != null
+                ? request.getCompetitionFormat()
+                : CompetitionFormat.GENERIC;
+
         HackathonEvent event = HackathonEvent.builder()
                 .name(request.getName())
                 .season(SeasonUtils.normalize(request.getSeason()))
@@ -79,6 +85,7 @@ public class EventService {
                 .description(request.getDescription())
                 .location(request.getLocation())
                 .format(request.getFormat() != null ? request.getFormat() : "OFFLINE")
+                .competitionFormat(competitionFormat)
                 .registrationOpenDate(request.getRegistrationOpenDate())
                 .minTeam(request.getMinTeam())
                 .maxTeam(request.getMaxTeam())
@@ -94,13 +101,16 @@ public class EventService {
             validatePrizes(prizeRequests);
         }
 
-        if (request.getTracks() != null) {
+        if (competitionFormat == CompetitionFormat.SEAL_RAG_2026) {
+            SealSpring2026Template.apply(event);
+        } else if (request.getTracks() != null) {
             request.getTracks().forEach(t -> {
                 validateTrackMaxTeams(t.getMaxTeams());
                 Track track = Track.builder()
                         .hackathonEvent(event)
                         .name(t.getName())
                         .description(t.getDescription())
+                        .topic(t.getTopic())
                         .maxTeams(t.getMaxTeams())
                         .scoringTemplateId(t.getScoringTemplateId())
                         .build();
@@ -135,7 +145,7 @@ public class EventService {
         HackathonEvent saved = eventRepository.save(event);
         eventRepository.flush();
 
-        if (prizeRequests != null) {
+        if (prizeRequests != null && competitionFormat != CompetitionFormat.SEAL_RAG_2026) {
             for (PrizeRequest p : prizeRequests) {
                 saved.getPrizes().add(buildPrize(saved, p));
             }
@@ -390,6 +400,10 @@ public class EventService {
         if (event.getStatus() == EventStatus.CANCELLED) {
             return EventStatus.CANCELLED;
         }
+        if (event.getStatus() == EventStatus.CLOSED_REGISTRATION
+                || event.getStatus() == EventStatus.SCORING) {
+            return event.getStatus();
+        }
 
         LocalDate today = LocalDate.now();
 
@@ -561,6 +575,7 @@ public class EventService {
                 .description(event.getDescription())
                 .location(event.getLocation())
                 .format(event.getFormat())
+                .competitionFormat(event.getCompetitionFormat())
                 .minTeam(event.getMinTeam())
                 .maxTeam(event.getMaxTeam())
                 .semesterMin(event.getSemesterMin())
@@ -576,6 +591,7 @@ public class EventService {
                                 .eventId(event.getId())
                                 .name(t.getName())
                                 .description(t.getDescription())
+                                .topic(t.getTopic())
                                 .maxTeams(t.getMaxTeams())
                                 .scoringTemplateId(t.getScoringTemplateId())
                                 .build())

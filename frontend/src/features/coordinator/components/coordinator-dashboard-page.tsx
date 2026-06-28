@@ -7,9 +7,9 @@ import { StaffQuickActions } from "@/features/coordinator/components/staff-quick
 
 function StatCard({ label, value, href }: { label: string; value: number; href?: string }) {
   const content = (
-    <div className="rounded-xl border border-seal-border/50 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
+    <div className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-5 transition-shadow hover:shadow-[6px_6px_0_0_#0c1228]">
       <p className="text-sm font-medium text-seal-text-muted">{label}</p>
-      <p className="mt-2 font-heading text-3xl font-bold text-seal-text">{value}</p>
+      <p className="mt-2 font-mono text-3xl font-bold text-navy">{value}</p>
     </div>
   );
   if (href) return <Link href={href}>{content}</Link>;
@@ -17,7 +17,7 @@ function StatCard({ label, value, href }: { label: string; value: number; href?:
 }
 
 function SkeletonBlock({ className }: { className?: string }) {
-  return <div className={`animate-pulse rounded-xl bg-seal-border/40 ${className ?? "h-24"}`} />;
+  return <div className={`animate-pulse border-2 border-navy/10 bg-seal-surface-sunken ${className ?? "h-24"}`} />;
 }
 
 export function CoordinatorDashboardPage() {
@@ -26,7 +26,7 @@ export function CoordinatorDashboardPage() {
   return (
     <div className="mx-auto max-w-6xl">
       <div className="mb-6">
-        <h1 className="font-heading text-3xl font-bold tracking-tight text-seal-text">
+        <h1 className="font-mono text-3xl font-bold tracking-tight text-navy">
           Coordinator Dashboard
         </h1>
         <p className="mt-1 text-sm text-seal-text-muted">
@@ -57,9 +57,9 @@ export function CoordinatorDashboardPage() {
           </div>
 
           {summary.pendingApprovals > 0 && (
-            <div className="mb-6 rounded-xl border border-amber-200/80 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <div className="mb-6 border-2 border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 shadow-[2px_2px_0_0_#0c1228]">
               <span className="font-semibold">{summary.pendingApprovals} user(s)</span> awaiting approval.{" "}
-              <Link href="/coordinator/user-approval" className="font-medium text-seal-purple underline-offset-2 hover:underline">
+              <Link href="/coordinator/user-approval" className="font-medium text-royal underline-offset-2 hover:underline">
                 Review now
               </Link>
             </div>

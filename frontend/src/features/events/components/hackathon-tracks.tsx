@@ -7,7 +7,7 @@ interface HackathonTracksProps {
 function TrackCard({ track }: { track: HackathonTrack }) {
   return (
     <div
-      className="flex flex-col rounded-lg"
+      className="flex flex-col border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]"
       style={{
         backgroundColor: "#ffffff",
         border: track.isUserTrack
@@ -22,7 +22,7 @@ function TrackCard({ track }: { track: HackathonTrack }) {
     >
       <div style={{ paddingBottom: 8 }}>
         <div
-          className="flex items-center justify-center rounded-lg"
+          className="flex items-center justify-center border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]"
           style={{
             width: 40,
             height: 40,

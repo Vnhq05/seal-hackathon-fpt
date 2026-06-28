@@ -11,8 +11,8 @@ import type { ProfileTab } from "@/features/profile/components/profile-header";
 function ProfileSkeleton() {
   return (
     <div className="flex animate-pulse flex-col" style={{ gap: 16 }}>
-      <div className="rounded-lg" style={{ height: 270, backgroundColor: "rgba(223,226,236,0.8)" }} />
-      <div className="rounded-lg" style={{ height: 300, backgroundColor: "rgba(223,226,236,0.8)" }} />
+      <div className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]" style={{ height: 270, backgroundColor: "rgba(223,226,236,0.8)" }} />
+      <div className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]" style={{ height: 300, backgroundColor: "rgba(223,226,236,0.8)" }} />
     </div>
   );
 }
@@ -20,7 +20,7 @@ function ProfileSkeleton() {
 function ProfileError() {
   return (
     <div
-      className="rounded-lg p-10 text-center"
+      className="p-10 text-center border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]"
       style={{ border: "1px solid rgba(223,226,236,0.8)", backgroundColor: "#fff" }}
     >
       <p style={{ fontSize: "15px", color: "#8891a5" }}>
@@ -95,7 +95,7 @@ export function ProfilePage() {
       )}
       {activeTab === "events" && (
         <div
-          className="rounded-lg bg-seal-surface p-10 text-center"
+          className="p-10 text-center border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]"
           style={{
             border: "1px solid rgba(223,226,236,0.8)",
             boxShadow: "0px 1px 2px rgba(0, 0, 0, 0.05)",

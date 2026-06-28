@@ -16,7 +16,7 @@ function CloseIcon() {
 
 function Field({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-seal-border bg-seal-surface-sunken p-3">
+    <div className="border-2 border-navy bg-seal-surface-sunken shadow-[4px_4px_0_0_#0c1228] p-3">
       <div className="text-[10px] font-medium uppercase tracking-wider text-seal-text-muted">{label}</div>
       <div className="mt-0.5 text-sm text-seal-text">{value}</div>
     </div>
@@ -77,7 +77,7 @@ export function EventDetailDialog({ event, onClose, canRegister, activeEnrollmen
     <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={onClose}>
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
       <div
-        className="relative z-10 w-full max-w-2xl rounded-xl border border-seal-border bg-seal-surface shadow-xl"
+        className="relative z-10 w-full max-w-2xl border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -112,7 +112,7 @@ export function EventDetailDialog({ event, onClose, canRegister, activeEnrollmen
               ) : (
                 <div className="flex flex-col gap-2">
                   {rounds.map((r) => (
-                    <div key={r.id} className="rounded-lg border border-seal-border p-3">
+                    <div key={r.id} className="border-2 border-navy bg-white p-3 shadow-[2px_2px_0_0_#0c1228]">
                       <div className="text-sm font-medium text-seal-text">{r.name}</div>
                       <div className="mt-0.5 text-xs text-seal-text-muted">
                         {r.startDate.slice(0, 10)} — {r.endDate.slice(0, 10)} | Submission deadline: {r.submissionDeadline.slice(0, 10)}
@@ -131,7 +131,7 @@ export function EventDetailDialog({ event, onClose, canRegister, activeEnrollmen
               ) : (
                 <div className="flex flex-col gap-1.5">
                   {event.prizes.map((p) => (
-                    <div key={p.id} className="flex items-center justify-between rounded-lg border border-seal-border p-3">
+                    <div key={p.id} className="flex items-center justify-between border-2 border-navy bg-white p-3 shadow-[2px_2px_0_0_#0c1228]">
                       <span className="text-sm font-medium text-seal-text">
                         {getPrizeLabel(p.rank, p.label)} <span className="text-xs text-seal-text-muted">x{p.quantity}</span>
                       </span>
@@ -193,14 +193,14 @@ export function EventDetailDialog({ event, onClose, canRegister, activeEnrollmen
               <button
                 onClick={handleRegister}
                 disabled={enrolling}
-                className="rounded-lg bg-seal-cyan px-5 py-2 text-xs font-semibold text-white transition-colors hover:bg-seal-cyan-dark disabled:opacity-50"
+                className="border-2 border-navy bg-seal-yellow px-5 py-2 text-navy font-mono font-bold shadow-[4px_4px_0_0_#0c1228] disabled:opacity-50"
               >
                 {enrolling ? "Registering..." : "Register"}
               </button>
             ) : null}
             <button
               onClick={onClose}
-              className="rounded-lg border border-seal-border bg-seal-surface px-5 py-2 text-xs font-semibold text-seal-text transition-colors hover:bg-seal-surface-elevated"
+              className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] px-5 py-2 text-xs font-semibold text-seal-text transition-colors hover:bg-seal-surface-elevated"
             >
               Close
             </button>

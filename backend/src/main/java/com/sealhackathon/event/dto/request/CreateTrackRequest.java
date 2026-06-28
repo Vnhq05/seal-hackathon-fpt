@@ -24,6 +24,9 @@ public class CreateTrackRequest {
     @Size(max = 1000)
     private String description;
 
+    @Size(max = 1000)
+    private String topic;
+
     @NotNull(message = "Max teams is required")
     @Min(value = 16, message = "Max teams must be at least 16")
     @jakarta.validation.constraints.Max(value = 40, message = "Max teams must be at most 40")

@@ -166,6 +166,7 @@ public class EventPublicServiceImpl implements EventPublicService {
                 .registrationDeadline(event.getRegistrationDeadline())
                 .registrationOpenDate(event.getRegistrationOpenDate())
                 .status(eventService.resolveStatus(event))
+                .competitionFormat(event.getCompetitionFormat())
                 .semesterMin(event.getSemesterMin())
                 .semesterMax(event.getSemesterMax())
                 .leaderboardPublic(event.isLeaderboardPublic())
@@ -185,6 +186,7 @@ public class EventPublicServiceImpl implements EventPublicService {
                 .scoringDeadline(round.getScoringDeadline())
                 .advancementCutoff(round.getAdvancementCutoff())
                 .roundWeight(round.getRoundWeight())
+                .roundType(round.getRoundType())
                 .build();
     }
 }

@@ -3,8 +3,6 @@ import {
   assignmentApi,
   type AssignJudgeRequest,
   type AssignMentorRequest,
-  type JudgeAssignmentResponse,
-  type MentorAssignmentResponse,
 } from "@/lib/api";
 
 export const JUDGE_ASSIGNMENTS_KEY = "judge-assignments" as const;
@@ -101,7 +99,8 @@ export function useStaffAssignments() {
 /** @deprecated Staff assignments are not supported by the backend. No-op. */
 export function useAssignStaff() {
   return useMutation({
-    mutationFn: async (_payload: unknown) => {
+    mutationFn: async (payload: unknown) => {
+      void payload;
       console.warn("[useAssignStaff] No backend endpoint for staff assignments.");
     },
   });
@@ -110,7 +109,8 @@ export function useAssignStaff() {
 /** @deprecated Staff assignments are not supported by the backend. No-op. */
 export function useUpdateStaff() {
   return useMutation({
-    mutationFn: async (_payload: unknown) => {
+    mutationFn: async (payload: unknown) => {
+      void payload;
       console.warn("[useUpdateStaff] No backend endpoint for staff assignments.");
     },
   });
@@ -119,7 +119,8 @@ export function useUpdateStaff() {
 /** @deprecated Staff assignments are not supported by the backend. No-op. */
 export function useRemoveStaff() {
   return useMutation({
-    mutationFn: async (_id: string) => {
+    mutationFn: async (id: string) => {
+      void id;
       console.warn("[useRemoveStaff] No backend endpoint for staff assignments.");
     },
   });

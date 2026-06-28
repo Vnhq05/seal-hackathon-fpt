@@ -13,7 +13,7 @@ const bodyCell: React.CSSProperties = {
 
 function StatCard({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="flex flex-col rounded-lg" style={{ backgroundColor: "#ffffff", border: "1px solid rgba(198,198,205,0.5)", padding: 24 }}>
+    <div className="flex flex-col p-6 border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]">
       <span style={{ fontSize: 12, fontWeight: 500, color: "#8891a5", letterSpacing: "0.24px" }}>{label}</span>
       <span style={{ fontSize: 24, fontWeight: 700, color: "#0e1528", marginTop: 4 }}>{value}</span>
     </div>
@@ -40,7 +40,7 @@ export function JudgeVariancePage() {
       <div className="grid grid-cols-3 gap-6" style={{ marginBottom: 32 }}>
         {isLoading ? (
           Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="animate-pulse rounded-lg" style={{ height: 100, backgroundColor: "rgba(223,226,236,0.8)", border: "1px solid rgba(198,198,205,0.3)" }} />
+            <div key={i} className="animate-pulse border-2 border-navy/10 bg-seal-surface-sunken" style={{ height: 100 }} />
           ))
         ) : (
           <>
@@ -53,7 +53,7 @@ export function JudgeVariancePage() {
 
       {/* Chart placeholder */}
       <div
-        className="flex flex-col items-center justify-center rounded-lg"
+        className="flex flex-col items-center justify-center border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]"
         style={{ backgroundColor: "#ffffff", border: "1px solid rgba(198,198,205,0.5)", padding: 48, marginBottom: 32, minHeight: 200 }}
       >
         <svg width="48" height="48" viewBox="0 0 48 48" fill="none" aria-hidden="true">
@@ -67,7 +67,7 @@ export function JudgeVariancePage() {
       </div>
 
       {/* Outlier detection table */}
-      <div className="overflow-hidden rounded-lg" style={{ backgroundColor: "#ffffff", border: "1px solid rgba(198,198,205,0.5)" }}>
+      <div className="overflow-hidden border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]">
         <div style={{ padding: "12px 16px", borderBottom: "1px solid rgba(198,198,205,0.3)" }}>
           <span style={{ fontSize: 14, fontWeight: 600, color: "#0e1528" }}>Outlier Detection</span>
         </div>

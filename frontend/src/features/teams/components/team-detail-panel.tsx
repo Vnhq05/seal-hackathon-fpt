@@ -134,7 +134,7 @@ export function TeamDetailPanel({ event, team }: TeamDetailPanelProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="rounded-lg border border-seal-border bg-seal-surface p-5">
+      <div className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-5">
         <div className="flex items-center gap-3 mb-4">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-seal-cyan/10 text-seal-cyan flex-shrink-0">
             <svg width="18" height="14" viewBox="0 0 22 16" fill="none" aria-hidden="true">
@@ -150,7 +150,7 @@ export function TeamDetailPanel({ event, team }: TeamDetailPanelProps) {
                 <input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="h-8 flex-1 rounded-lg border border-seal-border bg-seal-surface px-2 text-sm text-seal-text outline-none focus:border-seal-cyan/40"
+                  className="h-8 flex-1 border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] px-2 text-sm text-seal-text outline-none focus:border-royal/40"
                   autoFocus
                 />
                 <button onClick={saveName} disabled={renamePending} className="p-1 text-emerald-600"><CheckIcon /></button>
@@ -171,7 +171,7 @@ export function TeamDetailPanel({ event, team }: TeamDetailPanelProps) {
               Status: <span className="rounded-md bg-seal-surface-elevated px-2 py-0.5 font-medium">{team.status}</span>
             </div>
           </div>
-          <span className="rounded-lg border border-seal-border px-2.5 py-1 text-xs font-medium text-seal-text-secondary flex-shrink-0">
+          <span className="border-2 border-navy bg-white px-2.5 py-1 text-xs font-medium text-seal-text-secondary flex-shrink-0">
             {team.memberCount} / {maxMembers}
           </span>
         </div>
@@ -209,7 +209,7 @@ export function TeamDetailPanel({ event, team }: TeamDetailPanelProps) {
           ) : team.canSelectTrack && isLeader ? (
             <button
               onClick={() => setShowTrackPicker((v) => !v)}
-              className="rounded-lg bg-seal-cyan px-3 py-1.5 text-xs font-semibold text-white hover:bg-seal-cyan-dark"
+              className="border-2 border-navy bg-seal-yellow px-3 py-1.5 text-navy font-mono font-bold shadow-[4px_4px_0_0_#0c1228]"
             >
               Chọn Track
             </button>
@@ -229,7 +229,7 @@ export function TeamDetailPanel({ event, team }: TeamDetailPanelProps) {
                 key={track.id}
                 disabled={trackPending}
                 onClick={() => selectTrack(track.id)}
-                className="rounded-lg border border-seal-border px-3 py-1.5 text-xs font-medium text-seal-text hover:border-seal-cyan/40 hover:bg-seal-cyan/5 disabled:opacity-50"
+                className="border-2 border-navy bg-white px-3 py-1.5 text-xs font-medium text-seal-text hover:border-royal/40 hover:bg-royal/5 disabled:opacity-50"
               >
                 {track.name}
               </button>
@@ -270,12 +270,12 @@ export function TeamDetailPanel({ event, team }: TeamDetailPanelProps) {
                 onChange={(e) => setInviteEmail(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleInvite()}
                 placeholder="email@example.com"
-                className="flex-1 rounded-lg border border-seal-border bg-seal-surface px-3 py-2 text-sm text-seal-text outline-none focus:border-seal-cyan/40"
+                className="flex-1 border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] px-3 py-2 text-sm text-seal-text outline-none focus:border-royal/40"
               />
               <button
                 onClick={handleInvite}
                 disabled={invitePending}
-                className="rounded-lg bg-seal-cyan px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-seal-cyan-dark disabled:opacity-50"
+                className="border-2 border-navy bg-seal-yellow px-4 py-2 text-navy font-mono font-bold shadow-[4px_4px_0_0_#0c1228] disabled:opacity-50"
               >
                 {invitePending ? "Sending..." : "Invite"}
               </button>
@@ -291,7 +291,7 @@ export function TeamDetailPanel({ event, team }: TeamDetailPanelProps) {
               <button
                 onClick={() => setShowTransferDialog(true)}
                 disabled={team.members.length < 2}
-                className="rounded-lg border border-seal-border px-3 py-1.5 text-xs font-medium text-seal-text hover:bg-seal-surface-sunken disabled:opacity-50"
+                className="border-2 border-navy bg-white px-3 py-1.5 text-xs font-medium text-seal-text hover:bg-seal-surface-sunken disabled:opacity-50"
               >
                 Transfer leadership
               </button>
@@ -315,7 +315,7 @@ export function TeamDetailPanel({ event, team }: TeamDetailPanelProps) {
         )}
       </div>
 
-      <div className="rounded-lg border border-seal-border bg-seal-surface p-5">
+      <div className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-5">
         <div className="mb-3 text-xs font-medium uppercase tracking-wider text-seal-text-muted">Rounds</div>
         {roundsLoading ? (
           <p className="text-sm text-seal-text-muted">Loading rounds...</p>
@@ -327,7 +327,7 @@ export function TeamDetailPanel({ event, team }: TeamDetailPanelProps) {
               const roundOpen = isRoundOpen(round);
               const isLocked = !roundOpen;
               return (
-                <div key={round.id} className="flex items-center justify-between rounded-lg border border-seal-border p-3">
+                <div key={round.id} className="flex items-center justify-between border-2 border-navy bg-white p-3 shadow-[2px_2px_0_0_#0c1228]">
                   <div className="min-w-0">
                     <div className="text-sm font-medium text-seal-text">{round.name}</div>
                     <div className="text-xs text-seal-text-muted">
@@ -349,7 +349,7 @@ export function TeamDetailPanel({ event, team }: TeamDetailPanelProps) {
                       className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
                         isLocked
                           ? "bg-seal-surface-elevated text-seal-text-muted"
-                          : "bg-seal-cyan text-white hover:bg-seal-cyan-dark"
+                          : "border-2 border-navy bg-seal-yellow text-navy font-mono font-bold shadow-[4px_4px_0_0_#0c1228]"
                       } disabled:opacity-50`}
                     >
                       {isLocked ? <><LockIcon /> Locked</> : <><UploadIcon /> {submission ? "Edit" : "Submit"}</>}
@@ -377,13 +377,13 @@ export function TeamDetailPanel({ event, team }: TeamDetailPanelProps) {
 
       {kickTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-sm rounded-lg border border-seal-border bg-seal-surface p-6 shadow-lg">
+          <div className="w-full max-w-sm border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-6 shadow-lg">
             <h3 className="font-semibold text-seal-text">Remove member?</h3>
             <p className="mt-2 text-sm text-seal-text-muted">
               Remove <strong>{kickTarget.name}</strong> from the team? They will return to the waiting list.
             </p>
             <div className="mt-4 flex justify-end gap-2">
-              <button onClick={() => setKickTarget(null)} className="rounded-lg border border-seal-border px-4 py-2 text-sm">Cancel</button>
+              <button onClick={() => setKickTarget(null)} className="border-2 border-navy bg-white px-4 py-2 text-sm">Cancel</button>
               <button
                 onClick={confirmKick}
                 disabled={removing}

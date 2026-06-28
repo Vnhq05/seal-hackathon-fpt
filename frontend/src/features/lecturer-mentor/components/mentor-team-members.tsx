@@ -24,7 +24,7 @@ function MemberCard({ member }: { member: MentorTeamMember }) {
   const isLeader = member.isLeader;
   return (
     <div
-      className="flex items-center gap-4 rounded-lg"
+      className="flex items-center gap-4 border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]"
       style={{
         backgroundColor: "#eef0f6",
         border: `1px solid ${isLeader ? "#38bdf8" : "rgba(223,226,236,0.8)"}`,
@@ -63,7 +63,7 @@ function MemberCard({ member }: { member: MentorTeamMember }) {
 function EmptySlot() {
   return (
     <div
-      className="flex items-center gap-4 rounded-lg"
+      className="flex items-center gap-4 border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]"
       style={{ backgroundColor: "#eef0f6", border: "1px dashed rgba(223,226,236,0.8)", padding: 17, opacity: 0.6 }}
     >
       <div

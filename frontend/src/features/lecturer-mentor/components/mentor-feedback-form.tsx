@@ -45,7 +45,7 @@ export function MentorFeedbackForm() {
       </div>
 
       <div
-        className="rounded-lg"
+        className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]"
         style={{ backgroundColor: "#ffffff", border: "1px solid rgba(223,226,236,0.8)", padding: 32, maxWidth: 640 }}
       >
         <div className="flex flex-col gap-5">
@@ -85,7 +85,7 @@ export function MentorFeedbackForm() {
           <button
             onClick={handleSubmit}
             disabled={!canSubmit}
-            className="rounded-lg"
+            className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]"
             style={{
               padding: "10px 24px", fontSize: 14, fontWeight: 600,
               backgroundColor: canSubmit ? "#38bdf8" : "#dfe2ec",
@@ -97,7 +97,7 @@ export function MentorFeedbackForm() {
           </button>
           <button
             onClick={() => router.back()}
-            className="rounded-lg"
+            className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]"
             style={{ padding: "10px 24px", fontSize: 14, fontWeight: 600, backgroundColor: "#ffffff", color: "#0e1528", border: "1px solid rgba(223,226,236,0.8)", cursor: "pointer" }}
           >
             Cancel

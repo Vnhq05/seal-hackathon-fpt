@@ -16,19 +16,7 @@ export function HackathonDetailSidebar({ hackathon }: HackathonDetailSidebarProp
       <HackathonKeyDates dates={hackathon.keyDates} />
       <button
         type="button"
-        className="flex items-center justify-center gap-2 rounded-lg"
-        style={{
-          backgroundColor: "#ffffff",
-          border: "1px solid rgba(223,226,236,0.8)",
-          padding: 17,
-          filter: "drop-shadow(0px 1px 1px rgba(0,0,0,0.05))",
-          cursor: "pointer",
-          fontSize: 12,
-          fontWeight: 500,
-          color: "#0e1528",
-          letterSpacing: "0.24px",
-          lineHeight: "12px",
-        }}
+        className="flex items-center justify-center gap-2 border-2 border-navy bg-white px-6 py-2.5 text-sm font-medium text-navy cursor-pointer"
       >
         <svg width="15" height="12" viewBox="0 0 15 12" fill="none" aria-hidden="true">
           <rect x="1" y="1" width="13" height="10" rx="2" stroke="#0e1528" strokeWidth="1.2" />

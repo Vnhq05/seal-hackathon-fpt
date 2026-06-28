@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useSubmissionScoring } from "@/features/judging/hooks/use-submission-scoring";
 import { useSubmitScores } from "@/features/judging/hooks/use-submit-scores";
@@ -41,7 +41,7 @@ export function ScoringPage({ teamId, roundId }: { teamId: string; roundId: stri
     });
   }, [submission]);
 
-  const { handleSubmit, setValue, watch, reset } = useForm<ScoringFormValues>({
+  const { handleSubmit, setValue, reset, control } = useForm<ScoringFormValues>({
     resolver: zodResolver(scoringFormSchema),
     defaultValues: { scores: defaultScores },
   });
@@ -50,7 +50,7 @@ export function ScoringPage({ teamId, roundId }: { teamId: string; roundId: stri
     if (defaultScores.length > 0) reset({ scores: defaultScores });
   }, [defaultScores, reset]);
 
-  const watchedScores = watch("scores");
+  const watchedScores = useWatch({ control, name: "scores" });
 
   const allScored = useMemo(() => {
     return (watchedScores ?? []).every((s) => hasScore(s.score) && s.score <= 10);
@@ -212,7 +212,7 @@ function ScoringPageContent({
             href={submission.githubUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-lg border border-seal-border p-3 text-sm font-medium text-seal-cyan hover:bg-seal-surface-elevated"
+            className="border-2 border-navy bg-white p-3 text-sm font-medium text-royal shadow-[4px_4px_0_0_#0c1228] hover:bg-seal-surface-sunken"
           >
             GitHub Repository →
           </a>
@@ -222,7 +222,7 @@ function ScoringPageContent({
             href={submission.demoUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-lg border border-seal-border p-3 text-sm font-medium text-seal-cyan hover:bg-seal-surface-elevated"
+            className="border-2 border-navy bg-white p-3 text-sm font-medium text-royal shadow-[4px_4px_0_0_#0c1228] hover:bg-seal-surface-sunken"
           >
             Demo Video →
           </a>
@@ -230,7 +230,7 @@ function ScoringPageContent({
       </div>
 
       {submission.pdfUrl && (
-        <div className="rounded-lg border border-seal-border bg-seal-surface p-4">
+        <div className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-4">
           <div className="mb-2 text-xs font-medium text-seal-text-muted">
             PDF: {submission.pdfFileName ?? "Submission"}
           </div>
@@ -242,7 +242,7 @@ function ScoringPageContent({
         </div>
       )}
 
-      <div className="overflow-hidden rounded-lg border border-seal-border">
+      <div className="overflow-hidden border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]">
         <table className="w-full text-left text-sm">
           <thead className="bg-seal-surface-elevated text-xs font-semibold uppercase text-seal-text-muted">
             <tr>
@@ -300,7 +300,7 @@ function ScoringPageContent({
         </table>
       </div>
 
-      <div className="flex items-center justify-between rounded-lg border border-seal-border bg-seal-surface p-4">
+      <div className="flex items-center justify-between border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-4">
         <div>
           <div className="text-xs text-seal-text-muted">Tổng điểm có trọng số</div>
           <div className="text-2xl font-bold text-seal-text">
@@ -314,14 +314,14 @@ function ScoringPageContent({
               type="button"
               onClick={onSaveDraft}
               disabled={isSaving}
-              className="rounded-lg border border-seal-border px-4 py-2 text-sm font-medium disabled:opacity-50"
+              className="border-2 border-navy bg-white px-4 py-2 text-sm font-medium disabled:opacity-50"
             >
               {isSaving ? "Đang lưu..." : "Lưu nháp"}
             </button>
             <button
               type="submit"
               disabled={isSubmitting || !allScored || commentErrors.some(Boolean)}
-              className="rounded-lg bg-seal-cyan px-4 py-2 text-sm font-semibold text-white hover:bg-seal-cyan-dark disabled:opacity-50"
+              className="border-2 border-navy bg-seal-yellow px-4 py-2 text-navy font-mono font-bold shadow-[4px_4px_0_0_#0c1228] disabled:opacity-50"
             >
               {isSubmitting ? "Đang gửi..." : "Complete"}
             </button>

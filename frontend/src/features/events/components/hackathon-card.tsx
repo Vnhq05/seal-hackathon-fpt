@@ -49,7 +49,7 @@ function getClosingText(deadline: string): string {
 function OutlineButton({ label }: { label: string }) {
   return (
     <span
-      className="flex shrink-0 items-center justify-center rounded-lg"
+      className="flex shrink-0 items-center justify-center border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]"
       style={{
         border: "1px solid rgba(223,226,236,0.8)",
         padding: "9px 17px",
@@ -80,7 +80,7 @@ function CardFooter({ event }: { event: EventResponse }) {
           </span>
         </div>
         <span
-          className="flex shrink-0 items-center justify-center rounded-lg"
+          className="flex shrink-0 items-center justify-center border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]"
           style={{
             backgroundColor: "#059669",
             padding: "8px 16px",
@@ -127,7 +127,7 @@ export function HackathonCard({ hackathon }: HackathonCardProps) {
   return (
     <Link
       href={`/student/projects/${hackathon.id}`}
-      className="flex flex-col overflow-hidden rounded-lg transition-shadow hover:shadow-md"
+      className="flex flex-col overflow-hidden transition-shadow hover:shadow-md border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]"
       style={{
         backgroundColor: "#ffffff",
         border: "1px solid rgba(198, 198, 205, 0.5)",

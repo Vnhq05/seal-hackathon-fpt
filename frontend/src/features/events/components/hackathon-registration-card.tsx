@@ -14,7 +14,7 @@ export function HackathonRegistrationCard({
 
   return (
     <div
-      className="relative flex flex-col items-center overflow-hidden rounded-lg"
+      className="relative flex flex-col items-center overflow-hidden border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]"
       style={{
         backgroundColor: "#ffffff",
         border: "1px solid rgba(223,226,236,0.8)",
@@ -76,7 +76,7 @@ export function HackathonRegistrationCard({
 
       {team && (
         <div
-          className="flex w-full items-center justify-between rounded-lg"
+          className="flex w-full items-center justify-between border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]"
           style={{
             backgroundColor: "rgba(223,226,236,0.8)",
             border: "1px solid rgba(198,198,205,0.3)",
@@ -146,16 +146,7 @@ export function HackathonRegistrationCard({
 
       <Link
         href={`/student/projects/${hackathonId}`}
-        className="flex w-full items-center justify-center gap-1 rounded-lg"
-        style={{
-          backgroundColor: "#38bdf8",
-          padding: 8,
-          fontSize: 12,
-          fontWeight: 500,
-          color: "#ffffff",
-          letterSpacing: "0.24px",
-          lineHeight: "12px",
-        }}
+        className="flex w-full items-center justify-center gap-1 border-2 border-navy bg-seal-yellow px-6 py-2.5 text-sm text-navy font-mono font-bold cursor-pointer"
       >
         <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
           <path

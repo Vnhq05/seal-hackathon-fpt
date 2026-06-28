@@ -89,7 +89,7 @@ export function InlineSubmissionForm({ event, round, teamId, existing, onClose }
     <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={onClose}>
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
       <div
-        className="relative z-10 w-full max-w-2xl rounded-xl border border-seal-border bg-seal-surface shadow-xl"
+        className="relative z-10 w-full max-w-2xl border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-seal-border p-5">
@@ -117,7 +117,7 @@ export function InlineSubmissionForm({ event, round, teamId, existing, onClose }
               value={github}
               onChange={(e) => setGithub(e.target.value)}
               placeholder="https://github.com/team/project"
-              className="mt-1.5 w-full rounded-lg border border-seal-border bg-seal-surface px-3 py-2 text-sm text-seal-text outline-none focus:border-seal-cyan/40"
+              className="mt-1.5 w-full border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] px-3 py-2 text-sm text-seal-text outline-none focus:border-royal/40"
             />
           </div>
 
@@ -127,7 +127,7 @@ export function InlineSubmissionForm({ event, round, teamId, existing, onClose }
               value={demo}
               onChange={(e) => setDemo(e.target.value)}
               placeholder="https://youtube.com/watch?v=..."
-              className="mt-1.5 w-full rounded-lg border border-seal-border bg-seal-surface px-3 py-2 text-sm text-seal-text outline-none focus:border-seal-cyan/40"
+              className="mt-1.5 w-full border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] px-3 py-2 text-sm text-seal-text outline-none focus:border-royal/40"
             />
           </div>
 
@@ -171,14 +171,14 @@ export function InlineSubmissionForm({ event, round, teamId, existing, onClose }
           <button
             onClick={onClose}
             disabled={isPending}
-            className="rounded-lg border border-seal-border bg-seal-surface px-5 py-2 text-xs font-semibold text-seal-text hover:bg-seal-surface-elevated"
+            className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] px-5 py-2 text-xs font-semibold text-seal-text hover:bg-seal-surface-elevated"
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
             disabled={isPending || locked}
-            className="rounded-lg bg-seal-cyan px-5 py-2 text-xs font-semibold text-white hover:bg-seal-cyan-dark disabled:opacity-50"
+            className="border-2 border-navy bg-seal-yellow px-5 py-2 text-navy font-mono font-bold shadow-[4px_4px_0_0_#0c1228] disabled:opacity-50"
           >
             {isPending ? "Submitting..." : existing ? "Cập nhật bài nộp" : "Nộp bài"}
           </button>

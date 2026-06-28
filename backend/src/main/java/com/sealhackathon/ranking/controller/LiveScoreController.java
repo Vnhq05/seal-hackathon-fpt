@@ -32,8 +32,9 @@ public class LiveScoreController {
     public ResponseEntity<ApiResponse<LiveScoreBoard>> getLeaderboard(
             @PathVariable UUID eventId,
             @RequestParam(required = false) UUID trackId,
-            @RequestParam(required = false) UUID roundId) {
-        LiveScoreBoard board = liveScoreService.getLeaderboard(eventId, trackId, roundId);
+            @RequestParam(required = false) UUID roundId,
+            @RequestParam(required = false) String roundType) {
+        LiveScoreBoard board = liveScoreService.getLeaderboard(eventId, trackId, roundId, roundType);
         return ResponseEntity.ok(ApiResponse.success(board));
     }
 
@@ -43,7 +44,7 @@ public class LiveScoreController {
             @PathVariable UUID eventId,
             @RequestParam UUID roundId) {
         judgingService.lockScoresForRound(roundId);
-        LiveScoreBoard board = liveScoreService.getLeaderboard(eventId, null, roundId);
+        LiveScoreBoard board = liveScoreService.getLeaderboard(eventId, null, roundId, null);
         return ResponseEntity.ok(ApiResponse.success("Scores locked", board));
     }
 
@@ -54,7 +55,7 @@ public class LiveScoreController {
             @RequestParam UUID roundId) {
         UUID userId = authPublicService.getCurrentUserId();
         rankingService.publishResults(roundId, userId);
-        LiveScoreBoard board = liveScoreService.getLeaderboard(eventId, null, roundId);
+        LiveScoreBoard board = liveScoreService.getLeaderboard(eventId, null, roundId, null);
         return ResponseEntity.ok(ApiResponse.success("Results published", board));
     }
 
@@ -64,7 +65,7 @@ public class LiveScoreController {
             @PathVariable UUID eventId,
             @RequestParam boolean enabled) {
         liveScoreService.setLeaderboardPublic(eventId, enabled);
-        LiveScoreBoard board = liveScoreService.getLeaderboard(eventId, null, null);
+        LiveScoreBoard board = liveScoreService.getLeaderboard(eventId, null, null, null);
         return ResponseEntity.ok(ApiResponse.success(
                 enabled ? "Public leaderboard enabled" : "Public leaderboard disabled", board));
     }
