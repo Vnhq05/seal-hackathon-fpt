@@ -29,13 +29,13 @@ export function roundLockMessage(round: RoundResponse): string {
     : end;
 
   if (now < start) {
-    return `Round chưa bắt đầu. Thời gian mở: ${formatDt(round.startDate)} — ${formatDt(round.endDate)}`;
+    return `Round has not started yet. Opens: ${formatDt(round.startDate)} — ${formatDt(round.endDate)}`;
   }
   if (now > submissionEnd) {
     if (round.submissionDeadline && submissionEnd !== end) {
-      return `Đã qua deadline nộp bài (${formatDt(round.submissionDeadline)})`;
+      return `Submission deadline has passed (${formatDt(round.submissionDeadline)})`;
     }
-    return `Round đã kết thúc (${formatDt(round.startDate)} — ${formatDt(round.endDate)})`;
+    return `Round has ended (${formatDt(round.startDate)} — ${formatDt(round.endDate)})`;
   }
   return "";
 }
@@ -47,7 +47,7 @@ function formatDt(iso: string): string {
 export const MAX_PDF_BYTES = 5 * 1024 * 1024;
 
 export function validatePdfFile(file: File): string | null {
-  if (file.type !== "application/pdf") return "File phải là PDF";
-  if (file.size > MAX_PDF_BYTES) return "PDF phải nhỏ hơn 5MB";
+  if (file.type !== "application/pdf") return "File must be a PDF";
+  if (file.size > MAX_PDF_BYTES) return "PDF must be smaller than 5MB";
   return null;
 }

@@ -257,7 +257,7 @@ export function UserManagementPage() {
   };
 
   const handleReject = (user: UserListItem) => {
-    const reason = window.prompt(`Nhập lý do từ chối tài khoản ${user.fullName}:`, "");
+    const reason = window.prompt(`Enter reason for rejecting account ${user.fullName}:`, "");
     if (reason === null) return;
 
     setActionError(null);

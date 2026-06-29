@@ -109,8 +109,8 @@ export function RankingPage() {
           style={{ minWidth: 180 }}
         >
           <option value="">All rounds</option>
-          <option value="PRELIMINARY">Vòng bảng (per track)</option>
-          <option value="FINAL">Chung kết (overall)</option>
+          <option value="PRELIMINARY">Preliminary (per track)</option>
+          <option value="FINAL">Finals (overall)</option>
         </select>
 
         {roundType === "PRELIMINARY" && tracks.length > 0 && (

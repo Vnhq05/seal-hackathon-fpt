@@ -7,10 +7,10 @@ export function formatAdvancementLabel(
 ): string {
   if (competitionFormat === "SEAL_RAG_2026") {
     if (round.roundType === "PRELIMINARY" || round.advancementRule === "PER_TRACK_TOP_N") {
-      return `Top ${round.advancementCutoff} mỗi bảng → 6 đội chung kết`;
+      return `Top ${round.advancementCutoff} per track → 6 finalists`;
     }
     if (round.roundType === "FINAL" || round.advancementRule === "FINALIST_POOL") {
-      return `${round.advancementCutoff} đội chung kết`;
+      return `${round.advancementCutoff} finalists`;
     }
   }
   if (round.advancementRule === "PER_TRACK_TOP_N") {

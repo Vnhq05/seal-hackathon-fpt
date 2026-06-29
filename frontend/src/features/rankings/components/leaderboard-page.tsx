@@ -137,8 +137,8 @@ export function LeaderboardPage({ roundId: initialRoundId }: LeaderboardPageProp
           className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] px-3 py-2 text-sm text-seal-text outline-none focus:border-royal/40"
         >
           <option value="">All rounds</option>
-          <option value="PRELIMINARY">Vòng bảng</option>
-          <option value="FINAL">Chung kết</option>
+          <option value="PRELIMINARY">Preliminary</option>
+          <option value="FINAL">Finals</option>
         </select>
 
         <select

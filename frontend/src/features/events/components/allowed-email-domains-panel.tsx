@@ -145,7 +145,7 @@ export function AllowedEmailDomainsPanel({ eventId, className }: AllowedEmailDom
               type="text"
               value={universityLabel}
               onChange={(e) => setUniversityLabel(e.target.value)}
-              placeholder="ĐH Bách khoa TP.HCM"
+              placeholder="Ho Chi Minh City University of Technology"
               style={inputStyle}
             />
           </div>

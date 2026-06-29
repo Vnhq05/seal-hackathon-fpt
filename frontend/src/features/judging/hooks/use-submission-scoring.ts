@@ -16,14 +16,14 @@ export function useSubmissionScoring(roundId: string, teamId: string) {
         criteriaApi.list(roundId),
       ]);
 
-      if (!sub) throw new Error("Team chưa nộp bài cho round này");
+      if (!sub) throw new Error("Team has not submitted for this round");
 
       const assignment = assignments.find(
         (a) => a.teamId === teamId && a.roundId === roundId,
       );
 
       if (!assignment) {
-        throw new Error("Bạn không được phân công chấm team này trong round này");
+        throw new Error("You are not assigned to score this team in this round");
       }
 
       const score = await judgingApi

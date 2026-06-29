@@ -60,18 +60,18 @@ function SealDrawSessionPanel({
 
   return (
     <SealCard className="space-y-4 p-4">
-      <h2 className="font-mono font-bold text-navy">Phiên bốc thăm chia bảng (SEAL)</h2>
+      <h2 className="font-mono font-bold text-navy">Track draw session (SEAL)</h2>
       <p className="text-sm text-seal-text-secondary">
-        {unassignedCount} đội chưa có bảng · {tracks.length} bảng · Đội tự chọn theo lượt
+        {unassignedCount} teams without a track · {tracks.length} tracks · Teams pick in turn
       </p>
 
       {isLoadingSession && !session && (
-        <p className="text-sm text-seal-text-muted">Đang tải phiên bốc thăm...</p>
+        <p className="text-sm text-seal-text-muted">Loading draw session...</p>
       )}
 
       {!session && !isLoadingSession && (
         <SealButton onClick={handleOpenSession} disabled={isOpening || unassignedCount === 0}>
-          {isOpening ? "Đang mở phiên..." : "Mở phiên bốc thăm"}
+          {isOpening ? "Opening session..." : "Open draw session"}
         </SealButton>
       )}
 
@@ -89,27 +89,27 @@ function SealDrawSessionPanel({
                   : "bg-gray-100 text-gray-600"
               }`}
             >
-              {session.status === "OPEN" ? "Đang diễn ra" : "Đã đóng"}
+              {session.status === "OPEN" ? "In progress" : "Closed"}
             </span>
             <span className="text-sm text-seal-text-secondary">
-              Lượt {session.currentIndex + 1}/{session.totalTeams}
+              Turn {session.currentIndex + 1}/{session.totalTeams}
             </span>
           </div>
 
           {session.status === "OPEN" && session.currentTeamName && (
             <p className="text-sm font-semibold text-navy">
-              Lượt hiện tại: {session.currentTeamName}
+              Current turn: {session.currentTeamName}
             </p>
           )}
 
           {session.openedAt && (
-            <p className="text-xs text-seal-text-muted">Mở lúc: {formatDt(session.openedAt)}</p>
+            <p className="text-xs text-seal-text-muted">Opened at: {formatDt(session.openedAt)}</p>
           )}
 
           {session.availableTracks.length > 0 && (
             <div>
               <p className="mb-2 text-xs font-semibold uppercase text-seal-text-muted">
-                Bảng còn chỗ
+                Tracks with open slots
               </p>
               <ul className="grid gap-2 sm:grid-cols-3">
                 {session.availableTracks.map((slot) => (
@@ -118,7 +118,7 @@ function SealDrawSessionPanel({
                     className="border border-navy/20 bg-white px-3 py-2 text-sm"
                   >
                     <span className="font-semibold">{slot.name}</span>
-                    <span className="ml-2 text-seal-text-muted">({slot.remainingSlots} chỗ)</span>
+                    <span className="ml-2 text-seal-text-muted">({slot.remainingSlots} slots)</span>
                   </li>
                 ))}
               </ul>
@@ -129,18 +129,18 @@ function SealDrawSessionPanel({
 
       {tracks.length > 0 && (
         <div className="space-y-3">
-          <h3 className="text-sm font-semibold text-navy">Gán chủ đề cho từng bảng</h3>
+          <h3 className="text-sm font-semibold text-navy">Assign topic to each track</h3>
           {tracks.map((track) => (
             <div key={track.id} className="flex flex-wrap items-end gap-2 border border-navy/10 p-3">
               <div className="min-w-[120px] flex-1">
                 <p className="text-xs uppercase text-seal-text-muted">{track.name}</p>
                 <p className="text-xs text-seal-text-secondary">
-                  {track.assignedTeamCount ?? 0} đội
-                  {track.status === "LOCKED" && " · Đã khóa"}
+                  {track.assignedTeamCount ?? 0} teams
+                  {track.status === "LOCKED" && " · Locked"}
                 </p>
                 {track.topic && (
                   <p className="mt-1 text-sm text-navy">
-                    <span className="font-semibold">Chủ đề:</span> {track.topic}
+                    <span className="font-semibold">Topic:</span> {track.topic}
                   </p>
                 )}
               </div>
@@ -148,7 +148,7 @@ function SealDrawSessionPanel({
                 <>
                   <input
                     type="text"
-                    placeholder="Nhập chủ đề bảng..."
+                    placeholder="Enter track topic..."
                     className="min-w-[200px] flex-1 border-2 border-navy px-2 py-1.5 text-sm"
                     value={topicDrafts[track.id] ?? ""}
                     onChange={(e) =>
@@ -162,7 +162,7 @@ function SealDrawSessionPanel({
                     }}
                     disabled={isAssigningTopic || !topicDrafts[track.id]?.trim()}
                   >
-                    Gán chủ đề
+                    Assign topic
                   </SealButton>
                 </>
               )}
@@ -173,19 +173,19 @@ function SealDrawSessionPanel({
 
       {allAssigned && allHaveTopic && !allLocked && (
         <SealButton onClick={() => lockTracks()} disabled={isLocking}>
-          {isLocking ? "Đang khóa..." : "Khóa tất cả bảng (kết thúc Day 1)"}
+          {isLocking ? "Locking..." : "Lock all tracks (end of Day 1)"}
         </SealButton>
       )}
 
       {lockResult && (
         <p className="text-sm text-emerald-700">
-          Đã khóa {lockResult.lockedTrackCount} bảng.
+          Locked {lockResult.lockedTrackCount} tracks.
         </p>
       )}
 
       {allLocked && (
         <p className="text-sm font-semibold text-emerald-700">
-          Tất cả bảng đã khóa. Không thể thay đổi phân bảng.
+          All tracks are locked. Track assignments cannot be changed.
         </p>
       )}
     </SealCard>
@@ -209,15 +209,15 @@ function GenericDrawPanel({
 
   return (
     <SealCard className="space-y-4 p-4">
-      <h2 className="font-mono font-bold text-navy">Bốc thăm chia bảng</h2>
-      <p className="text-sm text-seal-text-secondary">{unassignedCount} đội chưa có bảng</p>
+      <h2 className="font-mono font-bold text-navy">Track draw</h2>
+      <p className="text-sm text-seal-text-secondary">{unassignedCount} teams without a track</p>
       <SealButton onClick={() => drawMutation.mutate()} disabled={drawMutation.isPending}>
-        {drawMutation.isPending ? "Đang bốc thăm..." : "Bốc thăm ngẫu nhiên"}
+        {drawMutation.isPending ? "Drawing..." : "Random draw"}
       </SealButton>
       {drawMutation.data && (
         <p className="text-sm text-emerald-700">
-          Đã gán {drawMutation.data.assignments.length} đội · Còn{" "}
-          {drawMutation.data.unassignedCount} chưa gán
+          Assigned {drawMutation.data.assignments.length} teams ·{" "}
+          {drawMutation.data.unassignedCount} still unassigned
         </p>
       )}
     </SealCard>
@@ -263,18 +263,18 @@ export function CoordinatorTrackAssignmentPage() {
       <div>
         <h1 className="text-2xl font-bold text-navy">Track & Finals Management</h1>
         <p className="text-sm text-seal-text-secondary">
-          Bốc thăm chia bảng, chọn Top 6 và trao giải cho SEAL Hackathon.
+          Run track draw, select Top 6, and assign awards for SEAL Hackathon.
         </p>
       </div>
 
       <SealCard className="p-4">
-        <label className="text-xs font-semibold uppercase text-seal-text-muted">Chọn sự kiện</label>
+        <label className="text-xs font-semibold uppercase text-seal-text-muted">Select event</label>
         <select
           className="mt-2 w-full border-2 border-navy px-3 py-2 font-mono text-sm"
           value={eventId}
           onChange={(e) => setEventId(e.target.value)}
         >
-          <option value="">— Chọn event —</option>
+          <option value="">— Select event —</option>
           {(sealEvents.length > 0 ? sealEvents : events ?? []).map((e) => (
             <option key={e.id} value={e.id}>
               {e.name} {e.competitionFormat === "SEAL_RAG_2026" ? "(SEAL)" : ""}
@@ -296,15 +296,15 @@ export function CoordinatorTrackAssignmentPage() {
           )}
 
           <SealCard className="space-y-4 p-4">
-            <h2 className="font-mono font-bold text-navy">Chọn Top 6 (Chung kết)</h2>
+            <h2 className="font-mono font-bold text-navy">Select Top 6 (Finals)</h2>
             <SealButton onClick={() => finalistMutation.mutate()} disabled={finalistMutation.isPending}>
-              {finalistMutation.isPending ? "Đang chọn..." : "Chọn finalist (Top 2/bảng)"}
+              {finalistMutation.isPending ? "Selecting..." : "Select finalists (Top 2/track)"}
             </SealButton>
             {finalistMutation.data?.summary && (
               <p className="text-sm text-seal-text-secondary">
-                Đã chọn {finalistMutation.data.summary.selectedCount}/{finalistMutation.data.summary.targetCount} đội
+                Selected {finalistMutation.data.summary.selectedCount}/{finalistMutation.data.summary.targetCount} teams
                 {finalistMutation.data.summary.penaltyEvaluationRequired && (
-                  <span className="ml-2 font-semibold text-amber-700">— Cần OC đánh giá penalty</span>
+                  <span className="ml-2 font-semibold text-amber-700">— OC penalty review required</span>
                 )}
               </p>
             )}
@@ -327,7 +327,7 @@ export function CoordinatorTrackAssignmentPage() {
             )}
             {contestedSlots.length > 0 && (
               <div className="rounded border border-amber-400 bg-amber-50 p-3 text-sm">
-                <p className="font-semibold text-amber-900">Vị trí tranh chấp — cần OC penalty evaluation</p>
+                <p className="font-semibold text-amber-900">Contested positions — OC penalty review required</p>
                 <ul className="mt-2 space-y-2">
                   {contestedSlots.map((slot) => (
                     <li key={slot.id}>
@@ -341,15 +341,15 @@ export function CoordinatorTrackAssignmentPage() {
           </SealCard>
 
           <SealCard className="space-y-4 p-4">
-            <h2 className="font-mono font-bold text-navy">Trao giải</h2>
+            <h2 className="font-mono font-bold text-navy">Award assignment</h2>
             <SealButton onClick={() => awardMutation.mutate()} disabled={awardMutation.isPending}>
-              {awardMutation.isPending ? "Đang gán..." : "Gán giải từ BXH chung kết"}
+              {awardMutation.isPending ? "Assigning..." : "Assign awards from finals leaderboard"}
             </SealButton>
             {awardMutation.isError && (
               <p className="text-sm text-red-600">
                 {awardMutation.error instanceof Error
                   ? awardMutation.error.message
-                  : "Không thể gán giải. Vui lòng thử lại."}
+                  : "Unable to assign awards. Please try again."}
               </p>
             )}
             {awardMutation.data && (
@@ -362,7 +362,7 @@ export function CoordinatorTrackAssignmentPage() {
                   ))}
                 </ul>
                 <p className="text-seal-text-secondary">
-                  Đã cấp {awardMutation.data.participationCertificatesIssued} chứng nhận tham gia.
+                  Issued {awardMutation.data.participationCertificatesIssued} participation certificates.
                 </p>
               </div>
             )}

@@ -108,7 +108,7 @@ function PrizeForm({
                   value={row.label ?? DEFAULT_CONSOLATION_LABEL}
                   onChange={(e) => updateRow(row.id, { label: e.target.value })}
                   style={{ ...inputStyle, flex: 1, marginRight: 8, fontWeight: 600 }}
-                  placeholder="Tên giải khuyến khích"
+                  placeholder="Consolation prize name"
                 />
               ) : (
                 <span style={{ fontSize: 13, fontWeight: 600 }}>{PRIZE_RANK_LABELS[row.rank]}</span>
@@ -252,7 +252,7 @@ function Step5PrizesBody({ onNext, onBack }: { onNext: () => void; onBack: () =>
       for (let idx = 0; idx < data.tracks.length; idx++) {
         const trackPrizes = rowsToPrizes(trackRows[idx] ?? defaultRows(), idx);
         if (trackPrizes.length === 0) {
-          setFormError(`Track "${data.tracks[idx].name}" chưa có giải thưởng.`);
+          setFormError(`Track "${data.tracks[idx].name}" has no prizes configured.`);
           return false;
         }
       }

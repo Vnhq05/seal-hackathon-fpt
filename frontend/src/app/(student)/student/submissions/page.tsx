@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { StudentSubmissionPage } from "@/features/submissions/components/student-submission-page";
 
 export const metadata: Metadata = {
-  title: "Nộp bài — SEAL Hackathon",
-  description: "Nộp và cập nhật bài thi cho round hiện tại.",
+  title: "Submit — SEAL Hackathon",
+  description: "Submit and update your entry for the current round.",
 };
 
 export default function SubmissionsRoute() {

@@ -84,11 +84,11 @@ export function StudentSubmissionPage() {
   const locked = !roundOpen || !isLeader || (isSealPrelim && !sealGateOpen);
 
   const lockReason = !team
-    ? "Bạn chưa có team. Hãy tham gia team trước khi nộp bài."
+    ? "You don't have a team yet. Join a team before submitting."
     : !currentRound
-      ? "Không có round nào đang diễn ra."
+      ? "No round is currently active."
       : !isLeader
-        ? "Chỉ Leader mới được nộp bài."
+        ? "Only the team leader can submit."
         : isSealPrelim && sealPhase === "DEMO_CLOSED"
           ? sealPhaseDescription("DEMO_CLOSED")
           : !roundOpen && currentRound
@@ -124,7 +124,7 @@ export function StudentSubmissionPage() {
         },
         {
           onSuccess: (res) => {
-            setSuccess(`Đã lưu bài nộp v${res.currentVersion} (${res.status})`);
+            setSuccess(`Submission saved as v${res.currentVersion} (${res.status})`);
             setPdfFile(null);
           },
           onError: (err: Error) => setFormError(err.message),
@@ -146,7 +146,7 @@ export function StudentSubmissionPage() {
       },
       {
         onSuccess: (res) => {
-          setSuccess(`Đã lưu bài nộp v${res.currentVersion} (${res.status})`);
+          setSuccess(`Submission saved as v${res.currentVersion} (${res.status})`);
           setPdfFile(null);
         },
         onError: (err: Error) => setFormError(err.message),
@@ -180,7 +180,7 @@ export function StudentSubmissionPage() {
 
     if (showSlideOnly) {
       if (!slide.trim() || !isValidHttpUrl(slide)) {
-        setFormError("Slide URL không hợp lệ");
+        setFormError("Invalid slide URL");
         return;
       }
       handleSubmitMutation();
@@ -194,15 +194,15 @@ export function StudentSubmissionPage() {
         return;
       }
       if (!slide.trim() || !isValidHttpUrl(slide)) {
-        setFormError("Slide URL không hợp lệ");
+        setFormError("Invalid slide URL");
         return;
       }
       if (!demo.trim() || !isValidHttpUrl(demo)) {
-        setFormError("Demo Video URL không hợp lệ");
+        setFormError("Invalid demo video URL");
         return;
       }
       if (requirePdf && !existing && !pdfFile) {
-        setFormError("Vui lòng upload file PDF");
+        setFormError("Please upload a PDF file");
         return;
       }
       handleSubmitMutation();
@@ -220,11 +220,11 @@ export function StudentSubmissionPage() {
   return (
     <div className="mx-auto max-w-2xl flex flex-col gap-6">
       <div>
-        <h1 className="text-[28px] font-bold tracking-tight text-seal-text">Nộp bài</h1>
+        <h1 className="text-[28px] font-bold tracking-tight text-seal-text">Submit</h1>
         <p className="mt-1 text-sm text-seal-text-secondary">
           {isSealPrelim
-            ? "Milestone gates SEAL Spring 2026 — slide trước 10:00, bài đầy đủ trước 14:00."
-            : "Slide, source code và demo cho round hiện tại."}
+            ? "SEAL Spring 2026 milestone gates — slides before 10:00, full submission before 14:00."
+            : "Slides, source code, and demo for the current round."}
         </p>
       </div>
 
@@ -243,14 +243,14 @@ export function StudentSubmissionPage() {
           )}
           <div className="mt-3 flex flex-wrap gap-4 font-mono text-xs">
             {slideCountdown !== null && sealPhase === "SLIDE_ONLY" && slideCountdown > 0 && (
-              <span>Còn {formatCountdown(slideCountdown)} đến deadline slide (10:00)</span>
+              <span>{formatCountdown(slideCountdown)} until slide deadline (10:00)</span>
             )}
             {demoCountdown !== null && sealPhase === "FULL" && demoCountdown > 0 && (
-              <span>Còn {formatCountdown(demoCountdown)} đến deadline demo (14:00)</span>
+              <span>{formatCountdown(demoCountdown)} until demo deadline (14:00)</span>
             )}
           </div>
           <p className="mt-2 text-[10px] text-seal-text-muted">
-            Thời gian hệ thống server là chuẩn.
+            Server time is authoritative.
           </p>
         </div>
       )}
@@ -259,7 +259,7 @@ export function StudentSubmissionPage() {
         <div className="border-2 border-navy bg-white p-5 shadow-[4px_4px_0_0_#0c1228]">
           <h2 className="font-mono text-base font-bold text-navy">Milestone timeline</h2>
           <p className="mt-1 mb-4 text-xs text-seal-text-secondary">
-            Milestone 1 (slide) và Milestone 2 (demo đầy đủ) theo lịch SEAL Spring 2026.
+            Milestone 1 (slides) and Milestone 2 (full demo submission) per the SEAL Spring 2026 schedule.
           </p>
           <EventScheduleTimeline
             schedules={schedule}
@@ -279,14 +279,14 @@ export function StudentSubmissionPage() {
             <>
               <div className="mt-1 font-semibold text-seal-text">{team.name}</div>
               <div className="text-xs text-seal-text-muted">{event.name}</div>
-              <div className="mt-1 text-xs text-seal-text-secondary">{team.memberCount} thành viên</div>
+              <div className="mt-1 text-xs text-seal-text-secondary">{team.memberCount} members</div>
             </>
           ) : (
-            <p className="mt-1 text-sm text-seal-text-muted">Chưa có team</p>
+            <p className="mt-1 text-sm text-seal-text-muted">No team</p>
           )}
         </div>
         <div className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-4">
-          <div className="text-[11px] font-medium uppercase tracking-wider text-seal-text-muted">Round hiện tại</div>
+          <div className="text-[11px] font-medium uppercase tracking-wider text-seal-text-muted">Current round</div>
           {currentRound ? (
             <>
               <div className="mt-1 font-semibold text-seal-text">{currentRound.name}</div>
@@ -307,18 +307,18 @@ export function StudentSubmissionPage() {
                     : "bg-amber-50 text-amber-700"
                 }`}
               >
-                {roundOpen && sealGateOpen ? "Đang mở nộp bài" : "Đã đóng"}
+                {roundOpen && sealGateOpen ? "Open for submission" : "Closed"}
               </span>
             </>
           ) : (
-            <p className="mt-1 text-sm text-seal-text-muted">Không có round đang diễn ra</p>
+            <p className="mt-1 text-sm text-seal-text-muted">No active round</p>
           )}
         </div>
       </div>
 
       {existing && (
         <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
-          <span className="font-semibold">Đã nộp:</span> v{existing.currentVersion} — {existing.status}
+          <span className="font-semibold">Submitted:</span> v{existing.currentVersion} — {existing.status}
           {existing.latestVersion?.submittedAt && (
             <span className="text-emerald-700">
               {" "}
@@ -379,7 +379,7 @@ export function StudentSubmissionPage() {
         {requirePdf && (
           <div>
             <label className="text-xs font-medium text-seal-text-secondary">
-              PDF {existing ? "(tuỳ chọn khi cập nhật)" : "*"}
+              PDF {existing ? "(optional when updating)" : "*"}
             </label>
             <input
               type="file"
@@ -389,10 +389,10 @@ export function StudentSubmissionPage() {
               className="mt-1.5 w-full text-sm"
             />
             {pdfError && <p className="mt-1 text-xs text-red-600">{pdfError}</p>}
-            {pdfFile && <p className="mt-1 text-xs text-seal-text-muted">Đã chọn: {pdfFile.name}</p>}
+            {pdfFile && <p className="mt-1 text-xs text-seal-text-muted">Selected: {pdfFile.name}</p>}
             {!pdfFile && existing?.latestVersion?.attachments?.[0] && (
               <p className="mt-1 text-xs text-seal-text-muted">
-                File hiện tại: {existing.latestVersion.attachments[0].fileName}
+                Current file: {existing.latestVersion.attachments[0].fileName}
               </p>
             )}
           </div>
@@ -408,14 +408,14 @@ export function StudentSubmissionPage() {
           className="border-2 border-navy bg-seal-yellow py-2.5 font-mono font-bold text-navy shadow-[4px_4px_0_0_#0c1228] disabled:opacity-50"
         >
           {isPending
-            ? "Đang gửi..."
+            ? "Submitting..."
             : showSlideOnly
               ? existing
-                ? "Cập nhật slide"
-                : "Nộp slide (Milestone 1)"
+                ? "Update slides"
+                : "Submit slides (Milestone 1)"
               : existing
-                ? "Cập nhật bài nộp"
-                : "Nộp bài"}
+                ? "Update submission"
+                : "Submit"}
         </button>
       </div>
     </div>

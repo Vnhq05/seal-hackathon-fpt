@@ -35,16 +35,16 @@ export function ScoreReviewReadonlyModal({
         <div className="flex items-center justify-between border-b border-seal-border p-4">
           <h2 className="text-lg font-bold text-seal-text">Score Deviation Review</h2>
           <button type="button" onClick={onClose} className="text-sm text-seal-text-muted hover:text-seal-text">
-            Đóng
+            Close
           </button>
         </div>
 
         {isLoading || !review ? (
-          <div className="p-8 text-center text-sm text-seal-text-muted">Đang tải...</div>
+          <div className="p-8 text-center text-sm text-seal-text-muted">Loading...</div>
         ) : (
           <div className="flex flex-col gap-4 p-4">
             <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded px-3 py-2">
-              Hệ thống phát hiện chênh lệch điểm giữa các judge ≥ 25 điểm. Coordinator sẽ xử lý flag này.
+              The system detected a score deviation of ≥ 25 points between judges. A coordinator will resolve this flag.
             </p>
 
             <div className="grid grid-cols-2 gap-3 text-sm">

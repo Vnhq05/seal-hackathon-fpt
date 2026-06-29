@@ -41,7 +41,7 @@ function StarRating({
           disabled={disabled}
           onClick={() => onChange(star)}
           className={`text-2xl transition ${disabled ? "cursor-default" : "cursor-pointer hover:scale-110"}`}
-          aria-label={`${star} sao`}
+          aria-label={`${star} stars`}
         >
           {star <= value ? "★" : "☆"}
         </button>
@@ -89,13 +89,13 @@ export function ParticipantFeedbackPage() {
     e.preventDefault();
     setError(null);
     if (rating < 1) {
-      setError("Vui lòng chọn điểm đánh giá từ 1 đến 5 sao.");
+      setError("Please select a rating from 1 to 5 stars.");
       return;
     }
     submit(
       { overallRating: rating, comment: comment.trim() || undefined },
       {
-        onError: (err: Error) => setError(err.message || "Không thể gửi feedback."),
+        onError: (err: Error) => setError(err.message || "Unable to submit feedback."),
       },
     );
   };
@@ -105,51 +105,51 @@ export function ParticipantFeedbackPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-6 p-6">
       <div>
-        <h1 className="text-2xl font-bold text-navy">Đánh giá sau sự kiện</h1>
+        <h1 className="text-2xl font-bold text-navy">Post-Event Feedback</h1>
         {sealEvent && <p className="text-sm text-seal-text-secondary">{sealEvent.name}</p>}
       </div>
 
-      {loading && <p className="text-sm text-seal-text-muted">Đang tải...</p>}
+      {loading && <p className="text-sm text-seal-text-muted">Loading...</p>}
 
       {!loading && !sealEvent && (
         <p className="rounded-lg border border-navy/20 bg-white p-6 text-sm text-seal-text-secondary">
-          Chưa có sự kiện nào.
+          No events available.
         </p>
       )}
 
       {!loading && sealEvent && sealEvent.status !== "COMPLETED" && (
         <p className="rounded-lg border border-navy/20 bg-white p-6 text-sm text-seal-text-secondary">
-          Feedback chỉ mở sau khi sự kiện kết thúc (trạng thái COMPLETED).
+          Feedback opens only after the event ends (COMPLETED status).
         </p>
       )}
 
       {!loading && sealEvent && sealEvent.status === "COMPLETED" && !team && (
         <p className="rounded-lg border border-navy/20 bg-white p-6 text-sm text-seal-text-secondary">
-          Bạn cần thuộc một đội đã xác nhận (CONFIRMED) để gửi feedback.
+          You must belong to a CONFIRMED team to submit feedback.
         </p>
       )}
 
       {!loading && sealEvent && sealEvent.status === "COMPLETED" && team && team.status !== "CONFIRMED" && (
         <p className="rounded-lg border border-navy/20 bg-white p-6 text-sm text-seal-text-secondary">
-          Đội của bạn chưa ở trạng thái CONFIRMED. Chỉ thành viên đội đã xác nhận mới được gửi feedback.
+          Your team is not CONFIRMED yet. Only confirmed team members can submit feedback.
         </p>
       )}
 
       {!loading && existing && (
         <div className="space-y-4 border-2 border-royal bg-white p-6 shadow-[3px_3px_0_0_#0c1228]">
-          <p className="font-mono text-xs font-bold uppercase text-royal">Đã gửi feedback</p>
+          <p className="font-mono text-xs font-bold uppercase text-royal">Feedback submitted</p>
           <div>
-            <p className="text-sm text-seal-text-muted">Điểm đánh giá</p>
+            <p className="text-sm text-seal-text-muted">Rating</p>
             <StarRating value={existing.overallRating} onChange={() => {}} disabled />
           </div>
           {existing.comment && (
             <div>
-              <p className="text-sm text-seal-text-muted">Nhận xét</p>
+              <p className="text-sm text-seal-text-muted">Comment</p>
               <p className="text-sm text-navy">{existing.comment}</p>
             </div>
           )}
           <p className="text-xs text-seal-text-muted">
-            Gửi lúc {new Date(existing.submittedAt).toLocaleString("vi-VN")}
+            Submitted at {new Date(existing.submittedAt).toLocaleString("en-US")}
           </p>
         </div>
       )}
@@ -160,16 +160,16 @@ export function ParticipantFeedbackPage() {
           className="space-y-5 border-2 border-navy bg-white p-6 shadow-[3px_3px_0_0_#0c1228]"
         >
           <div>
-            <label style={labelStyle}>Điểm tổng thể (1–5 sao) *</label>
+            <label style={labelStyle}>Overall rating (1–5 stars) *</label>
             <StarRating value={rating} onChange={setRating} />
           </div>
 
           <div>
-            <label style={labelStyle}>Nhận xét (tuỳ chọn)</label>
+            <label style={labelStyle}>Comment (optional)</label>
             <textarea
               value={comment}
               onChange={(e) => setComment(e.target.value)}
-              placeholder="Chia sẻ trải nghiệm của bạn về sự kiện..."
+              placeholder="Share your experience about the event..."
               rows={5}
               maxLength={2000}
               style={{ ...inputStyle, resize: "vertical" }}
@@ -183,7 +183,7 @@ export function ParticipantFeedbackPage() {
             disabled={isPending}
             className="w-full border-2 border-navy bg-royal px-4 py-3 text-sm font-semibold text-white shadow-[3px_3px_0_0_#0c1228] transition hover:translate-x-px hover:translate-y-px hover:shadow-[2px_2px_0_0_#0c1228] disabled:opacity-60"
           >
-            {isPending ? "Đang gửi..." : "Gửi feedback"}
+            {isPending ? "Submitting..." : "Submit feedback"}
           </button>
         </form>
       )}

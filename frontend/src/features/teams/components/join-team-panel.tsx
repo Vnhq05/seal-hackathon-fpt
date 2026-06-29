@@ -142,7 +142,7 @@ export function JoinTeamPanel({ event }: JoinTeamPanelProps) {
         <p className="mt-4 text-sm text-seal-text-muted">
           {recruitingOnly
             ? "No teams are actively recruiting right now."
-            : "Chưa có team nào còn slot. Hãy tạo team mới hoặc quay lại sau."}
+            : "No teams with open slots. Create a new team or check back later."}
         </p>
       ) : (
         <div className="mt-4 flex flex-col gap-3">

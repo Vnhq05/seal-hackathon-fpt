@@ -33,7 +33,7 @@ const NAV_ITEMS = [
   },
   {
     href: "/student/tracks/draw",
-    label: "Bảng thi",
+    label: "Competition track",
     icon: (
       <svg width="18" height="18" viewBox="0 0 18 18" {...svgProps}>
         <rect x="2" y="3" width="14" height="12" rx="1" {...s15} />

@@ -174,7 +174,7 @@ function StatsRow({ summary, team }: { summary: DashboardSummaryData | undefined
 }
 
 function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString("vi-VN", {
+  return new Date(dateStr).toLocaleDateString("en-US", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -218,18 +218,18 @@ function DashboardEventCard({
         <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-seal-text-secondary">
           <span>{event.season} {event.year}</span>
           <span>{event.trackCount} track{event.trackCount !== 1 ? "s" : ""}</span>
-          <span>Đăng ký đến: {formatDate(event.registrationDeadline)}</span>
+          <span>Register by: {formatDate(event.registrationDeadline)}</span>
         </div>
       </div>
 
       <div className="flex-shrink-0">
         {isApproved ? (
           <span className="inline-flex items-center rounded-lg bg-emerald-50 px-4 py-2 text-xs font-semibold text-emerald-700">
-            Đang tham gia
+            Participating
           </span>
         ) : isPending ? (
           <span className="inline-flex items-center rounded-lg bg-amber-50 px-4 py-2 text-xs font-semibold text-amber-700">
-            Chờ phê duyệt
+            Pending approval
           </span>
         ) : canEnroll ? (
           <Link
@@ -304,7 +304,7 @@ function HackathonEvents({
   if (openEvents.length === 0 && upcomingEvents.length === 0) {
     return (
       <div className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-6">
-        <p className="py-4 text-sm text-seal-text-muted">Hiện chưa có sự kiện nào mở đăng ký hoặc sắp diễn ra.</p>
+        <p className="py-4 text-sm text-seal-text-muted">No events are open for registration or coming up right now.</p>
       </div>
     );
   }
@@ -312,15 +312,15 @@ function HackathonEvents({
   return (
     <div className="flex flex-col gap-6">
       <EventSection
-        title="Đang mở đăng ký"
-        description="Các sự kiện đang nhận đăng ký tham gia."
+        title="Open for registration"
+        description="Events currently accepting registrations."
         events={openEvents}
         activeEnrollment={activeEnrollment}
         profile={profile}
       />
       <EventSection
-        title="Sắp diễn ra"
-        description="Các sự kiện sẽ mở đăng ký trong thời gian tới."
+        title="Coming soon"
+        description="Events that will open registration soon."
         events={upcomingEvents}
         activeEnrollment={activeEnrollment}
         profile={profile}
@@ -431,14 +431,14 @@ function ScheduleDashboardCard({ event }: { event: EventResponse }) {
     <div className="border-2 border-navy bg-white p-6 shadow-[4px_4px_0_0_#0c1228]">
       <div className="mb-4 flex items-center justify-between gap-4">
         <div>
-          <h2 className="font-mono text-xl font-bold text-navy">Lịch thi đấu</h2>
+          <h2 className="font-mono text-xl font-bold text-navy">Competition schedule</h2>
           <p className="mt-1 text-sm text-seal-text-secondary">{event.name}</p>
         </div>
         <Link
           href="/student/submissions"
           className="inline-flex items-center gap-1 font-mono text-xs font-bold text-seal-cyan hover:underline"
         >
-          Nộp bài
+          Submit
           <ArrowRightIcon />
         </Link>
       </div>
@@ -446,14 +446,14 @@ function ScheduleDashboardCard({ event }: { event: EventResponse }) {
       {(activeMilestone || nextMilestone) && (
         <div className="mb-4 rounded-lg border border-seal-cyan/30 bg-seal-cyan/5 p-3 text-sm">
           {activeMilestone ? (
-            <p className="font-semibold text-seal-cyan">Đang diễn ra: {activeMilestone.title}</p>
+            <p className="font-semibold text-seal-cyan">In progress: {activeMilestone.title}</p>
           ) : nextMilestone ? (
-            <p className="font-semibold text-seal-text">Tiếp theo: {nextMilestone.title}</p>
+            <p className="font-semibold text-seal-text">Next: {nextMilestone.title}</p>
           ) : null}
           {countdownMs !== null && countdownMs > 0 && (
             <p className="mt-1 font-mono text-xs text-seal-text-secondary">
-              Còn {formatCountdown(countdownMs)}
-              {activeMilestone?.gate === "SLIDE_SUBMISSION" ? " đến deadline slide" : activeMilestone?.gate === "DEMO_SUBMISSION" ? " đến deadline demo" : " đến mốc tiếp theo"}
+              {formatCountdown(countdownMs)}
+              {activeMilestone?.gate === "SLIDE_SUBMISSION" ? " until slide deadline" : activeMilestone?.gate === "DEMO_SUBMISSION" ? " until demo deadline" : " until next milestone"}
             </p>
           )}
         </div>

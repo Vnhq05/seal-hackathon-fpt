@@ -41,9 +41,9 @@ export function findNextMilestone(
 export function scheduleGateLabel(gate: ScheduleGate): string {
   switch (gate) {
     case "SLIDE_SUBMISSION":
-      return "Cổng slide (deadline 10:00)";
+      return "Slide gate (deadline 10:00)";
     case "DEMO_SUBMISSION":
-      return "Cổng demo (deadline 14:00)";
+      return "Demo gate (deadline 14:00)";
   }
 }
 
@@ -52,28 +52,28 @@ export function scheduleTypeLabel(type: ScheduleType): string {
     case "WORKSHOP":
       return "Workshop";
     case "OPENING":
-      return "Khai mạc";
+      return "Opening ceremony";
     case "TRACK_DRAW":
-      return "Bốc thăm bảng";
+      return "Track draw";
     case "MILESTONE":
       return "Milestone";
     case "SCORING":
-      return "Chấm điểm";
+      return "Scoring";
     case "FINAL":
-      return "Chung kết";
+      return "Finals";
     case "CEREMONY":
-      return "Trao giải";
+      return "Award ceremony";
   }
 }
 
 export function scheduleStatusLabel(status: ScheduleItemStatus): string {
   switch (status) {
     case "upcoming":
-      return "Sắp tới";
+      return "Upcoming";
     case "active":
-      return "Đang diễn ra";
+      return "In progress";
     case "completed":
-      return "Đã qua";
+      return "Completed";
   }
 }
 
@@ -92,7 +92,7 @@ export function groupSchedulesByDay(
 
   return Array.from(groups.entries()).map(([dateKey, items]) => ({
     dateKey,
-    dateLabel: new Date(dateKey + "T00:00:00").toLocaleDateString("vi-VN", {
+    dateLabel: new Date(dateKey + "T00:00:00").toLocaleDateString("en-US", {
       weekday: "long",
       day: "numeric",
       month: "long",

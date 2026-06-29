@@ -61,12 +61,12 @@ function ReviewDetailModal({
         <div className="flex items-center justify-between border-b border-seal-border p-4">
           <h2 className="text-lg font-bold text-seal-text">Score Deviation Review</h2>
           <button type="button" onClick={onClose} className="text-sm text-seal-text-muted hover:text-seal-text">
-            Đóng
+            Close
           </button>
         </div>
 
         {isLoading || !review ? (
-          <div className="p-8 text-center text-sm text-seal-text-muted">Đang tải...</div>
+          <div className="p-8 text-center text-sm text-seal-text-muted">Loading...</div>
         ) : (
           <div className="flex flex-col gap-4 p-4">
             <div className="grid grid-cols-2 gap-3 text-sm">
@@ -103,7 +103,7 @@ function ReviewDetailModal({
                   rows={3}
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
-                  placeholder="Ghi chú xử lý (tùy chọn)"
+                  placeholder="Resolution note (optional)"
                   className="w-full rounded border border-seal-border px-3 py-2 text-sm"
                 />
                 <div className="flex justify-end gap-2">
@@ -113,7 +113,7 @@ function ReviewDetailModal({
                     onClick={() => handleResolve("IGNORED")}
                     className="border-2 border-navy bg-white px-4 py-2 text-sm font-medium disabled:opacity-50"
                   >
-                    Bỏ qua
+                    Ignore
                   </button>
                   <button
                     type="button"
@@ -121,7 +121,7 @@ function ReviewDetailModal({
                     onClick={() => handleResolve("RESOLVED")}
                     className="border-2 border-navy bg-seal-yellow px-4 py-2 text-sm font-bold text-navy disabled:opacity-50"
                   >
-                    Đã xử lý
+                    Mark resolved
                   </button>
                 </div>
               </div>
@@ -129,7 +129,7 @@ function ReviewDetailModal({
 
             {review.resolutionNote && (
               <p className="text-sm text-seal-text-secondary">
-                <span className="font-medium">Ghi chú:</span> {review.resolutionNote}
+                <span className="font-medium">Note:</span> {review.resolutionNote}
               </p>
             )}
           </div>
@@ -155,7 +155,7 @@ function ReviewRow({
       <td style={bodyCell}>{new Date(review.createdAt).toLocaleString()}</td>
       <td style={bodyCell}>
         <button type="button" onClick={onSelect} className="text-sm font-semibold text-royal hover:underline">
-          Chi tiết
+          Details
         </button>
       </td>
     </tr>
@@ -187,13 +187,13 @@ export function JudgeVariancePage() {
           Score Deviation Review
         </h1>
         <p style={{ fontSize: 14, color: "#8891a5", lineHeight: "21px", marginTop: 4 }}>
-          Cờ tự động khi chênh lệch điểm giữa các judge ≥ 25 (thang 0–100).
+          Auto-flagged when score deviation between judges is ≥ 25 (on a 0–100 scale).
         </p>
       </div>
 
       <div className="mb-6 flex flex-wrap gap-4">
         <select value={eventId} onChange={(e) => { setEventId(e.target.value); setSelectedId(null); }} style={inputStyle}>
-          <option value="">Chọn sự kiện</option>
+          <option value="">Select event</option>
           {events.map((e) => (
             <option key={e.id} value={e.id}>{e.name}</option>
           ))}
@@ -204,7 +204,7 @@ export function JudgeVariancePage() {
           style={inputStyle}
           disabled={!eventId}
         >
-          <option value="">Tất cả trạng thái</option>
+          <option value="">All statuses</option>
           <option value="OPEN">OPEN</option>
           <option value="RESOLVED">RESOLVED</option>
           <option value="IGNORED">IGNORED</option>
@@ -238,7 +238,7 @@ export function JudgeVariancePage() {
         </div>
         {!eventId ? (
           <p style={{ ...bodyCell, textAlign: "center", color: "#8891a5", padding: "48px 16px" }}>
-            Chọn sự kiện để xem danh sách.
+            Select an event to view the list.
           </p>
         ) : (
           <table className="w-full" style={{ borderCollapse: "collapse" }}>
@@ -269,7 +269,7 @@ export function JudgeVariancePage() {
               {!isLoading && eventId && reviews.length === 0 && (
                 <tr>
                   <td colSpan={6} style={{ ...bodyCell, textAlign: "center", color: "#8891a5", padding: "48px 16px" }}>
-                    Không có review nào.
+                    No reviews found.
                   </td>
                 </tr>
               )}

@@ -87,7 +87,7 @@ function ScheduleItemCard({
 
       {gateDeadline && (
         <p className="mt-1 font-mono text-xs text-seal-cyan">
-          Deadline hệ thống: {formatEventDateTime(gateDeadline)}
+          System deadline: {formatEventDateTime(gateDeadline)}
         </p>
       )}
     </div>

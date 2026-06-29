@@ -201,8 +201,8 @@ export function TeamDetailPanel({ event, team }: TeamDetailPanelProps) {
 
         {needsMoreMembers && (
           <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
-            Team cần tối thiểu {minMembers} thành viên (bao gồm bạn) trước khi chọn track.
-            Hiện có {team.memberCount} thành viên.
+            Team needs at least {minMembers} members (including you) before choosing a track.
+            Currently {team.memberCount} members.
           </div>
         )}
         {!needsMoreMembers && !team.trackId && isLeader && !isSeal && (
@@ -212,12 +212,12 @@ export function TeamDetailPanel({ event, team }: TeamDetailPanelProps) {
         )}
         {!needsMoreMembers && !team.trackId && isSeal && (
           <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs text-blue-800">
-            SEAL Hackathon: đội tự chọn bảng trong phiên bốc thăm do BTC tổ chức.
+            SEAL Hackathon: teams pick their track during the draw session run by organizers.
             {isLeader && (
               <>
                 {" "}
                 <Link href="/student/tracks/draw" className="font-semibold underline">
-                  Vào trang bốc thăm
+                  Go to draw page
                 </Link>
               </>
             )}
@@ -236,21 +236,21 @@ export function TeamDetailPanel({ event, team }: TeamDetailPanelProps) {
               href="/student/tracks/draw"
               className="border-2 border-navy bg-seal-yellow px-3 py-1.5 text-navy font-mono text-xs font-bold shadow-[4px_4px_0_0_#0c1228]"
             >
-              {isLeader ? "Vào bốc thăm bảng" : "Xem trạng thái bốc thăm"}
+              {isLeader ? "Go to track draw" : "View draw status"}
             </Link>
           ) : team.canSelectTrack && isLeader ? (
             <button
               onClick={() => setShowTrackPicker((v) => !v)}
               className="border-2 border-navy bg-seal-yellow px-3 py-1.5 text-navy font-mono font-bold shadow-[4px_4px_0_0_#0c1228]"
             >
-              Chọn Track
+              Select Track
             </button>
           ) : (
             <span
               className="text-xs text-seal-text-muted"
-              title={needsMoreMembers ? `Cần ít nhất ${minMembers} thành viên` : undefined}
+              title={needsMoreMembers ? `Need at least ${minMembers} members` : undefined}
             >
-              {needsMoreMembers && isLeader ? "Chưa đủ thành viên" : "Not selected"}
+              {needsMoreMembers && isLeader ? "Not enough members" : "Not selected"}
             </span>
           )}
         </div>
@@ -343,7 +343,7 @@ export function TeamDetailPanel({ event, team }: TeamDetailPanelProps) {
               onClick={() => setShowLeaveDialog(true)}
               className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
             >
-              Yêu cầu rời team
+              Request to leave team
             </button>
           </div>
         )}

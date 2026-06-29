@@ -47,23 +47,23 @@ function SealSubmissionRedirect({
         className="relative z-10 w-full max-w-md border-2 border-navy bg-white p-6 shadow-[4px_4px_0_0_#0c1228]"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-lg font-bold text-seal-text">Nộp bài SEAL</h2>
+        <h2 className="text-lg font-bold text-seal-text">SEAL submission</h2>
         <p className="mt-2 text-sm text-seal-text-secondary">
-          Vui lòng dùng trang Nộp bài chính để tuân thủ milestone gates (slide 10:00, demo 14:00).
+          Please use the main Submit page to follow milestone gates (slides 10:00, demo 14:00).
         </p>
         {sealPhase && !sealGateOpen && (
           <p className="mt-2 text-xs text-amber-700">{sealPhaseDescription(sealPhase)}</p>
         )}
         <div className="mt-4 flex justify-end gap-2">
           <button onClick={onClose} className="border-2 border-navy px-4 py-2 text-xs">
-            Đóng
+            Close
           </button>
           <Link
             href="/student/submissions"
             className="border-2 border-navy bg-seal-yellow px-4 py-2 font-mono text-xs font-bold text-navy"
             onClick={onClose}
           >
-            Đến trang Nộp bài
+            Go to Submit page
           </Link>
         </div>
       </div>
@@ -156,7 +156,7 @@ export function InlineSubmissionForm({ event, round, teamId, existing, onClose }
       >
         <div className="flex items-center justify-between border-b border-seal-border p-5">
           <div>
-            <h2 className="text-lg font-bold text-seal-text">{existing ? "Cập nhật bài nộp" : "Nộp bài"}</h2>
+            <h2 className="text-lg font-bold text-seal-text">{existing ? "Update submission" : "Submit"}</h2>
             <p className="text-xs text-seal-text-muted">
               {event.name} — {round.name} | {round.startDate.slice(0, 16).replace("T", " ")} —{" "}
               {round.endDate.slice(0, 16).replace("T", " ")}
@@ -251,7 +251,7 @@ export function InlineSubmissionForm({ event, round, teamId, existing, onClose }
             disabled={isPending || locked}
             className="border-2 border-navy bg-seal-yellow px-5 py-2 font-mono font-bold text-navy shadow-[4px_4px_0_0_#0c1228] disabled:opacity-50"
           >
-            {isPending ? "Submitting..." : existing ? "Cập nhật bài nộp" : "Nộp bài"}
+            {isPending ? "Submitting..." : existing ? "Update submission" : "Submit"}
           </button>
         </div>
       </div>

@@ -101,7 +101,7 @@ function AssignJudgesModal({
         disabled={judgesLoading || cannotAssign}
         className="w-full border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] px-3 py-2 text-sm outline-none focus:border-royal/40 disabled:opacity-50"
       >
-        <option value="">Chọn judge...</option>
+        <option value="">Select judge...</option>
         {eligibleJudges.map((j) => {
           const isMentor = team.mentorUserId === j.judgeUserId;
           const taken = selected.has(j.judgeUserId) && j.judgeUserId !== value;
@@ -115,7 +115,7 @@ function AssignJudgesModal({
       </select>
       {value && team.mentorUserId === value && (
         <p className="mt-1 text-xs font-medium text-red-600">
-          Cảnh báo: Judge này đang là mentor của team {team.teamName}
+          Warning: This judge is the mentor of team {team.teamName}
         </p>
       )}
     </div>
@@ -124,19 +124,19 @@ function AssignJudgesModal({
   const handleSubmit = () => {
     setError(null);
     if (cannotAssign) {
-      setError("Team chưa có track — không thể phân công judge vòng sơ khảo");
+      setError("Team has no track — cannot assign preliminary judges");
       return;
     }
     if (!j1 || !j2 || !j3) {
-      setError("Vui lòng chọn đủ 3 judge");
+      setError("Please select all 3 judges");
       return;
     }
     if (new Set([j1, j2, j3]).size !== 3) {
-      setError("3 judge phải khác nhau");
+      setError("All 3 judges must be different");
       return;
     }
     if ([j1, j2, j3].some((id) => id === team.mentorUserId)) {
-      setError("Không thể phân công mentor của team làm judge");
+      setError("Cannot assign the team's mentor as a judge");
       return;
     }
     mutate();
@@ -149,9 +149,9 @@ function AssignJudgesModal({
         className="relative z-10 w-full max-w-md border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-6 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-lg font-bold text-seal-text">Phân công judge</h2>
+        <h2 className="text-lg font-bold text-seal-text">Assign judges</h2>
         <p className="mt-1 text-sm text-seal-text-muted">
-          {team.teamName} — chọn đúng 3 judge
+          {team.teamName} — select exactly 3 judges
         </p>
         {team.mentorFullName && (
           <p className="mt-2 text-xs text-seal-text-secondary">
@@ -160,7 +160,7 @@ function AssignJudgesModal({
         )}
         {cannotAssign && (
           <p className="mt-2 text-xs font-medium text-red-600">
-            Team chưa được gán track. Vui lòng gán track trước khi phân công judge.
+            Team has no track assigned. Please assign a track before assigning judges.
           </p>
         )}
 
@@ -178,7 +178,7 @@ function AssignJudgesModal({
             onClick={onClose}
             className="border-2 border-navy bg-white px-4 py-2 text-sm font-medium text-seal-text"
           >
-            Huỷ
+            Cancel
           </button>
           <button
             type="button"
@@ -186,7 +186,7 @@ function AssignJudgesModal({
             disabled={isPending || judgesLoading || cannotAssign}
             className="border-2 border-navy bg-seal-yellow px-4 py-2 text-navy font-mono font-bold shadow-[4px_4px_0_0_#0c1228] disabled:opacity-50"
           >
-            {isPending ? "Đang lưu..." : "Lưu phân công"}
+            {isPending ? "Saving..." : "Save assignment"}
           </button>
         </div>
       </div>
@@ -236,9 +236,9 @@ export function JudgeAssignmentsPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-[28px] font-bold tracking-tight text-seal-text">Phân công Judge</h1>
+        <h1 className="text-[28px] font-bold tracking-tight text-seal-text">Judge assignments</h1>
         <p className="mt-1 text-sm text-seal-text-secondary">
-          Mỗi team cần đúng 3 judge cho mỗi round. Judge không được là mentor của team.
+          Each team needs exactly 3 judges per round. Judges cannot be the team's mentor.
         </p>
       </div>
 
@@ -270,7 +270,7 @@ export function JudgeAssignmentsPage() {
           }}
           className="min-w-[220px] border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] px-3 py-2 text-sm"
         >
-          <option value="">Chọn event...</option>
+          <option value="">Select event...</option>
           {events.map((e: EventResponse) => (
             <option key={e.id} value={e.id}>{e.name}</option>
           ))}
@@ -281,7 +281,7 @@ export function JudgeAssignmentsPage() {
             onChange={(e) => setSelectedTrackId(e.target.value)}
             className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] px-3 py-2 text-sm"
           >
-            <option value="">Tất cả track</option>
+            <option value="">All tracks</option>
             {tracks.map((t) => (
               <option key={t.id} value={t.id}>{t.name}</option>
             ))}
@@ -293,7 +293,7 @@ export function JudgeAssignmentsPage() {
             onChange={(e) => setSelectedRoundId(e.target.value)}
             className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] px-3 py-2 text-sm"
           >
-            <option value="">Chọn round...</option>
+            <option value="">Select round...</option>
             {rounds.map((r) => (
               <option key={r.id} value={r.id}>{r.name}</option>
             ))}
@@ -308,7 +308,7 @@ export function JudgeAssignmentsPage() {
       )}
 
       {!eventsLoading && events.length === 0 && (
-        <p className="text-sm text-seal-text-muted">Không có event nào cho {season} {year}.</p>
+        <p className="text-sm text-seal-text-muted">No events for {season} {year}.</p>
       )}
 
       {selectedEventId && selectedRoundId && (
@@ -323,7 +323,7 @@ export function JudgeAssignmentsPage() {
                 <tr>
                   <th className="px-4 py-3">Team</th>
                   <th className="px-4 py-3">Track</th>
-                  <th className="px-4 py-3">Nộp bài</th>
+                  <th className="px-4 py-3">Submission</th>
                   <th className="px-4 py-3">Judge</th>
                   <th className="px-4 py-3 w-32" />
                 </tr>
@@ -339,7 +339,7 @@ export function JudgeAssignmentsPage() {
                           ? "bg-emerald-50 text-emerald-700"
                           : "bg-amber-50 text-amber-700"
                       }`}>
-                        {team.submissionStatus ?? "Chưa nộp"}
+                        {team.submissionStatus ?? "Not submitted"}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-sm text-seal-text-secondary">
@@ -356,7 +356,7 @@ export function JudgeAssignmentsPage() {
                         onClick={() => setModalTeam(team)}
                         className="border-2 border-navy bg-seal-yellow px-3 py-1.5 text-navy font-mono font-bold shadow-[4px_4px_0_0_#0c1228]"
                       >
-                        Phân công
+                        Assign
                       </button>
                     </td>
                   </tr>
@@ -364,7 +364,7 @@ export function JudgeAssignmentsPage() {
                 {(overview?.teams ?? []).length === 0 && (
                   <tr>
                     <td colSpan={5} className="px-4 py-12 text-center text-sm text-seal-text-muted">
-                      Không có team nào.
+                      No teams found.
                     </td>
                   </tr>
                 )}
@@ -375,7 +375,7 @@ export function JudgeAssignmentsPage() {
       )}
 
       {selectedEventId && !selectedRoundId && (
-        <p className="text-sm text-seal-text-muted">Chọn round để xem danh sách team.</p>
+        <p className="text-sm text-seal-text-muted">Select a round to view the team list.</p>
       )}
 
       {modalTeam && overview && (

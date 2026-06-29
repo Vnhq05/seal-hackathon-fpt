@@ -42,10 +42,10 @@ export function TransferLeaderDialog({ eventId, team, onClose }: TransferLeaderD
       <div className="w-full max-w-md border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-6 shadow-lg">
         <h3 className="text-lg font-semibold text-seal-text">Transfer leadership</h3>
         <p className="mt-2 text-sm text-seal-text-muted">
-          Chọn thành viên sẽ trở thành leader mới của team.
+          Select the member who will become the new team leader.
         </p>
         {members.length === 0 ? (
-          <p className="mt-4 text-sm text-seal-text-muted">Không có thành viên để chuyển quyền.</p>
+          <p className="mt-4 text-sm text-seal-text-muted">No members available to transfer leadership to.</p>
         ) : (
           <div className="mt-4 flex flex-col gap-2">
             {members.map((m) => (

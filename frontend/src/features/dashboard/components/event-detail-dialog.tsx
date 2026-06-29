@@ -63,7 +63,7 @@ export function EventDetailDialog({ event, onClose, canRegister, activeEnrollmen
     try {
       const result = await enroll();
       if (result.status === "PENDING") {
-        setSuccess("Đăng ký thành công! Chờ Coordinator/Admin phê duyệt.");
+        setSuccess("Registration successful! Awaiting coordinator/admin approval.");
       } else {
         setSuccess("Successfully joined the competition!");
       }

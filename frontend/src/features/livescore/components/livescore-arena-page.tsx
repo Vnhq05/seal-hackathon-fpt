@@ -500,7 +500,7 @@ export function LiveScoreArenaPage({ eventId }: LiveScoreArenaPageProps) {
 
         <div className="flex gap-2" style={{ borderBottom: "1px solid rgba(198,198,205,0.5)", paddingBottom: 1 }}>
           <TrackTab
-            label="Vòng bảng"
+            label="Preliminary"
             active={roundType === "PRELIMINARY"}
             onClick={() => {
               setRoundTypeSelection("PRELIMINARY");
@@ -508,7 +508,7 @@ export function LiveScoreArenaPage({ eventId }: LiveScoreArenaPageProps) {
             }}
           />
           <TrackTab
-            label="Chung kết"
+            label="Finals"
             active={roundType === "FINAL"}
             onClick={() => {
               setRoundTypeSelection("FINAL");

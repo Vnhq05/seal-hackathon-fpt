@@ -1,14 +1,14 @@
 import type { ContestedSlotType, FinalistSelectionMethod } from "./finalist.api";
 
 const SELECTION_METHOD_LABELS: Record<FinalistSelectionMethod, string> = {
-  TOP_PER_TRACK: "Top trong bảng",
-  OVERFLOW_FILL: "Bổ sung slot chung kết",
-  PENALTY_PENDING: "Chờ OC đánh giá penalty",
+  TOP_PER_TRACK: "Top per track",
+  OVERFLOW_FILL: "Finals slot overflow fill",
+  PENALTY_PENDING: "Pending OC penalty review",
 };
 
 const CONTESTED_SLOT_LABELS: Record<ContestedSlotType, string> = {
-  PER_TRACK_CUTOFF: "Hòa điểm tại Top-N trong bảng",
-  OVERFLOW_FILL: "Hòa điểm khi bổ sung slot chung kết",
+  PER_TRACK_CUTOFF: "Tie at Top-N within track",
+  OVERFLOW_FILL: "Tie when filling finals slots",
 };
 
 export function formatSelectionMethod(method: FinalistSelectionMethod | null | undefined): string {

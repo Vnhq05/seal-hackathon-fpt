@@ -26,9 +26,9 @@ function hasScore(score: number | null | undefined): score is number {
 
 function conflictMessage(reason: string | null): string {
   if (reason === "MENTOR_OF_TEAM") {
-    return "Bạn là mentor của team này nên không thể chấm điểm bài nộp.";
+    return "You are a mentor for this team and cannot score this submission.";
   }
-  return reason ?? "Xung đột lợi ích — không thể chấm điểm.";
+  return reason ?? "Conflict of interest — cannot score.";
 }
 
 export function ScoringPage({ teamId, roundId }: { teamId: string; roundId: string }) {
@@ -89,7 +89,7 @@ export function ScoringPage({ teamId, roundId }: { teamId: string; roundId: stri
       if (!criterion || !hasScore(s.score)) return null;
       return needsCommentForScore(s.score, criterion.minScore, criterion.maxScore)
         && !s.feedback.trim()
-        ? "Bắt buộc khi điểm ở mức tối thiểu hoặc tối đa"
+        ? "Required when score is at minimum or maximum"
         : null;
     });
   }, [watchedScores, submission]);
@@ -163,7 +163,7 @@ export function ScoringPage({ teamId, roundId }: { teamId: string; roundId: stri
   if (error || !submission) {
     return (
       <div className="p-8 text-center text-sm text-red-600">
-        {(error as Error)?.message ?? "Không tải được dữ liệu chấm điểm"}
+        {(error as Error)?.message ?? "Unable to load scoring data"}
       </div>
     );
   }
@@ -171,9 +171,9 @@ export function ScoringPage({ teamId, roundId }: { teamId: string; roundId: stri
   if (!submission.isAssigned) {
     return (
       <div className="mx-auto max-w-lg p-8 text-center">
-        <p className="text-sm text-red-600">Bạn không được phân công chấm team này.</p>
+        <p className="text-sm text-red-600">You are not assigned to score this team.</p>
         <Link href={`${portalBase}/scoring`} className="mt-4 inline-block text-sm font-semibold text-royal hover:underline">
-          ← Quay lại danh sách
+          ← Back to list
         </Link>
       </div>
     );
@@ -182,12 +182,12 @@ export function ScoringPage({ teamId, roundId }: { teamId: string; roundId: stri
   if (submission.conflictOfInterest) {
     return (
       <div className="mx-auto max-w-lg p-8 text-center">
-        <p className="text-lg font-semibold text-red-700">Xung đột lợi ích</p>
+        <p className="text-lg font-semibold text-red-700">Conflict of interest</p>
         <p className="mt-2 text-sm text-seal-text-secondary">
           {conflictMessage(submission.conflictReason)}
         </p>
         <Link href={`${portalBase}/scoring`} className="mt-4 inline-block text-sm font-semibold text-royal hover:underline">
-          ← Quay lại danh sách
+          ← Back to list
         </Link>
       </div>
     );
@@ -253,12 +253,12 @@ function ScoringPageContent({
           <h1 className="text-2xl font-bold text-seal-text">{submission.teamName}</h1>
           {completed && (
             <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">
-              Đã hoàn tất
+              Completed
             </span>
           )}
           {readOnly && (
             <span className="rounded-md bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-600">
-              Đã khóa
+              Locked
             </span>
           )}
         </div>
@@ -309,10 +309,10 @@ function ScoringPageContent({
         <table className="w-full text-left text-sm">
           <thead className="bg-seal-surface-elevated text-xs font-semibold uppercase text-seal-text-muted">
             <tr>
-              <th className="px-4 py-3">Tiêu chí</th>
-              <th className="px-4 py-3 w-24">Trọng số</th>
-              <th className="px-4 py-3 w-28">Điểm</th>
-              <th className="px-4 py-3">Nhận xét</th>
+              <th className="px-4 py-3">Criterion</th>
+              <th className="px-4 py-3 w-24">Weight</th>
+              <th className="px-4 py-3 w-28">Score</th>
+              <th className="px-4 py-3">Comment</th>
             </tr>
           </thead>
           <tbody>
@@ -360,7 +360,7 @@ function ScoringPageContent({
                         disabled={disabled}
                         value={watchedScores?.[i]?.feedback ?? ""}
                         onChange={(e) => onFeedbackChange(i, e.target.value)}
-                        placeholder={showComment ? "Bắt buộc *" : "Nhận xét"}
+                        placeholder={showComment ? "Required *" : "Comment"}
                         className={`w-full rounded border px-2 py-1 text-xs disabled:opacity-50 ${
                           showComment && !watchedScores?.[i]?.feedback.trim()
                             ? "border-red-400"
@@ -381,7 +381,7 @@ function ScoringPageContent({
 
       <div className="flex items-center justify-between border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-4">
         <div>
-          <div className="text-xs text-seal-text-muted">Tổng điểm có trọng số</div>
+          <div className="text-xs text-seal-text-muted">Weighted total score</div>
           <div className="text-2xl font-bold text-seal-text">
             {totalWeighted.toFixed(2)}
             <span className="text-sm font-normal text-seal-text-muted"> / {maxWeighted.toFixed(1)}</span>
@@ -395,14 +395,14 @@ function ScoringPageContent({
               disabled={isSaving}
               className="border-2 border-navy bg-white px-4 py-2 text-sm font-medium disabled:opacity-50"
             >
-              {isSaving ? "Đang lưu..." : "Lưu nháp"}
+              {isSaving ? "Saving..." : "Save draft"}
             </button>
             <button
               type="submit"
               disabled={isSubmitting || !allScored || commentErrors.some(Boolean)}
               className="border-2 border-navy bg-seal-yellow px-4 py-2 text-navy font-mono font-bold shadow-[4px_4px_0_0_#0c1228] disabled:opacity-50"
             >
-              {isSubmitting ? "Đang gửi..." : "Complete"}
+              {isSubmitting ? "Submitting..." : "Complete"}
             </button>
           </div>
         )}

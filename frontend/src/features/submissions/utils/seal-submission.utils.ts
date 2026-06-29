@@ -32,13 +32,13 @@ export function resolveSealPhase(
 export function sealPhaseLabel(phase: SealSubmissionPhase): string {
   switch (phase) {
     case "SLIDE_ONLY":
-      return "Milestone 1 — Nộp slide (trước 10:00)";
+      return "Milestone 1 — Submit slides (before 10:00)";
     case "FULL":
-      return "Milestone 2 — Nộp đầy đủ (source + slide + demo, trước 14:00)";
+      return "Milestone 2 — Full submission (source + slide + demo, before 14:00)";
     case "SLIDE_CLOSED":
-      return "Cổng slide đã đóng (sau 10:00)";
+      return "Slide gate closed (after 10:00)";
     case "DEMO_CLOSED":
-      return "Hết hạn nộp demo (sau 14:00)";
+      return "Demo submission deadline passed (after 14:00)";
     default:
       return "";
   }
@@ -47,13 +47,13 @@ export function sealPhaseLabel(phase: SealSubmissionPhase): string {
 export function sealPhaseDescription(phase: SealSubmissionPhase): string {
   switch (phase) {
     case "SLIDE_ONLY":
-      return "Giai đoạn này chỉ cần link slide (Google Slides, PowerPoint online, v.v.).";
+      return "This phase only requires a slide link (Google Slides, online PowerPoint, etc.).";
     case "FULL":
-      return "Bổ sung source code (GitHub/Jira/Notion) và demo video trước deadline 14:00.";
+      return "Add source code (GitHub/Jira/Notion) and demo video before the 14:00 deadline.";
     case "SLIDE_CLOSED":
-      return "Không thể nộp chỉ slide nữa. Cần nộp bài đầy đủ nếu còn trong Milestone 2.";
+      return "Slide-only submissions are no longer accepted. Submit a full entry if still within Milestone 2.";
     case "DEMO_CLOSED":
-      return "Đã qua deadline nộp bài vòng bảng. Không thể submit thêm.";
+      return "The preliminary submission deadline has passed. No further submissions are allowed.";
     default:
       return "";
   }

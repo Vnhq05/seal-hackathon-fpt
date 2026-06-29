@@ -49,7 +49,7 @@ function DistributionBar({
 }) {
   const total = Object.values(distribution).reduce((a, b) => a + b, 0);
   if (total === 0) {
-    return <p className="text-sm text-seal-text-muted">Chưa có feedback.</p>;
+    return <p className="text-sm text-seal-text-muted">No feedback yet.</p>;
   }
 
   return (
@@ -88,12 +88,12 @@ export function ParticipantFeedbackReviewPage() {
       <div>
         <h1 className="text-2xl font-bold text-navy">Participant Feedback</h1>
         <p className="text-sm text-seal-text-secondary">
-          Xem đánh giá sau sự kiện từ thành viên đội CONFIRMED.
+          View post-event feedback from CONFIRMED team members.
         </p>
       </div>
 
       <div>
-        <label className="mb-2 block text-sm font-semibold text-navy">Sự kiện</label>
+        <label className="mb-2 block text-sm font-semibold text-navy">Event</label>
         <select
           value={selectedEventId}
           onChange={(e) => setEventId(e.target.value)}
@@ -107,18 +107,18 @@ export function ParticipantFeedbackReviewPage() {
         </select>
       </div>
 
-      {loading && <p className="text-sm text-seal-text-muted">Đang tải...</p>}
+      {loading && <p className="text-sm text-seal-text-muted">Loading...</p>}
 
       {!loading && summary && (
         <div className="grid gap-4 sm:grid-cols-3">
-          <SummaryCard label="Tổng feedback" value={String(summary.totalCount)} />
+          <SummaryCard label="Total feedback" value={String(summary.totalCount)} />
           <SummaryCard
-            label="Điểm TB"
+            label="Avg. rating"
             value={summary.averageRating != null ? summary.averageRating.toFixed(1) : "—"}
           />
           <div className="border-2 border-navy bg-white p-4 shadow-[3px_3px_0_0_#0c1228] sm:col-span-1">
             <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-seal-text-muted">
-              Phân bố điểm
+              Rating distribution
             </p>
             <DistributionBar distribution={summary.ratingDistribution} />
           </div>
@@ -130,18 +130,18 @@ export function ParticipantFeedbackReviewPage() {
           <table className="w-full" style={{ borderCollapse: "collapse" }}>
             <thead>
               <tr className="border-b border-seal-border">
-                <th style={headerCell}>Người gửi</th>
-                <th style={headerCell}>Đội</th>
-                <th style={headerCell}>Điểm</th>
-                <th style={headerCell}>Nhận xét</th>
-                <th style={headerCell}>Thời gian</th>
+                <th style={headerCell}>Submitter</th>
+                <th style={headerCell}>Team</th>
+                <th style={headerCell}>Rating</th>
+                <th style={headerCell}>Comment</th>
+                <th style={headerCell}>Submitted at</th>
               </tr>
             </thead>
             <tbody>
               {feedbackList.length === 0 && (
                 <tr>
                   <td colSpan={5} style={{ ...bodyCell, textAlign: "center", color: "#8891a5" }}>
-                    Chưa có feedback nào.
+                    No feedback yet.
                   </td>
                 </tr>
               )}
@@ -156,7 +156,7 @@ export function ParticipantFeedbackReviewPage() {
                     <span className="line-clamp-3">{fb.comment ?? "—"}</span>
                   </td>
                   <td style={bodyCell}>
-                    {new Date(fb.submittedAt).toLocaleString("vi-VN")}
+                    {new Date(fb.submittedAt).toLocaleString("en-US")}
                   </td>
                 </tr>
               ))}

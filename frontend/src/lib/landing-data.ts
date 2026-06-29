@@ -195,7 +195,7 @@ export const SCORING_ROUNDS: ScoringRound[] = [
   {
     id: "group",
     label: "Group Round",
-    subtitle: "Vòng bảng",
+    subtitle: "Preliminary round",
     criteria: [
       { name: "Domain Accuracy & Relevance", weight: 30 },
       { name: "Agentic RAG Architecture", weight: 30 },
@@ -207,7 +207,7 @@ export const SCORING_ROUNDS: ScoringRound[] = [
   {
     id: "finals",
     label: "Finals",
-    subtitle: "Vòng chung kết",
+    subtitle: "Finals round",
     criteria: [
       { name: "Data Processing & Retrieval Quality", weight: 30 },
       { name: "Reliability & Hallucination Resistance", weight: 20 },

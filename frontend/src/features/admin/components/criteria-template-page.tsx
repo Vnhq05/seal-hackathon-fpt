@@ -159,7 +159,7 @@ function TemplateForm({
 
     if (newTotal !== 100) {
       setDeleteWarning(
-        `Sau khi xóa, tổng weight sẽ là ${newTotal}% (khác 100%). Vui lòng điều chỉnh weight các tiêu chí còn lại trước khi lưu.`
+        `After deletion, total weight will be ${newTotal}% (not 100%). Please adjust the remaining criteria weights before saving.`
       );
     } else {
       setDeleteWarning(null);
@@ -239,8 +239,8 @@ function TemplateForm({
             backgroundColor: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8,
             padding: "8px 12px", marginBottom: 8, fontSize: 13, color: "#991b1b",
           }}>
-            Tổng weight phải bằng đúng 100%. Hiện tại: {totalWeight}%
-            {!allWeightsPositive && " — mỗi tiêu chí cần weight là số nguyên dương > 0."}
+            Total weight must equal exactly 100%. Current: {totalWeight}%
+            {!allWeightsPositive && " — each criterion needs a positive integer weight > 0."}
           </div>
         )}
 

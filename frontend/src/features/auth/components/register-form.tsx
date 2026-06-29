@@ -73,15 +73,15 @@ export function RegisterForm() {
             <path d="M20 6 9 17l-5-5" />
           </svg>
         </div>
-        <h2 className="font-mono text-xl font-semibold text-seal-text">Đăng ký thành công</h2>
+        <h2 className="font-mono text-xl font-semibold text-seal-text">Registration successful</h2>
         <p className="max-w-[360px] text-center text-sm text-seal-text-muted">
-          Chờ Admin phê duyệt. Bạn sẽ nhận thông báo khi tài khoản được kích hoạt.
+          Awaiting admin approval. You will be notified when your account is activated.
         </p>
         <Link
           href="/login"
           className="mt-4 font-medium text-royal hover:text-royal/80 hover:underline"
         >
-          Quay lại đăng nhập
+          Back to sign in
         </Link>
       </div>
     );
@@ -163,29 +163,29 @@ export function RegisterForm() {
           <>
             {domainsLoading ? (
               <div className="rounded-md border border-seal-border bg-seal-surface-muted px-3 py-2 text-xs text-seal-text-secondary">
-                Đang tải danh sách domain email được phép...
+                Loading allowed email domains...
               </div>
             ) : allowedDomains.length === 0 ? (
               <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-                Không có domain email được phép. Vui lòng thử lại sau hoặc liên hệ ban tổ chức.
+                No allowed email domains. Please try again later or contact the organizers.
               </div>
             ) : (
               <div className="rounded-md border border-seal-border bg-seal-surface-muted px-3 py-2 text-xs text-seal-text-secondary">
-                <p className="font-medium text-seal-text">Email trường được phép</p>
+                <p className="font-medium text-seal-text">Allowed university email domains</p>
                 <p className="mt-1">
                   {allowedDomains.map((d) => `@${d.domain}`).join(", ")}
                 </p>
               </div>
             )}
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="universityName">Trường đại học</Label>
+              <Label htmlFor="universityName">University</Label>
               <select
                 id="universityName"
                 className="h-10 w-full rounded-md border border-seal-border-dark bg-white px-3 text-sm text-seal-text outline-none focus:border-seal-cyan"
                 aria-invalid={!!errors.universityName}
                 {...register("universityName")}
               >
-                <option value="">Chọn trường</option>
+                <option value="">Select university</option>
                 {universityOptions.map((label) => (
                   <option key={label} value={label}>
                     {label}
@@ -236,7 +236,7 @@ export function RegisterForm() {
               {...register("confirmEnrolled")}
             />
             <span className="text-[13px] leading-relaxed text-seal-text-secondary">
-              Tôi xác nhận đang là sinh viên đang theo học (chưa tốt nghiệp).
+              I confirm I am currently enrolled as a student (not yet graduated).
             </span>
           </label>
           {errors.confirmEnrolled && (

@@ -8,10 +8,10 @@ import { usePortalBase } from "@/shared/hooks/use-portal-base";
 import type { JudgeScoringAssignment } from "@/lib/api/judging.api";
 
 const STATUS_LABEL: Record<JudgeScoringAssignment["scoringStatus"], string> = {
-  NOT_STARTED: "Chưa chấm",
-  IN_PROGRESS: "Đang chấm",
-  COMPLETED: "Hoàn tất",
-  LOCKED: "Đã khóa",
+  NOT_STARTED: "Not started",
+  IN_PROGRESS: "In progress",
+  COMPLETED: "Completed",
+  LOCKED: "Locked",
 };
 
 const STATUS_STYLE: Record<JudgeScoringAssignment["scoringStatus"], string> = {
@@ -24,17 +24,17 @@ const STATUS_STYLE: Record<JudgeScoringAssignment["scoringStatus"], string> = {
 type FilterTab = "all" | "pending" | "completed" | "conflict";
 
 const FILTER_TABS: { key: FilterTab; label: string }[] = [
-  { key: "all", label: "Tất cả" },
-  { key: "pending", label: "Cần chấm" },
-  { key: "completed", label: "Hoàn tất" },
-  { key: "conflict", label: "Xung đột" },
+  { key: "all", label: "All" },
+  { key: "pending", label: "Needs scoring" },
+  { key: "completed", label: "Completed" },
+  { key: "conflict", label: "Conflict" },
 ];
 
 function conflictMessage(reason: string | null | undefined): string {
   if (reason === "MENTOR_OF_TEAM") {
-    return "Bạn là mentor của team này";
+    return "You are a mentor for this team";
   }
-  return reason ?? "Xung đột lợi ích";
+  return reason ?? "Conflict of interest";
 }
 
 function matchesFilter(a: JudgeScoringAssignment, filter: FilterTab): boolean {
@@ -62,9 +62,9 @@ export function JudgeScoringListPage() {
   return (
     <div className="mx-auto max-w-5xl flex flex-col gap-6" style={{ padding: 32 }}>
       <div>
-        <h1 className="text-[28px] font-bold tracking-tight text-seal-text">Chấm điểm</h1>
+        <h1 className="text-[28px] font-bold tracking-tight text-seal-text">Scoring</h1>
         <p className="mt-1 text-sm text-seal-text-secondary">
-          Danh sách team được phân công chấm điểm.
+          Teams assigned to you for scoring.
         </p>
       </div>
 
@@ -90,7 +90,7 @@ export function JudgeScoringListPage() {
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-seal-cyan border-t-transparent" />
         </div>
       ) : filtered.length === 0 ? (
-        <p className="text-sm text-seal-text-muted">Không có team nào trong bộ lọc này.</p>
+        <p className="text-sm text-seal-text-muted">No teams match this filter.</p>
       ) : (
         <div className="overflow-hidden border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]">
           <table className="w-full text-left">
@@ -99,7 +99,7 @@ export function JudgeScoringListPage() {
                 <th className="px-4 py-3">Track</th>
                 <th className="px-4 py-3">Round</th>
                 <th className="px-4 py-3">Team</th>
-                <th className="px-4 py-3">Trạng thái</th>
+                <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Deviation</th>
                 <th className="px-4 py-3 w-28" />
               </tr>
@@ -114,7 +114,7 @@ export function JudgeScoringListPage() {
                     {a.conflictOfInterest ? (
                       <div className="flex flex-col gap-0.5">
                         <span className="rounded-md bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700 w-fit">
-                          Xung đột lợi ích
+                          Conflict of interest
                         </span>
                         <span className="text-xs text-red-600">
                           {conflictMessage(a.conflictReason)}
@@ -138,7 +138,7 @@ export function JudgeScoringListPage() {
                             onClick={() => setReviewModal({ eventId: a.eventId!, reviewId: a.openScoreReviewId! })}
                             className="text-left text-xs font-semibold text-royal hover:underline"
                           >
-                            Xem chi tiết
+                            View details
                           </button>
                         )}
                       </div>
@@ -152,12 +152,12 @@ export function JudgeScoringListPage() {
                         href={`${portalBase}/scoring/${a.teamId}/${a.roundId}`}
                         className="text-xs font-semibold text-royal hover:underline"
                       >
-                        {a.scoringStatus === "COMPLETED" || a.scoringStatus === "LOCKED" ? "Xem" : "Chấm"}
+                        {a.scoringStatus === "COMPLETED" || a.scoringStatus === "LOCKED" ? "View" : "Score"}
                       </Link>
                     ) : a.conflictOfInterest ? (
-                      <span className="text-xs text-red-600">Không thể chấm</span>
+                      <span className="text-xs text-red-600">Cannot score</span>
                     ) : (
-                      <span className="text-xs text-seal-text-muted">Chưa nộp</span>
+                      <span className="text-xs text-seal-text-muted">Not submitted</span>
                     )}
                   </td>
                 </tr>

@@ -181,9 +181,9 @@ function StudentTeamPanel({ eventId, teamId, teamName, trackId, isLeader }: {
   if (!isLeader) {
     return (
       <div className="border-2 border-dashed border-navy bg-seal-surface p-10 text-center">
-        <p className="font-semibold text-seal-text">Chưa có mentor</p>
+        <p className="font-semibold text-seal-text">No mentor yet</p>
         <p className="mt-1 text-sm text-seal-text-muted">
-          Team chưa được gán mentor. Leader sẽ gửi lời mời.
+          Your team has no mentor assigned. The leader will send an invitation.
         </p>
       </div>
     );
@@ -227,26 +227,26 @@ function InvitePanel({ eventId, teamId, teamName, trackId, isLeader }: {
     <div className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-5 self-start">
       <div className="flex items-center gap-2 mb-1 text-seal-text">
         <MailIcon />
-        <h3 className="font-semibold text-sm">Mời Mentor</h3>
+        <h3 className="font-semibold text-sm">Invite mentor</h3>
       </div>
       <p className="text-xs text-seal-text-muted mb-4">
-        Chọn mentor từ danh sách track của team. Mentor sẽ nhận lời mời và có thể chấp nhận hoặc từ chối.
+        Choose a mentor from your team's track list. They will receive an invitation and can accept or decline.
       </p>
       {!trackId && (
         <p className="text-xs text-amber-600 mb-4">
-          Team chưa được gán track. Hoàn tất bốc thăm track trước khi mời mentor.
+          Your team has no track yet. Complete the track draw before inviting a mentor.
         </p>
       )}
       <div className="flex flex-col gap-3">
         <div>
-          <label className="text-xs text-seal-text-secondary">Chọn mentor</label>
+          <label className="text-xs text-seal-text-secondary">Select mentor</label>
           <select
             value={mentorUserId}
             onChange={(e) => setMentorUserId(e.target.value)}
             disabled={!isLeader}
             className="mt-1 w-full border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] px-3 py-2 text-sm text-seal-text outline-none focus:border-royal/40"
           >
-            <option value="">-- Chọn mentor --</option>
+            <option value="">-- Select mentor --</option>
             {mentors.map((m) => (
               <option key={m.mentorUserId} value={m.mentorUserId}>
                 {m.mentorFullName ?? m.mentorEmail}
@@ -255,7 +255,7 @@ function InvitePanel({ eventId, teamId, teamName, trackId, isLeader }: {
           </select>
         </div>
         <div>
-          <label className="text-xs text-seal-text-secondary">Ghi chú (tuỳ chọn)</label>
+          <label className="text-xs text-seal-text-secondary">Note (optional)</label>
           <textarea
             placeholder={`Hi! We're ${teamName} — would love your guidance.`}
             value={note}
@@ -270,9 +270,9 @@ function InvitePanel({ eventId, teamId, teamName, trackId, isLeader }: {
           disabled={!isLeader || isPending || !mentorUserId}
           className="w-full border-2 border-navy bg-seal-yellow py-2.5 text-navy font-mono font-bold shadow-[4px_4px_0_0_#0c1228] disabled:opacity-50"
         >
-          <span className="inline-flex items-center gap-2"><SendIcon /> {isPending ? "Đang gửi..." : "Gửi lời mời"}</span>
+          <span className="inline-flex items-center gap-2"><SendIcon /> {isPending ? "Sending..." : "Send invitation"}</span>
         </button>
-        {!isLeader && <p className="text-xs text-seal-text-muted">Chỉ Leader mới được mời mentor.</p>}
+        {!isLeader && <p className="text-xs text-seal-text-muted">Only the team leader can invite a mentor.</p>}
       </div>
     </div>
   );

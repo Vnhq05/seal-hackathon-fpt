@@ -2,10 +2,10 @@ import type { PrizeRank } from "@/lib/api/event.api";
 import type { WizardPrize } from "@/features/admin/store/event-wizard.store";
 
 export const PRIZE_RANK_LABELS: Record<PrizeRank, string> = {
-  FIRST: "Giải Nhất",
-  SECOND: "Giải Nhì",
-  THIRD: "Giải Ba",
-  CONSOLATION: "Giải Khuyến khích",
+  FIRST: "First Prize",
+  SECOND: "Second Prize",
+  THIRD: "Third Prize",
+  CONSOLATION: "Consolation Prize",
 };
 
 export const DEFAULT_CONSOLATION_LABEL = PRIZE_RANK_LABELS.CONSOLATION;
@@ -28,7 +28,7 @@ export function parsePrizeAmount(value: string): number | null {
 export function formatPrizeAmount(value: string): string {
   const amount = parsePrizeAmount(value);
   if (amount == null) return value;
-  return `${new Intl.NumberFormat("vi-VN").format(amount)} ₫`;
+  return `${new Intl.NumberFormat("en-US").format(amount)} ₫`;
 }
 
 export function validatePrizeOrdering(prizes: WizardPrize[]): string | null {
@@ -58,7 +58,7 @@ export function validatePrizeOrdering(prizes: WizardPrize[]): string | null {
         byRank.get(higher)! <= byRank.get(lower)!
       ) {
         const scope = key === "shared" ? "" : ` (track ${Number(key.replace("track-", "")) + 1})`;
-        return `${PRIZE_RANK_LABELS[higher]} phải lớn hơn ${PRIZE_RANK_LABELS[lower]}${scope}`;
+        return `${PRIZE_RANK_LABELS[higher]} must be greater than ${PRIZE_RANK_LABELS[lower]}${scope}`;
       }
     }
   }

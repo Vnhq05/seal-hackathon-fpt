@@ -119,7 +119,7 @@ export function TeamCompetitionsPage() {
                 <NoTeamPanel event={allTeams[0].event} onTeamCreated={handleTeamCreated} />
               ) : enrollmentPending ? (
                 <div className="rounded-lg border border-amber-200 bg-amber-50 p-8 text-center">
-                  <p className="font-semibold text-amber-800">Đang chờ duyệt đăng ký — chưa thể tạo/tham gia team</p>
+                  <p className="font-semibold text-amber-800">Registration pending approval — cannot create or join a team yet</p>
                   <p className="mt-1 text-sm text-amber-700">
                     Your registration is waiting for coordinator approval.
                   </p>

@@ -6,20 +6,20 @@ const BLOCKED_HOSTS = new Set(["drive.google.com", "docs.google.com"]);
 export function validateSourceCodeUrl(url: string): string | null {
   const trimmed = url.trim();
   if (!trimmed) {
-    return "Source code URL không hợp lệ";
+    return "Invalid source code URL";
   }
 
   try {
     const parsed = new URL(trimmed);
     if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-      return "Source code URL phải dùng http hoặc https";
+      return "Source code URL must use http or https";
     }
     const host = parsed.hostname.toLowerCase();
     if (BLOCKED_HOSTS.has(host)) {
-      return "Không dùng Google Drive làm nơi chứa source code";
+      return "Google Drive cannot be used as a source code host";
     }
   } catch {
-    return "Source code URL không hợp lệ";
+    return "Invalid source code URL";
   }
 
   if (
@@ -29,7 +29,7 @@ export function validateSourceCodeUrl(url: string): string | null {
     !trimmed.includes("notion.so") &&
     !trimmed.includes("notion.site")
   ) {
-    return "Source code URL phải là GitHub, Jira, Confluence hoặc Notion";
+    return "Source code URL must be GitHub, Jira, Confluence, or Notion";
   }
 
   return null;

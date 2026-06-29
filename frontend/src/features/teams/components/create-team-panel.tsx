@@ -106,7 +106,7 @@ export function CreateTeamPanel({ event, onCreated }: CreateTeamPanelProps) {
           {waitingLoading ? (
             <p className="mt-2 text-sm text-seal-text-muted">Loading waiting list...</p>
           ) : available.length === 0 ? (
-            <p className="mt-2 text-sm text-seal-text-muted">Waiting list trống — bạn có thể mời sau khi tạo team.</p>
+            <p className="mt-2 text-sm text-seal-text-muted">Waiting list is empty — you can invite members after creating the team.</p>
           ) : (
             <div className="mt-2 max-h-48 overflow-y-auto border-2 border-navy bg-white divide-y divide-navy/10 shadow-[2px_2px_0_0_#0c1228]">
               {available.map((e) => (
@@ -144,7 +144,7 @@ export function CreateTeamPanel({ event, onCreated }: CreateTeamPanelProps) {
             </div>
           )}
           <p className="mt-1 text-[11px] text-seal-text-muted">
-            Team cần tối thiểu {minTeamMembers} thành viên (bao gồm bạn) trước khi chọn track.
+            Team needs at least {minTeamMembers} members (including you) before choosing a track.
           </p>
         </div>
 

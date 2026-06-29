@@ -10,11 +10,11 @@ export const USER_TYPES = ["FPT_STUDENT", "EXTERNAL_STUDENT"] as const;
 const FPT_STUDENT_ID_PATTERN = /^SE\d{6}$/;
 
 const baseRegisterSchema = z.object({
-  fullName: z.string().min(1, "Họ tên là bắt buộc"),
+  fullName: z.string().min(1, "Full name is required"),
   email: z
     .string()
-    .min(1, "Email là bắt buộc")
-    .email("Vui lòng nhập email hợp lệ"),
+    .min(1, "Email is required")
+    .email("Please enter a valid email address"),
   userType: z.enum(USER_TYPES),
   studentId: z.string().optional(),
   universityName: z.string().optional(),
@@ -25,13 +25,13 @@ const baseRegisterSchema = z.object({
     .regex(/[a-z]/, "Password must contain at least one lowercase letter")
     .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
     .regex(/\d/, "Password must contain at least one digit"),
-  confirmPassword: z.string().min(1, "Vui lòng xác nhận mật khẩu"),
+  confirmPassword: z.string().min(1, "Please confirm your password"),
   agreeToTerms: z
     .boolean()
-    .refine((v) => v === true, "Bạn phải đồng ý với điều khoản để tiếp tục"),
+    .refine((v) => v === true, "You must agree to the terms to continue"),
   confirmEnrolled: z
     .boolean()
-    .refine((v) => v === true, "Bạn phải xác nhận đang là sinh viên đang theo học"),
+    .refine((v) => v === true, "You must confirm you are currently enrolled as a student"),
 });
 
 function applyParticipantRules(
@@ -42,7 +42,7 @@ function applyParticipantRules(
   if (data.password !== data.confirmPassword) {
     ctx.addIssue({
       code: "custom",
-      message: "Mật khẩu không khớp",
+      message: "Passwords do not match",
       path: ["confirmPassword"],
     });
   }
@@ -52,15 +52,15 @@ function applyParticipantRules(
       code: "custom",
       message:
         data.userType === "FPT_STUDENT"
-          ? "Mã sinh viên FPT là bắt buộc"
-          : "Mã sinh viên là bắt buộc",
+          ? "FPT student ID is required"
+          : "Student ID is required",
       path: ["studentId"],
     });
   }
   if (data.userType === "FPT_STUDENT" && studentId && !FPT_STUDENT_ID_PATTERN.test(studentId)) {
     ctx.addIssue({
       code: "custom",
-      message: "Mã sinh viên phải đúng định dạng SE + 6 chữ số (vd: SE191021)",
+      message: "Student ID must match SE + 6 digits (e.g. SE191021)",
       path: ["studentId"],
     });
   }
@@ -69,7 +69,7 @@ function applyParticipantRules(
     if (allowedDomains.length === 0) {
       ctx.addIssue({
         code: "custom",
-        message: "Không có domain email được phép. Vui lòng thử lại sau.",
+        message: "No allowed email domains available. Please try again later.",
         path: ["email"],
       });
       return;
@@ -77,7 +77,7 @@ function applyParticipantRules(
     if (!universityName) {
       ctx.addIssue({
         code: "custom",
-        message: "Vui lòng chọn trường đại học",
+        message: "Please select a university",
         path: ["universityName"],
       });
       return;
@@ -86,7 +86,7 @@ function applyParticipantRules(
     if (domainRules.length > 0 && !matchesAllowedDomain(data.email, domainRules)) {
       ctx.addIssue({
         code: "custom",
-        message: "Email phải thuộc domain trường được phép (vd: @hcmut.edu.vn)",
+        message: "Email must use an allowed university domain (e.g. @hcmut.edu.vn)",
         path: ["email"],
       });
     }
@@ -96,7 +96,7 @@ function applyParticipantRules(
     ) {
       ctx.addIssue({
         code: "custom",
-        message: "Trường đã chọn không khớp với domain email",
+        message: "Selected university does not match the email domain",
         path: ["universityName"],
       });
     }

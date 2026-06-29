@@ -59,12 +59,12 @@ export function TrackDrawPage() {
   if (!event || !team) {
     return (
       <div className="mx-auto max-w-2xl p-6">
-        <h1 className="text-2xl font-bold text-navy">Bảng thi</h1>
+        <h1 className="text-2xl font-bold text-navy">Competition track</h1>
         <p className="mt-4 text-sm text-seal-text-secondary">
-          Bạn chưa tham gia team trong sự kiện SEAL Spring 2026.
+          You are not on a team for SEAL Spring 2026 yet.
         </p>
         <Link href="/student/teams" className="mt-4 inline-block text-sm font-semibold text-royal underline">
-          Quay lại Teams
+          Back to Teams
         </Link>
       </div>
     );
@@ -79,9 +79,9 @@ export function TrackDrawPage() {
   return (
     <div className="mx-auto max-w-2xl flex flex-col gap-6 p-6">
       <div>
-        <h1 className="text-[28px] font-bold tracking-tight text-seal-text">Bảng thi</h1>
+        <h1 className="text-[28px] font-bold tracking-tight text-seal-text">Competition track</h1>
         <p className="mt-1 text-sm text-seal-text-secondary">
-          {event.name} — BTC tổ chức phiên bốc thăm, đội tự chọn bảng theo lượt.
+          {event.name} — Organizers run the draw session; teams pick their track in turn.
         </p>
       </div>
 
@@ -90,47 +90,47 @@ export function TrackDrawPage() {
         <p className="mt-1 font-semibold text-navy">{team.name}</p>
         {!isLeader && (
           <p className="mt-2 text-xs text-amber-700">
-            Chỉ Leader mới được chọn bảng khi đến lượt.
+            Only the team leader can pick a track when it is your turn.
           </p>
         )}
       </div>
 
       {assignedTrack ? (
         <div className="border-2 border-navy bg-white p-5 shadow-[4px_4px_0_0_#0c1228]">
-          <p className="text-xs uppercase tracking-wider text-seal-text-muted">Bảng đã chọn</p>
+          <p className="text-xs uppercase tracking-wider text-seal-text-muted">Selected track</p>
           <p className="mt-1 text-lg font-bold text-royal">{assignedTrack.name}</p>
           {assignedTrack.topic && (
             <p className="mt-2 text-sm text-navy">
-              <span className="font-semibold">Chủ đề:</span> {assignedTrack.topic}
+              <span className="font-semibold">Topic:</span> {assignedTrack.topic}
             </p>
           )}
           {assignedTrack.status === "LOCKED" && (
             <p className="mt-3 text-xs font-semibold text-emerald-700">
-              Bảng đã khóa — không thể thay đổi.
+              Track is locked — cannot be changed.
             </p>
           )}
         </div>
       ) : sessionLoading ? (
-        <p className="text-sm text-seal-text-muted">Đang tải phiên bốc thăm...</p>
+        <p className="text-sm text-seal-text-muted">Loading draw session...</p>
       ) : noSession ? (
         <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-          Phiên bốc thăm chưa mở. Vui lòng chờ BTC bắt đầu lễ bốc thăm (Day 1).
+          The draw session has not opened yet. Please wait for organizers to start the Day 1 draw ceremony.
         </div>
       ) : session?.status === "CLOSED" ? (
         <div className="rounded-md border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700">
-          Phiên bốc thăm đã kết thúc. Liên hệ BTC nếu đội chưa có bảng.
+          The draw session has ended. Contact organizers if your team still has no track.
         </div>
       ) : (
         <div className="space-y-4">
           <div className="rounded-md border border-blue-200 bg-blue-50 p-4">
             <p className="text-sm font-semibold text-blue-900">
-              Phiên đang diễn ra — Lượt {session!.currentIndex + 1}/{session!.totalTeams}
+              Session in progress — Turn {session!.currentIndex + 1}/{session!.totalTeams}
             </p>
             {session!.currentTeamName && (
               <p className="mt-1 text-sm text-blue-800">
                 {isMyTurn
-                  ? "Đến lượt đội bạn! Chọn một bảng bên dưới."
-                  : `Đang chờ: ${session!.currentTeamName}`}
+                  ? "It's your team's turn! Pick a track below."
+                  : `Waiting for: ${session!.currentTeamName}`}
               </p>
             )}
           </div>
@@ -138,7 +138,7 @@ export function TrackDrawPage() {
           {isMyTurn && session!.availableTracks.length > 0 && (
             <div className="space-y-2">
               <p className="text-xs font-semibold uppercase text-seal-text-muted">
-                Chọn bảng (còn chỗ)
+                Pick a track (open slots)
               </p>
               <div className="grid gap-2 sm:grid-cols-2">
                 {session!.availableTracks.map((slot) => (
@@ -151,7 +151,7 @@ export function TrackDrawPage() {
                   >
                     {slot.name}
                     <span className="mt-1 block text-xs font-normal text-navy/70">
-                      Còn {slot.remainingSlots} chỗ
+                      {slot.remainingSlots} slots left
                     </span>
                   </button>
                 ))}
@@ -168,7 +168,7 @@ export function TrackDrawPage() {
       {tracks && tracks.length > 0 && !assignedTrack && (
         <div className="space-y-2">
           <p className="text-xs font-semibold uppercase text-seal-text-muted">
-            Các bảng trong cuộc thi
+            Tracks in this competition
           </p>
           {tracks.map((track) => (
             <div key={track.id} className="border border-navy/20 bg-white p-3 text-sm">
