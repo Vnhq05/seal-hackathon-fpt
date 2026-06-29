@@ -1,7 +1,13 @@
 "use client";
 
-import { useJudgeVariance } from "@/features/admin/hooks/use-admin-system";
-import type { JudgeVarianceEntry } from "@/features/admin/types/admin-analytics.types";
+import { useState } from "react";
+import { useAdminEvents } from "@/features/admin/hooks/use-admin-hackathons";
+import {
+  useResolveScoreReview,
+  useScoreReviewDetail,
+  useScoreReviews,
+} from "@/features/admin/hooks/use-score-reviews";
+import type { ScoreReviewResponse, ScoreReviewStatus } from "@/lib/api/score-review.api";
 
 const headerCell: React.CSSProperties = {
   fontSize: 12, fontWeight: 600, color: "#8891a5",
@@ -11,109 +17,274 @@ const bodyCell: React.CSSProperties = {
   fontSize: 14, color: "#0e1528", lineHeight: "20px", padding: "14px 16px",
 };
 
-function StatCard({ label, value }: { label: string; value: string | number }) {
+const inputStyle: React.CSSProperties = {
+  padding: "8px 12px", fontSize: 14, border: "1px solid rgba(198,198,205,0.5)",
+  borderRadius: 8, minWidth: 220,
+};
+
+function StatusBadge({ status }: { status: ScoreReviewStatus }) {
+  const styles: Record<ScoreReviewStatus, string> = {
+    OPEN: "bg-amber-50 text-amber-800",
+    RESOLVED: "bg-emerald-50 text-emerald-800",
+    IGNORED: "bg-gray-100 text-gray-600",
+  };
   return (
-    <div className="flex flex-col p-6 border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]">
-      <span style={{ fontSize: 12, fontWeight: 500, color: "#8891a5", letterSpacing: "0.24px" }}>{label}</span>
-      <span style={{ fontSize: 24, fontWeight: 700, color: "#0e1528", marginTop: 4 }}>{value}</span>
+    <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${styles[status]}`}>
+      {status}
+    </span>
+  );
+}
+
+function ReviewDetailModal({
+  eventId,
+  reviewId,
+  onClose,
+}: {
+  eventId: string;
+  reviewId: string;
+  onClose: () => void;
+}) {
+  const { data: review, isLoading } = useScoreReviewDetail(eventId, reviewId);
+  const { mutate: resolve, isPending } = useResolveScoreReview(eventId);
+  const [note, setNote] = useState("");
+
+  const handleResolve = (status: "RESOLVED" | "IGNORED") => {
+    resolve(
+      { reviewId, body: { status, resolutionNote: note.trim() || undefined } },
+      { onSuccess: onClose },
+    );
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto border-2 border-navy bg-white shadow-[8px_8px_0_0_#0c1228]">
+        <div className="flex items-center justify-between border-b border-seal-border p-4">
+          <h2 className="text-lg font-bold text-seal-text">Score Deviation Review</h2>
+          <button type="button" onClick={onClose} className="text-sm text-seal-text-muted hover:text-seal-text">
+            Đóng
+          </button>
+        </div>
+
+        {isLoading || !review ? (
+          <div className="p-8 text-center text-sm text-seal-text-muted">Đang tải...</div>
+        ) : (
+          <div className="flex flex-col gap-4 p-4">
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div><span className="text-seal-text-muted">Team:</span> {review.teamName}</div>
+              <div><span className="text-seal-text-muted">Round:</span> {review.roundType ?? review.roundId}</div>
+              <div><span className="text-seal-text-muted">Deviation:</span> {review.deviationValue.toFixed(1)} pts</div>
+              <div><span className="text-seal-text-muted">Range:</span> {review.minJudgeScore.toFixed(1)} – {review.maxJudgeScore.toFixed(1)}</div>
+            </div>
+
+            <table className="w-full" style={{ borderCollapse: "collapse" }}>
+              <thead>
+                <tr style={{ backgroundColor: "#eef0f6" }}>
+                  <th style={headerCell}>Judge</th>
+                  <th style={{ ...headerCell, width: 100 }}>Weighted</th>
+                  <th style={{ ...headerCell, width: 100 }}>% Score</th>
+                  <th style={{ ...headerCell, width: 100 }}>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(review.judgeScores ?? []).map((j) => (
+                  <tr key={j.judgeUserId} style={{ borderTop: "1px solid rgba(198,198,205,0.3)" }}>
+                    <td style={{ ...bodyCell, fontWeight: 600 }}>{j.judgeFullName ?? j.judgeUserId}</td>
+                    <td style={bodyCell}>{j.weightedScore.toFixed(2)}</td>
+                    <td style={bodyCell}>{j.percentScore.toFixed(1)}</td>
+                    <td style={bodyCell}>{j.status}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {review.status === "OPEN" && (
+              <div className="flex flex-col gap-3 border-t border-seal-border pt-4">
+                <textarea
+                  rows={3}
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder="Ghi chú xử lý (tùy chọn)"
+                  className="w-full rounded border border-seal-border px-3 py-2 text-sm"
+                />
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    disabled={isPending}
+                    onClick={() => handleResolve("IGNORED")}
+                    className="border-2 border-navy bg-white px-4 py-2 text-sm font-medium disabled:opacity-50"
+                  >
+                    Bỏ qua
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isPending}
+                    onClick={() => handleResolve("RESOLVED")}
+                    className="border-2 border-navy bg-seal-yellow px-4 py-2 text-sm font-bold text-navy disabled:opacity-50"
+                  >
+                    Đã xử lý
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {review.resolutionNote && (
+              <p className="text-sm text-seal-text-secondary">
+                <span className="font-medium">Ghi chú:</span> {review.resolutionNote}
+              </p>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
+function ReviewRow({
+  review,
+  onSelect,
+}: {
+  review: ScoreReviewResponse;
+  onSelect: () => void;
+}) {
+  return (
+    <tr style={{ borderTop: "1px solid rgba(198,198,205,0.3)" }}>
+      <td style={{ ...bodyCell, fontWeight: 600 }}>{review.teamName}</td>
+      <td style={bodyCell}>{review.roundType ?? "—"}</td>
+      <td style={bodyCell}>{review.deviationValue.toFixed(1)}</td>
+      <td style={bodyCell}><StatusBadge status={review.status} /></td>
+      <td style={bodyCell}>{new Date(review.createdAt).toLocaleString()}</td>
+      <td style={bodyCell}>
+        <button type="button" onClick={onSelect} className="text-sm font-semibold text-royal hover:underline">
+          Chi tiết
+        </button>
+      </td>
+    </tr>
+  );
+}
+
 export function JudgeVariancePage() {
-  const { data, isLoading } = useJudgeVariance();
-  // data.entries is never[] from stub; cast safely
-  const entries = (data?.entries ?? []) as JudgeVarianceEntry[];
+  const [eventId, setEventId] = useState("");
+  const [statusFilter, setStatusFilter] = useState<ScoreReviewStatus | "">("OPEN");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  const { data: eventsPage } = useAdminEvents();
+  const events = eventsPage?.content ?? [];
+
+  const { data: reviews = [], isLoading } = useScoreReviews(
+    eventId,
+    statusFilter ? { status: statusFilter } : undefined,
+  );
+
+  const openReviews = reviews.filter((r) => r.status === "OPEN");
+  const avgDeviation = reviews.length
+    ? reviews.reduce((s, r) => s + r.deviationValue, 0) / reviews.length
+    : 0;
 
   return (
     <div style={{ padding: 24 }}>
       <div style={{ marginBottom: 32 }}>
         <h1 style={{ fontSize: 32, fontWeight: 700, color: "#0e1528", letterSpacing: "-0.64px", lineHeight: "38.4px" }}>
-          Judge Variance Dashboard
+          Score Deviation Review
         </h1>
         <p style={{ fontSize: 14, color: "#8891a5", lineHeight: "21px", marginTop: 4 }}>
-          Analyze judge scoring patterns and detect outliers.
+          Cờ tự động khi chênh lệch điểm giữa các judge ≥ 25 (thang 0–100).
         </p>
       </div>
 
-      {/* Stats */}
+      <div className="mb-6 flex flex-wrap gap-4">
+        <select value={eventId} onChange={(e) => { setEventId(e.target.value); setSelectedId(null); }} style={inputStyle}>
+          <option value="">Chọn sự kiện</option>
+          {events.map((e) => (
+            <option key={e.id} value={e.id}>{e.name}</option>
+          ))}
+        </select>
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value as ScoreReviewStatus | "")}
+          style={inputStyle}
+          disabled={!eventId}
+        >
+          <option value="">Tất cả trạng thái</option>
+          <option value="OPEN">OPEN</option>
+          <option value="RESOLVED">RESOLVED</option>
+          <option value="IGNORED">IGNORED</option>
+        </select>
+      </div>
+
       <div className="grid grid-cols-3 gap-6" style={{ marginBottom: 32 }}>
-        {isLoading ? (
-          Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="animate-pulse border-2 border-navy/10 bg-seal-surface-sunken" style={{ height: 100 }} />
-          ))
+        <div className="flex flex-col p-6 border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]">
+          <span style={{ fontSize: 12, fontWeight: 500, color: "#8891a5" }}>OPEN FLAGS</span>
+          <span style={{ fontSize: 24, fontWeight: 700, color: "#0e1528", marginTop: 4 }}>
+            {isLoading ? "—" : openReviews.length}
+          </span>
+        </div>
+        <div className="flex flex-col p-6 border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]">
+          <span style={{ fontSize: 12, fontWeight: 500, color: "#8891a5" }}>AVG DEVIATION</span>
+          <span style={{ fontSize: 24, fontWeight: 700, color: "#0e1528", marginTop: 4 }}>
+            {isLoading || !reviews.length ? "—" : avgDeviation.toFixed(1)}
+          </span>
+        </div>
+        <div className="flex flex-col p-6 border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]">
+          <span style={{ fontSize: 12, fontWeight: 500, color: "#8891a5" }}>TOTAL REVIEWS</span>
+          <span style={{ fontSize: 24, fontWeight: 700, color: "#0e1528", marginTop: 4 }}>
+            {isLoading ? "—" : reviews.length}
+          </span>
+        </div>
+      </div>
+
+      <div className="overflow-hidden border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]">
+        <div style={{ padding: "12px 16px", borderBottom: "1px solid rgba(198,198,205,0.3)" }}>
+          <span style={{ fontSize: 14, fontWeight: 600, color: "#0e1528" }}>Deviation Flags</span>
+        </div>
+        {!eventId ? (
+          <p style={{ ...bodyCell, textAlign: "center", color: "#8891a5", padding: "48px 16px" }}>
+            Chọn sự kiện để xem danh sách.
+          </p>
         ) : (
-          <>
-            <StatCard label="INTER-RATER RELIABILITY" value={data?.interRaterReliability?.toFixed(2) ?? "--"} />
-            <StatCard label="AVERAGE VARIANCE" value={data?.averageVariance?.toFixed(2) ?? "--"} />
-            <StatCard label="JUDGES ANALYZED" value={entries.length} />
-          </>
+          <table className="w-full" style={{ borderCollapse: "collapse" }}>
+            <thead>
+              <tr style={{ backgroundColor: "#eef0f6" }}>
+                <th style={headerCell}>Team</th>
+                <th style={headerCell}>Round</th>
+                <th style={{ ...headerCell, width: 100 }}>Deviation</th>
+                <th style={{ ...headerCell, width: 100 }}>Status</th>
+                <th style={headerCell}>Created</th>
+                <th style={{ ...headerCell, width: 90 }} />
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading
+                ? Array.from({ length: 3 }).map((_, i) => (
+                    <tr key={i}>
+                      {Array.from({ length: 6 }).map((__, j) => (
+                        <td key={j} style={{ padding: "14px 16px" }}>
+                          <div className="animate-pulse rounded" style={{ height: 14, backgroundColor: "rgba(223,226,236,0.8)", width: "60%" }} />
+                        </td>
+                      ))}
+                    </tr>
+                  ))
+                : reviews.map((r) => (
+                    <ReviewRow key={r.id} review={r} onSelect={() => setSelectedId(r.id)} />
+                  ))}
+              {!isLoading && eventId && reviews.length === 0 && (
+                <tr>
+                  <td colSpan={6} style={{ ...bodyCell, textAlign: "center", color: "#8891a5", padding: "48px 16px" }}>
+                    Không có review nào.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         )}
       </div>
 
-      {/* Chart placeholder */}
-      <div
-        className="flex flex-col items-center justify-center border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]"
-        style={{ backgroundColor: "#ffffff", border: "1px solid rgba(198,198,205,0.5)", padding: 48, marginBottom: 32, minHeight: 200 }}
-      >
-        <svg width="48" height="48" viewBox="0 0 48 48" fill="none" aria-hidden="true">
-          <rect x="4" y="24" width="8" height="20" rx="2" fill="rgba(223,226,236,0.8)" />
-          <rect x="16" y="12" width="8" height="32" rx="2" fill="rgba(223,226,236,0.8)" />
-          <rect x="28" y="18" width="8" height="26" rx="2" fill="rgba(223,226,236,0.8)" />
-          <rect x="40" y="6" width="4" height="38" rx="2" fill="rgba(223,226,236,0.8)" />
-        </svg>
-        <p style={{ fontSize: 14, fontWeight: 600, color: "#0e1528", marginTop: 12 }}>Variance Chart</p>
-        <p style={{ fontSize: 13, color: "#8891a5", marginTop: 4 }}>Chart will render when data is available.</p>
-      </div>
-
-      {/* Outlier detection table */}
-      <div className="overflow-hidden border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]">
-        <div style={{ padding: "12px 16px", borderBottom: "1px solid rgba(198,198,205,0.3)" }}>
-          <span style={{ fontSize: 14, fontWeight: 600, color: "#0e1528" }}>Outlier Detection</span>
-        </div>
-        <table className="w-full" style={{ borderCollapse: "collapse" }}>
-          <thead>
-            <tr style={{ backgroundColor: "#eef0f6" }}>
-              <th style={headerCell}>Judge</th>
-              <th style={{ ...headerCell, width: 100 }}>Avg Score</th>
-              <th style={{ ...headerCell, width: 100 }}>Std Dev</th>
-              <th style={{ ...headerCell, width: 120 }}>Scored</th>
-              <th style={{ ...headerCell, width: 90 }}>Outlier</th>
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading
-              ? Array.from({ length: 4 }).map((_, i) => (
-                  <tr key={i}>{Array.from({ length: 5 }).map((_, j) => (
-                    <td key={j} style={{ padding: "14px 16px" }}><div className="animate-pulse rounded" style={{ height: 14, backgroundColor: "rgba(223,226,236,0.8)", width: "50%" }} /></td>
-                  ))}</tr>
-                ))
-              : entries.map((e) => (
-                  <tr key={e.judgeId} style={{ borderTop: "1px solid rgba(198,198,205,0.3)" }}>
-                    <td style={{ ...bodyCell, fontWeight: 600 }}>{e.judgeName}</td>
-                    <td style={bodyCell}>{e.avgScore.toFixed(2)}</td>
-                    <td style={bodyCell}>{e.stdDeviation.toFixed(2)}</td>
-                    <td style={bodyCell}>{e.submissionsScored}</td>
-                    <td style={bodyCell}>
-                      {e.isOutlier ? (
-                        <span className="inline-flex rounded-full px-2 py-1" style={{ fontSize: 12, fontWeight: 600, backgroundColor: "#fef2f2", color: "#991b1b" }}>Yes</span>
-                      ) : (
-                        <span className="inline-flex rounded-full px-2 py-1" style={{ fontSize: 12, fontWeight: 600, backgroundColor: "#f0fdf4", color: "#166534" }}>No</span>
-                      )}
-                    </td>
-                  </tr>
-                ))
-            }
-            {!isLoading && entries.length === 0 && (
-              <tr>
-                <td colSpan={5} style={{ ...bodyCell, textAlign: "center", color: "#8891a5", padding: "48px 16px" }}>
-                  No variance data available.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      {selectedId && eventId && (
+        <ReviewDetailModal
+          eventId={eventId}
+          reviewId={selectedId}
+          onClose={() => setSelectedId(null)}
+        />
+      )}
     </div>
   );
 }

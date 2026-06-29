@@ -1,5 +1,6 @@
 package com.sealhackathon.ranking.dto.response;
 
+import com.sealhackathon.event.domain.enums.RoundType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -20,6 +21,7 @@ public class LiveScoreBoard {
     private Integer year;
     private UUID roundId;
     private String roundName;
+    private RoundType roundType;
     private List<TrackInfo> tracks;
     private List<LiveScoreEntry> rankings;
     private boolean scoresLocked;

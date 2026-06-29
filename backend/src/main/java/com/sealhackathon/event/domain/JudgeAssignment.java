@@ -26,7 +26,7 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "judge_assignments", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"round_id", "judge_user_id"})
+        @UniqueConstraint(columnNames = {"round_id", "judge_user_id", "track_id"})
 })
 @Getter
 @Setter
@@ -43,6 +43,10 @@ public class JudgeAssignment extends BaseEntity {
     @NotNull
     @Column(name = "judge_user_id", nullable = false)
     private UUID judgeUserId;
+
+    /** Null for FINAL round (judge covers all finalists); required for PRELIMINARY. */
+    @Column(name = "track_id")
+    private UUID trackId;
 
     @NotNull
     @Column(name = "assigned_at", nullable = false)

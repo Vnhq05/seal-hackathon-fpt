@@ -1,8 +1,11 @@
 package com.sealhackathon.event.domain;
 
 import com.sealhackathon.common.entity.BaseEntity;
+import com.sealhackathon.event.domain.enums.TrackStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
@@ -56,4 +59,9 @@ public class Track extends BaseEntity {
 
     @Column(name = "scoring_template_id")
     private UUID scoringTemplateId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false, length = 20)
+    @Builder.Default
+    private TrackStatus status = TrackStatus.OPEN;
 }

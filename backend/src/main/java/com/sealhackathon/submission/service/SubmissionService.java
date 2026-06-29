@@ -7,6 +7,7 @@ import com.sealhackathon.common.storage.FileStorageService;
 import com.sealhackathon.event.domain.enums.RoundType;
 import com.sealhackathon.event.dto.snapshot.RoundSnapshot;
 import com.sealhackathon.event.service.EventPublicService;
+import com.sealhackathon.event.service.FormatRuleEngine;
 import com.sealhackathon.ranking.service.FinalistSelectionService;
 import com.sealhackathon.judging.repository.TeamJudgeAssignmentRepository;
 import com.sealhackathon.submission.domain.Submission;
@@ -58,21 +59,25 @@ public class SubmissionService {
     private final FileStorageService fileStorageService;
     private final TeamJudgeAssignmentRepository teamJudgeAssignmentRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final FormatRuleEngine formatRuleEngine;
 
     // ── BR-25, BR-31, BR-32: Create or re-submit ──
     @Transactional
     public SubmissionResponse submit(UUID currentUserId, UUID roundId,
                                      CreateSubmissionRequest request, MultipartFile pdfFile) {
-        // Resolve source URL (sourceCodeUrl alias supported)
-        String sourceUrl = resolveSourceUrl(request);
-        sourceCodeUrlValidator.validate(sourceUrl);
-
-        // BR-28: Demo URL whitelist
-        demoUrlValidator.validate(request.getDemoUrl());
-
-        // Resolve team from current user via round's event
         RoundSnapshot roundSnapshot = eventPublicService.getRound(roundId)
                 .orElseThrow(() -> new ResourceNotFoundException("Round", "id", roundId));
+
+        validateSealSubmission(roundSnapshot, request);
+
+        String sourceUrl = resolveSourceUrl(request, roundSnapshot);
+        if (sourceUrl != null) {
+            sourceCodeUrlValidator.validate(sourceUrl);
+        }
+
+        if (request.getDemoUrl() != null && !request.getDemoUrl().isBlank()) {
+            demoUrlValidator.validate(request.getDemoUrl());
+        }
 
         TeamSnapshot team = teamPublicService.getTeamByParticipantAndEvent(
                         currentUserId, roundSnapshot.getEventId())
@@ -103,7 +108,8 @@ public class SubmissionService {
         boolean isNew = (submission == null);
         boolean hasPdf = pdfFile != null && !pdfFile.isEmpty();
 
-        pdfValidator.validate(pdfFile, request.getPdfPageCount(), isNew);
+        boolean pdfRequired = isNew && isPdfRequiredForSubmit(roundSnapshot);
+        pdfValidator.validate(pdfFile, request.getPdfPageCount(), pdfRequired);
 
         if (isNew) {
             submission = Submission.builder()
@@ -123,7 +129,7 @@ public class SubmissionService {
                 .versionNumber(nextVersion)
                 .githubUrl(sourceUrl)
                 .slideUrl(request.getSlideUrl() != null ? request.getSlideUrl().trim() : null)
-                .demoUrl(request.getDemoUrl().trim())
+                .demoUrl(request.getDemoUrl() != null ? request.getDemoUrl().trim() : null)
                 .submittedAt(LocalDateTime.now())
                 .build();
         final SubmissionVersion savedVersion = versionRepository.save(version);
@@ -167,19 +173,23 @@ public class SubmissionService {
     }
 
     @Transactional(readOnly = true)
-    public SubmissionResponse getSubmissionById(UUID roundId, UUID submissionId) {
+    public SubmissionResponse getSubmissionById(UUID roundId, UUID submissionId,
+                                                UUID requesterId, UserType requesterRole) {
         Submission submission = getSubmission(submissionId);
         if (!submission.getRoundId().equals(roundId)) {
             throw new ResourceNotFoundException("Submission", "id", submissionId);
         }
+        assertSubmissionReadAccess(submission, roundId, requesterId, requesterRole);
         return toResponse(submission);
     }
 
     @Transactional(readOnly = true)
-    public SubmissionResponse getSubmissionByTeamAndRound(UUID teamId, UUID roundId) {
+    public SubmissionResponse getSubmissionByTeamAndRound(UUID teamId, UUID roundId,
+                                                          UUID requesterId, UserType requesterRole) {
         Submission submission = submissionRepository.findByTeamIdAndRoundId(teamId, roundId)
                 .orElseThrow(() -> new ResourceNotFoundException("Submission", "team+round",
                         teamId + " / " + roundId));
+        assertSubmissionReadAccess(submission, roundId, requesterId, requesterRole);
         return toResponse(submission);
     }
 
@@ -248,6 +258,42 @@ public class SubmissionService {
                 .toList();
     }
 
+    private void assertSubmissionReadAccess(Submission submission, UUID roundId,
+                                            UUID requesterId, UserType requesterRole) {
+        if (requesterRole == UserType.SYSTEM_ADMIN || requesterRole == UserType.EVENT_COORDINATOR) {
+            return;
+        }
+
+        RoundSnapshot round = eventPublicService.getRound(roundId)
+                .orElseThrow(() -> new ResourceNotFoundException("Round", "id", roundId));
+
+        if (requesterRole == UserType.FPT_STUDENT || requesterRole == UserType.EXTERNAL_STUDENT) {
+            TeamSnapshot team = teamPublicService.getTeamByParticipantAndEvent(
+                            requesterId, round.getEventId())
+                    .orElseThrow(() -> new BusinessException(
+                            "You are not a member of any team in this event",
+                            HttpStatus.FORBIDDEN) {});
+            if (!submission.getTeamId().equals(team.getId())) {
+                throw new BusinessException("Access denied", HttpStatus.FORBIDDEN) {};
+            }
+            return;
+        }
+
+        if (requesterRole == UserType.LECTURER) {
+            boolean assigned = teamJudgeAssignmentRepository
+                    .existsByTeamIdAndRoundIdAndJudgeUserId(
+                            submission.getTeamId(), roundId, requesterId);
+            if (!assigned) {
+                throw new BusinessException(
+                        "You are not assigned to score this team for this round",
+                        HttpStatus.FORBIDDEN) {};
+            }
+            return;
+        }
+
+        throw new BusinessException("Access denied", HttpStatus.FORBIDDEN) {};
+    }
+
     // ═══ Helpers ═══
 
     Submission getSubmission(UUID submissionId) {
@@ -306,11 +352,13 @@ public class SubmissionService {
                         .build())
                 .toList();
 
+        String sourceCodeUrl = v.getGithubUrl();
+
         return SubmissionVersionResponse.builder()
                 .id(v.getId())
                 .versionNumber(v.getVersionNumber())
-                .githubUrl(v.getGithubUrl())
-                .sourceCodeUrl(v.getGithubUrl())
+                .sourceCodeUrl(sourceCodeUrl)
+                .githubUrl(sourceCodeUrl)
                 .slideUrl(v.getSlideUrl())
                 .demoUrl(v.getDemoUrl())
                 .submittedAt(v.getSubmittedAt())
@@ -318,13 +366,93 @@ public class SubmissionService {
                 .build();
     }
 
-    private String resolveSourceUrl(CreateSubmissionRequest request) {
+    /**
+     * PDF required on first submit for non-SEAL events only (SEAL uses slide instead).
+     */
+    private boolean isPdfRequiredForSubmit(RoundSnapshot round) {
+        return !formatRuleEngine.isSealFormat(round.getEventId());
+    }
+
+    private String resolveSourceUrl(CreateSubmissionRequest request, RoundSnapshot round) {
+        String url = null;
+        if (request.getSourceCodeUrl() != null && !request.getSourceCodeUrl().isBlank()) {
+            url = request.getSourceCodeUrl().trim();
+        } else if (request.getGithubUrl() != null && !request.getGithubUrl().isBlank()) {
+            url = request.getGithubUrl().trim();
+        }
+        if (url == null && isFullSubmissionPhase(round)) {
+            throw new BusinessException("Source code URL is required", HttpStatus.BAD_REQUEST);
+        }
+        return url;
+    }
+
+    private void validateSealSubmission(RoundSnapshot round, CreateSubmissionRequest request) {
+        if (!formatRuleEngine.isSealFormat(round.getEventId())) {
+            if (request.getDemoUrl() == null || request.getDemoUrl().isBlank()) {
+                throw new BusinessException("Demo URL is required", HttpStatus.BAD_REQUEST);
+            }
+            if (resolveSourceUrlOptional(request) == null) {
+                throw new BusinessException("Source code URL is required", HttpStatus.BAD_REQUEST);
+            }
+            return;
+        }
+
+        if (round.getRoundType() != RoundType.PRELIMINARY) {
+            if (request.getDemoUrl() == null || request.getDemoUrl().isBlank()) {
+                throw new BusinessException("Demo URL is required", HttpStatus.BAD_REQUEST);
+            }
+            if (resolveSourceUrlOptional(request) == null) {
+                throw new BusinessException("Source code URL is required", HttpStatus.BAD_REQUEST);
+            }
+            return;
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        boolean hasSlide = request.getSlideUrl() != null && !request.getSlideUrl().isBlank();
+        boolean hasDemo = request.getDemoUrl() != null && !request.getDemoUrl().isBlank();
+        boolean hasSource = resolveSourceUrlOptional(request) != null;
+
+        if (round.getSlideDeadline() != null && now.isBefore(round.getSlideDeadline())) {
+            if (hasSlide && !hasDemo && !hasSource) {
+                return;
+            }
+        } else if (round.getSlideDeadline() != null && now.isAfter(round.getSlideDeadline())
+                && hasSlide && !hasDemo && !hasSource) {
+            throw new BusinessException(
+                    "Slide submission gate closed at " + round.getSlideDeadline(),
+                    HttpStatus.BAD_REQUEST);
+        }
+
+        if (round.getSubmissionDeadline() != null && now.isAfter(round.getSubmissionDeadline())) {
+            throw new BusinessException(
+                    "Demo submission deadline passed at " + round.getSubmissionDeadline(),
+                    HttpStatus.BAD_REQUEST);
+        }
+        if (!hasDemo) {
+            throw new BusinessException("Demo URL is required for Milestone 2", HttpStatus.BAD_REQUEST);
+        }
+        if (!hasSource) {
+            throw new BusinessException("Source code URL is required for Milestone 2", HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    private boolean isFullSubmissionPhase(RoundSnapshot round) {
+        if (formatRuleEngine.isSealFormat(round.getEventId())
+                && round.getRoundType() == RoundType.PRELIMINARY
+                && round.getSlideDeadline() != null
+                && LocalDateTime.now().isBefore(round.getSlideDeadline())) {
+            return false;
+        }
+        return true;
+    }
+
+    private String resolveSourceUrlOptional(CreateSubmissionRequest request) {
         if (request.getSourceCodeUrl() != null && !request.getSourceCodeUrl().isBlank()) {
             return request.getSourceCodeUrl().trim();
         }
         if (request.getGithubUrl() != null && !request.getGithubUrl().isBlank()) {
             return request.getGithubUrl().trim();
         }
-        throw new BusinessException("Source code URL is required", HttpStatus.BAD_REQUEST);
+        return null;
     }
 }

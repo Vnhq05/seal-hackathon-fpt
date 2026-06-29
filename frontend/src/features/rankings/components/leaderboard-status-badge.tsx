@@ -1,4 +1,4 @@
-import type { TeamStatus } from "@/features/rankings/types/leaderboard.types";
+import type { LeaderboardTeamStatus } from "@/features/rankings/types/leaderboard.types";
 
 const dotStyle: React.CSSProperties = {
   width: 6,
@@ -17,10 +17,9 @@ const badgeLabelStyle: React.CSSProperties = {
   whiteSpace: "nowrap" as const,
 };
 
-const STATUS_LABELS: Record<TeamStatus, string> = {
-  promoted: "Promoted",
+const STATUS_LABELS: Record<LeaderboardTeamStatus, string> = {
   active: "Active",
-  at_risk: "At Risk",
+  finalist: "Finalist",
   eliminated: "Eliminated",
 };
 
@@ -42,7 +41,7 @@ function LightningIcon() {
 }
 
 interface LeaderboardStatusBadgeProps {
-  status: TeamStatus;
+  status: LeaderboardTeamStatus;
   isCurrentUserTeam: boolean;
 }
 
@@ -66,7 +65,24 @@ export function LeaderboardStatusBadge({
     );
   }
 
-  if (status === "at_risk") {
+  if (status === "finalist") {
+    return (
+      <span
+        className="inline-flex items-center gap-1"
+        style={{
+          backgroundColor: "#dcfce7",
+          borderRadius: 4,
+          padding: "4px 8px",
+        }}
+      >
+        <span style={{ ...badgeLabelStyle, color: "#065f46" }}>
+          {STATUS_LABELS[status]}
+        </span>
+      </span>
+    );
+  }
+
+  if (status === "eliminated") {
     return (
       <span
         className="inline-flex items-center justify-center"

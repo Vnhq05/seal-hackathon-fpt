@@ -8,7 +8,7 @@ import type { CreateSubmissionRequest } from "@/lib/api";
 interface SubmitPayload {
   roundId: string;
   request: CreateSubmissionRequest;
-  pdfFile: File;
+  pdfFile?: File | null;
 }
 
 export function useSubmitProject() {

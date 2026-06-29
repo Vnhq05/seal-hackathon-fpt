@@ -1,7 +1,10 @@
 package com.sealhackathon.event.controller;
 
 import com.sealhackathon.BaseIntegrationTest;
+import com.sealhackathon.common.enums.AccountStatus;
+import com.sealhackathon.common.enums.UserType;
 import com.sealhackathon.event.domain.HackathonEvent;
+import com.sealhackathon.event.domain.enums.EventStatus;
 import com.sealhackathon.event.domain.Round;
 import com.sealhackathon.event.domain.Track;
 import com.sealhackathon.event.repository.HackathonEventRepository;
@@ -15,6 +18,7 @@ import java.time.LocalDateTime;
 
 import static org.hamcrest.Matchers.is;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -144,6 +148,42 @@ class EventControllerIntegrationTest extends BaseIntegrationTest {
                 .andExpect(jsonPath("$.data.status", is("OPEN")));
     }
 
+    @Test
+    void updateEventStatus_shouldTransitionToClosedRegistration() throws Exception {
+        User admin = createAdmin();
+        HackathonEvent event = createEvent("Status Flow");
+        event.setRegistrationOpenDate(LocalDate.now().minusDays(1));
+        event.setStartDate(LocalDate.now().plusDays(2));
+        event.setEndDate(LocalDate.now().plusDays(30));
+        event.setRegistrationDeadline(LocalDate.now().plusDays(1));
+        eventRepository.save(event);
+
+        mockMvc.perform(patch("/api/events/" + event.getId() + "/status")
+                        .header("Authorization", "Bearer " + tokenFor(admin))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"CLOSED_REGISTRATION\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status", is("CLOSED_REGISTRATION")));
+    }
+
+    @Test
+    void updateEventStatus_shouldReturn400_forInvalidTransition() throws Exception {
+        User admin = createAdmin();
+        HackathonEvent event = createEvent("Invalid Transition");
+        event.setRegistrationOpenDate(LocalDate.now().plusDays(5));
+        event.setStartDate(LocalDate.now().plusDays(10));
+        event.setEndDate(LocalDate.now().plusDays(40));
+        event.setRegistrationDeadline(LocalDate.now().plusDays(8));
+        event.setStatus(EventStatus.UPCOMING);
+        eventRepository.save(event);
+
+        mockMvc.perform(patch("/api/events/" + event.getId() + "/status")
+                        .header("Authorization", "Bearer " + tokenFor(admin))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"SCORING\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
     // ── List events ──
 
     @Test
@@ -156,6 +196,50 @@ class EventControllerIntegrationTest extends BaseIntegrationTest {
                         .header("Authorization", "Bearer " + tokenFor(admin)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.totalElements", is(2)));
+    }
+
+    @Test
+    void listEvents_shouldReturnOnlyOwnedEvents_forCoordinator() throws Exception {
+        User coordinator = createCoordinator();
+        User otherCoordinator = createUser("other-coord@test.com", UserType.EVENT_COORDINATOR, AccountStatus.ACTIVE);
+
+        HackathonEvent owned = createEvent("Owned Event");
+        owned.setCreatedBy(coordinator.getEmail());
+        eventRepository.save(owned);
+
+        HackathonEvent foreign = createEvent("Foreign Event");
+        foreign.setCreatedBy(otherCoordinator.getEmail());
+        eventRepository.save(foreign);
+
+        mockMvc.perform(get("/api/events")
+                        .header("Authorization", "Bearer " + tokenFor(coordinator)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalElements", is(1)))
+                .andExpect(jsonPath("$.data.content[0].name", is("Owned Event")));
+    }
+
+    @Test
+    void createEvent_shouldAssignCoordinatorOwner_whenAdminSpecifiesEmail() throws Exception {
+        User admin = createAdmin();
+        User coordinator = createCoordinator();
+
+        mockMvc.perform(post("/api/events")
+                        .header("Authorization", "Bearer " + tokenFor(admin))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"SEAL Hackathon Spring","season":"Spring","year":2026,
+                                 "startDate":"2026-04-12","endDate":"2026-04-12",
+                                 "registrationOpenDate":"2026-03-01",
+                                 "registrationDeadline":"2026-03-25",
+                                 "coordinatorEmail":"%s"}
+                                """.formatted(coordinator.getEmail())))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/events")
+                        .header("Authorization", "Bearer " + tokenFor(coordinator)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalElements", is(1)))
+                .andExpect(jsonPath("$.data.content[0].name", is("SEAL Hackathon Spring")));
     }
 
     private HackathonEvent createEvent(String name) {

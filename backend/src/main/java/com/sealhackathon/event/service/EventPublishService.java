@@ -1,6 +1,7 @@
 package com.sealhackathon.event.service;
 
 import com.sealhackathon.common.exception.BusinessException;
+import com.sealhackathon.event.domain.enums.RoundType;
 import com.sealhackathon.event.dto.request.AssignJudgeRequest;
 import com.sealhackathon.event.dto.request.CreateRoundRequest;
 import com.sealhackathon.event.dto.request.PublishEventRequest;
@@ -36,6 +37,9 @@ public class EventPublishService {
         if (request.getRounds() != null) {
             for (CreateRoundRequest roundRequest : request.getRounds()) {
                 RoundResponse round = roundService.createRound(eventId, roundRequest);
+                if (roundRequest.getRoundType() != RoundType.FINAL) {
+                    continue;
+                }
                 for (UUID judgeUserId : judgeUserIds) {
                     judgeAssignmentService.assignJudge(
                             round.getId(),

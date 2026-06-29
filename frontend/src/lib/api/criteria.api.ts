@@ -8,6 +8,8 @@ export interface CriteriaResponse {
   description: string | null;
   weight: number;
   sortOrder: number;
+  minScore: number;
+  maxScore: number;
 }
 
 export interface CriteriaRequest {
@@ -15,6 +17,8 @@ export interface CriteriaRequest {
   description?: string;
   weight: number;
   sortOrder?: number;
+  minScore?: number;
+  maxScore?: number;
 }
 
 // ═══ API calls ═══

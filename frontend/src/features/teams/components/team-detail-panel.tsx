@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useAuthStore } from "@/features/auth/store/auth.store";
 import { useRenameTeam } from "@/features/teams/hooks/use-rename-team";
@@ -8,7 +9,12 @@ import { InlineSubmissionForm } from "@/features/teams/components/inline-submiss
 import { InvitePendingSection } from "@/features/teams/components/invite-pending-section";
 import { JoinRequestsSection } from "@/features/teams/components/join-requests-section";
 import { LeaveRequestDialog } from "@/features/teams/components/leave-request-dialog";
+import { TeamRecruitmentSettings } from "@/features/teams/components/team-recruitment-settings";
 import { TransferLeaderDialog } from "@/features/teams/components/transfer-leader-dialog";
+import { useEventParticipationGate } from "@/features/events/hooks/use-event-participation-gate";
+import { enrollmentWaitingListKey } from "@/features/events/hooks/use-enrollment";
+import { JOINABLE_TEAMS_KEY } from "@/features/teams/hooks/use-joinable-teams";
+import { resolveEventTeamSize } from "@/features/events/utils/participation-gate.utils";
 import { isRoundOpen, roundLockMessage } from "@/features/submissions/utils/round.utils";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { invitationApi, teamApi } from "@/lib/api";
@@ -62,6 +68,7 @@ interface TeamDetailPanelProps {
 
 export function TeamDetailPanel({ event, team }: TeamDetailPanelProps) {
   const { user } = useAuthStore();
+  const { canModifyMembers, registrationClosedReason } = useEventParticipationGate(event);
   const isLeader = team.leaderId === user?.id;
   const isMember = team.members.some((m) => m.userId === user?.id && m.role !== "LEADER");
   const started = new Date() >= new Date(event.startDate);
@@ -83,17 +90,21 @@ export function TeamDetailPanel({ event, team }: TeamDetailPanelProps) {
       setInviteEmail("");
       qc.invalidateQueries({ queryKey: ["my-teams-all-events"] });
       qc.invalidateQueries({ queryKey: ["pending-invites", team.id] });
-      qc.invalidateQueries({ queryKey: ["waiting-list", event.id] });
+      qc.invalidateQueries({ queryKey: enrollmentWaitingListKey(event.id) });
     },
   });
 
   const { data: roundSubs, isLoading: roundsLoading } = useTeamSubmissions(event.id, team.id);
   const [activeRound, setActiveRound] = useState<RoundResponse | null>(null);
 
-  const minMembers = team.minTeamMembers ?? 3;
-  const maxMembers = team.maxTeamMembers ?? 5;
+  const { minTeam: minMembers, maxTeam: maxMembers } = resolveEventTeamSize(
+    event,
+    team.minTeamMembers ?? 3,
+    team.maxTeamMembers ?? 5,
+  );
   const needsMoreMembers = team.memberCount < minMembers;
   const selectedTrack = event.tracks.find((t) => t.id === team.trackId);
+  const isSeal = event.competitionFormat === "SEAL_RAG_2026";
 
   const { mutate: selectTrack, isPending: trackPending } = useMutation({
     mutationFn: (trackId: string) => teamApi.selectTrack(event.id, team.id, { trackId }),
@@ -108,8 +119,8 @@ export function TeamDetailPanel({ event, team }: TeamDetailPanelProps) {
     onSuccess: () => {
       setKickTarget(null);
       qc.invalidateQueries({ queryKey: ["my-teams-all-events"] });
-      qc.invalidateQueries({ queryKey: ["waiting-list", event.id] });
-      qc.invalidateQueries({ queryKey: ["joinable-teams", event.id] });
+      qc.invalidateQueries({ queryKey: enrollmentWaitingListKey(event.id) });
+      qc.invalidateQueries({ queryKey: [JOINABLE_TEAMS_KEY, event.id] });
     },
   });
 
@@ -194,9 +205,22 @@ export function TeamDetailPanel({ event, team }: TeamDetailPanelProps) {
             Hiện có {team.memberCount} thành viên.
           </div>
         )}
-        {!needsMoreMembers && !team.trackId && isLeader && (
+        {!needsMoreMembers && !team.trackId && isLeader && !isSeal && (
           <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs text-blue-800">
             Your team is ready. Select a track to complete registration.
+          </div>
+        )}
+        {!needsMoreMembers && !team.trackId && isSeal && (
+          <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs text-blue-800">
+            SEAL Hackathon: đội tự chọn bảng trong phiên bốc thăm do BTC tổ chức.
+            {isLeader && (
+              <>
+                {" "}
+                <Link href="/student/tracks/draw" className="font-semibold underline">
+                  Vào trang bốc thăm
+                </Link>
+              </>
+            )}
           </div>
         )}
 
@@ -205,7 +229,15 @@ export function TeamDetailPanel({ event, team }: TeamDetailPanelProps) {
           {selectedTrack ? (
             <span className="rounded-md bg-seal-cyan/10 px-2.5 py-1 text-xs font-medium text-seal-cyan">
               {selectedTrack.name}
+              {selectedTrack.topic && ` — ${selectedTrack.topic}`}
             </span>
+          ) : isSeal ? (
+            <Link
+              href="/student/tracks/draw"
+              className="border-2 border-navy bg-seal-yellow px-3 py-1.5 text-navy font-mono text-xs font-bold shadow-[4px_4px_0_0_#0c1228]"
+            >
+              {isLeader ? "Vào bốc thăm bảng" : "Xem trạng thái bốc thăm"}
+            </Link>
           ) : team.canSelectTrack && isLeader ? (
             <button
               onClick={() => setShowTrackPicker((v) => !v)}
@@ -250,7 +282,7 @@ export function TeamDetailPanel({ event, team }: TeamDetailPanelProps) {
                 {isLeader && m.role !== "LEADER" && (
                   <button
                     onClick={() => setKickTarget({ id: m.userId, name: m.fullName ?? m.email ?? "member" })}
-                    disabled={removing}
+                    disabled={removing || !canModifyMembers}
                     className="rounded-md border border-red-200 px-2 py-0.5 text-[10px] font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
                   >
                     Remove
@@ -261,7 +293,13 @@ export function TeamDetailPanel({ event, team }: TeamDetailPanelProps) {
           ))}
         </div>
 
-        {isLeader && team.memberCount < maxMembers && (
+        {!canModifyMembers && (
+          <div className="mb-4 rounded-lg bg-amber-50 p-3 text-xs font-medium text-amber-800">
+            {registrationClosedReason ?? "Team member changes are closed for this event."}
+          </div>
+        )}
+
+        {isLeader && team.memberCount < maxMembers && canModifyMembers && (
           <div className="mb-4">
             <label className="text-xs font-medium text-seal-text-secondary">Invite member</label>
             <div className="mt-1.5 flex gap-2">
@@ -286,11 +324,11 @@ export function TeamDetailPanel({ event, team }: TeamDetailPanelProps) {
         {isLeader && (
           <>
             <InvitePendingSection teamId={team.id} />
-            <JoinRequestsSection eventId={event.id} teamId={team.id} />
+            <JoinRequestsSection eventId={event.id} teamId={team.id} canModifyMembers={canModifyMembers} />
             <div className="mt-4 flex flex-wrap gap-2 border-t border-seal-border-light pt-4">
               <button
                 onClick={() => setShowTransferDialog(true)}
-                disabled={team.members.length < 2}
+                disabled={team.members.length < 2 || !canModifyMembers}
                 className="border-2 border-navy bg-white px-3 py-1.5 text-xs font-medium text-seal-text hover:bg-seal-surface-sunken disabled:opacity-50"
               >
                 Transfer leadership
@@ -314,6 +352,10 @@ export function TeamDetailPanel({ event, team }: TeamDetailPanelProps) {
           <p className="text-xs text-seal-text-muted">Only the team leader can invite members.</p>
         )}
       </div>
+
+      {isLeader && team.memberCount < maxMembers && canModifyMembers && (
+        <TeamRecruitmentSettings eventId={event.id} team={team} />
+      )}
 
       <div className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-5">
         <div className="mb-3 text-xs font-medium uppercase tracking-wider text-seal-text-muted">Rounds</div>

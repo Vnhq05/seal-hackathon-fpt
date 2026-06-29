@@ -4,6 +4,7 @@ import {
   type CreateEventRequest,
   type UpdateEventRequest,
   type EventListParams,
+  type UpdateEventStatusRequest,
 } from "@/lib/api";
 
 export const ADMIN_EVENTS_KEY = "admin-events" as const;
@@ -45,9 +46,11 @@ export function useActivateEvent() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (eventId: string) => eventApi.activate(eventId),
-    onSuccess: () => {
+    onSuccess: (_data, eventId) => {
       qc.invalidateQueries({ queryKey: [ADMIN_EVENTS_KEY] });
+      qc.invalidateQueries({ queryKey: [ADMIN_EVENT_KEY, eventId] });
       qc.invalidateQueries({ queryKey: ["admin-active-events"] });
+      qc.invalidateQueries({ queryKey: ["coordinator-events"] });
     },
   });
 }
@@ -58,7 +61,23 @@ export function useCancelEvent() {
     mutationFn: (eventId: string) => eventApi.cancel(eventId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: [ADMIN_EVENTS_KEY] });
+      qc.invalidateQueries({ queryKey: [ADMIN_EVENT_KEY] });
       qc.invalidateQueries({ queryKey: ["admin-active-events"] });
+      qc.invalidateQueries({ queryKey: ["coordinator-events"] });
+    },
+  });
+}
+
+export function useUpdateEventStatus() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ eventId, status }: { eventId: string; status: UpdateEventStatusRequest["status"] }) =>
+      eventApi.updateStatus(eventId, { status }),
+    onSuccess: (_data, { eventId }) => {
+      qc.invalidateQueries({ queryKey: [ADMIN_EVENTS_KEY] });
+      qc.invalidateQueries({ queryKey: [ADMIN_EVENT_KEY, eventId] });
+      qc.invalidateQueries({ queryKey: ["admin-active-events"] });
+      qc.invalidateQueries({ queryKey: ["coordinator-events"] });
     },
   });
 }

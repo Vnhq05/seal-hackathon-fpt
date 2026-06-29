@@ -4,6 +4,8 @@ import type { RoundType } from "./types";
 
 export type { RoundType };
 
+export type AdvancementRule = "GLOBAL_TOP_N" | "PER_TRACK_TOP_N" | "FINALIST_POOL" | "NONE";
+
 // ═══ Types ═══
 
 export interface RoundResponse {
@@ -14,10 +16,12 @@ export interface RoundResponse {
   startDate: string;
   endDate: string;
   submissionDeadline: string;
+  slideDeadline?: string | null;
   scoringDeadline: string;
   advancementCutoff: number;
   roundWeight?: number;
-  roundType?: RoundType | null;
+  roundType: RoundType | null;
+  advancementRule?: AdvancementRule | null;
   criteria: CriteriaResponse[];
   judgeCount: number;
 }
@@ -28,9 +32,12 @@ export interface CreateRoundRequest {
   startDate: string;
   endDate: string;
   submissionDeadline: string;
+  slideDeadline?: string | null;
   scoringDeadline: string;
   advancementCutoff: number;
   roundWeight?: number;
+  roundType?: RoundType;
+  advancementRule?: AdvancementRule;
 }
 
 // ═══ API calls ═══

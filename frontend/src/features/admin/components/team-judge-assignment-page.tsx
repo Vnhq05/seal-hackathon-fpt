@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { eventApi, teamApi, trackApi } from "@/lib/api";
+import { eventApi, teamApi, trackApi, roundApi } from "@/lib/api";
 import { useTeamJudgeAssignments, useAssignJudgeToTeam, useRemoveTeamJudge } from "@/features/admin/hooks/use-team-judge-assignments";
-import type { TeamResponse } from "@/lib/api";
-import type { TrackResponse, EventResponse } from "@/lib/api";
+import { useLecturerOptions } from "@/features/admin/hooks/use-lecturer-options";
+import type { TeamResponse, TrackResponse, EventResponse, UserListItem } from "@/lib/api";
 
 const headerCell: React.CSSProperties = {
   fontSize: 12, fontWeight: 600, color: "#8891a5", letterSpacing: "0.24px", padding: "12px 16px", textAlign: "left",
@@ -14,7 +14,17 @@ const bodyCell: React.CSSProperties = {
   fontSize: 14, color: "#0e1528", padding: "14px 16px",
 };
 
-function TeamJudgeRow({ eventId, roundId, team }: { eventId: string; roundId: string; team: TeamResponse }) {
+function TeamJudgeRow({
+  eventId,
+  roundId,
+  team,
+  lecturers,
+}: {
+  eventId: string;
+  roundId: string;
+  team: TeamResponse;
+  lecturers: UserListItem[];
+}) {
   const { data: assignments = [] } = useTeamJudgeAssignments(eventId, roundId, team.id);
   const { mutate: assign, isPending: assigning } = useAssignJudgeToTeam(eventId, roundId, team.id);
   const { mutate: remove } = useRemoveTeamJudge(eventId, roundId, team.id);
@@ -39,15 +49,21 @@ function TeamJudgeRow({ eventId, roundId, team }: { eventId: string; roundId: st
           ))}
           {assignments.length < 3 && (
             <div className="flex gap-1" style={{ marginTop: 4 }}>
-              <input
+              <select
                 value={judgeId}
                 onChange={(e) => setJudgeId(e.target.value)}
                 style={{ border: "1px solid rgba(223,226,236,0.8)", borderRadius: 4, padding: "4px 8px", fontSize: 12, width: 200 }}
-                placeholder="Judge User ID"
-              />
+              >
+                <option value="">Select judge...</option>
+                {lecturers.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.fullName ?? l.email}
+                  </option>
+                ))}
+              </select>
               <button
                 onClick={() => { if (judgeId) { assign(judgeId); setJudgeId(""); } }}
-                disabled={assigning}
+                disabled={assigning || !judgeId}
                 style={{ fontSize: 11, fontWeight: 600, color: "#0284c7", background: "none", border: "none", cursor: "pointer" }}
               >
                 Assign
@@ -79,8 +95,15 @@ export function TeamJudgeAssignmentPage() {
     queryFn: () => eventApi.list({ status: "ACTIVE" }),
   });
   const events = eventsPage?.content ?? [];
+  const { data: lecturers = [] } = useLecturerOptions();
 
   const selectedEvent = events.find((e: EventResponse) => e.id === selectedEventId);
+
+  const { data: rounds = [] } = useQuery({
+    queryKey: ["rounds-for-assignment", selectedEventId],
+    queryFn: () => roundApi.list(selectedEventId),
+    enabled: !!selectedEventId,
+  });
 
   const { data: tracks = [] } = useQuery({
     queryKey: ["tracks-for-assignment", selectedEventId],
@@ -93,7 +116,7 @@ export function TeamJudgeAssignmentPage() {
     queryFn: () => teamApi.list(selectedEventId),
     enabled: !!selectedEventId,
   });
-  const allTeams: TeamResponse[] = (teamsPage as unknown as TeamResponse[]) ?? [];
+  const allTeams: TeamResponse[] = teamsPage?.content ?? [];
   const filteredTeams = selectedTrackId
     ? allTeams.filter((t: TeamResponse) => t.trackId === selectedTrackId)
     : allTeams;
@@ -122,7 +145,9 @@ export function TeamJudgeAssignmentPage() {
             style={{ border: "1px solid rgba(223,226,236,0.8)", borderRadius: 8, padding: "10px 14px", fontSize: 14, minWidth: 200 }}
           >
             <option value="">Select round...</option>
-            {/* Rounds will be fetched separately when full round API is used */}
+            {rounds.map((r) => (
+              <option key={r.id} value={r.id}>{r.name}</option>
+            ))}
           </select>
         )}
 
@@ -153,7 +178,13 @@ export function TeamJudgeAssignmentPage() {
             </thead>
             <tbody>
               {filteredTeams.map((team: TeamResponse) => (
-                <TeamJudgeRow key={team.id} eventId={selectedEventId} roundId={selectedRoundId} team={team} />
+                <TeamJudgeRow
+                  key={team.id}
+                  eventId={selectedEventId}
+                  roundId={selectedRoundId}
+                  team={team}
+                  lecturers={lecturers}
+                />
               ))}
               {filteredTeams.length === 0 && (
                 <tr>

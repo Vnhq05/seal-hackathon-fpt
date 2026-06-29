@@ -1,6 +1,7 @@
 package com.sealhackathon.user.dto.response;
 
 import com.sealhackathon.common.enums.AccountStatus;
+import com.sealhackathon.common.enums.StudentStanding;
 import com.sealhackathon.common.enums.UserType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -24,6 +25,8 @@ public class UserProfileResponse {
     private String universityName;
     private UserType userType;
     private AccountStatus status;
+    private StudentStanding studentStanding;
+    private Integer semester;
     private boolean temporaryAccount;
     private LocalDateTime createdAt;
 }

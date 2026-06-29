@@ -16,6 +16,7 @@ function toRegisterRequest(values: RegisterFormValues): RegisterRequest {
         ? values.universityName?.trim()
         : undefined,
     semester: values.semester,
+    studentStanding: "ENROLLED",
   };
 }
 

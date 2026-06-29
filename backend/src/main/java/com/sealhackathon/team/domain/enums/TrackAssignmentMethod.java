@@ -2,5 +2,6 @@ package com.sealhackathon.team.domain.enums;
 
 public enum TrackAssignmentMethod {
     RANDOM,
-    MANUAL
+    MANUAL,
+    SELF_DRAW
 }

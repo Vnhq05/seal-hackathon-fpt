@@ -3,6 +3,7 @@ import { publicApi } from "@/lib/api/public.api";
 
 export const PUBLIC_EVENT_KEY = "public-event" as const;
 export const PUBLIC_EVENT_ROUNDS_KEY = "public-event-rounds" as const;
+export const PUBLIC_EVENT_SCHEDULE_KEY = "public-event-schedule" as const;
 
 export function usePublicEvent(eventId: string) {
   return useQuery({
@@ -17,6 +18,15 @@ export function usePublicEventRounds(eventId: string) {
   return useQuery({
     queryKey: [PUBLIC_EVENT_ROUNDS_KEY, eventId],
     queryFn: () => publicApi.getRounds(eventId),
+    enabled: !!eventId,
+    staleTime: 2 * 60 * 1000,
+  });
+}
+
+export function usePublicEventSchedule(eventId: string) {
+  return useQuery({
+    queryKey: [PUBLIC_EVENT_SCHEDULE_KEY, eventId],
+    queryFn: () => publicApi.getSchedule(eventId),
     enabled: !!eventId,
     staleTime: 2 * 60 * 1000,
   });

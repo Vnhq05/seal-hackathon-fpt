@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -38,11 +39,11 @@ public class AssignmentController {
     private final MentorAssignmentService mentorAssignmentService;
 
     // ═══════════════════════════════════════
-    //  Judge Assignments — BR-13 (per round)
+    //  Judge Assignments — BR-13 (per round + track)
     // ═══════════════════════════════════════
 
     @PostMapping("/rounds/{roundId}/judges")
-    @Operation(summary = "Assign a judge to a round (BR-13)")
+    @Operation(summary = "Assign a judge to a round (BR-13). trackId required for PRELIMINARY, omit for FINAL.")
     public ResponseEntity<ApiResponse<JudgeAssignmentResponse>> assignJudge(
             @PathVariable UUID eventId, @PathVariable UUID roundId,
             @Valid @RequestBody AssignJudgeRequest request) {
@@ -52,10 +53,12 @@ public class AssignmentController {
     }
 
     @GetMapping("/rounds/{roundId}/judges")
-    @Operation(summary = "List judges assigned to a round")
+    @Operation(summary = "List judges assigned to a round. trackId required for PRELIMINARY rounds.")
     public ResponseEntity<ApiResponse<List<JudgeAssignmentResponse>>> getJudges(
-            @PathVariable UUID eventId, @PathVariable UUID roundId) {
-        List<JudgeAssignmentResponse> judges = judgeAssignmentService.getJudgesByRound(roundId);
+            @PathVariable UUID eventId,
+            @PathVariable UUID roundId,
+            @RequestParam(required = false) UUID trackId) {
+        List<JudgeAssignmentResponse> judges = judgeAssignmentService.getJudgesByRound(roundId, trackId);
         return ResponseEntity.ok(ApiResponse.success(judges));
     }
 
@@ -69,32 +72,36 @@ public class AssignmentController {
     }
 
     // ═══════════════════════════════════════
-    //  Mentor Assignments — BR-14 (per event)
+    //  Mentor Assignments — BR-14 (per track)
     // ═══════════════════════════════════════
 
-    @PostMapping("/mentors")
-    @Operation(summary = "Assign a mentor to the event (BR-14)")
+    @PostMapping("/tracks/{trackId}/mentors")
+    @Operation(summary = "Assign a mentor to a track (BR-14)")
     public ResponseEntity<ApiResponse<MentorAssignmentResponse>> assignMentor(
             @PathVariable UUID eventId,
+            @PathVariable UUID trackId,
             @Valid @RequestBody AssignMentorRequest request) {
-        MentorAssignmentResponse response = mentorAssignmentService.assignMentor(eventId, request);
+        MentorAssignmentResponse response = mentorAssignmentService.assignMentor(eventId, trackId, request);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Mentor assigned to event", response));
+                .body(ApiResponse.success("Mentor assigned to track", response));
     }
 
-    @GetMapping("/mentors")
-    @Operation(summary = "List mentors assigned to the event")
+    @GetMapping("/tracks/{trackId}/mentors")
+    @Operation(summary = "List mentors assigned to a track")
     public ResponseEntity<ApiResponse<List<MentorAssignmentResponse>>> getMentors(
-            @PathVariable UUID eventId) {
-        List<MentorAssignmentResponse> mentors = mentorAssignmentService.getMentorsByEvent(eventId);
+            @PathVariable UUID eventId,
+            @PathVariable UUID trackId) {
+        List<MentorAssignmentResponse> mentors = mentorAssignmentService.getMentorsByTrack(eventId, trackId);
         return ResponseEntity.ok(ApiResponse.success(mentors));
     }
 
-    @DeleteMapping("/mentors/{assignmentId}")
-    @Operation(summary = "Remove a mentor assignment")
+    @DeleteMapping("/tracks/{trackId}/mentors/{assignmentId}")
+    @Operation(summary = "Remove a mentor assignment from a track")
     public ResponseEntity<ApiResponse<Void>> removeMentor(
-            @PathVariable UUID eventId, @PathVariable UUID assignmentId) {
-        mentorAssignmentService.removeMentorAssignment(assignmentId);
+            @PathVariable UUID eventId,
+            @PathVariable UUID trackId,
+            @PathVariable UUID assignmentId) {
+        mentorAssignmentService.removeMentorAssignment(eventId, trackId, assignmentId);
         return ResponseEntity.ok(ApiResponse.success("Mentor assignment removed", null));
     }
 }

@@ -1,8 +1,12 @@
 package com.sealhackathon.event.controller;
 
 import com.sealhackathon.common.response.ApiResponse;
+import com.sealhackathon.event.dto.response.AllowedEmailDomainResponse;
+import com.sealhackathon.event.dto.response.EventScheduleResponse;
 import com.sealhackathon.event.dto.response.EventResponse;
 import com.sealhackathon.event.dto.response.RoundResponse;
+import com.sealhackathon.event.service.AllowedEmailDomainService;
+import com.sealhackathon.event.service.EventScheduleService;
 import com.sealhackathon.event.service.EventService;
 import com.sealhackathon.event.service.RoundService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -29,6 +33,8 @@ public class PublicEventController {
 
     private final EventService eventService;
     private final RoundService roundService;
+    private final AllowedEmailDomainService allowedEmailDomainService;
+    private final EventScheduleService eventScheduleService;
 
     @GetMapping
     @Operation(summary = "List published events (public)")
@@ -49,5 +55,20 @@ public class PublicEventController {
     public ResponseEntity<ApiResponse<List<RoundResponse>>> getRounds(@PathVariable UUID eventId) {
         eventService.assertPubliclyVisible(eventId);
         return ResponseEntity.ok(ApiResponse.success(roundService.getRoundsByEvent(eventId)));
+    }
+
+    @GetMapping("/{eventId}/allowed-email-domains")
+    @Operation(summary = "List allowed email domains for external registration (public)")
+    public ResponseEntity<ApiResponse<List<AllowedEmailDomainResponse>>> getAllowedEmailDomains(
+            @PathVariable UUID eventId) {
+        eventService.assertPubliclyVisible(eventId);
+        return ResponseEntity.ok(ApiResponse.success(allowedEmailDomainService.listByEvent(eventId)));
+    }
+
+    @GetMapping("/{eventId}/schedule")
+    @Operation(summary = "Get competition schedule (public)")
+    public ResponseEntity<ApiResponse<List<EventScheduleResponse>>> getSchedule(@PathVariable UUID eventId) {
+        eventService.assertPubliclyVisible(eventId);
+        return ResponseEntity.ok(ApiResponse.success(eventScheduleService.getSchedule(eventId)));
     }
 }

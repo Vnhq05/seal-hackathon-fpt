@@ -8,11 +8,13 @@ import {
   usePublishResults,
   useToggleLeaderboardPublic,
 } from "../hooks/use-livescore";
-import type { LiveScoreEntry, LiveScoreBoard, RankingEvent, TrackInfo } from "@/lib/api/livescore.api";
+import { useRecalculateRankings } from "@/features/rankings/hooks/use-ranking";
+import type { LiveScoreEntry, LiveScoreBoard, RankingEvent, LiveScoreStatus, TrackInfo } from "@/lib/api/livescore.api";
+import type { RoundType } from "@/lib/api/types";
 
 const MEDAL_COLORS: Record<number, string> = { 1: "#f59e0b", 2: "#8891a5", 3: "#cd7f32" };
 
-const STATUS_LABELS: Record<string, { label: string; color: string; bg: string }> = {
+const STATUS_LABELS: Record<LiveScoreStatus, { label: string; color: string; bg: string }> = {
   NOT_SUBMITTED: { label: "Not submitted", color: "#991b1b", bg: "#fee2e2" },
   WAITING_FOR_SCORE: { label: "Waiting for score", color: "#92400e", bg: "#fef3c7" },
   PARTIALLY_SCORED: { label: "Partially scored", color: "#1e40af", bg: "#dbeafe" },
@@ -51,7 +53,7 @@ function RankMovement({ current, previous, animation }: { current: number; previ
   return <span style={{ fontSize: 13, fontWeight: 700, color: "#dc2626" }}>{diff}</span>;
 }
 
-function StatusBadge({ status }: { status: string }) {
+function StatusBadge({ status }: { status: LiveScoreStatus }) {
   const s = STATUS_LABELS[status] ?? { label: status, color: "#0e1528", bg: "#f1f5f9" };
   return (
     <span style={{ fontSize: 11, fontWeight: 600, color: s.color, backgroundColor: s.bg, padding: "3px 8px", borderRadius: 4 }}>
@@ -318,17 +320,30 @@ interface LiveScoreArenaPageProps {
 
 export function LiveScoreArenaPage({ eventId }: LiveScoreArenaPageProps) {
   const [selectedTrackId, setSelectedTrackId] = useState<string | undefined>(undefined);
+  const [roundTypeSelection, setRoundTypeSelection] = useState<RoundType | null>(null);
   const [showReveal, setShowReveal] = useState(false);
   const [leaderToast, setLeaderToast] = useState<string | null>(null);
   const [rowAnimations, setRowAnimations] = useState<Map<string, RowAnimation>>(new Map());
   const prevRankingsRef = useRef<Map<string, number>>(new Map());
 
-  const { data: board, isLoading, error } = useLiveScoreBoard(eventId, selectedTrackId);
-  const { data: fullBoard } = useLiveScoreBoard(eventId, undefined);
+  const { data: board, isLoading, error } = useLiveScoreBoard(
+    eventId,
+    roundTypeSelection === "PRELIMINARY" ? selectedTrackId : undefined,
+    undefined,
+    roundTypeSelection ?? undefined,
+  );
+  const { data: fullBoard } = useLiveScoreBoard(
+    eventId,
+    undefined,
+    undefined,
+    roundTypeSelection ?? undefined,
+  );
+  const roundType = roundTypeSelection ?? board?.roundType ?? undefined;
   const { connected, rankingEvents, finalResults } = useLiveScoreWebSocket(eventId);
   const lockMutation = useLockScores(eventId);
   const publishMutation = usePublishResults(eventId);
   const publicMutation = useToggleLeaderboardPublic(eventId);
+  const recalculateMutation = useRecalculateRankings(eventId);
 
   const allRankings = fullBoard?.rankings ?? board?.rankings ?? [];
   const revealVisible = showReveal || Boolean(finalResults && board?.resultsPublished);
@@ -469,7 +484,7 @@ export function LiveScoreArenaPage({ eventId }: LiveScoreArenaPageProps) {
           </div>
         </div>
 
-        {hasMultipleTracks && (
+        {hasMultipleTracks && roundType === "PRELIMINARY" && (
           <div className="flex gap-2" style={{ borderBottom: "1px solid rgba(198,198,205,0.5)", paddingBottom: 1 }}>
             <TrackTab label="Overall" active={!selectedTrackId} onClick={() => setSelectedTrackId(undefined)} />
             {board.tracks.map((track: TrackInfo) => (
@@ -482,6 +497,25 @@ export function LiveScoreArenaPage({ eventId }: LiveScoreArenaPageProps) {
             ))}
           </div>
         )}
+
+        <div className="flex gap-2" style={{ borderBottom: "1px solid rgba(198,198,205,0.5)", paddingBottom: 1 }}>
+          <TrackTab
+            label="Vòng bảng"
+            active={roundType === "PRELIMINARY"}
+            onClick={() => {
+              setRoundTypeSelection("PRELIMINARY");
+              setSelectedTrackId(undefined);
+            }}
+          />
+          <TrackTab
+            label="Chung kết"
+            active={roundType === "FINAL"}
+            onClick={() => {
+              setRoundTypeSelection("FINAL");
+              setSelectedTrackId(undefined);
+            }}
+          />
+        </div>
 
         <div className="flex gap-6">
           <div style={{ flex: 1 }}>
@@ -569,6 +603,15 @@ export function LiveScoreArenaPage({ eventId }: LiveScoreArenaPageProps) {
 
             {board.canManageLeaderboard && (
               <div className="flex flex-wrap gap-3" style={{ marginTop: 16 }}>
+                {board.roundId && (
+                  <button
+                    onClick={() => recalculateMutation.mutate(board.roundId)}
+                    disabled={recalculateMutation.isPending}
+                    style={btnStyle("#0e7490", recalculateMutation.isPending)}
+                  >
+                    {recalculateMutation.isPending ? "Recalculating..." : "Recalculate Rankings"}
+                  </button>
+                )}
                 {!board.scoresLocked && board.roundId && (
                   <button
                     onClick={() => lockMutation.mutate(board.roundId)}

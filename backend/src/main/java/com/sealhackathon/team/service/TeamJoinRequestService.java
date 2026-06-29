@@ -6,6 +6,7 @@ import com.sealhackathon.common.service.SystemConfigService;
 import com.sealhackathon.team.domain.Team;
 import com.sealhackathon.team.domain.TeamJoinRequest;
 import com.sealhackathon.team.domain.TeamMember;
+import com.sealhackathon.team.domain.enums.HackathonSkillRole;
 import com.sealhackathon.team.domain.enums.JoinRequestStatus;
 import com.sealhackathon.team.domain.enums.TeamMemberRole;
 import com.sealhackathon.team.domain.enums.TeamStatus;
@@ -58,7 +59,8 @@ public class TeamJoinRequestService {
     }
 
     @Transactional(readOnly = true)
-    public List<JoinableTeamResponse> getJoinableTeams(UUID eventId, UUID currentUserId) {
+    public List<JoinableTeamResponse> getJoinableTeams(
+            UUID eventId, UUID currentUserId, boolean recruitingOnly) {
         enrollmentService.requireApprovedEnrollment(currentUserId, eventId);
 
         if (teamMemberRepository.existsByUserIdAndEventId(currentUserId, eventId)) {
@@ -74,6 +76,7 @@ public class TeamJoinRequestService {
         List<Team> teams = teamRepository.findByEventId(eventId).stream()
                 .filter(t -> t.getStatus() != TeamStatus.DISBANDED)
                 .filter(t -> teamMemberRepository.countByTeamId(t.getId()) < maxSize)
+                .filter(t -> !recruitingOnly || t.isRecruiting())
                 .toList();
 
         List<UUID> leaderIds = teams.stream().map(Team::getLeaderId).distinct().toList();
@@ -84,15 +87,19 @@ public class TeamJoinRequestService {
                 .map(t -> {
                     UserSnapshot leader = leaders.get(t.getLeaderId());
                     int memberCount = teamMemberRepository.countByTeamId(t.getId());
+                    List<HackathonSkillRole> neededRoles =
+                            t.getNeededRoles() != null ? List.copyOf(t.getNeededRoles()) : List.of();
                     return JoinableTeamResponse.builder()
                             .id(t.getId())
                             .name(t.getName())
                             .leaderId(t.getLeaderId())
-                            .leaderEmail(leader != null ? leader.getEmail() : null)
                             .leaderFullName(leader != null ? leader.getFullName() : null)
                             .memberCount(memberCount)
                             .maxTeamMembers(maxSize)
                             .status(t.getStatus())
+                            .isRecruiting(t.isRecruiting())
+                            .recruitmentNote(t.getRecruitmentNote())
+                            .neededRoles(neededRoles)
                             .build();
                 })
                 .toList();
@@ -174,6 +181,7 @@ public class TeamJoinRequestService {
         Team team = teamRepository.findByIdForUpdate(joinRequest.getTeam().getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Team", "id", joinRequest.getTeam().getId()));
         guardLeader(team, leaderId);
+        teamService.validateMemberChangesAllowed(eventId);
         validatePending(joinRequest);
 
         UUID requesterId = joinRequest.getRequesterId();
@@ -213,6 +221,7 @@ public class TeamJoinRequestService {
         }
 
         teamService.notifyTeamCountChanged(eventId);
+        teamService.syncRecruitingStatus(team.getId());
 
         eventPublisher.publishEvent(new JoinRequestResolvedEvent(
                 joinRequestId, team.getId(), eventId, requesterId, team.getName(), true));

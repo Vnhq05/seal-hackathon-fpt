@@ -1,5 +1,7 @@
 package com.sealhackathon.event.dto.request;
 
+import com.sealhackathon.event.domain.enums.AdvancementRule;
+import com.sealhackathon.event.domain.enums.RoundType;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -43,4 +45,8 @@ public class CreateRoundRequest {
 
     @Min(value = 1, message = "Round weight must be at least 1")
     private Integer roundWeight;
+
+    private RoundType roundType;
+
+    private AdvancementRule advancementRule;
 }

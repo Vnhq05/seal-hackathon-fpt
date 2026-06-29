@@ -4,7 +4,10 @@ import com.sealhackathon.common.exception.BusinessException;
 import com.sealhackathon.common.exception.ResourceNotFoundException;
 import com.sealhackathon.event.domain.HackathonEvent;
 import com.sealhackathon.event.domain.Round;
+import com.sealhackathon.event.domain.enums.AdvancementRule;
+import com.sealhackathon.event.domain.enums.CompetitionFormat;
 import com.sealhackathon.event.domain.enums.EventStatus;
+import com.sealhackathon.event.domain.enums.RoundType;
 import com.sealhackathon.event.dto.request.CreateRoundRequest;
 import com.sealhackathon.event.dto.response.CriteriaResponse;
 import com.sealhackathon.event.dto.response.RoundResponse;
@@ -46,6 +49,7 @@ public class RoundService {
 
         validateDeadlineOrder(request.getStartDate(), request.getEndDate(),
                 request.getSubmissionDeadline(), request.getScoringDeadline());
+        validateSealRoundType(event, request.getRoundType());
 
         int roundWeight = resolveRoundWeight(eventId, request.getRoundWeight());
 
@@ -59,6 +63,10 @@ public class RoundService {
                 .scoringDeadline(request.getScoringDeadline())
                 .advancementCutoff(request.getAdvancementCutoff())
                 .roundWeight(roundWeight)
+                .roundType(request.getRoundType())
+                .advancementRule(request.getAdvancementRule() != null
+                        ? request.getAdvancementRule()
+                        : AdvancementRule.GLOBAL_TOP_N)
                 .build();
 
         round = roundRepository.save(round);
@@ -83,6 +91,7 @@ public class RoundService {
 
         validateDeadlineOrder(request.getStartDate(), request.getEndDate(),
                 request.getSubmissionDeadline(), request.getScoringDeadline());
+        validateSealRoundType(event, request.getRoundType());
 
         int roundWeight = request.getRoundWeight() != null
                 ? request.getRoundWeight()
@@ -96,6 +105,12 @@ public class RoundService {
         round.setScoringDeadline(request.getScoringDeadline());
         round.setAdvancementCutoff(request.getAdvancementCutoff());
         round.setRoundWeight(roundWeight);
+        if (request.getRoundType() != null) {
+            round.setRoundType(request.getRoundType());
+        }
+        if (request.getAdvancementRule() != null) {
+            round.setAdvancementRule(request.getAdvancementRule());
+        }
 
         round = roundRepository.save(round);
         return toResponse(round);
@@ -248,6 +263,14 @@ public class RoundService {
         }
     }
 
+    private void validateSealRoundType(HackathonEvent event, RoundType roundType) {
+        if (event.getCompetitionFormat() == CompetitionFormat.SEAL_RAG_2026 && roundType == null) {
+            throw new BusinessException(
+                    "roundType is required for SEAL format rounds (PRELIMINARY or FINAL)",
+                    HttpStatus.BAD_REQUEST) {};
+        }
+    }
+
     private void guardDraftOrActive(HackathonEvent event) {
         if (event.getStatus() == EventStatus.COMPLETED || event.getStatus() == EventStatus.CANCELLED) {
             throw new BusinessException(
@@ -264,6 +287,8 @@ public class RoundService {
                         .description(c.getDescription())
                         .weight(c.getWeight())
                         .sortOrder(c.getSortOrder())
+                        .minScore(c.getMinScore())
+                        .maxScore(c.getMaxScore())
                         .build())
                 .toList();
 
@@ -275,10 +300,12 @@ public class RoundService {
                 .startDate(round.getStartDate())
                 .endDate(round.getEndDate())
                 .submissionDeadline(round.getSubmissionDeadline())
+                .slideDeadline(round.getSlideDeadline())
                 .scoringDeadline(round.getScoringDeadline())
                 .advancementCutoff(round.getAdvancementCutoff())
                 .roundWeight(round.getRoundWeight())
                 .roundType(round.getRoundType())
+                .advancementRule(round.getAdvancementRule())
                 .criteria(criteriaList)
                 .judgeCount(round.getJudgeAssignments().size())
                 .build();

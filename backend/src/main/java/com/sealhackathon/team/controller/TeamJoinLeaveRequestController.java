@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -44,9 +45,11 @@ public class TeamJoinLeaveRequestController {
     @GetMapping("/joinable")
     @Operation(summary = "List teams with available slots for join requests")
     public ResponseEntity<ApiResponse<List<JoinableTeamResponse>>> getJoinableTeams(
-            @PathVariable UUID eventId) {
+            @PathVariable UUID eventId,
+            @RequestParam(defaultValue = "false") boolean recruitingOnly) {
         UUID userId = authPublicService.getCurrentUserId();
-        return ResponseEntity.ok(ApiResponse.success(joinRequestService.getJoinableTeams(eventId, userId)));
+        return ResponseEntity.ok(ApiResponse.success(
+                joinRequestService.getJoinableTeams(eventId, userId, recruitingOnly)));
     }
 
     // ── Join requests ──

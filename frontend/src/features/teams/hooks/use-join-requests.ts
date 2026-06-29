@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { joinRequestApi } from "@/lib/api/join-request.api";
+import { enrollmentWaitingListKey } from "@/features/events/hooks/use-enrollment";
 import { JOINABLE_TEAMS_KEY } from "@/features/teams/hooks/use-joinable-teams";
 
 export const TEAM_JOIN_REQUESTS_KEY = "team-join-requests" as const;
@@ -31,7 +32,7 @@ export function useJoinRequestMutations(eventId: string, teamId?: string) {
     if (teamId) {
       qc.invalidateQueries({ queryKey: [TEAM_JOIN_REQUESTS_KEY, teamId] });
     }
-    qc.invalidateQueries({ queryKey: ["waiting-list", eventId] });
+    qc.invalidateQueries({ queryKey: enrollmentWaitingListKey(eventId) });
   };
 
   const create = useMutation({

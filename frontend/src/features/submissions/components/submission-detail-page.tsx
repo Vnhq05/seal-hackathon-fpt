@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useSubmissionDetail } from "@/features/submissions/hooks/use-submission-detail";
+import { useSubmissionVersions } from "@/features/submissions/hooks/use-submission-versions";
+import { resolveFileUrl } from "@/lib/files";
 
 interface SubmissionDetailPageProps {
   roundId: string;
@@ -35,6 +37,7 @@ function PageSkeleton() {
 
 export function SubmissionDetailPage({ roundId, submissionId }: SubmissionDetailPageProps) {
   const { data: submission, isLoading } = useSubmissionDetail(roundId, submissionId);
+  const { data: versions } = useSubmissionVersions(roundId, submissionId);
 
   if (isLoading) return <PageSkeleton />;
 
@@ -120,17 +123,36 @@ export function SubmissionDetailPage({ roundId, submissionId }: SubmissionDetail
             Latest Version (v{submission.latestVersion.versionNumber})
           </h2>
           <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2">
-              <span style={{ fontSize: 12, fontWeight: 600, color: "#8891a5" }}>GitHub:</span>
-              <a
-                href={submission.latestVersion.githubUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ fontSize: 14, color: "#38bdf8" }}
-              >
-                {submission.latestVersion.githubUrl}
-              </a>
-            </div>
+            {(submission.latestVersion.sourceCodeUrl ?? submission.latestVersion.githubUrl) && (
+              <div className="flex items-center gap-2">
+                <span style={{ fontSize: 12, fontWeight: 600, color: "#8891a5" }}>Source:</span>
+                <a
+                  href={
+                    submission.latestVersion.sourceCodeUrl ??
+                    submission.latestVersion.githubUrl ??
+                    undefined
+                  }
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ fontSize: 14, color: "#38bdf8" }}
+                >
+                  {submission.latestVersion.sourceCodeUrl ?? submission.latestVersion.githubUrl}
+                </a>
+              </div>
+            )}
+            {submission.latestVersion.slideUrl && (
+              <div className="flex items-center gap-2">
+                <span style={{ fontSize: 12, fontWeight: 600, color: "#8891a5" }}>Slide:</span>
+                <a
+                  href={submission.latestVersion.slideUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ fontSize: 14, color: "#38bdf8" }}
+                >
+                  {submission.latestVersion.slideUrl}
+                </a>
+              </div>
+            )}
             {submission.latestVersion.demoUrl && (
               <div className="flex items-center gap-2">
                 <span style={{ fontSize: 12, fontWeight: 600, color: "#8891a5" }}>Demo:</span>
@@ -156,6 +178,53 @@ export function SubmissionDetailPage({ roundId, submissionId }: SubmissionDetail
                 })}
               </span>
             </div>
+            {submission.latestVersion.attachments.map((attachment) => {
+              const href = resolveFileUrl(attachment.fileUrl);
+              if (!href) return null;
+              return (
+                <div key={attachment.id} className="flex items-center gap-2">
+                  <span style={{ fontSize: 12, fontWeight: 600, color: "#8891a5" }}>PDF:</span>
+                  <a
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ fontSize: 14, color: "#38bdf8" }}
+                  >
+                    {attachment.fileName} ({attachment.pageCount} pages)
+                  </a>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {versions && versions.length > 0 && (
+        <div
+          className="rounded-lg p-6"
+          style={{
+            backgroundColor: "#ffffff",
+            border: "1px solid rgba(223,226,236,0.8)",
+          }}
+        >
+          <h2 style={{ fontSize: 18, fontWeight: 600, color: "#0e1528", marginBottom: 12 }}>
+            Version History
+          </h2>
+          <div className="flex flex-col gap-3">
+            {versions.map((version) => (
+              <div
+                key={version.id}
+                className="rounded-md p-3"
+                style={{ backgroundColor: "#f8fafc", border: "1px solid rgba(223,226,236,0.6)" }}
+              >
+                <div style={{ fontSize: 14, fontWeight: 600, color: "#0e1528" }}>
+                  v{version.versionNumber}
+                </div>
+                <div style={{ fontSize: 12, color: "#8891a5", marginTop: 4 }}>
+                  {new Date(version.submittedAt).toLocaleString()}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}

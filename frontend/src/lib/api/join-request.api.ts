@@ -1,5 +1,5 @@
 import { api } from "./api-client";
-import type { TeamStatus } from "./types";
+import type { HackathonSkillRole, TeamStatus } from "./types";
 
 export type JoinRequestStatus = "PENDING" | "ACCEPTED" | "REJECTED" | "CANCELLED";
 
@@ -7,11 +7,13 @@ export interface JoinableTeamResponse {
   id: string;
   name: string;
   leaderId: string;
-  leaderEmail: string | null;
   leaderFullName: string | null;
   memberCount: number;
   maxTeamMembers: number;
   status: TeamStatus;
+  isRecruiting: boolean;
+  recruitmentNote: string | null;
+  neededRoles: HackathonSkillRole[];
 }
 
 export interface TeamJoinRequestResponse {
@@ -33,8 +35,8 @@ export interface CreateJoinRequestRequest {
 }
 
 export const joinRequestApi = {
-  getJoinable(eventId: string): Promise<JoinableTeamResponse[]> {
-    return api.get<JoinableTeamResponse[]>(`/events/${eventId}/teams/joinable`);
+  getJoinable(eventId: string, params?: { recruitingOnly?: boolean }): Promise<JoinableTeamResponse[]> {
+    return api.get<JoinableTeamResponse[]>(`/events/${eventId}/teams/joinable`, { params });
   },
 
   create(eventId: string, teamId: string, body?: CreateJoinRequestRequest): Promise<TeamJoinRequestResponse> {

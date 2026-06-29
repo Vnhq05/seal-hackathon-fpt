@@ -1,6 +1,9 @@
 package com.sealhackathon.ranking.service;
 
-import com.sealhackathon.event.service.EventPublicService;
+import com.sealhackathon.common.exception.ResourceNotFoundException;
+import com.sealhackathon.event.domain.Round;
+import com.sealhackathon.event.domain.enums.AdvancementRule;
+import com.sealhackathon.event.repository.RoundRepository;
 import com.sealhackathon.ranking.domain.Advancement;
 import com.sealhackathon.ranking.domain.Ranking;
 import com.sealhackathon.ranking.domain.enums.AdvancementStatus;
@@ -14,8 +17,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -25,27 +32,36 @@ public class AdvancementService {
 
     private final AdvancementRepository advancementRepository;
     private final RankingRepository rankingRepository;
-    private final EventPublicService eventPublicService;
+    private final RoundRepository roundRepository;
     private final TeamPublicService teamPublicService;
 
     @Transactional
     public List<AdvancementResponse> determineAdvancements(UUID roundId) {
-        int cutoff = eventPublicService.getAdvancementCutoff(roundId);
-        int latestVersion = rankingRepository.findMaxVersionByRoundId(roundId);
+        Round round = roundRepository.findById(roundId)
+                .orElseThrow(() -> new ResourceNotFoundException("Round", "id", roundId));
 
+        AdvancementRule rule = round.getAdvancementRule() != null
+                ? round.getAdvancementRule()
+                : AdvancementRule.GLOBAL_TOP_N;
+
+        int latestVersion = rankingRepository.findMaxVersionByRoundId(roundId);
         List<Ranking> rankings = rankingRepository
                 .findByRoundIdAndVersionOrderByRankAsc(roundId, latestVersion);
 
         advancementRepository.deleteByRoundId(roundId);
         advancementRepository.flush();
 
-        List<Advancement> advancements = new ArrayList<>();
+        Set<UUID> advancedTeamIds = switch (rule) {
+            case PER_TRACK_TOP_N -> determinePerTrackAdvanced(round, rankings);
+            case FINALIST_POOL, NONE -> Set.of();
+            case GLOBAL_TOP_N -> determineGlobalAdvanced(round.getAdvancementCutoff(), rankings);
+        };
 
+        List<Advancement> advancements = new ArrayList<>();
         for (Ranking r : rankings) {
-            AdvancementStatus status = r.getRank() <= cutoff
+            AdvancementStatus status = advancedTeamIds.contains(r.getTeamId())
                     ? AdvancementStatus.ADVANCED
                     : AdvancementStatus.ELIMINATED;
-
             advancements.add(Advancement.builder()
                     .teamId(r.getTeamId())
                     .roundId(roundId)
@@ -61,6 +77,43 @@ public class AdvancementService {
         return advancements.stream()
                 .map(a -> toResponse(a, rankingMap.get(a.getTeamId())))
                 .toList();
+    }
+
+    private Set<UUID> determineGlobalAdvanced(int cutoff, List<Ranking> rankings) {
+        Set<UUID> advanced = new HashSet<>();
+        for (Ranking r : rankings) {
+            if (r.getRank() <= cutoff) {
+                advanced.add(r.getTeamId());
+            }
+        }
+        return advanced;
+    }
+
+    private Set<UUID> determinePerTrackAdvanced(Round round, List<Ranking> rankings) {
+        int cutoff = round.getAdvancementCutoff() != null ? round.getAdvancementCutoff() : 2;
+        Map<UUID, List<Ranking>> byTrack = new LinkedHashMap<>();
+
+        for (Ranking r : rankings) {
+            UUID trackId = teamPublicService.getTeam(r.getTeamId())
+                    .map(TeamSnapshot::getTrackId)
+                    .orElse(null);
+            if (trackId == null) {
+                continue;
+            }
+            byTrack.computeIfAbsent(trackId, k -> new ArrayList<>()).add(r);
+        }
+
+        Set<UUID> advanced = new HashSet<>();
+        for (List<Ranking> trackRankings : byTrack.values()) {
+            trackRankings.sort(Comparator
+                    .comparing(Ranking::getRank)
+                    .thenComparing(Ranking::getFinalScore, Comparator.reverseOrder()));
+            int take = Math.min(cutoff, trackRankings.size());
+            for (int i = 0; i < take; i++) {
+                advanced.add(trackRankings.get(i).getTeamId());
+            }
+        }
+        return advanced;
     }
 
     @Transactional(readOnly = true)

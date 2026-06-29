@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { LandingNavbar } from "@/features/landing/components/landing-navbar";
 import { Footer } from "@/features/landing/components/footer";
-import { usePublicEvent, usePublicEventRounds } from "@/features/events/hooks/use-public-event";
+import { usePublicEvent, usePublicEventRounds, usePublicEventSchedule } from "@/features/events/hooks/use-public-event";
 import {
   calcTotalPrizePool,
   formatEventDate,
@@ -16,8 +16,15 @@ import {
 } from "@/features/events/utils/event-landing.utils";
 import { formatPrizeAmount, getPrizeLabel } from "@/lib/prize.utils";
 import type { EventResponse } from "@/lib/api/event.api";
+import { EventScheduleTimeline } from "@/features/events/components/event-schedule-timeline";
+import type { EventScheduleResponse } from "@/lib/api/schedule.api";
 import type { PrizeRank } from "@/lib/api/event.api";
 import type { RoundResponse } from "@/lib/api/round.api";
+import { formatAdvancementLabel } from "@/lib/api/round.utils";
+import { useEventParticipationGate } from "@/features/events/hooks/use-event-participation-gate";
+import { useProfile } from "@/features/profile/hooks/use-profile";
+import { useAuthStore } from "@/features/auth/store/auth.store";
+import { ParticipationBlockBanner } from "@/features/events/components/participation-block-banner";
 
 const SECTION_LINKS = [
   { id: "about", label: "About" },
@@ -93,7 +100,22 @@ function StatPill({ label, value }: { label: string; value: string | number }) {
 
 function HeroSection({ event }: { event: EventResponse }) {
   const status = getStatusMeta(event.status);
-  const isOpen = event.status === "OPEN";
+  const { isAuthenticated } = useAuthStore();
+  const { data: profile } = useProfile({ enabled: isAuthenticated });
+  const userEligibility = isAuthenticated && profile
+    ? {
+        studentStanding:
+          profile.studentStanding ??
+          (profile.userType === "FPT_STUDENT" || profile.userType === "EXTERNAL_STUDENT"
+            ? ("ENROLLED" as const)
+            : undefined),
+        semester: profile.semester,
+      }
+    : undefined;
+  const { canEnroll, enrollmentBlockReason, registrationClosedReason } =
+    useEventParticipationGate(event, userEligibility);
+  const showRegisterCta = event.status === "OPEN" && canEnroll;
+  const blockReason = enrollmentBlockReason ?? registrationClosedReason;
   const semester = formatSemesterRange(event);
   const prizePool = calcTotalPrizePool(event.prizes);
 
@@ -157,8 +179,9 @@ function HeroSection({ event }: { event: EventResponse }) {
           )}
         </div>
 
-        <div className="mt-10 flex flex-wrap gap-3">
-          {isOpen ? (
+        <div className="mt-10 flex flex-col gap-3">
+          <div className="flex flex-wrap gap-3">
+          {showRegisterCta ? (
             <Link
               href={`/hackathons/${event.id}/register`}
               className="inline-flex h-12 items-center border-2 border-navy bg-seal-yellow px-8 text-sm font-mono font-bold text-navy shadow-[4px_4px_0_0_#0c1228] transition-opacity hover:opacity-90"
@@ -184,6 +207,10 @@ function HeroSection({ event }: { event: EventResponse }) {
           >
             Explore Details
           </a>
+          </div>
+          {!showRegisterCta && blockReason && (
+            <ParticipationBlockBanner reason={blockReason} className="max-w-xl text-amber-300/90" />
+          )}
         </div>
 
         <div className="mt-14 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:max-w-3xl">
@@ -337,8 +364,16 @@ function TracksSection({ event }: { event: EventResponse }) {
   );
 }
 
-function ScheduleSection({ rounds }: { rounds: RoundResponse[] }) {
-  if (rounds.length === 0) return null;
+function ScheduleSection({
+  rounds,
+  schedules,
+  competitionFormat,
+}: {
+  rounds: RoundResponse[];
+  schedules: EventScheduleResponse[];
+  competitionFormat?: string | null;
+}) {
+  if (rounds.length === 0 && schedules.length === 0) return null;
 
   const sorted = [...rounds].sort((a, b) => a.roundNumber - b.roundNumber);
 
@@ -349,6 +384,14 @@ function ScheduleSection({ rounds }: { rounds: RoundResponse[] }) {
           title="Competition Schedule"
           subtitle="Mark your calendar — every round counts."
         />
+
+        {schedules.length > 0 && (
+          <div className="mb-10">
+            <EventScheduleTimeline schedules={schedules} rounds={rounds} variant="full" />
+          </div>
+        )}
+
+        {sorted.length > 0 && (
         <div className="relative mx-auto max-w-3xl">
           <div className="absolute top-0 bottom-0 left-6 w-px bg-gradient-to-b from-seal-cyan/50 via-seal-mint/30 to-transparent" aria-hidden="true" />
           <div className="flex flex-col gap-8">
@@ -362,8 +405,11 @@ function ScheduleSection({ rounds }: { rounds: RoundResponse[] }) {
                   <div className="mt-4 grid gap-3 sm:grid-cols-2">
                     <DeadlineRow label="Round Period" value={`${formatEventDateTime(round.startDate)} → ${formatEventDateTime(round.endDate)}`} />
                     <DeadlineRow label="Submission Deadline" value={formatEventDateTime(round.submissionDeadline)} highlight />
+                    {round.slideDeadline && (
+                      <DeadlineRow label="Slide Deadline" value={formatEventDateTime(round.slideDeadline)} />
+                    )}
                     <DeadlineRow label="Scoring Deadline" value={formatEventDateTime(round.scoringDeadline)} />
-                    <DeadlineRow label="Advancement Cutoff" value={`Top ${round.advancementCutoff} teams`} />
+                    <DeadlineRow label="Advancement" value={formatAdvancementLabel(round, competitionFormat as "SEAL_RAG_2026" | "GENERIC" | null)} />
                   </div>
                   {round.criteria.length > 0 && (
                     <div className="mt-4 flex flex-wrap gap-2">
@@ -382,6 +428,7 @@ function ScheduleSection({ rounds }: { rounds: RoundResponse[] }) {
             ))}
           </div>
         </div>
+        )}
       </div>
     </section>
   );
@@ -599,18 +646,19 @@ function ChevronDownIcon() {
 export function EventLandingPage({ eventId }: EventLandingPageProps) {
   const { data: event, isLoading, isError } = usePublicEvent(eventId);
   const { data: rounds = [] } = usePublicEventRounds(eventId);
+  const { data: schedules = [] } = usePublicEventSchedule(eventId);
   const [activeSection, setActiveSection] = useState("about");
 
   const visibleSections = useMemo(() => {
     if (!event) return [];
     return SECTION_LINKS.filter((s) => {
       if (s.id === "tracks") return event.tracks.length > 0;
-      if (s.id === "schedule") return rounds.length > 0;
+      if (s.id === "schedule") return rounds.length > 0 || schedules.length > 0;
       if (s.id === "prizes") return event.prizes.length > 0;
       if (s.id === "guests") return event.honoredGuests.length > 0;
       return true;
     });
-  }, [event, rounds]);
+  }, [event, rounds, schedules]);
 
   useEffect(() => {
     const ids = visibleSections.map((s) => s.id);
@@ -645,7 +693,7 @@ export function EventLandingPage({ eventId }: EventLandingPageProps) {
         <SectionNav active={activeSection} links={visibleSections} />
         <AboutSection event={event} />
         <TracksSection event={event} />
-        <ScheduleSection rounds={rounds} />
+        <ScheduleSection rounds={rounds} schedules={schedules} competitionFormat={event.competitionFormat} />
         <PrizesSection event={event} />
         <GuestsSection event={event} />
         <RegisterCta event={event} />

@@ -8,6 +8,8 @@ export type { TeamJudgeAssignmentResponse };
 export interface JudgeAssignmentResponse {
   id: string;
   roundId: string;
+  trackId: string | null;
+  trackName: string | null;
   judgeUserId: string;
   judgeFullName: string | null;
   judgeEmail: string | null;
@@ -17,6 +19,8 @@ export interface JudgeAssignmentResponse {
 export interface MentorAssignmentResponse {
   id: string;
   eventId: string;
+  trackId: string;
+  trackName: string | null;
   mentorUserId: string;
   mentorFullName: string | null;
   mentorEmail: string | null;
@@ -25,6 +29,7 @@ export interface MentorAssignmentResponse {
 
 export interface AssignJudgeRequest {
   judgeUserId: string;
+  trackId?: string;
 }
 
 export interface AssignMentorRequest {
@@ -34,32 +39,34 @@ export interface AssignMentorRequest {
 // ═══ API calls ═══
 
 export const assignmentApi = {
-  // ── Judges (per round) ──
+  // ── Judges (per round + track) ──
 
   assignJudge(eventId: string, roundId: string, body: AssignJudgeRequest): Promise<JudgeAssignmentResponse> {
     return api.post<JudgeAssignmentResponse>(`/events/${eventId}/rounds/${roundId}/judges`, body);
   },
 
-  listJudges(eventId: string, roundId: string): Promise<JudgeAssignmentResponse[]> {
-    return api.get<JudgeAssignmentResponse[]>(`/events/${eventId}/rounds/${roundId}/judges`);
+  listJudges(eventId: string, roundId: string, trackId?: string): Promise<JudgeAssignmentResponse[]> {
+    return api.get<JudgeAssignmentResponse[]>(`/events/${eventId}/rounds/${roundId}/judges`, {
+      params: trackId ? { trackId } : undefined,
+    });
   },
 
   removeJudge(eventId: string, roundId: string, assignmentId: string): Promise<void> {
     return api.delete<void>(`/events/${eventId}/rounds/${roundId}/judges/${assignmentId}`);
   },
 
-  // ── Mentors (per event) ──
+  // ── Mentors (per track) ──
 
-  assignMentor(eventId: string, body: AssignMentorRequest): Promise<MentorAssignmentResponse> {
-    return api.post<MentorAssignmentResponse>(`/events/${eventId}/mentors`, body);
+  assignMentor(eventId: string, trackId: string, body: AssignMentorRequest): Promise<MentorAssignmentResponse> {
+    return api.post<MentorAssignmentResponse>(`/events/${eventId}/tracks/${trackId}/mentors`, body);
   },
 
-  listMentors(eventId: string): Promise<MentorAssignmentResponse[]> {
-    return api.get<MentorAssignmentResponse[]>(`/events/${eventId}/mentors`);
+  listMentors(eventId: string, trackId: string): Promise<MentorAssignmentResponse[]> {
+    return api.get<MentorAssignmentResponse[]>(`/events/${eventId}/tracks/${trackId}/mentors`);
   },
 
-  removeMentor(eventId: string, assignmentId: string): Promise<void> {
-    return api.delete<void>(`/events/${eventId}/mentors/${assignmentId}`);
+  removeMentor(eventId: string, trackId: string, assignmentId: string): Promise<void> {
+    return api.delete<void>(`/events/${eventId}/tracks/${trackId}/mentors/${assignmentId}`);
   },
 
   // ── Team judge assignments (overview) ──

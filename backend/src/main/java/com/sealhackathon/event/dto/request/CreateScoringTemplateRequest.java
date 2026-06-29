@@ -53,5 +53,13 @@ public class CreateScoringTemplateRequest {
 
         @Min(0)
         private Integer sortOrder;
+
+        @Min(0)
+        @Max(100)
+        private Integer minScore;
+
+        @Min(1)
+        @Max(100)
+        private Integer maxScore;
     }
 }

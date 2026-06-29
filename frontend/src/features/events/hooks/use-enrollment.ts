@@ -1,7 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { enrollmentApi, type EnrollmentStatus } from "@/lib/api";
 
-const ENROLLMENT_KEY = "enrollment" as const;
+export const ENROLLMENT_KEY = "enrollment" as const;
+
+export function enrollmentMyKey(eventId: string) {
+  return [ENROLLMENT_KEY, eventId, "my"] as const;
+}
+
+export function enrollmentWaitingListKey(eventId: string) {
+  return [ENROLLMENT_KEY, eventId, "waiting-list"] as const;
+}
 
 export function useMyActiveEnrollment() {
   return useQuery({
@@ -24,7 +32,7 @@ export function useEnroll(eventId: string) {
 
 export function useMyEnrollment(eventId: string) {
   return useQuery({
-    queryKey: [ENROLLMENT_KEY, eventId, "my"],
+    queryKey: enrollmentMyKey(eventId),
     queryFn: () => enrollmentApi.getMyEnrollment(eventId),
     enabled: !!eventId,
     retry: false,
@@ -41,7 +49,7 @@ export function useEnrollmentList(eventId: string, status?: EnrollmentStatus) {
 
 export function useWaitingList(eventId: string) {
   return useQuery({
-    queryKey: [ENROLLMENT_KEY, eventId, "waiting-list"],
+    queryKey: enrollmentWaitingListKey(eventId),
     queryFn: () => enrollmentApi.getWaitingList(eventId),
     enabled: !!eventId,
   });

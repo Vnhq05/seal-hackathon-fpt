@@ -1,14 +1,28 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useAuthStore } from "@/features/auth/store/auth.store";
 import { useDashboardSummary } from "@/features/dashboard/hooks/use-dashboard-summary";
 import { useDashboardHackathons } from "@/features/dashboard/hooks/use-dashboard-hackathons";
 import { useDashboardTeam } from "@/features/dashboard/hooks/use-dashboard-team";
 import { useMyActiveEnrollment } from "@/features/events/hooks/use-enrollment";
+import { EventScheduleTimeline } from "@/features/events/components/event-schedule-timeline";
+import { useEventSchedule } from "@/features/events/hooks/use-event-schedule";
+import {
+  findActiveMilestone,
+  findNextMilestone,
+  getGateDeadlineFromRound,
+} from "@/features/events/utils/schedule.utils";
+import {
+  formatCountdown,
+  msUntil,
+} from "@/features/submissions/utils/seal-submission.utils";
 import { useQuery } from "@tanstack/react-query";
-import { notificationApi } from "@/lib/api";
+import { notificationApi, roundApi } from "@/lib/api";
 import type { NotificationResponse, TeamResponse, EventResponse } from "@/lib/api";
+import { useProfile } from "@/features/profile/hooks/use-profile";
+import { useEventParticipationGate } from "@/features/events/hooks/use-event-participation-gate";
 
 function ArrowRightIcon() {
   return (
@@ -170,13 +184,32 @@ function formatDate(dateStr: string): string {
 function DashboardEventCard({
   event,
   activeEnrollment,
+  profile,
 }: {
   event: EventResponse;
   activeEnrollment: { eventId: string; status: string } | null | undefined;
+  profile?: {
+    studentStanding?: "ENROLLED" | "GRADUATED" | null;
+    semester?: number | null;
+    userType?: string;
+  } | null;
 }) {
   const isEnrolled = activeEnrollment?.eventId === event.id;
   const isPending = isEnrolled && activeEnrollment?.status === "PENDING";
   const isApproved = isEnrolled && activeEnrollment?.status === "APPROVED";
+
+  const { canEnroll, enrollmentBlockReason, registrationClosedReason } =
+    useEventParticipationGate(event, profile
+      ? {
+          studentStanding:
+            profile.studentStanding ??
+            (profile.userType === "FPT_STUDENT" || profile.userType === "EXTERNAL_STUDENT"
+              ? "ENROLLED"
+              : undefined),
+          semester: profile.semester,
+        }
+      : undefined);
+  const blockReason = enrollmentBlockReason ?? registrationClosedReason;
 
   return (
     <div className="flex w-full items-center justify-between gap-4 border-2 border-navy bg-white p-5 shadow-[4px_4px_0_0_#0c1228]">
@@ -198,13 +231,20 @@ function DashboardEventCard({
           <span className="inline-flex items-center rounded-lg bg-amber-50 px-4 py-2 text-xs font-semibold text-amber-700">
             Chờ phê duyệt
           </span>
-        ) : (
+        ) : canEnroll ? (
           <Link
             href={`/hackathons/${event.id}/register`}
             className="inline-flex items-center border-2 border-navy bg-seal-yellow px-4 py-2 text-xs text-navy font-mono font-bold shadow-[4px_4px_0_0_#0c1228]"
           >
             Register
           </Link>
+        ) : (
+          <span
+            className="inline-flex max-w-[200px] items-center rounded-lg bg-amber-50 px-4 py-2 text-xs font-semibold text-amber-700"
+            title={blockReason ?? undefined}
+          >
+            {blockReason ? "Unavailable" : "Register"}
+          </span>
         )}
       </div>
     </div>
@@ -216,11 +256,17 @@ function EventSection({
   description,
   events,
   activeEnrollment,
+  profile,
 }: {
   title: string;
   description: string;
   events: EventResponse[];
   activeEnrollment: { eventId: string; status: string } | null | undefined;
+  profile?: {
+    studentStanding?: "ENROLLED" | "GRADUATED" | null;
+    semester?: number | null;
+    userType?: string;
+  } | null;
 }) {
   if (events.length === 0) return null;
 
@@ -232,7 +278,7 @@ function EventSection({
       </div>
       <div className="flex flex-col gap-3">
         {events.map((e) => (
-          <DashboardEventCard key={e.id} event={e} activeEnrollment={activeEnrollment} />
+          <DashboardEventCard key={e.id} event={e} activeEnrollment={activeEnrollment} profile={profile} />
         ))}
       </div>
     </div>
@@ -242,9 +288,15 @@ function EventSection({
 function HackathonEvents({
   hackathons,
   activeEnrollment,
+  profile,
 }: {
   hackathons: EventResponse[];
   activeEnrollment: { eventId: string; status: string } | null | undefined;
+  profile?: {
+    studentStanding?: "ENROLLED" | "GRADUATED" | null;
+    semester?: number | null;
+    userType?: string;
+  } | null;
 }) {
   const openEvents = hackathons.filter((e) => e.status === "OPEN");
   const upcomingEvents = hackathons.filter((e) => e.status === "UPCOMING");
@@ -264,12 +316,14 @@ function HackathonEvents({
         description="Các sự kiện đang nhận đăng ký tham gia."
         events={openEvents}
         activeEnrollment={activeEnrollment}
+        profile={profile}
       />
       <EventSection
         title="Sắp diễn ra"
         description="Các sự kiện sẽ mở đăng ký trong thời gian tới."
         events={upcomingEvents}
         activeEnrollment={activeEnrollment}
+        profile={profile}
       />
     </div>
   );
@@ -341,6 +395,77 @@ function RecentUpdates({ notifications }: { notifications: NotificationResponse[
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function ScheduleDashboardCard({ event }: { event: EventResponse }) {
+  const [now, setNow] = useState(() => Date.now());
+  const { data: schedules, isLoading: scheduleLoading } = useEventSchedule(event.id);
+  const { data: rounds, isLoading: roundsLoading } = useQuery({
+    queryKey: ["event-rounds", event.id],
+    queryFn: () => roundApi.list(event.id),
+    enabled: !!event.id,
+  });
+
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  const prelimRound = rounds?.find((r) => r.roundType === "PRELIMINARY") ?? rounds?.[0];
+  const activeMilestone = findActiveMilestone(schedules, now);
+  const nextMilestone = schedules ? findNextMilestone(schedules, now) : undefined;
+  const countdownTarget = activeMilestone?.gate
+    ? getGateDeadlineFromRound(activeMilestone.gate, prelimRound)
+    : nextMilestone?.startTime ?? null;
+  const countdownMs = countdownTarget ? msUntil(countdownTarget, now) : null;
+
+  if (scheduleLoading || roundsLoading) {
+    return <SkeletonBlock height={180} />;
+  }
+
+  if (!schedules || schedules.length === 0) return null;
+
+  return (
+    <div className="border-2 border-navy bg-white p-6 shadow-[4px_4px_0_0_#0c1228]">
+      <div className="mb-4 flex items-center justify-between gap-4">
+        <div>
+          <h2 className="font-mono text-xl font-bold text-navy">Lịch thi đấu</h2>
+          <p className="mt-1 text-sm text-seal-text-secondary">{event.name}</p>
+        </div>
+        <Link
+          href="/student/submissions"
+          className="inline-flex items-center gap-1 font-mono text-xs font-bold text-seal-cyan hover:underline"
+        >
+          Nộp bài
+          <ArrowRightIcon />
+        </Link>
+      </div>
+
+      {(activeMilestone || nextMilestone) && (
+        <div className="mb-4 rounded-lg border border-seal-cyan/30 bg-seal-cyan/5 p-3 text-sm">
+          {activeMilestone ? (
+            <p className="font-semibold text-seal-cyan">Đang diễn ra: {activeMilestone.title}</p>
+          ) : nextMilestone ? (
+            <p className="font-semibold text-seal-text">Tiếp theo: {nextMilestone.title}</p>
+          ) : null}
+          {countdownMs !== null && countdownMs > 0 && (
+            <p className="mt-1 font-mono text-xs text-seal-text-secondary">
+              Còn {formatCountdown(countdownMs)}
+              {activeMilestone?.gate === "SLIDE_SUBMISSION" ? " đến deadline slide" : activeMilestone?.gate === "DEMO_SUBMISSION" ? " đến deadline demo" : " đến mốc tiếp theo"}
+            </p>
+          )}
+        </div>
+      )}
+
+      <EventScheduleTimeline
+        schedules={schedules}
+        rounds={rounds}
+        variant="compact"
+        highlightTypes={["MILESTONE"]}
+        preliminaryRound={prelimRound}
+      />
     </div>
   );
 }
@@ -427,9 +552,19 @@ export function DashboardPage() {
   });
 
   const { data: activeEnrollment } = useMyActiveEnrollment();
+  const { data: profile } = useProfile();
 
   const notifications = notifData?.content ?? [];
   const firstName = user?.fullName?.split(" ")[0] ?? "there";
+
+  const sealScheduleEvent =
+    hackathons?.find(
+      (e) =>
+        e.competitionFormat === "SEAL_RAG_2026" &&
+        activeEnrollment?.eventId === e.id &&
+        activeEnrollment?.status === "APPROVED",
+    ) ??
+    hackathons?.find((e) => e.competitionFormat === "SEAL_RAG_2026" && e.status === "ACTIVE");
 
   if (summaryLoading && teamLoading) {
     return (
@@ -454,8 +589,11 @@ export function DashboardPage() {
         <HackathonEvents
           hackathons={hackathons ?? []}
           activeEnrollment={activeEnrollment}
+          profile={profile}
         />
       )}
+
+      {sealScheduleEvent && <ScheduleDashboardCard event={sealScheduleEvent} />}
 
       <div className="grid gap-6" style={{ gridTemplateColumns: "2fr 1fr" }}>
         <RecentUpdates notifications={notifications} />

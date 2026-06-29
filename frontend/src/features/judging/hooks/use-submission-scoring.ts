@@ -21,6 +21,11 @@ export function useSubmissionScoring(roundId: string, teamId: string) {
       const assignment = assignments.find(
         (a) => a.teamId === teamId && a.roundId === roundId,
       );
+
+      if (!assignment) {
+        throw new Error("Bạn không được phân công chấm team này trong round này");
+      }
+
       const score = await judgingApi
         .getMyScoreForSubmission(roundId, sub.id)
         .catch(() => null);
@@ -40,7 +45,8 @@ export function useSubmissionScoring(roundId: string, teamId: string) {
         roundId,
         deadline: assignment?.scoringDeadline ?? "",
         description: "",
-        githubUrl: version?.githubUrl ?? null,
+        sourceCodeUrl: version?.sourceCodeUrl ?? version?.githubUrl ?? null,
+        githubUrl: version?.sourceCodeUrl ?? version?.githubUrl ?? null,
         demoUrl: version?.demoUrl ?? null,
         pdfUrl: resolveFileUrl(version?.attachments?.[0]?.fileUrl ?? null),
         pdfFileName: version?.attachments?.[0]?.fileName ?? null,
@@ -50,7 +56,8 @@ export function useSubmissionScoring(roundId: string, teamId: string) {
           name: c.name,
           weight: c.weight,
           description: c.description ?? "",
-          maxScore: 10,
+          minScore: c.minScore ?? 1,
+          maxScore: c.maxScore ?? 5,
         })),
         existingScores: score
           ? score.details.map((d) => ({
@@ -64,6 +71,9 @@ export function useSubmissionScoring(roundId: string, teamId: string) {
         isDraft: score?.status === "IN_PROGRESS",
         isLocked: score?.status === "LOCKED",
         isCompleted: score?.status === "COMPLETED" || score?.status === "LOCKED",
+        conflictOfInterest: assignment.conflictOfInterest ?? false,
+        conflictReason: assignment.conflictReason ?? null,
+        isAssigned: true,
       };
     },
     enabled: !!roundId && !!teamId,

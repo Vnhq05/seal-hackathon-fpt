@@ -93,7 +93,10 @@ public class SubmissionController {
     @Operation(summary = "Get submission by ID")
     public ResponseEntity<ApiResponse<SubmissionResponse>> getSubmission(
             @PathVariable UUID roundId, @PathVariable UUID submissionId) {
-        SubmissionResponse response = submissionService.getSubmissionById(roundId, submissionId);
+        UUID userId = authPublicService.getCurrentUserId();
+        var role = authPublicService.getCurrentUserRole();
+        SubmissionResponse response = submissionService.getSubmissionById(
+                roundId, submissionId, userId, role);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
@@ -101,7 +104,10 @@ public class SubmissionController {
     @Operation(summary = "Get submission by team and round")
     public ResponseEntity<ApiResponse<SubmissionResponse>> getByTeam(
             @PathVariable UUID roundId, @PathVariable UUID teamId) {
-        SubmissionResponse response = submissionService.getSubmissionByTeamAndRound(teamId, roundId);
+        UUID userId = authPublicService.getCurrentUserId();
+        var role = authPublicService.getCurrentUserRole();
+        SubmissionResponse response = submissionService.getSubmissionByTeamAndRound(
+                teamId, roundId, userId, role);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 

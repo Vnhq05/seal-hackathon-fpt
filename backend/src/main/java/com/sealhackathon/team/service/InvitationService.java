@@ -58,6 +58,7 @@ public class InvitationService {
     @Transactional
     public InvitationResponse sendInvitation(UUID leaderId, UUID teamId, SendInvitationRequest request) {
         Team team = getTeam(teamId);
+        teamService.validateMemberChangesAllowed(team.getEventId());
         guardLeader(team, leaderId);
 
         int currentSize = teamMemberRepository.countByTeamId(teamId);
@@ -113,6 +114,7 @@ public class InvitationService {
 
         Team team = teamRepository.findByIdForUpdate(invitation.getTeam().getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Team", "id", invitation.getTeam().getId()));
+        teamService.validateMemberChangesAllowed(team.getEventId());
         enrollmentService.requireApprovedEnrollment(userId, team.getEventId());
 
         if (enrollmentService.hasActiveEnrollmentInOtherEvent(userId, team.getEventId())) {

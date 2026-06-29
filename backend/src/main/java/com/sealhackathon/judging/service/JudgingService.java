@@ -34,6 +34,7 @@ import com.sealhackathon.submission.repository.SubmissionRepository;
 import com.sealhackathon.submission.service.SubmissionPublicService;
 import com.sealhackathon.team.domain.Team;
 import com.sealhackathon.team.repository.TeamRepository;
+import com.sealhackathon.team.service.TeamPublicService;
 import com.sealhackathon.user.dto.snapshot.UserSnapshot;
 import com.sealhackathon.user.service.UserPublicService;
 import lombok.RequiredArgsConstructor;
@@ -64,8 +65,10 @@ public class JudgingService {
     private final HackathonEventRepository eventRepository;
     private final TrackRepository trackRepository;
     private final ConflictDetectionService conflictDetectionService;
+    private final ScoreReviewService scoreReviewService;
     private final EventPublicService eventPublicService;
     private final SubmissionPublicService submissionPublicService;
+    private final TeamPublicService teamPublicService;
     private final UserPublicService userPublicService;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -85,9 +88,10 @@ public class JudgingService {
 
         List<CriteriaSnapshot> roundCriteria = eventPublicService.getCriteriaByRound(roundId);
         validateCriteriaBelongToRound(request.getScores(), roundCriteria);
+        validateScoreRange(request.getScores(), roundCriteria);
         if (completing) {
             validateAllCriteriaPresent(request.getScores(), roundCriteria);
-            validateExtremeScoreComments(request.getScores());
+            validateExtremeScoreComments(request.getScores(), roundCriteria);
         }
 
         var existing = judgeScoreRepository.findByJudgeUserIdAndSubmissionId(judgeId, submissionId);
@@ -136,9 +140,10 @@ public class JudgingService {
 
         List<CriteriaSnapshot> roundCriteria = eventPublicService.getCriteriaByRound(score.getRoundId());
         validateCriteriaBelongToRound(request.getScores(), roundCriteria);
+        validateScoreRange(request.getScores(), roundCriteria);
         if (completing) {
             validateAllCriteriaPresent(request.getScores(), roundCriteria);
-            validateExtremeScoreComments(request.getScores());
+            validateExtremeScoreComments(request.getScores(), roundCriteria);
         }
 
         try {
@@ -182,6 +187,8 @@ public class JudgingService {
     public List<JudgeScoringAssignmentResponse> getMyScoringAssignments(UUID judgeId) {
         List<TeamJudgeAssignment> assignments = teamJudgeAssignmentRepository.findByJudgeUserId(judgeId);
         return assignments.stream()
+                .filter(a -> roundRepository.existsById(a.getRoundId())
+                        && teamRepository.existsById(a.getTeamId()))
                 .map(a -> buildScoringAssignment(judgeId, a))
                 .toList();
     }
@@ -253,6 +260,13 @@ public class JudgingService {
             };
         }
 
+        boolean mentorConflict = teamPublicService.isMentorOfTeam(judgeId, a.getTeamId());
+        boolean hasOpenReview = submission != null
+                && scoreReviewService.hasOpenReview(submission.getId());
+        UUID openReviewId = hasOpenReview && submission != null
+                ? scoreReviewService.findOpenReviewId(submission.getId()).orElse(null)
+                : null;
+
         return JudgeScoringAssignmentResponse.builder()
                 .teamId(a.getTeamId())
                 .teamName(team != null ? team.getName() : "Unknown")
@@ -265,6 +279,10 @@ public class JudgingService {
                 .submissionId(submission != null ? submission.getId() : null)
                 .scoringStatus(scoringStatus)
                 .scoringDeadline(round != null ? round.getScoringDeadline() : null)
+                .conflictOfInterest(mentorConflict)
+                .conflictReason(mentorConflict ? "MENTOR_OF_TEAM" : null)
+                .hasOpenScoreReview(hasOpenReview)
+                .openScoreReviewId(openReviewId)
                 .build();
     }
 
@@ -452,13 +470,44 @@ public class JudgingService {
         }
     }
 
-    private void validateExtremeScoreComments(List<ScoreDetailDto> scores) {
+    private void validateScoreRange(List<ScoreDetailDto> scores,
+                                    List<CriteriaSnapshot> roundCriteria) {
+        var criteriaById = roundCriteria.stream()
+                .collect(Collectors.toMap(CriteriaSnapshot::getId, c -> c));
+
         for (ScoreDetailDto dto : scores) {
-            if ((dto.getScore() < 3 || dto.getScore() > 8)
+            CriteriaSnapshot criterion = criteriaById.get(dto.getCriteriaId());
+            if (criterion == null) {
+                continue;
+            }
+            int min = criterion.getMinScore() != null ? criterion.getMinScore() : 1;
+            int max = criterion.getMaxScore() != null ? criterion.getMaxScore() : 5;
+            if (dto.getScore() < min || dto.getScore() > max) {
+                throw new BusinessException(
+                        "Score " + dto.getScore() + " for criteria " + dto.getCriteriaId()
+                                + " must be between " + min + " and " + max,
+                        HttpStatus.BAD_REQUEST) {};
+            }
+        }
+    }
+
+    private void validateExtremeScoreComments(List<ScoreDetailDto> scores,
+                                              List<CriteriaSnapshot> roundCriteria) {
+        var criteriaById = roundCriteria.stream()
+                .collect(Collectors.toMap(CriteriaSnapshot::getId, c -> c));
+
+        for (ScoreDetailDto dto : scores) {
+            CriteriaSnapshot criterion = criteriaById.get(dto.getCriteriaId());
+            if (criterion == null) {
+                continue;
+            }
+            int min = criterion.getMinScore() != null ? criterion.getMinScore() : 1;
+            int max = criterion.getMaxScore() != null ? criterion.getMaxScore() : 5;
+            if ((dto.getScore() == min || dto.getScore() == max)
                     && (dto.getComment() == null || dto.getComment().isBlank())) {
                 throw new BusinessException(
                         "Comment is required for criteria " + dto.getCriteriaId() +
-                                " because score " + dto.getScore() + " is below 3 or above 8",
+                                " because score " + dto.getScore() + " is at the minimum or maximum of the scale",
                         HttpStatus.BAD_REQUEST) {};
             }
         }

@@ -23,11 +23,11 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -40,6 +40,7 @@ public class AggregationService {
     private final SubmissionPublicService submissionPublicService;
     private final RankingRepository rankingRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final TieBreakComparatorBuilder tieBreakComparatorBuilder;
 
     @Transactional
     public List<Ranking> recalculate(UUID roundId) {
@@ -75,12 +76,17 @@ public class AggregationService {
                     submission.getTeamId(), roundScore, criteriaAverages, scoreDeviation, submittedAt, criteria));
         }
 
-        String tiebreakerCriteria = eventPublicService.getRound(roundId)
+        EventSnapshot eventConfig = eventPublicService.getRound(roundId)
                 .flatMap(round -> eventPublicService.getEvent(round.getEventId()))
-                .map(EventSnapshot::getTiebreakerCriteria)
                 .orElse(null);
 
-        teamScores.sort(buildComparator(criteria, tiebreakerCriteria));
+        List<CriteriaSnapshot> orderedCriteria = tieBreakComparatorBuilder.resolveCriteriaOrder(
+                criteria,
+                eventConfig != null ? eventConfig.getScoringTemplateId() : null,
+                eventConfig != null ? eventConfig.getTiebreakerCriterionIds() : null,
+                eventConfig != null ? eventConfig.getTiebreakerCriteria() : null);
+
+        teamScores.sort(buildComparator(orderedCriteria));
 
         int nextVersion = rankingRepository.findMaxVersionByRoundId(roundId) + 1;
         LocalDateTime now = LocalDateTime.now();
@@ -118,7 +124,7 @@ public class AggregationService {
     /**
      * WeightedJudgeScore = Σ(criterionScore × criterionWeight / 100)
      */
-    BigDecimal computeWeightedJudgeScore(JudgeScoreSnapshot judgeScore,
+    public BigDecimal computeWeightedJudgeScore(JudgeScoreSnapshot judgeScore,
                                          Map<UUID, Integer> weightMap,
                                          List<CriteriaSnapshot> criteria) {
         BigDecimal total = BigDecimal.ZERO;
@@ -227,46 +233,62 @@ public class AggregationService {
         return BigDecimal.valueOf(Math.sqrt(variance)).setScale(4, RoundingMode.HALF_UP);
     }
 
-    /**
-     * Tie-break: criteria per event tiebreaker config → lower deviation → earlier submit.
-     */
-    private Comparator<TeamScore> buildComparator(List<CriteriaSnapshot> criteria, String tiebreakerCriteria) {
-        Comparator<TeamScore> comp = Comparator.comparing(
-                (TeamScore ts) -> ts.roundScore, Comparator.reverseOrder());
-
-        List<CriteriaSnapshot> sorted;
-        if (tiebreakerCriteria != null && !tiebreakerCriteria.isBlank()) {
-            List<String> order = Arrays.stream(tiebreakerCriteria.split(","))
-                    .map(String::trim)
-                    .filter(s -> !s.isEmpty())
-                    .toList();
-
-            Map<String, Integer> nameOrder = new HashMap<>();
-            for (int i = 0; i < order.size(); i++) {
-                nameOrder.put(order.get(i).toLowerCase(), i);
-            }
-
-            sorted = criteria.stream()
-                    .sorted(Comparator.comparingInt(c ->
-                            nameOrder.getOrDefault(c.getName().toLowerCase(), Integer.MAX_VALUE)))
-                    .toList();
-        } else {
-            sorted = criteria.stream()
-                    .sorted(Comparator.comparingInt(CriteriaSnapshot::getSortOrder))
-                    .toList();
-        }
-
-        for (CriteriaSnapshot c : sorted) {
-            comp = comp.thenComparing(
-                    ts -> ts.criteriaAverages.getOrDefault(c.getId(), BigDecimal.ZERO),
-                    Comparator.reverseOrder());
-        }
-
-        comp = comp.thenComparing(ts -> ts.scoreDeviation);
-        comp = comp.thenComparing(ts -> ts.submittedAt);
-
-        return comp;
+    private Comparator<TeamScore> buildComparator(List<CriteriaSnapshot> orderedCriteria) {
+        return tieBreakComparatorBuilder.buildComparator(
+                Comparator.comparing((TeamScore ts) -> ts.roundScore, Comparator.reverseOrder()),
+                orderedCriteria,
+                ts -> ts.criteriaAverages,
+                ts -> ts.scoreDeviation,
+                ts -> ts.submittedAt);
     }
+
+    /**
+     * Tie-break metrics for finalist cutoff when only {@link Ranking} rows are available.
+     */
+    public Optional<TeamTieBreakMetrics> getTeamTieBreakMetrics(UUID roundId, UUID teamId) {
+        List<CriteriaSnapshot> criteria = eventPublicService.getCriteriaByRound(roundId);
+        if (criteria.isEmpty()) {
+            return Optional.empty();
+        }
+
+        Optional<SubmissionSnapshot> submissionOpt = submissionPublicService
+                .getSubmissionByTeamAndRound(teamId, roundId);
+        if (submissionOpt.isEmpty()) {
+            return Optional.empty();
+        }
+
+        SubmissionSnapshot submission = submissionOpt.get();
+        if (submission.getStatus() != SubmissionStatus.SUBMITTED
+                && submission.getStatus() != SubmissionStatus.SCORED) {
+            return Optional.empty();
+        }
+
+        List<JudgeScoreSnapshot> scores = judgingPublicService.getScoresBySubmission(submission.getId())
+                .stream()
+                .filter(s -> s.getStatus() == ScoreStatus.COMPLETED || s.getStatus() == ScoreStatus.LOCKED)
+                .toList();
+        if (scores.isEmpty()) {
+            return Optional.empty();
+        }
+
+        Map<UUID, Integer> weightMap = criteria.stream()
+                .collect(Collectors.toMap(CriteriaSnapshot::getId, CriteriaSnapshot::getWeight));
+        Map<UUID, BigDecimal> criteriaAverages = computeCriteriaAverages(scores, criteria);
+        List<BigDecimal> judgeWeightedScores = scores.stream()
+                .map(j -> computeWeightedJudgeScore(j, weightMap, criteria))
+                .toList();
+        LocalDateTime submittedAt = submissionPublicService.getSubmittedAt(submission.getId());
+
+        return Optional.of(new TeamTieBreakMetrics(
+                criteriaAverages,
+                computeScoreDeviation(judgeWeightedScores),
+                submittedAt));
+    }
+
+    public record TeamTieBreakMetrics(
+            Map<UUID, BigDecimal> criteriaAverages,
+            BigDecimal scoreDeviation,
+            LocalDateTime submittedAt) {}
 
     record TeamScore(UUID teamId, BigDecimal roundScore,
                      Map<UUID, BigDecimal> criteriaAverages,

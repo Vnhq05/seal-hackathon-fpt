@@ -1,6 +1,9 @@
 package com.sealhackathon.ranking.service;
 
 import com.sealhackathon.common.exception.BusinessException;
+import com.sealhackathon.event.domain.Round;
+import com.sealhackathon.event.domain.enums.RoundType;
+import com.sealhackathon.event.repository.RoundRepository;
 import com.sealhackathon.ranking.domain.PublishedResult;
 import com.sealhackathon.ranking.domain.Ranking;
 import com.sealhackathon.ranking.dto.response.PublishedResultResponse;
@@ -29,6 +32,7 @@ class RankingServiceTest {
 
     @Mock private RankingRepository rankingRepository;
     @Mock private PublishedResultRepository publishedResultRepository;
+    @Mock private RoundRepository roundRepository;
     @Mock private AggregationService aggregationService;
     @Mock private AdvancementService advancementService;
     @Mock private TeamPublicService teamPublicService;
@@ -115,5 +119,50 @@ class RankingServiceTest {
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getVersion()).isEqualTo(3);
+    }
+
+    @Test
+    void getLatestRankings_withTrackId_reRanksWithinTrackForPreliminary() {
+        UUID roundId = UUID.randomUUID();
+        UUID trackId = UUID.randomUUID();
+        UUID otherTrackId = UUID.randomUUID();
+
+        when(rankingRepository.findMaxVersionByRoundId(roundId)).thenReturn(1);
+        Round round = Round.builder().roundType(RoundType.PRELIMINARY).build();
+        round.setId(roundId);
+        when(roundRepository.findById(roundId)).thenReturn(java.util.Optional.of(round));
+
+        Ranking firstInTrack = rankingEntity(roundId, trackId, 88, 2);
+        Ranking secondInTrack = rankingEntity(roundId, trackId, 82, 4);
+        Ranking otherTrack = rankingEntity(roundId, otherTrackId, 95, 1);
+
+        when(rankingRepository.findByRoundIdAndVersionOrderByRankAsc(roundId, 1))
+                .thenReturn(List.of(otherTrack, firstInTrack, secondInTrack));
+        when(teamPublicService.getTeam(any())).thenAnswer(inv -> {
+            UUID teamId = inv.getArgument(0);
+            return java.util.Optional.of(com.sealhackathon.team.dto.snapshot.TeamSnapshot.builder()
+                    .id(teamId)
+                    .trackId(teamId.equals(otherTrack.getTeamId()) ? otherTrackId : trackId)
+                    .build());
+        });
+
+        var result = rankingService.getLatestRankings(roundId, trackId);
+
+        assertThat(result).hasSize(2);
+        assertThat(result).extracting(com.sealhackathon.ranking.dto.response.RankingResponse::getRank)
+                .containsExactly(1, 2);
+    }
+
+    private static Ranking rankingEntity(UUID roundId, UUID trackId, double score, int rank) {
+        Ranking r = Ranking.builder()
+                .teamId(UUID.randomUUID())
+                .roundId(roundId)
+                .finalScore(BigDecimal.valueOf(score))
+                .rank(rank)
+                .version(1)
+                .calculatedAt(LocalDateTime.now())
+                .build();
+        r.setId(UUID.randomUUID());
+        return r;
     }
 }

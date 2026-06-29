@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -83,10 +84,11 @@ public class MentorInvitationController {
     }
 
     @GetMapping("/api/events/{eventId}/mentor-invitations/available-mentors")
-    @Operation(summary = "List mentors available for invitation in this event")
+    @Operation(summary = "List mentors available for invitation in a track")
     public ResponseEntity<ApiResponse<List<MentorAssignmentResponse>>> getAvailableMentors(
-            @PathVariable UUID eventId) {
-        return ResponseEntity.ok(ApiResponse.success(mentorAssignmentService.getMentorsByEvent(eventId)));
+            @PathVariable UUID eventId,
+            @RequestParam UUID trackId) {
+        return ResponseEntity.ok(ApiResponse.success(mentorAssignmentService.getMentorsByTrack(eventId, trackId)));
     }
 
     @GetMapping("/api/events/{eventId}/teams/{teamId}/mentor-room")

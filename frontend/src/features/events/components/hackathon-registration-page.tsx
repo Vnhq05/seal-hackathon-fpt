@@ -73,9 +73,9 @@ export function HackathonRegistrationPage({
           <RegistrationFactsGrid hackathon={hackathon} />
 
           {isStudent ? (
-            <RegistrationForm hackathonId={hackathonId} />
+            <RegistrationForm hackathonId={hackathonId} event={hackathon} />
           ) : (
-            <ExternalRegistrationForm eventId={hackathonId} eventName={hackathon.name} />
+            <ExternalRegistrationForm event={hackathon} />
           )}
 
           {!isStudent && (

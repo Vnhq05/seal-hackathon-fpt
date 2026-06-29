@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import { JudgeVariancePage } from "@/features/admin/components/judge-variance-page";
 
 export default function AdminAnalyticsVariancePage() {
-  redirect("/admin");
+  return <JudgeVariancePage />;
 }

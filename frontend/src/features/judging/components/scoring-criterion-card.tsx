@@ -52,11 +52,14 @@ export function ScoringCriterionCard({
     if (score < criterion.maxScore) onScoreChange(score + 1);
   };
   const handleDecrement = () => {
-    if (score > 0) onScoreChange(score - 1);
+    if (score > criterion.minScore) onScoreChange(score - 1);
   };
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value.replace(/\D/g, "");
-    const num = Math.min(Number(raw) || 0, criterion.maxScore);
+    const num = Math.min(
+      Math.max(Number(raw) || criterion.minScore, criterion.minScore),
+      criterion.maxScore,
+    );
     onScoreChange(num);
   };
 

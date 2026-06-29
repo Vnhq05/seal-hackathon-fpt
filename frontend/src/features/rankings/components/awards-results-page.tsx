@@ -2,7 +2,11 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { eventApi } from "@/lib/api/event.api";
-import { awardApi } from "@/lib/api/award.api";
+import {
+  useMyParticipationCertificate,
+  useParticipationSummary,
+  usePublicAwards,
+} from "@/features/coordinator/hooks/use-awards";
 
 export function AwardsResultsPage() {
   const { data: events } = useQuery({
@@ -11,13 +15,11 @@ export function AwardsResultsPage() {
   });
 
   const sealEvent = events?.find((e) => e.competitionFormat === "SEAL_RAG_2026") ?? events?.[0];
-  const eventId = sealEvent?.id ?? "";
+  const eventId = sealEvent?.id;
 
-  const { data: awards, isLoading } = useQuery({
-    queryKey: ["awards", eventId],
-    queryFn: () => awardApi.listPublic(eventId),
-    enabled: !!eventId,
-  });
+  const { data: awards, isLoading } = usePublicAwards(eventId, !!eventId);
+  const { data: participationSummary } = useParticipationSummary(eventId, !!eventId);
+  const { data: myCertificate } = useMyParticipationCertificate(eventId, !!eventId);
 
   return (
     <div className="mx-auto max-w-2xl space-y-6 p-6">
@@ -51,6 +53,31 @@ export function AwardsResultsPage() {
             </li>
           ))}
         </ul>
+      )}
+
+      {participationSummary && participationSummary.issuedCount > 0 && (
+        <p className="rounded-lg border border-navy/20 bg-white p-4 text-sm text-seal-text-secondary">
+          Đã cấp {participationSummary.issuedCount.toLocaleString("vi-VN")} chứng nhận tham gia
+          cho các thành viên đội đã xác nhận tham gia.
+        </p>
+      )}
+
+      {myCertificate && (
+        <div className="border-2 border-royal bg-white px-4 py-3 shadow-[3px_3px_0_0_#0c1228]">
+          <p className="font-mono text-xs font-bold uppercase text-royal">
+            Chứng nhận tham gia của bạn
+          </p>
+          <p className="mt-1 font-semibold text-navy">{myCertificate.userFullName}</p>
+          <p className="text-sm text-seal-text-secondary">Đội: {myCertificate.teamName}</p>
+          <p className="mt-2 text-xs text-seal-text-muted">
+            Cấp ngày{" "}
+            {new Date(myCertificate.issuedAt).toLocaleDateString("vi-VN", {
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            })}
+          </p>
+        </div>
       )}
     </div>
   );

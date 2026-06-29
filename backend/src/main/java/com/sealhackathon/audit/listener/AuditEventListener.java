@@ -10,9 +10,12 @@ import com.sealhackathon.event.event.EventCreatedEvent;
 import com.sealhackathon.event.event.JudgeAssignedEvent;
 import com.sealhackathon.event.event.MentorAssignedEvent;
 import com.sealhackathon.event.event.ScoringWindowReopenedEvent;
+import com.sealhackathon.feedback.event.ParticipantFeedbackSubmittedEvent;
 import com.sealhackathon.judging.event.ConflictDetectedEvent;
 import com.sealhackathon.judging.event.ScoreCreatedEvent;
 import com.sealhackathon.judging.event.ScoreDeletedEvent;
+import com.sealhackathon.judging.event.ScoreReviewCreatedEvent;
+import com.sealhackathon.judging.event.ScoreReviewResolvedEvent;
 import com.sealhackathon.judging.event.ScoreUpdatedEvent;
 import com.sealhackathon.ranking.event.DisputeFiledEvent;
 import com.sealhackathon.ranking.event.DisputeResolvedEvent;
@@ -290,6 +293,27 @@ public class AuditEventListener {
     public void onDisputeResolved(DisputeResolvedEvent e) {
         auditService.log(e.resolvedBy(), "DISPUTE_RESOLVED", e.disputeId(), "Dispute",
                 null, "{\"resolution\":\"" + e.resolution() + "\"}", null);
+    }
+
+    @TransactionalEventListener
+    public void onScoreReviewCreated(ScoreReviewCreatedEvent e) {
+        auditService.log(SYSTEM_ACTOR, "SCORE_REVIEW_CREATED", e.reviewId(), "ScoreReviewRequest",
+                null, "{\"submissionId\":\"" + e.submissionId()
+                        + "\",\"deviationValue\":" + e.deviationValue() + "}", null);
+    }
+
+    @TransactionalEventListener
+    public void onScoreReviewResolved(ScoreReviewResolvedEvent e) {
+        auditService.log(e.resolvedBy(), "SCORE_REVIEW_RESOLVED", e.reviewId(), "ScoreReviewRequest",
+                null, "{\"status\":\"" + e.status() + "\"}", null);
+    }
+
+    @TransactionalEventListener
+    public void onParticipantFeedbackSubmitted(ParticipantFeedbackSubmittedEvent e) {
+        auditService.log(e.userId(), "PARTICIPANT_FEEDBACK_SUBMITTED", e.feedbackId(), "ParticipantFeedback",
+                null, "{\"eventId\":\"" + e.eventId()
+                        + "\",\"teamId\":\"" + e.teamId()
+                        + "\",\"overallRating\":" + e.overallRating() + "}", null);
     }
 
     private void safeLog(UUID actorId, String action, UUID targetId, String targetType,

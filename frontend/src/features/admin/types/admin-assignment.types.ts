@@ -3,6 +3,8 @@
 export interface JudgeAssignment {
   id: string;
   roundId: string;
+  trackId: string | null;
+  trackName: string | null;
   judgeUserId: string;
   judgeFullName: string | null;
   judgeEmail: string | null;
@@ -14,6 +16,8 @@ export interface JudgeAssignment {
 export interface MentorAssignment {
   id: string;
   eventId: string;
+  trackId: string;
+  trackName: string | null;
   mentorUserId: string;
   mentorFullName: string | null;
   mentorEmail: string | null;

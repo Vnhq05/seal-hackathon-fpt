@@ -1,10 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { EventScheduleTimeline } from "@/features/events/components/event-schedule-timeline";
+import { useEventSchedule } from "@/features/events/hooks/use-event-schedule";
+import { useEventParticipationGate } from "@/features/events/hooks/use-event-participation-gate";
 import { useEventRounds } from "@/features/dashboard/hooks/use-event-rounds";
 import { useEnroll, useWithdrawEnrollment } from "@/features/events/hooks/use-enrollment";
 import type { EventResponse, EnrollmentResponse } from "@/lib/api";
 import { getPrizeLabel } from "@/lib/prize.utils";
+import { useProfile } from "@/features/profile/hooks/use-profile";
 
 function CloseIcon() {
   return (
@@ -33,10 +37,19 @@ interface EventDetailDialogProps {
 
 export function EventDetailDialog({ event, onClose, canRegister, activeEnrollment, allEvents }: EventDetailDialogProps) {
   const { data: rounds } = useEventRounds(event.id);
+  const isSeal = event.competitionFormat === "SEAL_RAG_2026";
+  const { data: schedules } = useEventSchedule(event.id, isSeal);
   const { mutateAsync: enroll, isPending: enrolling } = useEnroll(event.id);
   const { mutateAsync: withdraw, isPending: withdrawing } = useWithdrawEnrollment(event.id);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  const { data: profile } = useProfile();
+  const { canEnroll, enrollmentBlockReason, registrationClosedReason } =
+    useEventParticipationGate(event, {
+      studentStanding: profile?.studentStanding ?? "ENROLLED",
+      semester: profile?.semester,
+    });
 
   const isEnrolledHere = activeEnrollment?.eventId === event.id;
   const isPendingHere = isEnrolledHere && activeEnrollment?.status === "PENDING";
@@ -123,6 +136,18 @@ export function EventDetailDialog({ event, onClose, canRegister, activeEnrollmen
               )}
             </div>
 
+            {isSeal && schedules && schedules.length > 0 && (
+              <div>
+                <div className="mb-2 text-xs font-medium uppercase tracking-wider text-seal-text-muted">Schedule</div>
+                <EventScheduleTimeline
+                  schedules={schedules}
+                  rounds={rounds}
+                  variant="compact"
+                  highlightTypes={["MILESTONE", "SCORING", "FINAL"]}
+                />
+              </div>
+            )}
+
             {/* Prizes */}
             <div>
               <div className="mb-2 text-xs font-medium uppercase tracking-wider text-seal-text-muted">Prizes</div>
@@ -173,6 +198,12 @@ export function EventDetailDialog({ event, onClose, canRegister, activeEnrollmen
             </div>
           )}
 
+          {!isEnrolledHere && !isEnrolledElsewhere && !canEnroll && (enrollmentBlockReason || registrationClosedReason) && (
+            <div className="rounded-lg bg-amber-50 p-3 text-xs font-medium text-amber-700">
+              {enrollmentBlockReason ?? registrationClosedReason}
+            </div>
+          )}
+
           <div className="flex items-center justify-end gap-3">
             {isEnrolledHere ? (
               <>
@@ -189,7 +220,7 @@ export function EventDetailDialog({ event, onClose, canRegister, activeEnrollmen
                   {withdrawing ? "Withdrawing..." : "Withdraw"}
                 </button>
               </>
-            ) : canRegister && event.status === "OPEN" && !isEnrolledElsewhere ? (
+            ) : canRegister && event.status === "OPEN" && !isEnrolledElsewhere && canEnroll ? (
               <button
                 onClick={handleRegister}
                 disabled={enrolling}

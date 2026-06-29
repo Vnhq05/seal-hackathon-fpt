@@ -4,11 +4,13 @@ import com.sealhackathon.auth.service.AuthPublicService;
 import com.sealhackathon.common.enums.UserType;
 import com.sealhackathon.common.response.ApiResponse;
 import com.sealhackathon.team.domain.enums.EnrollmentStatus;
+import com.sealhackathon.team.dto.request.UpdateMatchingProfileRequest;
 import com.sealhackathon.team.dto.response.EnrollmentResponse;
 import com.sealhackathon.team.service.EventEnrollmentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -50,6 +53,16 @@ public class EnrollmentController {
             @PathVariable UUID eventId) {
         UUID userId = authPublicService.getCurrentUserId();
         return ResponseEntity.ok(ApiResponse.success(enrollmentService.getMyEnrollment(userId, eventId)));
+    }
+
+    @PutMapping("/my/matching-profile")
+    @Operation(summary = "Update my team-matching profile for this event")
+    public ResponseEntity<ApiResponse<EnrollmentResponse>> updateMatchingProfile(
+            @PathVariable UUID eventId,
+            @Valid @RequestBody UpdateMatchingProfileRequest request) {
+        UUID userId = authPublicService.getCurrentUserId();
+        EnrollmentResponse response = enrollmentService.updateMatchingProfile(userId, eventId, request);
+        return ResponseEntity.ok(ApiResponse.success("Matching profile updated", response));
     }
 
     @GetMapping

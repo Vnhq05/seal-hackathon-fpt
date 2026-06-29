@@ -1,9 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import { useAuthStore } from "@/features/auth/store/auth.store";
+import { useMyActiveEnrollment } from "@/features/events/hooks/use-enrollment";
+import { useHackathonPage } from "@/features/events/hooks/use-hackathon-page";
+import { useEventParticipationGate } from "@/features/events/hooks/use-event-participation-gate";
+import { ParticipationBlockBanner } from "@/features/events/components/participation-block-banner";
 import { useTeamDetail } from "@/features/teams/hooks/use-team-detail";
 import { InviteDrawer } from "@/features/teams/components/invite-drawer";
 import { TeamDetailBreadcrumb } from "@/features/teams/components/team-detail-breadcrumb";
+import { TeamRecruitmentSettings } from "@/features/teams/components/team-recruitment-settings";
 
 interface TeamDetailPageProps {
   eventId: string;
@@ -20,8 +26,13 @@ function SkeletonBlock({ height }: { height: number }) {
 }
 
 export function TeamDetailPage({ eventId, teamId }: TeamDetailPageProps) {
+  const { user } = useAuthStore();
+  const { data: activeEnrollment } = useMyActiveEnrollment();
+  const resolvedEventId = eventId || activeEnrollment?.eventId || "";
   const [isInviteOpen, setIsInviteOpen] = useState(false);
-  const { data: team, isLoading } = useTeamDetail(eventId, teamId);
+  const { data: team, isLoading } = useTeamDetail(resolvedEventId, teamId);
+  const { data: event } = useHackathonPage(resolvedEventId);
+  const { canModifyMembers, registrationClosedReason } = useEventParticipationGate(event);
 
   if (isLoading) {
     return (
@@ -51,6 +62,7 @@ export function TeamDetailPage({ eventId, teamId }: TeamDetailPageProps) {
   }
 
   const leader = team.members.find((m) => m.role === "LEADER");
+  const isLeader = team.leaderId === user?.id;
 
   return (
     <>
@@ -156,20 +168,24 @@ export function TeamDetailPage({ eventId, teamId }: TeamDetailPageProps) {
             <button
               type="button"
               onClick={() => setIsInviteOpen(true)}
+              disabled={!canModifyMembers}
               style={{
-                backgroundColor: "#38bdf8",
+                backgroundColor: canModifyMembers ? "#38bdf8" : "#e5e7eb",
                 border: "none",
                 borderRadius: 6,
                 padding: "8px 16px",
                 fontSize: 13,
                 fontWeight: 600,
-                color: "#ffffff",
-                cursor: "pointer",
+                color: canModifyMembers ? "#ffffff" : "#9ca3af",
+                cursor: canModifyMembers ? "pointer" : "not-allowed",
               }}
             >
               Invite member
             </button>
           </div>
+          {!canModifyMembers && registrationClosedReason && (
+            <ParticipationBlockBanner reason={registrationClosedReason} />
+          )}
           <div className="flex flex-col gap-2">
             {team.members.map((m) => (
               <div key={m.id} className="flex items-center gap-3 rounded-lg p-3"
@@ -192,11 +208,17 @@ export function TeamDetailPage({ eventId, teamId }: TeamDetailPageProps) {
             ))}
           </div>
         </div>
+
+        {isLeader && (
+          <TeamRecruitmentSettings eventId={resolvedEventId} team={team} />
+        )}
       </div>
 
       <InviteDrawer
         isOpen={isInviteOpen}
         onClose={() => setIsInviteOpen(false)}
+        registrationClosed={!canModifyMembers}
+        registrationClosedReason={registrationClosedReason}
         team={{
           id: team.id,
           name: team.name,

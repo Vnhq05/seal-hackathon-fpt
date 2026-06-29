@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { EventResponse } from "@/lib/api";
 import { CreateTeamPanel } from "@/features/teams/components/create-team-panel";
 import { JoinTeamPanel } from "@/features/teams/components/join-team-panel";
+import { MatchingProfilePanel } from "@/features/teams/components/matching-profile-panel";
 
 interface NoTeamPanelProps {
   event: EventResponse;
@@ -15,6 +16,8 @@ export function NoTeamPanel({ event, onTeamCreated }: NoTeamPanelProps) {
 
   return (
     <div className="flex flex-col gap-4">
+      <MatchingProfilePanel eventId={event.id} />
+
       <div className="flex gap-1 border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-1 self-start">
         {([
           { key: "create" as const, label: "Create Team" },

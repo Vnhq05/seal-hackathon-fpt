@@ -2,6 +2,7 @@ package com.sealhackathon.user.domain;
 
 import com.sealhackathon.common.entity.BaseEntity;
 import com.sealhackathon.common.enums.AccountStatus;
+import com.sealhackathon.common.enums.StudentStanding;
 import com.sealhackathon.common.enums.UserType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -97,6 +98,12 @@ public class User extends BaseEntity {
 
     @Column(name = "semester")
     private Integer semester;
+
+    @NotNull
+    @Enumerated(EnumType.STRING)
+    @Column(name = "student_standing", nullable = false)
+    @Builder.Default
+    private StudentStanding studentStanding = StudentStanding.ENROLLED;
 
     @Column(name = "temporary_account", nullable = false, columnDefinition = "BIT NOT NULL DEFAULT 0")
     @Builder.Default

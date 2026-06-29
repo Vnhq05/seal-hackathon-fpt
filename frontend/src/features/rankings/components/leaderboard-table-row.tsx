@@ -29,9 +29,14 @@ function TeamNameIcon() {
 interface LeaderboardTableRowProps {
   team: LeaderboardTeam;
   isLast: boolean;
+  showTrack?: boolean;
 }
 
-export function LeaderboardTableRow({ team, isLast }: LeaderboardTableRowProps) {
+export function LeaderboardTableRow({
+  team,
+  isLast,
+  showTrack = true,
+}: LeaderboardTableRowProps) {
   const isUserTeam = team.isCurrentUserTeam;
   const rankColor = isUserTeam
     ? { text: "#0e1528", border: "#38bdf8" }
@@ -49,6 +54,7 @@ export function LeaderboardTableRow({ team, isLast }: LeaderboardTableRowProps) 
   const secondaryColor = isUserTeam ? "#000000" : "#8891a5";
   const teamNameColor =
     isUserTeam || team.rank <= 3 ? "#0e1528" : "#8891a5";
+  const showTotal = team.roundScores.length > 1;
 
   return (
     <tr style={rowStyle}>
@@ -89,49 +95,38 @@ export function LeaderboardTableRow({ team, isLast }: LeaderboardTableRowProps) 
           {isUserTeam && <TeamNameIcon />}
         </div>
       </td>
-      <td style={{ ...cellPadding, width: 124 }}>
-        <span
-          style={{
-            fontSize: 14,
-            fontWeight: 400,
-            color: secondaryColor,
-            lineHeight: "21px",
-            opacity: isUserTeam ? 0.8 : 1,
-          }}
+      {showTrack && (
+        <td style={{ ...cellPadding, width: 124 }}>
+          <span
+            style={{
+              fontSize: 14,
+              fontWeight: 400,
+              color: secondaryColor,
+              lineHeight: "21px",
+              opacity: isUserTeam ? 0.8 : 1,
+            }}
+          >
+            {team.trackName}
+          </span>
+        </td>
+      )}
+      {team.roundScores.map((roundScore) => (
+        <td
+          key={roundScore.roundId}
+          style={{ ...cellPadding, width: 125, textAlign: "right" }}
         >
-          {team.trackName}
-        </span>
-      </td>
-      <td style={{ ...cellPadding, width: 125, textAlign: "right" }}>
-        <span
-          style={{
-            ...monoStyle,
-            color: textColor,
-          }}
-        >
-          {team.round1Score.toFixed(2)}
-        </span>
-      </td>
-      <td style={{ ...cellPadding, width: 129, textAlign: "right" }}>
-        <span
-          style={{
-            ...monoStyle,
-            color: textColor,
-          }}
-        >
-          {team.round2Score.toFixed(2)}
-        </span>
-      </td>
-      <td style={{ ...cellPadding, width: 118, textAlign: "right" }}>
-        <span
-          style={{
-            ...monoStyle,
-            color: textColor,
-          }}
-        >
-          {team.totalScore.toFixed(2)}
-        </span>
-      </td>
+          <span style={{ ...monoStyle, color: textColor }}>
+            {roundScore.score.toFixed(2)}
+          </span>
+        </td>
+      ))}
+      {showTotal && (
+        <td style={{ ...cellPadding, width: 118, textAlign: "right" }}>
+          <span style={{ ...monoStyle, color: textColor }}>
+            {team.totalScore.toFixed(2)}
+          </span>
+        </td>
+      )}
       <td style={{ ...cellPadding, width: 174, textAlign: "center" }}>
         <LeaderboardStatusBadge
           status={team.status}

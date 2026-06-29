@@ -4,6 +4,8 @@ import com.sealhackathon.common.enums.UserType;
 import com.sealhackathon.common.exception.BusinessException;
 import com.sealhackathon.common.exception.DuplicateResourceException;
 import com.sealhackathon.common.exception.ResourceNotFoundException;
+import com.sealhackathon.event.repository.MentorAssignmentRepository;
+import com.sealhackathon.judging.service.ConflictDetectionService;
 import com.sealhackathon.team.domain.MentorTeam;
 import com.sealhackathon.team.domain.Team;
 import com.sealhackathon.team.dto.request.AssignMentorTeamRequest;
@@ -27,8 +29,10 @@ public class MentorTeamService {
 
     private final MentorTeamRepository mentorTeamRepository;
     private final TeamRepository teamRepository;
+    private final MentorAssignmentRepository mentorAssignmentRepository;
     private final UserPublicService userPublicService;
     private final ApplicationEventPublisher eventPublisher;
+    private final ConflictDetectionService conflictDetectionService;
 
     @Transactional
     public void assignMentorToTeam(AssignMentorTeamRequest request) {
@@ -44,11 +48,22 @@ public class MentorTeamService {
                     HttpStatus.BAD_REQUEST) {};
         }
 
+        if (team.getTrackId() == null) {
+            throw new BusinessException("Team must be assigned to a track before assigning a mentor", HttpStatus.BAD_REQUEST) {};
+        }
+
+        if (!mentorAssignmentRepository.existsByHackathonEventIdAndTrackIdAndMentorUserId(
+                team.getEventId(), team.getTrackId(), request.getMentorUserId())) {
+            throw new BusinessException("Mentor is not assigned to this team's track", HttpStatus.BAD_REQUEST) {};
+        }
+
         if (mentorTeamRepository.existsByMentorUserIdAndTeamId(
                 request.getMentorUserId(), request.getTeamId())) {
             throw new DuplicateResourceException("MentorTeam", "mentor+team",
                     mentor.getEmail() + " + " + team.getName());
         }
+
+        conflictDetectionService.assertNotJudgeOfTeam(request.getMentorUserId(), request.getTeamId());
 
         MentorTeam mentorTeam = MentorTeam.builder()
                 .mentorUserId(request.getMentorUserId())

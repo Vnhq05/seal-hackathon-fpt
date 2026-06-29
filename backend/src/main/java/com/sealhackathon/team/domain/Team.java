@@ -3,13 +3,17 @@ package com.sealhackathon.team.domain;
 import com.sealhackathon.common.entity.BaseEntity;
 import com.sealhackathon.team.domain.enums.TeamStatus;
 import com.sealhackathon.team.domain.enums.TrackAssignmentMethod;
+import com.sealhackathon.team.domain.enums.HackathonSkillRole;
 import jakarta.persistence.CascadeType;
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Index;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
@@ -86,6 +90,23 @@ public class Team extends BaseEntity {
 
     @Column(name = "track_assigned_by")
     private UUID trackAssignedBy;
+
+    @Column(name = "is_recruiting", nullable = false)
+    @Builder.Default
+    private boolean isRecruiting = false;
+
+    @Column(name = "recruitment_note", length = 1000)
+    private String recruitmentNote;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(
+            name = "team_needed_roles",
+            joinColumns = @JoinColumn(name = "team_id")
+    )
+    @Enumerated(EnumType.STRING)
+    @Column(name = "role", nullable = false, length = 30)
+    @Builder.Default
+    private List<HackathonSkillRole> neededRoles = new ArrayList<>();
 
     // ── Child entities ──
     @OneToMany(mappedBy = "team", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)

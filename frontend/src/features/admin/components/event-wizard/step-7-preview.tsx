@@ -12,7 +12,6 @@ import {
   buildPublishPayload,
   isPartialPublishFailure,
   publishEvent,
-  validatePublishReadiness,
   type PartialPublishFailure,
 } from "@/features/admin/utils/event-publish.utils";
 import { useRouter } from "next/navigation";
@@ -34,8 +33,7 @@ export function Step7Preview({ onBack }: { onBack: () => void }) {
 
   const totalRoundWeight = getRoundWeightTotal(data.rounds);
   const isRoundWeightValid = data.rounds.length <= 1 || totalRoundWeight === 100;
-  const judgeValidationError = validatePublishReadiness(data);
-  const canPublish = isRoundWeightValid && !judgeValidationError;
+  const canPublish = isRoundWeightValid;
 
   const getTemplateName = (id: string | null) => {
     if (!id) return "—";
@@ -63,21 +61,19 @@ export function Step7Preview({ onBack }: { onBack: () => void }) {
       return;
     }
 
-    const readinessError = validatePublishReadiness(data);
-    if (readinessError) {
-      setError(readinessError);
-      return;
-    }
-
     setIsSubmitting(true);
     setError(null);
     setPartialFailure(null);
 
     try {
       const payload = buildPublishPayload(data, systemConfig);
-      await publishEvent(payload);
+      const eventId = await publishEvent(payload);
       reset();
-      router.push("/admin/hackathons");
+      if (eventId) {
+        router.push(`/admin/hackathons/${eventId}/assignments`);
+      } else {
+        router.push("/admin/hackathons");
+      }
     } catch (err: unknown) {
       if (isPartialPublishFailure(err)) {
         setPartialFailure(err);
@@ -97,12 +93,6 @@ export function Step7Preview({ onBack }: { onBack: () => void }) {
       {!isRoundWeightValid && (
         <div style={{ backgroundColor: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, padding: "10px 14px", fontSize: 13, color: "#991b1b" }}>
           Total round weight must equal 100% before publishing. Currently: {totalRoundWeight}%
-        </div>
-      )}
-
-      {judgeValidationError && (
-        <div style={{ backgroundColor: "#fffbeb", border: "1px solid #fde68a", borderRadius: 8, padding: "10px 14px", fontSize: 13, color: "#92400e" }}>
-          {judgeValidationError} Go back to Step 2 to assign at least one judge.
         </div>
       )}
 
@@ -176,15 +166,6 @@ export function Step7Preview({ onBack }: { onBack: () => void }) {
       </div>
 
       <div style={sectionStyle}>
-        <p style={sectionTitle}>Staff</p>
-        <p style={fieldStyle}><strong>Mentors:</strong> {data.mentorUserIds.length}</p>
-        <p style={fieldStyle}><strong>Judges:</strong> {data.judgeUserIds.length}</p>
-        {data.lecturerAssignments.map((a) => (
-          <p key={a.userId} style={fieldStyle}>{a.fullName} — {a.role}</p>
-        ))}
-      </div>
-
-      <div style={sectionStyle}>
         <p style={sectionTitle}>Timeline</p>
         <p style={fieldStyle}><strong>Start:</strong> {data.startDate} ({data.duration} days)</p>
         <p style={fieldStyle}><strong>Registration:</strong> {data.registrationOpenDate} to {data.registrationDeadline}</p>
@@ -209,7 +190,13 @@ export function Step7Preview({ onBack }: { onBack: () => void }) {
         <p style={sectionTitle}>Rules & Teams</p>
         <p style={fieldStyle}><strong>Min Teams:</strong> {systemConfig?.minTeams ?? "—"}</p>
         <p style={fieldStyle}><strong>Max Teams:</strong> {systemConfig?.maxTeams ?? "—"}</p>
-        <p style={fieldStyle}><strong>Tiebreaker:</strong> {data.tiebreakerCriteria || "—"}</p>
+        <p style={fieldStyle}>
+          <strong>Tiebreaker:</strong>{" "}
+          {data.tiebreakerCriteria ||
+            (data.tiebreakerCriterionIds.length > 0
+              ? `${data.tiebreakerCriterionIds.length} criteria (ordered)`
+              : "—")}
+        </p>
       </div>
 
       {data.prizes.length > 0 && (

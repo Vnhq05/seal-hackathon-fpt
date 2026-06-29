@@ -1,5 +1,5 @@
 import { api } from "./api-client";
-import type { UserType, AccountStatus } from "./types";
+import type { UserType, AccountStatus, StudentStanding } from "./types";
 
 // ═══ Response types ═══
 
@@ -12,6 +12,8 @@ export interface UserProfile {
   universityName: string | null;
   userType: UserType;
   status: AccountStatus;
+  studentStanding?: StudentStanding | null;
+  semester?: number | null;
   temporaryAccount?: boolean;
   createdAt: string;
 }

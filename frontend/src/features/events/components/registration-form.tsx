@@ -1,14 +1,20 @@
 "use client";
 
+import { useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useHackathonRegistration } from "@/features/events/hooks/use-hackathon-registration";
+import { useEventParticipationGate } from "@/features/events/hooks/use-event-participation-gate";
+import { usePublicAllowedEmailDomains } from "@/features/events/hooks/use-allowed-email-domains";
+import { useProfile } from "@/features/profile/hooks/use-profile";
 import {
   hackathonRegistrationSchema,
   type HackathonRegistrationFormValues,
 } from "@/features/events/schemas/hackathon-registration.schema";
 import { Button } from "@/shared/ui/button";
+import type { EventResponse } from "@/lib/api/event.api";
+import { matchesAllowedDomain } from "@/lib/email-domain";
 
 function ArrowRightIcon() {
   return (
@@ -50,9 +56,40 @@ const errorStyle: React.CSSProperties = {
 
 interface RegistrationFormProps {
   hackathonId: string;
+  event: EventResponse;
 }
 
-export function RegistrationForm({ hackathonId }: RegistrationFormProps) {
+export function RegistrationForm({ hackathonId, event }: RegistrationFormProps) {
+  const { data: profile } = useProfile();
+
+  const { data: allowedDomains = [] } = usePublicAllowedEmailDomains(hackathonId);
+
+  const { canEnroll, enrollmentBlockReason, registrationClosedReason } =
+    useEventParticipationGate(event, {
+      studentStanding:
+        profile?.studentStanding ??
+        (profile?.userType === "FPT_STUDENT" || profile?.userType === "EXTERNAL_STUDENT"
+          ? "ENROLLED"
+          : undefined),
+      semester: profile?.semester,
+    });
+
+  const domainBlockReason = useMemo(() => {
+    if (profile?.userType !== "EXTERNAL_STUDENT" || !profile.email) {
+      return null;
+    }
+    if (allowedDomains.length === 0) {
+      return "No allowed email domains configured for this event. Contact the organizer.";
+    }
+    const domainRules = allowedDomains.map((d) => d.domain);
+    if (!matchesAllowedDomain(profile.email, domainRules)) {
+      return "Email domain is not allowed for this event. Use a university email from the approved list.";
+    }
+    return null;
+  }, [profile, allowedDomains]);
+
+  const canEnrollWithDomain = canEnroll && !domainBlockReason;
+  const displayBlockReason = domainBlockReason ?? enrollmentBlockReason;
   const {
     register: registerField,
     handleSubmit,
@@ -105,8 +142,7 @@ export function RegistrationForm({ hackathonId }: RegistrationFormProps) {
             style={checkboxStyle}
           />
           <span style={labelTextStyle}>
-            I confirm that I am currently a student or have graduated within the
-            last 12 months.
+            I confirm that I am currently enrolled as a student (not graduated).
           </span>
         </label>
         {errors.confirmStudent && (
@@ -146,6 +182,12 @@ export function RegistrationForm({ hackathonId }: RegistrationFormProps) {
       </div>
 
       <div className="flex flex-col gap-4 pt-2">
+        {!canEnrollWithDomain && (displayBlockReason || registrationClosedReason) && (
+          <div style={{ fontSize: 14, color: "#b45309", textAlign: "center" }}>
+            {displayBlockReason ?? registrationClosedReason}
+          </div>
+        )}
+
         {isError && (
           <div
             style={{ fontSize: 14, color: "#dc2626", textAlign: "center" }}
@@ -161,6 +203,7 @@ export function RegistrationForm({ hackathonId }: RegistrationFormProps) {
           variant="primary"
           size="lg"
           isLoading={isPending}
+          disabled={!canEnrollWithDomain}
           style={{
             borderRadius: 4,
             padding: "15.5px 24px",

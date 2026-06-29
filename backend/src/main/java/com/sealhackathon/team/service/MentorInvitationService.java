@@ -6,6 +6,7 @@ import com.sealhackathon.common.exception.DuplicateResourceException;
 import com.sealhackathon.common.exception.ResourceNotFoundException;
 import com.sealhackathon.event.repository.MentorAssignmentRepository;
 import com.sealhackathon.event.service.EventPublicService;
+import com.sealhackathon.judging.service.ConflictDetectionService;
 import com.sealhackathon.team.domain.MentorInvitation;
 import com.sealhackathon.team.domain.MentorTeam;
 import com.sealhackathon.team.domain.Team;
@@ -14,12 +15,14 @@ import com.sealhackathon.team.dto.request.RespondMentorInvitationRequest;
 import com.sealhackathon.team.dto.request.SendMentorInvitationRequest;
 import com.sealhackathon.team.dto.response.MentorInvitationResponse;
 import com.sealhackathon.team.dto.response.MentorRoomResponse;
+import com.sealhackathon.team.event.MentorTeamAssignedEvent;
 import com.sealhackathon.team.repository.MentorInvitationRepository;
 import com.sealhackathon.team.repository.MentorTeamRepository;
 import com.sealhackathon.team.repository.TeamRepository;
 import com.sealhackathon.user.dto.snapshot.UserSnapshot;
 import com.sealhackathon.user.service.UserPublicService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,6 +41,8 @@ public class MentorInvitationService {
     private final MentorAssignmentRepository mentorAssignmentRepository;
     private final EventPublicService eventPublicService;
     private final UserPublicService userPublicService;
+    private final ConflictDetectionService conflictDetectionService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public MentorInvitationResponse sendInvitation(UUID leaderId, UUID eventId, SendMentorInvitationRequest request) {
@@ -59,8 +64,13 @@ public class MentorInvitationService {
             throw new BusinessException("Team already has a mentor assigned", HttpStatus.CONFLICT) {};
         }
 
-        if (!mentorAssignmentRepository.existsByHackathonEventIdAndMentorUserId(eventId, request.getMentorUserId())) {
-            throw new BusinessException("Mentor is not assigned to this event", HttpStatus.BAD_REQUEST) {};
+        if (team.getTrackId() == null) {
+            throw new BusinessException("Team must be assigned to a track before inviting a mentor", HttpStatus.BAD_REQUEST) {};
+        }
+
+        if (!mentorAssignmentRepository.existsByHackathonEventIdAndTrackIdAndMentorUserId(
+                eventId, team.getTrackId(), request.getMentorUserId())) {
+            throw new BusinessException("Mentor is not assigned to this team's track", HttpStatus.BAD_REQUEST) {};
         }
 
         UserSnapshot mentor = userPublicService.findById(request.getMentorUserId())
@@ -121,12 +131,15 @@ public class MentorInvitationService {
                         invitationRepository.save(pending);
                     });
 
+            conflictDetectionService.assertNotJudgeOfTeam(mentorId, team.getId());
+
             MentorTeam mentorTeam = MentorTeam.builder()
                     .mentorUserId(mentorId)
                     .team(team)
                     .assignedAt(LocalDateTime.now())
                     .build();
             mentorTeamRepository.save(mentorTeam);
+            eventPublisher.publishEvent(new MentorTeamAssignedEvent(mentorId, team.getId()));
         } else if (request.getDecision() == MentorInvitationStatus.DENIED) {
             invitation.setStatus(MentorInvitationStatus.DENIED);
             invitationRepository.save(invitation);

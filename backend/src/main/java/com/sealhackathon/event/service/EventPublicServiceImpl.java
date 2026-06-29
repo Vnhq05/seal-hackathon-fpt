@@ -65,6 +65,8 @@ public class EventPublicServiceImpl implements EventPublicService {
                         .name(c.getName())
                         .weight(c.getWeight())
                         .sortOrder(c.getSortOrder())
+                        .minScore(c.getMinScore())
+                        .maxScore(c.getMaxScore())
                         .build())
                 .toList();
     }
@@ -135,7 +137,8 @@ public class EventPublicServiceImpl implements EventPublicService {
     @Override
     @Transactional(readOnly = true)
     public boolean isJudgeAssignedToRound(UUID judgeId, UUID roundId) {
-        return judgeAssignmentRepository.existsByRoundIdAndJudgeUserId(roundId, judgeId);
+        return judgeAssignmentRepository.findByRoundId(roundId).stream()
+                .anyMatch(a -> a.getJudgeUserId().equals(judgeId));
     }
 
     @Override
@@ -170,7 +173,9 @@ public class EventPublicServiceImpl implements EventPublicService {
                 .semesterMin(event.getSemesterMin())
                 .semesterMax(event.getSemesterMax())
                 .leaderboardPublic(event.isLeaderboardPublic())
+                .scoringTemplateId(event.getScoringTemplateId())
                 .tiebreakerCriteria(event.getTiebreakerCriteria())
+                .tiebreakerCriterionIds(List.copyOf(event.getTiebreakerCriterionIds()))
                 .build();
     }
 
@@ -183,10 +188,12 @@ public class EventPublicServiceImpl implements EventPublicService {
                 .startDate(round.getStartDate())
                 .endDate(round.getEndDate())
                 .submissionDeadline(round.getSubmissionDeadline())
+                .slideDeadline(round.getSlideDeadline())
                 .scoringDeadline(round.getScoringDeadline())
                 .advancementCutoff(round.getAdvancementCutoff())
                 .roundWeight(round.getRoundWeight())
                 .roundType(round.getRoundType())
+                .advancementRule(round.getAdvancementRule())
                 .build();
     }
 }

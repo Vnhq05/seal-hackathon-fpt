@@ -37,6 +37,8 @@ app:
     access-token-expiration-ms: 900000
     refresh-token-expiration-days: 7
     password-reset-token-expiration-minutes: 15
+  seeder:
+    resync-dev-accounts: ${SEEDER_RESYNC_DEV_ACCOUNTS:true}
   frontend:
     url: ${FRONTEND_URL:http://localhost:3000}
   cors:

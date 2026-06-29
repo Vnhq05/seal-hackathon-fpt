@@ -116,7 +116,7 @@ export function SubmitProjectForm({ roundId, roundName }: SubmitProjectFormProps
     submit({
       roundId,
       request: {
-        githubUrl: values.repositoryUrl,
+        sourceCodeUrl: values.repositoryUrl,
         demoUrl: values.demoUrl,
       },
       pdfFile,

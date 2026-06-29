@@ -6,6 +6,7 @@ import { useSendInvite } from "@/features/teams/hooks/use-send-invite";
 interface InviteUserCardProps {
   candidate: UserSearchResult;
   teamId: string;
+  registrationClosed?: boolean;
 }
 
 function getInitials(name: string): string {
@@ -24,7 +25,11 @@ const cardStyle: React.CSSProperties = {
   opacity: 1,
 };
 
-export function InviteUserCard({ candidate, teamId }: InviteUserCardProps) {
+export function InviteUserCard({
+  candidate,
+  teamId,
+  registrationClosed = false,
+}: InviteUserCardProps) {
   const { sendInvite, isPending, pendingEmail } = useSendInvite(teamId);
   const isSending = isPending && pendingEmail === candidate.email;
 
@@ -59,7 +64,7 @@ export function InviteUserCard({ candidate, teamId }: InviteUserCardProps) {
       <button
         type="button"
         onClick={() => sendInvite(candidate.email)}
-        disabled={isSending}
+        disabled={isSending || registrationClosed}
         className="flex-shrink-0"
         style={{
           backgroundColor: "#ffffff",

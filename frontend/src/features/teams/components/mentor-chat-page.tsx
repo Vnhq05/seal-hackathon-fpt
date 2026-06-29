@@ -7,6 +7,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { mentorInvitationApi, mentorChatApi } from "@/lib/api";
 import type { MentorInvitationResponse, ChatMessageResponse } from "@/lib/api";
 import { useMentorChatWebSocket } from "@/features/teams/hooks/use-mentor-chat-websocket";
+import { useAvailableMentors } from "@/features/teams/hooks/use-mentor-invitations";
 
 // ═══ Icons ═══
 
@@ -142,6 +143,7 @@ function StudentView() {
               eventId={selected.event.id}
               teamId={selected.team.id}
               teamName={selected.team.name}
+              trackId={selected.team.trackId}
               isLeader={selected.team.leaderId === useAuthStore.getState().user?.id}
             />
           ) : (
@@ -153,8 +155,8 @@ function StudentView() {
   );
 }
 
-function StudentTeamPanel({ eventId, teamId, teamName, isLeader }: {
-  eventId: string; teamId: string; teamName: string; isLeader: boolean;
+function StudentTeamPanel({ eventId, teamId, teamName, trackId, isLeader }: {
+  eventId: string; teamId: string; teamName: string; trackId: string | null; isLeader: boolean;
 }) {
   const { data: room } = useQuery({
     queryKey: ["mentor-room", eventId, teamId],
@@ -189,24 +191,20 @@ function StudentTeamPanel({ eventId, teamId, teamName, isLeader }: {
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
-      <InvitePanel eventId={eventId} teamId={teamId} teamName={teamName} isLeader={isLeader} />
+      <InvitePanel eventId={eventId} teamId={teamId} teamName={teamName} trackId={trackId} isLeader={isLeader} />
       <SentInvitations invitations={invitations} />
     </div>
   );
 }
 
-function InvitePanel({ eventId, teamId, teamName, isLeader }: {
-  eventId: string; teamId: string; teamName: string; isLeader: boolean;
+function InvitePanel({ eventId, teamId, teamName, trackId, isLeader }: {
+  eventId: string; teamId: string; teamName: string; trackId: string | null; isLeader: boolean;
 }) {
   const qc = useQueryClient();
   const [mentorUserId, setMentorUserId] = useState("");
   const [note, setNote] = useState("");
 
-  const { data: mentors = [] } = useQuery({
-    queryKey: ["available-mentors", eventId],
-    queryFn: () => mentorInvitationApi.getAvailableMentors(eventId),
-    enabled: isLeader,
-  });
+  const { data: mentors = [] } = useAvailableMentors(eventId, isLeader ? trackId : null);
 
   const { mutate: send, isPending } = useMutation({
     mutationFn: () => mentorInvitationApi.send(eventId, teamId, {
@@ -232,8 +230,13 @@ function InvitePanel({ eventId, teamId, teamName, isLeader }: {
         <h3 className="font-semibold text-sm">Mời Mentor</h3>
       </div>
       <p className="text-xs text-seal-text-muted mb-4">
-        Chọn mentor từ danh sách event. Mentor sẽ nhận lời mời và có thể chấp nhận hoặc từ chối.
+        Chọn mentor từ danh sách track của team. Mentor sẽ nhận lời mời và có thể chấp nhận hoặc từ chối.
       </p>
+      {!trackId && (
+        <p className="text-xs text-amber-600 mb-4">
+          Team chưa được gán track. Hoàn tất bốc thăm track trước khi mời mentor.
+        </p>
+      )}
       <div className="flex flex-col gap-3">
         <div>
           <label className="text-xs text-seal-text-secondary">Chọn mentor</label>

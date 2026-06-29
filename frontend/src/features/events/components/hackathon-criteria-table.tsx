@@ -51,6 +51,9 @@ function CriteriaRow({ criterion }: { criterion: JudgingCriterion }) {
           }}
         >
           {criterion.weight}%
+          <span style={{ color: "#8891a5", marginLeft: 8 }}>
+            ({criterion.minScore}–{criterion.maxScore})
+          </span>
         </span>
       </div>
     </div>

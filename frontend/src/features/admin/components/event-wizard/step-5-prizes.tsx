@@ -175,7 +175,6 @@ function Step5PrizesBody({ onNext, onBack }: { onNext: () => void; onBack: () =>
 
   const [guestName, setGuestName] = useState("");
   const [guestTitle, setGuestTitle] = useState("");
-  const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [saveErrors, setSaveErrors] = useState<Record<string, string>>({});
 
@@ -245,11 +244,6 @@ function Step5PrizesBody({ onNext, onBack }: { onNext: () => void; onBack: () =>
   };
 
   const validate = () => {
-    const errs: Record<string, string> = {};
-    if (!data.tiebreakerCriteria.trim()) {
-      errs.tiebreaker = "At least one tiebreaker criterion is required";
-    }
-
     const pendingPrizes = data.applyPrizesToAllTracks
       ? rowsToPrizes(sharedRows)
       : data.tracks.flatMap((_, idx) => rowsToPrizes(trackRows[idx] ?? defaultRows(), idx));
@@ -259,7 +253,6 @@ function Step5PrizesBody({ onNext, onBack }: { onNext: () => void; onBack: () =>
         const trackPrizes = rowsToPrizes(trackRows[idx] ?? defaultRows(), idx);
         if (trackPrizes.length === 0) {
           setFormError(`Track "${data.tracks[idx].name}" chưa có giải thưởng.`);
-          setErrors(errs);
           return false;
         }
       }
@@ -273,8 +266,7 @@ function Step5PrizesBody({ onNext, onBack }: { onNext: () => void; onBack: () =>
       updateData({ prizes: pendingPrizes });
     }
 
-    setErrors(errs);
-    return Object.keys(errs).length === 0 && !validationError;
+    return !validationError;
   };
 
   return (
@@ -356,16 +348,9 @@ function Step5PrizesBody({ onNext, onBack }: { onNext: () => void; onBack: () =>
         </div>
       )}
 
-      <div>
-        <label style={labelStyle}>Tiebreaker Criteria *</label>
-        <input
-          value={data.tiebreakerCriteria}
-          onChange={(e) => updateData({ tiebreakerCriteria: e.target.value })}
-          style={{ ...inputStyle, borderColor: errors.tiebreaker ? "#ef4444" : undefined }}
-          placeholder="e.g. Earlier submission time, then technical score"
-        />
-        {errors.tiebreaker && <p style={errorStyle}>{errors.tiebreaker}</p>}
-      </div>
+      <p style={{ fontSize: 13, color: "#8891a5" }}>
+        Tiebreaker criterion order is configured in Step 6 (Scoring) after selecting a template.
+      </p>
 
       <div>
         <label style={labelStyle}>Honored Guests</label>

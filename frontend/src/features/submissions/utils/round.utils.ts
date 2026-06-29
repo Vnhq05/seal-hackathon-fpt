@@ -4,7 +4,14 @@ export function isRoundOpen(round: RoundResponse): boolean {
   const now = Date.now();
   const start = new Date(round.startDate).getTime();
   const end = new Date(round.endDate).getTime();
-  return now >= start && now <= end;
+  if (now < start) return false;
+
+  if (round.submissionDeadline) {
+    const submissionEnd = new Date(round.submissionDeadline).getTime();
+    return now <= submissionEnd;
+  }
+
+  return now <= end;
 }
 
 export function findCurrentRound(rounds: RoundResponse[]): RoundResponse | null {
@@ -17,10 +24,17 @@ export function roundLockMessage(round: RoundResponse): string {
   const now = Date.now();
   const start = new Date(round.startDate).getTime();
   const end = new Date(round.endDate).getTime();
+  const submissionEnd = round.submissionDeadline
+    ? new Date(round.submissionDeadline).getTime()
+    : end;
+
   if (now < start) {
     return `Round chưa bắt đầu. Thời gian mở: ${formatDt(round.startDate)} — ${formatDt(round.endDate)}`;
   }
-  if (now > end) {
+  if (now > submissionEnd) {
+    if (round.submissionDeadline && submissionEnd !== end) {
+      return `Đã qua deadline nộp bài (${formatDt(round.submissionDeadline)})`;
+    }
     return `Round đã kết thúc (${formatDt(round.startDate)} — ${formatDt(round.endDate)})`;
   }
   return "";

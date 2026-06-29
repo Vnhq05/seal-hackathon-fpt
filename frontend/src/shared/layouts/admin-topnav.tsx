@@ -30,6 +30,7 @@ const BREADCRUMB_MAP: Record<string, { label: string; href: string }[]> = {
   ],
   "/admin/users": [{ label: "Users", href: "/admin/users" }],
   "/admin/system": [{ label: "System Config", href: "/admin/system" }],
+  "/admin/analytics/variance": [{ label: "Score Review", href: "/admin/analytics/variance" }],
   "/admin/export": [{ label: "Export", href: "/admin/export" }],
   "/admin/settings": [{ label: "Settings", href: "/admin/settings" }],
   "/admin/support": [{ label: "Support", href: "/admin/support" }],

@@ -4,86 +4,128 @@ import {
   type AssignJudgeRequest,
   type AssignMentorRequest,
 } from "@/lib/api";
+import { AVAILABLE_MENTORS_KEY } from "@/features/teams/hooks/use-mentor-invitations";
 
 export const JUDGE_ASSIGNMENTS_KEY = "judge-assignments" as const;
 export const MENTOR_ASSIGNMENTS_KEY = "mentor-assignments" as const;
+export const TEAM_ASSIGNMENTS_OVERVIEW_KEY = "team-assignments-overview" as const;
 
 /* ═══════════════════════════════════════════════
- *  Judge assignments (scoped to event + round)
+ *  Judge assignments (scoped to event + round + track)
  * ═══════════════════════════════════════════════ */
 
-/** List judges assigned to a specific round within an event. */
-export function useJudgeAssignments(eventId: string, roundId: string) {
+/** List judges assigned to a specific round (and track for preliminary rounds). */
+export function useJudgeAssignments(
+  eventId: string,
+  roundId: string,
+  trackId?: string,
+  options?: { requiresTrackId?: boolean },
+) {
+  const requiresTrackId = options?.requiresTrackId ?? false;
   return useQuery({
-    queryKey: [JUDGE_ASSIGNMENTS_KEY, eventId, roundId],
-    queryFn: () => assignmentApi.listJudges(eventId, roundId),
-    enabled: !!eventId && !!roundId,
+    queryKey: [JUDGE_ASSIGNMENTS_KEY, eventId, roundId, trackId],
+    queryFn: () => assignmentApi.listJudges(eventId, roundId, trackId),
+    enabled: !!eventId && !!roundId && (!requiresTrackId || !!trackId),
   });
 }
 
-/** Assign a judge to a round. */
+/** Assign a judge to a round (and track when preliminary). */
 export function useAssignJudge(eventId: string, roundId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body: AssignJudgeRequest) =>
       assignmentApi.assignJudge(eventId, roundId, body),
-    onSuccess: () =>
-      qc.invalidateQueries({ queryKey: [JUDGE_ASSIGNMENTS_KEY, eventId, roundId] }),
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({
+        queryKey: [JUDGE_ASSIGNMENTS_KEY, eventId, roundId, variables.trackId],
+      });
+      qc.invalidateQueries({ queryKey: [TEAM_ASSIGNMENTS_OVERVIEW_KEY] });
+    },
   });
 }
 
 /** Remove a judge assignment. */
-export function useRemoveJudge(eventId: string, roundId: string) {
+export function useRemoveJudge(eventId: string, roundId: string, trackId?: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (assignmentId: string) =>
       assignmentApi.removeJudge(eventId, roundId, assignmentId),
-    onSuccess: () =>
-      qc.invalidateQueries({ queryKey: [JUDGE_ASSIGNMENTS_KEY, eventId, roundId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [JUDGE_ASSIGNMENTS_KEY, eventId, roundId, trackId] });
+      qc.invalidateQueries({ queryKey: [TEAM_ASSIGNMENTS_OVERVIEW_KEY] });
+    },
   });
 }
 
 /* ═══════════════════════════════════════════════
- *  Mentor assignments (scoped to event)
+ *  Team assignment overview
  * ═══════════════════════════════════════════════ */
 
-/** List mentors assigned to an event. */
-export function useMentorAssignments(eventId: string) {
+/** Team-level judge assignment overview for an event round. */
+export function useTeamAssignmentsOverview(
+  eventId: string,
+  params: { roundId: string; season?: string; year?: number; trackId?: string },
+) {
   return useQuery({
-    queryKey: [MENTOR_ASSIGNMENTS_KEY, eventId],
-    queryFn: () => assignmentApi.listMentors(eventId),
-    enabled: !!eventId,
+    queryKey: [TEAM_ASSIGNMENTS_OVERVIEW_KEY, eventId, params.roundId, params.trackId, params.season, params.year],
+    queryFn: () => assignmentApi.getTeamAssignments(eventId, params),
+    enabled: !!eventId && !!params.roundId,
   });
 }
 
-/** Assign a mentor to an event. */
-export function useAssignMentor(eventId: string) {
+/** Remove a single team-judge link. */
+export function useRemoveTeamJudgeAssignment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (assignmentId: string) => assignmentApi.removeTeamJudgeAssignment(assignmentId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [TEAM_ASSIGNMENTS_OVERVIEW_KEY] });
+    },
+  });
+}
+
+/* ═══════════════════════════════════════════════
+ *  Mentor assignments (scoped to event + track)
+ * ═══════════════════════════════════════════════ */
+
+/** List mentors assigned to a track. */
+export function useMentorAssignments(eventId: string, trackId: string) {
+  return useQuery({
+    queryKey: [MENTOR_ASSIGNMENTS_KEY, eventId, trackId],
+    queryFn: () => assignmentApi.listMentors(eventId, trackId),
+    enabled: !!eventId && !!trackId,
+  });
+}
+
+/** Assign a mentor to a track. */
+export function useAssignMentor(eventId: string, trackId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body: AssignMentorRequest) =>
-      assignmentApi.assignMentor(eventId, body),
-    onSuccess: () =>
-      qc.invalidateQueries({ queryKey: [MENTOR_ASSIGNMENTS_KEY, eventId] }),
+      assignmentApi.assignMentor(eventId, trackId, body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [MENTOR_ASSIGNMENTS_KEY, eventId, trackId] });
+      qc.invalidateQueries({ queryKey: [AVAILABLE_MENTORS_KEY, eventId, trackId] });
+    },
   });
 }
 
 /** Remove a mentor assignment. */
-export function useRemoveMentor(eventId: string) {
+export function useRemoveMentor(eventId: string, trackId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (assignmentId: string) =>
-      assignmentApi.removeMentor(eventId, assignmentId),
-    onSuccess: () =>
-      qc.invalidateQueries({ queryKey: [MENTOR_ASSIGNMENTS_KEY, eventId] }),
+      assignmentApi.removeMentor(eventId, trackId, assignmentId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [MENTOR_ASSIGNMENTS_KEY, eventId, trackId] });
+      qc.invalidateQueries({ queryKey: [AVAILABLE_MENTORS_KEY, eventId, trackId] });
+    },
   });
 }
 
 /* ═══════════════════════════════════════════════
  *  Staff assignments — NOT supported by backend
  * ═══════════════════════════════════════════════ */
-
-// TODO: Staff assignment endpoints do not exist in the backend.
-// These are placeholder hooks that return empty data.
 
 export const STAFF_ASSIGNMENTS_KEY = "staff-assignments" as const;
 

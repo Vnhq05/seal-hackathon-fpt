@@ -1,8 +1,11 @@
 package com.sealhackathon.ranking.domain;
 
 import com.sealhackathon.common.entity.BaseEntity;
+import com.sealhackathon.ranking.domain.enums.FinalistSelectionMethod;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.constraints.Min;
@@ -51,4 +54,13 @@ public class FinalistSelection extends BaseEntity {
     @NotNull
     @Column(name = "selected_at", nullable = false)
     private LocalDateTime selectedAt;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "selection_method")
+    private FinalistSelectionMethod selectionMethod;
+
+    @NotNull
+    @Column(name = "needs_penalty_evaluation", nullable = false)
+    @Builder.Default
+    private boolean needsPenaltyEvaluation = false;
 }

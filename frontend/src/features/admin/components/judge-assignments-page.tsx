@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   assignmentApi,
@@ -10,7 +10,12 @@ import {
   type EventResponse,
   type TeamAssignmentOverview,
   type EventJudgeOption,
+  type RoundType,
 } from "@/lib/api";
+import {
+  TEAM_ASSIGNMENTS_OVERVIEW_KEY,
+  useTeamAssignmentsOverview,
+} from "@/features/admin/hooks/use-admin-assignments";
 
 const SEASONS = ["Spring", "Summer", "Fall", "Winter"] as const;
 
@@ -22,25 +27,52 @@ function getCurrentSeason(): string {
   return "Winter";
 }
 
+function toJudgeOptions(
+  judges: Awaited<ReturnType<typeof assignmentApi.listJudges>>,
+): EventJudgeOption[] {
+  return judges.map((j) => ({
+    id: j.id,
+    judgeUserId: j.judgeUserId,
+    judgeFullName: j.judgeFullName,
+    judgeEmail: j.judgeEmail,
+  }));
+}
+
 function AssignJudgesModal({
   eventId,
   roundId,
+  roundType,
   team,
-  eligibleJudges,
+  fallbackEligibleJudges,
   onClose,
 }: {
   eventId: string;
   roundId: string;
+  roundType: RoundType | undefined;
   team: TeamAssignmentOverview;
-  eligibleJudges: EventJudgeOption[];
+  fallbackEligibleJudges: EventJudgeOption[];
   onClose: () => void;
 }) {
   const qc = useQueryClient();
+  const isPreliminary = roundType === "PRELIMINARY";
   const initial = team.judges.map((j) => j.judgeUserId);
   const [j1, setJ1] = useState(initial[0] ?? "");
   const [j2, setJ2] = useState(initial[1] ?? "");
   const [j3, setJ3] = useState(initial[2] ?? "");
   const [error, setError] = useState<string | null>(null);
+
+  const { data: trackJudges, isLoading: judgesLoading } = useQuery({
+    queryKey: ["modal-eligible-judges", eventId, roundId, team.trackId],
+    queryFn: () => assignmentApi.listJudges(eventId, roundId, team.trackId!),
+    enabled: isPreliminary && !!team.trackId,
+  });
+
+  const eligibleJudges = useMemo(() => {
+    if (isPreliminary && team.trackId) {
+      return trackJudges ? toJudgeOptions(trackJudges) : [];
+    }
+    return fallbackEligibleJudges;
+  }, [isPreliminary, team.trackId, trackJudges, fallbackEligibleJudges]);
 
   const { mutate, isPending } = useMutation({
     mutationFn: () =>
@@ -51,13 +83,14 @@ function AssignJudgesModal({
         judgeUserIds: [j1, j2, j3],
       }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["team-assignments-overview"] });
+      qc.invalidateQueries({ queryKey: [TEAM_ASSIGNMENTS_OVERVIEW_KEY] });
       onClose();
     },
     onError: (err: Error) => setError(err.message),
   });
 
   const selected = new Set([j1, j2, j3].filter(Boolean));
+  const cannotAssign = isPreliminary && !team.trackId;
 
   const renderSelect = (value: string, onChange: (v: string) => void, label: string) => (
     <div>
@@ -65,7 +98,8 @@ function AssignJudgesModal({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] px-3 py-2 text-sm outline-none focus:border-royal/40"
+        disabled={judgesLoading || cannotAssign}
+        className="w-full border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] px-3 py-2 text-sm outline-none focus:border-royal/40 disabled:opacity-50"
       >
         <option value="">Chọn judge...</option>
         {eligibleJudges.map((j) => {
@@ -89,6 +123,10 @@ function AssignJudgesModal({
 
   const handleSubmit = () => {
     setError(null);
+    if (cannotAssign) {
+      setError("Team chưa có track — không thể phân công judge vòng sơ khảo");
+      return;
+    }
     if (!j1 || !j2 || !j3) {
       setError("Vui lòng chọn đủ 3 judge");
       return;
@@ -120,6 +158,11 @@ function AssignJudgesModal({
             Mentor: {team.mentorFullName}
           </p>
         )}
+        {cannotAssign && (
+          <p className="mt-2 text-xs font-medium text-red-600">
+            Team chưa được gán track. Vui lòng gán track trước khi phân công judge.
+          </p>
+        )}
 
         <div className="mt-4 flex flex-col gap-3">
           {renderSelect(j1, setJ1, "Judge 1")}
@@ -140,7 +183,7 @@ function AssignJudgesModal({
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={isPending}
+            disabled={isPending || judgesLoading || cannotAssign}
             className="border-2 border-navy bg-seal-yellow px-4 py-2 text-navy font-mono font-bold shadow-[4px_4px_0_0_#0c1228] disabled:opacity-50"
           >
             {isPending ? "Đang lưu..." : "Lưu phân công"}
@@ -177,19 +220,18 @@ export function JudgeAssignmentsPage() {
     enabled: !!selectedEventId,
   });
 
-  const { data: overview, isLoading: overviewLoading } = useQuery({
-    queryKey: ["team-assignments-overview", selectedEventId, selectedRoundId, selectedTrackId, season, year],
-    queryFn: () =>
-      assignmentApi.getTeamAssignments(selectedEventId, {
-        roundId: selectedRoundId,
-        season,
-        year,
-        trackId: selectedTrackId || undefined,
-      }),
-    enabled: !!selectedEventId && !!selectedRoundId,
-  });
+  const { data: overview, isLoading: overviewLoading } = useTeamAssignmentsOverview(
+    selectedEventId,
+    {
+      roundId: selectedRoundId,
+      season,
+      year,
+      trackId: selectedTrackId || undefined,
+    },
+  );
 
   const selectedEvent = events.find((e: EventResponse) => e.id === selectedEventId);
+  const selectedRound = rounds.find((r) => r.id === selectedRoundId);
 
   return (
     <div className="flex flex-col gap-6">
@@ -340,8 +382,9 @@ export function JudgeAssignmentsPage() {
         <AssignJudgesModal
           eventId={selectedEventId}
           roundId={selectedRoundId}
+          roundType={selectedRound?.roundType ?? undefined}
           team={modalTeam}
-          eligibleJudges={overview.eligibleJudges}
+          fallbackEligibleJudges={overview.eligibleJudges}
           onClose={() => setModalTeam(null)}
         />
       )}

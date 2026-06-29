@@ -1,15 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  externalRegistrationSchema,
+  createExternalRegistrationSchema,
   type ExternalRegistrationFormValues,
 } from "@/features/events/schemas/external-registration.schema";
 import { useExternalEnrollment } from "@/features/events/hooks/use-external-enrollment";
+import { usePublicAllowedEmailDomains } from "@/features/events/hooks/use-allowed-email-domains";
+import { useEventParticipationGate } from "@/features/events/hooks/use-event-participation-gate";
+import { ParticipationBlockBanner } from "@/features/events/components/participation-block-banner";
+import { uniqueUniversityLabels } from "@/lib/email-domain";
 import { Button } from "@/shared/ui/button";
+import type { EventResponse } from "@/lib/api/event.api";
 
 const inputStyle: React.CSSProperties = {
   border: "1px solid rgba(223,226,236,0.8)",
@@ -34,12 +39,28 @@ const errorStyle: React.CSSProperties = {
 };
 
 interface ExternalRegistrationFormProps {
-  eventId: string;
-  eventName: string;
+  event: EventResponse;
 }
 
-export function ExternalRegistrationForm({ eventId, eventName }: ExternalRegistrationFormProps) {
+export function ExternalRegistrationForm({ event }: ExternalRegistrationFormProps) {
+  const eventId = event.id;
+  const eventName = event.name;
   const [submitted, setSubmitted] = useState(false);
+
+  const { isRegistrationOpen, registrationClosedReason } = useEventParticipationGate(event);
+
+  const { data: allowedDomains = [], isLoading: domainsLoading } = usePublicAllowedEmailDomains(eventId);
+
+  const externalRegistrationSchema = useMemo(
+    () => createExternalRegistrationSchema(allowedDomains),
+    [allowedDomains],
+  );
+
+  const universityOptions = useMemo(
+    () => uniqueUniversityLabels(allowedDomains),
+    [allowedDomains],
+  );
+
   const {
     register,
     handleSubmit,
@@ -51,10 +72,14 @@ export function ExternalRegistrationForm({ eventId, eventName }: ExternalRegistr
       email: "",
       studentId: "",
       universityName: "",
+      confirmEnrolled: false,
     },
   });
 
   const { submit, isPending, isError, error } = useExternalEnrollment(eventId);
+
+  const domainsBlocked = domainsLoading || allowedDomains.length === 0;
+  const canSubmit = isRegistrationOpen && !domainsBlocked;
 
   const onSubmit = async (values: ExternalRegistrationFormValues) => {
     await submit(values);
@@ -95,6 +120,26 @@ export function ExternalRegistrationForm({ eventId, eventName }: ExternalRegistr
         </p>
       </div>
 
+      {domainsLoading ? (
+        <p className="text-sm text-seal-text-secondary">Loading approved university email domains...</p>
+      ) : allowedDomains.length === 0 ? (
+        <div className="rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+          No allowed email domains configured for this event. Contact the organizer.
+        </div>
+      ) : (
+        <div className="text-sm text-seal-text-secondary">
+          <p className="font-semibold text-seal-text">Approved university email domains</p>
+          <ul className="mt-2 list-disc pl-5">
+            {allowedDomains.map((d) => (
+              <li key={d.domain}>
+                @{d.domain}
+                {d.universityLabel ? ` — ${d.universityLabel}` : ""}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <div className="flex flex-col gap-4">
         <div>
           <label style={labelStyle}>Full name</label>
@@ -103,8 +148,8 @@ export function ExternalRegistrationForm({ eventId, eventName }: ExternalRegistr
         </div>
 
         <div>
-          <label style={labelStyle}>Gmail</label>
-          <input type="email" placeholder="you@gmail.com" className="w-full rounded" style={inputStyle} {...register("email")} />
+          <label style={labelStyle}>University email</label>
+          <input type="email" placeholder="student@hcmut.edu.vn" className="w-full rounded" style={inputStyle} {...register("email")} />
           {errors.email && <span style={errorStyle}>{errors.email.message}</span>}
         </div>
 
@@ -116,9 +161,28 @@ export function ExternalRegistrationForm({ eventId, eventName }: ExternalRegistr
 
         <div>
           <label style={labelStyle}>University</label>
-          <input type="text" placeholder="University name" className="w-full rounded" style={inputStyle} {...register("universityName")} />
+          <select
+            className="w-full rounded"
+            style={inputStyle}
+            {...register("universityName")}
+          >
+            <option value="">Select university</option>
+            {universityOptions.map((label) => (
+              <option key={label} value={label}>
+                {label}
+              </option>
+            ))}
+          </select>
           {errors.universityName && <span style={errorStyle}>{errors.universityName.message}</span>}
         </div>
+
+        <label className="flex cursor-pointer items-start gap-2">
+          <input type="checkbox" className="mt-1" {...register("confirmEnrolled")} />
+          <span className="text-sm text-seal-text-secondary">
+            I confirm that I am currently enrolled as a student (not graduated).
+          </span>
+        </label>
+        {errors.confirmEnrolled && <span style={errorStyle}>{errors.confirmEnrolled.message}</span>}
       </div>
 
       {isError && (
@@ -127,11 +191,16 @@ export function ExternalRegistrationForm({ eventId, eventName }: ExternalRegistr
         </div>
       )}
 
+      {!isRegistrationOpen && registrationClosedReason && (
+        <ParticipationBlockBanner reason={registrationClosedReason} className="text-center" />
+      )}
+
       <Button
         type="submit"
         variant="primary"
         size="lg"
         isLoading={isPending}
+        disabled={!canSubmit}
         style={{ borderRadius: 4, padding: "15.5px 24px", fontSize: 18, fontWeight: 600 }}
       >
         Submit registration

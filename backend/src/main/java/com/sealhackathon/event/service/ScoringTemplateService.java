@@ -46,6 +46,8 @@ public class ScoringTemplateService {
                     .description(c.getDescription())
                     .weight(c.getWeight())
                     .sortOrder(c.getSortOrder() != null ? c.getSortOrder() : order.getAndIncrement())
+                    .minScore(resolveMinScore(c))
+                    .maxScore(resolveMaxScore(c))
                     .build();
             template.getCriteria().add(criterion);
         });
@@ -76,6 +78,8 @@ public class ScoringTemplateService {
                     .description(c.getDescription())
                     .weight(c.getWeight())
                     .sortOrder(c.getSortOrder() != null ? c.getSortOrder() : order.getAndIncrement())
+                    .minScore(resolveMinScore(c))
+                    .maxScore(resolveMaxScore(c))
                     .build();
             template.getCriteria().add(criterion);
         });
@@ -146,6 +150,13 @@ public class ScoringTemplateService {
                         "Weight must be a positive integer greater than 0",
                         HttpStatus.BAD_REQUEST) {};
             }
+            int minScore = resolveMinScore(criterion);
+            int maxScore = resolveMaxScore(criterion);
+            if (minScore >= maxScore) {
+                throw new BusinessException(
+                        "minScore must be less than maxScore for criterion: " + criterion.getName(),
+                        HttpStatus.BAD_REQUEST) {};
+            }
         }
 
         int sum = criteria.stream()
@@ -163,6 +174,14 @@ public class ScoringTemplateService {
                 .orElseThrow(() -> new ResourceNotFoundException("ScoringTemplate", "id", templateId));
     }
 
+    private int resolveMinScore(CreateScoringTemplateRequest.CriterionRequest c) {
+        return c.getMinScore() != null ? c.getMinScore() : 1;
+    }
+
+    private int resolveMaxScore(CreateScoringTemplateRequest.CriterionRequest c) {
+        return c.getMaxScore() != null ? c.getMaxScore() : 5;
+    }
+
     private ScoringTemplateResponse toResponse(ScoringTemplate template) {
         List<ScoringTemplateResponse.CriterionResponse> criteriaResponses = template.getCriteria().stream()
                 .map(c -> ScoringTemplateResponse.CriterionResponse.builder()
@@ -171,6 +190,8 @@ public class ScoringTemplateService {
                         .description(c.getDescription())
                         .weight(c.getWeight())
                         .sortOrder(c.getSortOrder())
+                        .minScore(c.getMinScore())
+                        .maxScore(c.getMaxScore())
                         .build())
                 .toList();
 

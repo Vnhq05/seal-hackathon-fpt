@@ -1,6 +1,7 @@
 package com.sealhackathon.event.service;
 
 import com.sealhackathon.common.exception.BusinessException;
+import com.sealhackathon.common.exception.ResourceNotFoundException;
 import com.sealhackathon.event.domain.HackathonEvent;
 import com.sealhackathon.event.domain.enums.CompetitionFormat;
 import com.sealhackathon.event.domain.enums.EventStatus;
@@ -8,6 +9,7 @@ import com.sealhackathon.event.repository.HackathonEventRepository;
 import com.sealhackathon.event.repository.TrackRepository;
 import com.sealhackathon.team.repository.TeamRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -25,6 +27,8 @@ public class FormatRuleEngine {
     private final HackathonEventRepository eventRepository;
     private final TrackRepository trackRepository;
     private final TeamRepository teamRepository;
+    @Lazy
+    private final EventService eventService;
 
     public CompetitionFormat getFormat(UUID eventId) {
         return eventRepository.findById(eventId)
@@ -67,6 +71,13 @@ public class FormatRuleEngine {
         return status == EventStatus.OPEN || status == EventStatus.UPCOMING;
     }
 
+    public boolean canModifyTeamMembersResolved(EventStatus persisted, EventStatus resolved) {
+        if (persisted == EventStatus.CLOSED_REGISTRATION) {
+            return false;
+        }
+        return canModifyTeamMembers(resolved);
+    }
+
     public boolean canSubmit(EventStatus status) {
         return status == EventStatus.ACTIVE;
     }
@@ -77,5 +88,35 @@ public class FormatRuleEngine {
 
     public boolean canViewPublishedResults(EventStatus status) {
         return status == EventStatus.COMPLETED || status == EventStatus.SCORING;
+    }
+
+    public void assertCanCreateTeam(UUID eventId) {
+        HackathonEvent event = getEvent(eventId);
+        EventStatus resolved = eventService.resolveStatus(event);
+        if (resolved == EventStatus.CANCELLED || resolved == EventStatus.COMPLETED) {
+            throw new BusinessException("Event is not open for team formation", HttpStatus.BAD_REQUEST);
+        }
+        if (!canCreateTeam(resolved)) {
+            throw new BusinessException("Event is not open for team formation", HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    public void assertCanModifyTeamMembers(UUID eventId) {
+        HackathonEvent event = getEvent(eventId);
+        EventStatus persisted = event.getStatus();
+        EventStatus resolved = eventService.resolveStatus(event);
+        if (resolved == EventStatus.CANCELLED || resolved == EventStatus.COMPLETED) {
+            throw new BusinessException("Team member changes are not allowed in the current event phase",
+                    HttpStatus.BAD_REQUEST);
+        }
+        if (!canModifyTeamMembersResolved(persisted, resolved)) {
+            throw new BusinessException("Team member changes are not allowed in the current event phase",
+                    HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    private HackathonEvent getEvent(UUID eventId) {
+        return eventRepository.findById(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Event", "id", eventId));
     }
 }

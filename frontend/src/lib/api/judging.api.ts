@@ -4,6 +4,9 @@ import { api } from "./api-client";
 
 export type ScoreStatus = "IN_PROGRESS" | "COMPLETED" | "LOCKED";
 
+/** Assignment-level scoring status from GET /judging/my-assignments */
+export type ScoringStatus = "NOT_STARTED" | "IN_PROGRESS" | "COMPLETED" | "LOCKED";
+
 export interface ScoreDetailDto {
   criteriaId: string;
   score: number;
@@ -101,6 +104,10 @@ export interface JudgeScoringAssignment {
   trackId: string | null;
   trackName: string | null;
   submissionId: string | null;
-  scoringStatus: "NOT_STARTED" | "IN_PROGRESS" | "COMPLETED" | "LOCKED";
+  scoringStatus: ScoringStatus;
   scoringDeadline: string | null;
+  conflictOfInterest?: boolean;
+  conflictReason?: string | null;
+  hasOpenScoreReview?: boolean;
+  openScoreReviewId?: string | null;
 }

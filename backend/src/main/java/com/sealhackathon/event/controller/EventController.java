@@ -5,6 +5,9 @@ import com.sealhackathon.event.domain.enums.EventStatus;
 import com.sealhackathon.event.dto.request.CreateEventRequest;
 import com.sealhackathon.event.dto.request.PublishEventRequest;
 import com.sealhackathon.event.dto.request.UpdateEventRequest;
+import com.sealhackathon.event.dto.request.UpdateEventStatusRequest;
+import com.sealhackathon.event.dto.response.EventScheduleResponse;
+import com.sealhackathon.event.service.EventScheduleService;
 import com.sealhackathon.event.dto.response.EventResponse;
 import com.sealhackathon.event.service.EventPublishService;
 import com.sealhackathon.event.service.EventService;
@@ -23,6 +26,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -44,6 +48,7 @@ public class EventController {
 
     private final EventService eventService;
     private final EventPublishService eventPublishService;
+    private final EventScheduleService eventScheduleService;
 
     @PostMapping
     @PreAuthorize("hasAnyRole('SYSTEM_ADMIN', 'EVENT_COORDINATOR')")
@@ -105,6 +110,24 @@ public class EventController {
             HttpServletRequest httpRequest) {
         EventResponse response = eventService.cancelEvent(eventId, httpRequest.getRemoteAddr());
         return ResponseEntity.ok(ApiResponse.success("Event cancelled", response));
+    }
+
+    @PatchMapping("/{eventId}/status")
+    @PreAuthorize("hasAnyRole('SYSTEM_ADMIN', 'EVENT_COORDINATOR')")
+    @Operation(summary = "Transition event phase (registration → running → scoring → finished)")
+    public ResponseEntity<ApiResponse<EventResponse>> updateEventStatus(
+            @PathVariable UUID eventId,
+            @Valid @RequestBody UpdateEventStatusRequest request,
+            HttpServletRequest httpRequest) {
+        EventResponse response = eventService.updateEventStatus(
+                eventId, request, httpRequest.getRemoteAddr());
+        return ResponseEntity.ok(ApiResponse.success("Event status updated", response));
+    }
+
+    @GetMapping("/{eventId}/schedule")
+    @Operation(summary = "Get SEAL competition schedule (Day 1 / Day 2 milestones)")
+    public ResponseEntity<ApiResponse<List<EventScheduleResponse>>> getSchedule(@PathVariable UUID eventId) {
+        return ResponseEntity.ok(ApiResponse.success(eventScheduleService.getSchedule(eventId)));
     }
 
     @GetMapping("/{eventId}")

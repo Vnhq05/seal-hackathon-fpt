@@ -1,6 +1,7 @@
 package com.sealhackathon.event.controller;
 
 import com.sealhackathon.common.response.ApiResponse;
+import com.sealhackathon.event.dto.request.AssignTrackTopicRequest;
 import com.sealhackathon.event.dto.request.CreateTrackRequest;
 import com.sealhackathon.event.dto.response.TrackResponse;
 import com.sealhackathon.event.service.TrackService;
@@ -64,6 +65,17 @@ public class TrackController {
             @PathVariable UUID eventId, @PathVariable UUID trackId,
             @Valid @RequestBody CreateTrackRequest request) {
         return ResponseEntity.ok(ApiResponse.success("Track updated", trackService.updateTrack(eventId, trackId, request)));
+    }
+
+    @PutMapping("/{trackId}/topic")
+    @PreAuthorize("hasAnyRole('SYSTEM_ADMIN', 'EVENT_COORDINATOR')")
+    @Operation(summary = "Assign topic to track after draw (OC draws topic per track)")
+    public ResponseEntity<ApiResponse<TrackResponse>> assignTopic(
+            @PathVariable UUID eventId,
+            @PathVariable UUID trackId,
+            @Valid @RequestBody AssignTrackTopicRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(
+                "Track topic assigned", trackService.assignTopic(eventId, trackId, request)));
     }
 
     @DeleteMapping("/{trackId}")

@@ -1,16 +1,19 @@
 package com.sealhackathon.team.service;
 
 import com.sealhackathon.auth.service.AuthEmailService;
+import com.sealhackathon.common.enums.StudentStanding;
 import com.sealhackathon.common.enums.UserType;
 import com.sealhackathon.common.exception.BusinessException;
 import com.sealhackathon.common.exception.DuplicateResourceException;
 import com.sealhackathon.common.exception.ResourceNotFoundException;
 import com.sealhackathon.event.dto.snapshot.EventSnapshot;
+import com.sealhackathon.event.service.AllowedEmailDomainService;
 import com.sealhackathon.event.service.EventPublicService;
 import com.sealhackathon.team.domain.EventEnrollment;
 import com.sealhackathon.team.domain.TeamMember;
 import com.sealhackathon.team.domain.enums.EnrollmentStatus;
 import com.sealhackathon.team.dto.request.EnrollRequest;
+import com.sealhackathon.team.dto.request.UpdateMatchingProfileRequest;
 import com.sealhackathon.team.dto.response.EnrollmentResponse;
 import com.sealhackathon.team.repository.EventEnrollmentRepository;
 import com.sealhackathon.team.repository.TeamMemberRepository;
@@ -37,6 +40,7 @@ public class EventEnrollmentService {
     private final TeamMemberRepository teamMemberRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthEmailService authEmailService;
+    private final AllowedEmailDomainService allowedEmailDomainService;
 
     private static final List<EnrollmentStatus> ACTIVE_STATUSES =
             List.of(EnrollmentStatus.PENDING, EnrollmentStatus.APPROVED);
@@ -65,13 +69,10 @@ public class EventEnrollmentService {
         UserSnapshot user = userPublicService.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
 
-        if (event.getSemesterMin() != null && event.getSemesterMax() != null && user.getSemester() != null) {
-            if (user.getSemester() < event.getSemesterMin() || user.getSemester() > event.getSemesterMax()) {
-                throw new BusinessException(
-                        "Your semester (" + user.getSemester() + ") does not meet the requirement (semester " +
-                                event.getSemesterMin() + "-" + event.getSemesterMax() + ")",
-                        HttpStatus.BAD_REQUEST) {};
-            }
+        assertEligibleParticipant(user, event);
+
+        if (user.getUserType() == UserType.EXTERNAL_STUDENT) {
+            allowedEmailDomainService.validateEmailForEvent(eventId, user.getEmail());
         }
 
         EnrollmentStatus status = user.getUserType() == UserType.EXTERNAL_STUDENT
@@ -100,6 +101,15 @@ public class EventEnrollmentService {
             throw new BusinessException("Event is not open for enrollment", HttpStatus.BAD_REQUEST) {};
         }
 
+        if (request.getStudentStanding() == StudentStanding.GRADUATED) {
+            throw new BusinessException(
+                    "Graduated students are not eligible to participate",
+                    HttpStatus.BAD_REQUEST) {};
+        }
+
+        allowedEmailDomainService.validateExternalStudentForEvent(
+                eventId, email, request.getUniversityName().trim());
+
         UUID userId;
         String tempPassword = null;
         UserSnapshot user = userPublicService.findByEmail(email).orElse(null);
@@ -115,7 +125,8 @@ public class EventEnrollmentService {
                     request.getUniversityName().trim(),
                     UserType.EXTERNAL_STUDENT,
                     null,
-                    true);
+                    true,
+                    request.getStudentStanding());
             user = userPublicService.findById(userId)
                     .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
         } else if (user.getUserType() != UserType.EXTERNAL_STUDENT) {
@@ -123,6 +134,8 @@ public class EventEnrollmentService {
                     "This email is already registered as a non-external account",
                     HttpStatus.CONFLICT) {};
         }
+
+        assertEligibleParticipant(user, event);
 
         if (enrollmentRepository.existsByUserIdAndEventId(user.getId(), eventId)) {
             throw new DuplicateResourceException("Enrollment", "userId+eventId", user.getId() + "+" + eventId);
@@ -251,6 +264,35 @@ public class EventEnrollmentService {
                 .toList();
     }
 
+    @Transactional
+    public EnrollmentResponse updateMatchingProfile(
+            UUID userId, UUID eventId, UpdateMatchingProfileRequest request) {
+        EventEnrollment enrollment = enrollmentRepository.findByUserIdAndEventId(userId, eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Enrollment", "userId+eventId",
+                        userId + "+" + eventId));
+
+        if (enrollment.getStatus() != EnrollmentStatus.APPROVED) {
+            throw new BusinessException(
+                    "Your enrollment must be approved before updating matching profile",
+                    HttpStatus.BAD_REQUEST) {};
+        }
+
+        boolean onTeam = teamMemberRepository.existsByUserIdAndEventId(userId, eventId);
+        if (onTeam) {
+            if (request.isLookingForTeam()) {
+                throw new BusinessException(
+                        "Cannot enable looking-for-team while you are on a team",
+                        HttpStatus.BAD_REQUEST) {};
+            }
+            enrollment.setLookingForTeam(false);
+        } else {
+            enrollment.setLookingForTeam(request.isLookingForTeam());
+        }
+        enrollment.setPreferredRole(request.getPreferredRole());
+
+        return toResponse(enrollmentRepository.save(enrollment), null);
+    }
+
     private EventEnrollment getEnrollmentEntity(UUID enrollmentId) {
         return enrollmentRepository.findById(enrollmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Enrollment", "id", enrollmentId));
@@ -262,7 +304,9 @@ public class EventEnrollmentService {
                 .userId(enrollment.getUserId())
                 .eventId(enrollment.getEventId())
                 .status(enrollment.getStatus())
-                .enrolledAt(enrollment.getEnrolledAt());
+                .enrolledAt(enrollment.getEnrolledAt())
+                .isLookingForTeam(enrollment.isLookingForTeam())
+                .preferredRole(enrollment.getPreferredRole());
 
         if (user != null) {
             builder.userFullName(user.getFullName())
@@ -278,5 +322,32 @@ public class EventEnrollmentService {
         }
 
         return builder.build();
+    }
+
+    private void assertEligibleParticipant(UserSnapshot user, EventSnapshot event) {
+        if (user.getStudentStanding() == StudentStanding.GRADUATED) {
+            throw new BusinessException(
+                    "Graduated students are not eligible to participate",
+                    HttpStatus.BAD_REQUEST) {};
+        }
+        assertSemesterEligible(user, event);
+    }
+
+    private void assertSemesterEligible(UserSnapshot user, EventSnapshot event) {
+        if (event.getSemesterMin() == null || event.getSemesterMax() == null) {
+            return;
+        }
+        if (user.getSemester() == null) {
+            throw new BusinessException(
+                    "Semester information is required for this event (semester "
+                            + event.getSemesterMin() + "-" + event.getSemesterMax() + ")",
+                    HttpStatus.BAD_REQUEST) {};
+        }
+        if (user.getSemester() < event.getSemesterMin() || user.getSemester() > event.getSemesterMax()) {
+            throw new BusinessException(
+                    "Your semester (" + user.getSemester() + ") does not meet the requirement (semester "
+                            + event.getSemesterMin() + "-" + event.getSemesterMax() + ")",
+                    HttpStatus.BAD_REQUEST) {};
+        }
     }
 }

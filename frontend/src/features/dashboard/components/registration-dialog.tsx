@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { teamApi, invitationApi } from "@/lib/api";
+import { enrollmentMyKey } from "@/features/events/hooks/use-enrollment";
 import { useAuthStore } from "@/features/auth/store/auth.store";
 import type { EventResponse } from "@/lib/api";
 
@@ -89,7 +90,7 @@ export function RegistrationDialog({ event, onClose }: RegistrationDialogProps) 
         setSuccess(`Team "${name}" registered for ${event.name}!`);
       }
 
-      qc.invalidateQueries({ queryKey: ["my-enrollment", event.id] });
+      qc.invalidateQueries({ queryKey: enrollmentMyKey(event.id) });
       qc.invalidateQueries({ queryKey: ["dashboard-team"] });
 
       setTimeout(() => onClose(), 2000);

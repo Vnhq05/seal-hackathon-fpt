@@ -1,12 +1,18 @@
 package com.sealhackathon.judging.service;
 
 import com.sealhackathon.common.exception.BusinessException;
+import com.sealhackathon.event.domain.Round;
 import com.sealhackathon.event.dto.snapshot.CriteriaSnapshot;
+import com.sealhackathon.event.repository.HackathonEventRepository;
+import com.sealhackathon.event.repository.RoundRepository;
+import com.sealhackathon.event.repository.TrackRepository;
 import com.sealhackathon.event.service.EventPublicService;
 import com.sealhackathon.judging.domain.JudgeScore;
+import com.sealhackathon.judging.domain.TeamJudgeAssignment;
 import com.sealhackathon.judging.domain.enums.ScoreStatus;
 import com.sealhackathon.judging.dto.request.ScoreDetailDto;
 import com.sealhackathon.judging.dto.request.ScoreSubmissionRequest;
+import com.sealhackathon.judging.dto.response.JudgeScoringAssignmentResponse;
 import com.sealhackathon.judging.dto.response.JudgeScoreResponse;
 import com.sealhackathon.judging.repository.JudgeScoreRepository;
 import com.sealhackathon.judging.repository.TeamJudgeAssignmentRepository;
@@ -14,6 +20,9 @@ import com.sealhackathon.submission.domain.Submission;
 import com.sealhackathon.submission.dto.snapshot.SubmissionSnapshot;
 import com.sealhackathon.submission.repository.SubmissionRepository;
 import com.sealhackathon.submission.service.SubmissionPublicService;
+import com.sealhackathon.team.domain.Team;
+import com.sealhackathon.team.repository.TeamRepository;
+import com.sealhackathon.team.service.TeamPublicService;
 import com.sealhackathon.user.dto.snapshot.UserSnapshot;
 import com.sealhackathon.user.service.UserPublicService;
 import org.junit.jupiter.api.Test;
@@ -41,9 +50,15 @@ class JudgingServiceTest {
     @Mock private JudgeScoreRepository judgeScoreRepository;
     @Mock private TeamJudgeAssignmentRepository teamJudgeAssignmentRepository;
     @Mock private SubmissionRepository submissionRepository;
+    @Mock private TeamRepository teamRepository;
+    @Mock private RoundRepository roundRepository;
+    @Mock private HackathonEventRepository eventRepository;
+    @Mock private TrackRepository trackRepository;
     @Mock private ConflictDetectionService conflictDetectionService;
+    @Mock private ScoreReviewService scoreReviewService;
     @Mock private EventPublicService eventPublicService;
     @Mock private SubmissionPublicService submissionPublicService;
+    @Mock private TeamPublicService teamPublicService;
     @Mock private UserPublicService userPublicService;
     @Mock private ApplicationEventPublisher eventPublisher;
 
@@ -80,7 +95,7 @@ class JudgingServiceTest {
     void submitScore_shouldThrow_whenLowScoreWithoutComment() {
         setupValidContext();
 
-        ScoreSubmissionRequest request = buildRequest(2, 8, null, null);
+        ScoreSubmissionRequest request = buildRequest(0, 8, null, null);
 
         assertThatThrownBy(() -> judgingService.submitScore(JUDGE_ID, ROUND_ID, request))
                 .isInstanceOf(BusinessException.class)
@@ -111,7 +126,7 @@ class JudgingServiceTest {
         when(userPublicService.findById(JUDGE_ID))
                 .thenReturn(Optional.of(UserSnapshot.builder().fullName("Judge").build()));
 
-        ScoreSubmissionRequest request = buildRequest(3, 10, "Too basic", "Outstanding");
+        ScoreSubmissionRequest request = buildRequest(3, 10, "At minimum", "Outstanding");
 
         JudgeScoreResponse result = judgingService.submitScore(JUDGE_ID, ROUND_ID, request);
 
@@ -165,6 +180,48 @@ class JudgingServiceTest {
     }
 
     @Test
+    void getMyScoringAssignments_shouldExcludeOrphanRoundOrTeam() {
+        UUID orphanRoundId = UUID.randomUUID();
+        UUID validRoundId = UUID.randomUUID();
+        UUID orphanTeamId = UUID.randomUUID();
+        UUID validTeamId = UUID.randomUUID();
+
+        TeamJudgeAssignment orphanTeam = TeamJudgeAssignment.builder()
+                .teamId(orphanTeamId).roundId(validRoundId).judgeUserId(JUDGE_ID).build();
+        TeamJudgeAssignment orphanRound = TeamJudgeAssignment.builder()
+                .teamId(validTeamId).roundId(orphanRoundId).judgeUserId(JUDGE_ID).build();
+        TeamJudgeAssignment valid = TeamJudgeAssignment.builder()
+                .teamId(validTeamId).roundId(validRoundId).judgeUserId(JUDGE_ID).build();
+
+        when(teamJudgeAssignmentRepository.findByJudgeUserId(JUDGE_ID))
+                .thenReturn(List.of(orphanTeam, orphanRound, valid));
+        when(roundRepository.existsById(validRoundId)).thenReturn(true);
+        when(roundRepository.existsById(orphanRoundId)).thenReturn(false);
+        when(teamRepository.existsById(validTeamId)).thenReturn(true);
+        when(teamRepository.existsById(orphanTeamId)).thenReturn(false);
+
+        Team team = Team.builder().eventId(UUID.randomUUID()).name("Team Alpha").build();
+        team.setId(validTeamId);
+        Round round = Round.builder()
+                .name("Round One")
+                .scoringDeadline(LocalDateTime.now().plusDays(1))
+                .build();
+        round.setId(validRoundId);
+
+        when(teamRepository.findById(validTeamId)).thenReturn(Optional.of(team));
+        when(roundRepository.findById(validRoundId)).thenReturn(Optional.of(round));
+        when(submissionRepository.findByTeamIdAndRoundId(validTeamId, validRoundId))
+                .thenReturn(Optional.empty());
+        when(teamPublicService.isMentorOfTeam(JUDGE_ID, validTeamId)).thenReturn(false);
+
+        List<JudgeScoringAssignmentResponse> result = judgingService.getMyScoringAssignments(JUDGE_ID);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.getFirst().getTeamId()).isEqualTo(validTeamId);
+        assertThat(result.getFirst().getRoundId()).isEqualTo(validRoundId);
+    }
+
+    @Test
     void submitScore_shouldThrow_whenLockedOnResubmit() {
         setupValidContext();
         UUID scoreId = UUID.randomUUID();
@@ -199,8 +256,10 @@ class JudgingServiceTest {
         when(teamJudgeAssignmentRepository.existsByTeamIdAndRoundIdAndJudgeUserId(TEAM_ID, ROUND_ID, JUDGE_ID))
                 .thenReturn(true);
         when(eventPublicService.getCriteriaByRound(ROUND_ID)).thenReturn(List.of(
-                CriteriaSnapshot.builder().id(CRITERIA_1).name("Technical").weight(50).build(),
-                CriteriaSnapshot.builder().id(CRITERIA_2).name("Innovation").weight(50).build()
+                CriteriaSnapshot.builder().id(CRITERIA_1).name("Technical").weight(50)
+                        .minScore(0).maxScore(10).build(),
+                CriteriaSnapshot.builder().id(CRITERIA_2).name("Innovation").weight(50)
+                        .minScore(0).maxScore(10).build()
         ));
     }
 

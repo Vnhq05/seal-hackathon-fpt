@@ -8,6 +8,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 @Getter
@@ -29,7 +30,9 @@ public class EventSnapshot {
     private Integer semesterMin;
     private Integer semesterMax;
     private boolean leaderboardPublic;
+    private UUID scoringTemplateId;
     private String tiebreakerCriteria;
+    private List<UUID> tiebreakerCriterionIds;
 
     public boolean isActive() {
         return status == EventStatus.ACTIVE;

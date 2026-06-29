@@ -216,6 +216,46 @@ export function ProfileInfoForm({ profile }: ProfileInfoFormProps) {
               tabIndex={-1}
             />
           </div>
+
+          {/* Student standing - read-only */}
+          {(profile.userType === "FPT_STUDENT" || profile.userType === "EXTERNAL_STUDENT") && (
+            <div className="flex flex-col" style={{ gap: 4 }}>
+              <div className="flex items-center gap-1">
+                <label style={fieldLabelStyle}>Student standing</label>
+                <LockIcon />
+              </div>
+              <input
+                type="text"
+                readOnly
+                value={
+                  profile.studentStanding === "GRADUATED"
+                    ? "Graduated"
+                    : profile.studentStanding === "ENROLLED"
+                      ? "Enrolled"
+                      : "—"
+                }
+                style={readOnlyInputStyle}
+                tabIndex={-1}
+              />
+            </div>
+          )}
+
+          {/* Semester - read-only */}
+          {(profile.userType === "FPT_STUDENT" || profile.userType === "EXTERNAL_STUDENT") && (
+            <div className="flex flex-col" style={{ gap: 4 }}>
+              <div className="flex items-center gap-1">
+                <label style={fieldLabelStyle}>Semester</label>
+                <LockIcon />
+              </div>
+              <input
+                type="text"
+                readOnly
+                value={profile.semester != null ? String(profile.semester) : "Not set"}
+                style={readOnlyInputStyle}
+                tabIndex={-1}
+              />
+            </div>
+          )}
         </div>
 
         {/* Save button row */}

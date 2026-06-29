@@ -4,12 +4,14 @@ import com.sealhackathon.common.exception.BusinessException;
 import com.sealhackathon.common.exception.DuplicateResourceException;
 import com.sealhackathon.common.exception.ResourceNotFoundException;
 import com.sealhackathon.event.service.EventJudgeService;
+import com.sealhackathon.event.service.JudgeAssignmentService;
 import com.sealhackathon.judging.domain.TeamJudgeAssignment;
 import com.sealhackathon.judging.dto.request.AssignJudgeToTeamRequest;
 import com.sealhackathon.judging.dto.response.TeamJudgeAssignmentResponse;
 import com.sealhackathon.judging.repository.JudgeScoreRepository;
 import com.sealhackathon.judging.repository.TeamJudgeAssignmentRepository;
-import com.sealhackathon.team.service.TeamPublicService;
+import com.sealhackathon.team.domain.Team;
+import com.sealhackathon.team.repository.TeamRepository;
 import com.sealhackathon.user.service.UserPublicService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -27,13 +29,15 @@ public class TeamJudgeAssignmentService {
     private final TeamJudgeAssignmentRepository assignmentRepository;
     private final JudgeScoreRepository judgeScoreRepository;
     private final EventJudgeService eventJudgeService;
-    private final TeamPublicService teamPublicService;
+    private final JudgeAssignmentService judgeAssignmentService;
+    private final TeamRepository teamRepository;
+    private final ConflictDetectionService conflictDetectionService;
     private final UserPublicService userPublicService;
 
     @Transactional
     public TeamJudgeAssignmentResponse assignJudgeToTeam(
             UUID eventId, UUID roundId, UUID teamId, AssignJudgeToTeamRequest request) {
-        validateJudgeCandidate(eventId, teamId, request.getJudgeUserId());
+        validateJudgeCandidate(eventId, roundId, teamId, request.getJudgeUserId());
 
         if (assignmentRepository.existsByTeamIdAndRoundIdAndJudgeUserId(teamId, roundId, request.getJudgeUserId())) {
             throw new DuplicateResourceException("TeamJudgeAssignment", "judge", request.getJudgeUserId().toString());
@@ -88,18 +92,23 @@ public class TeamJudgeAssignmentService {
         assignmentRepository.delete(assignment);
     }
 
-    void validateJudgeCandidate(UUID eventId, UUID teamId, UUID judgeUserId) {
+    void validateJudgeCandidate(UUID eventId, UUID roundId, UUID teamId, UUID judgeUserId) {
         if (!eventJudgeService.isEventJudge(eventId, judgeUserId)) {
             throw new BusinessException(
                     "Judge must be assigned to the event with role JUDGE or BOTH",
                     HttpStatus.BAD_REQUEST) {};
         }
 
-        if (teamPublicService.isMentorOfTeam(judgeUserId, teamId)) {
+        Team team = teamRepository.findById(teamId)
+                .orElseThrow(() -> new ResourceNotFoundException("Team", "id", teamId));
+
+        if (!judgeAssignmentService.isJudgeAssignedToRoundScope(roundId, judgeUserId, team.getTrackId())) {
             throw new BusinessException(
-                    "Cannot assign judge who is the mentor of this team (conflict of interest)",
-                    HttpStatus.CONFLICT) {};
+                    "Judge is not assigned to this round and track",
+                    HttpStatus.BAD_REQUEST) {};
         }
+
+        conflictDetectionService.assertNotMentorOfTeam(judgeUserId, teamId);
     }
 
     TeamJudgeAssignmentResponse toResponse(TeamJudgeAssignment assignment) {

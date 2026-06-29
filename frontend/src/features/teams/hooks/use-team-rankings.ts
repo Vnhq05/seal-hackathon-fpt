@@ -1,5 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
-import { rankingApi } from "@/lib/api";
+import { useRoundRankings } from "@/features/rankings/hooks/use-ranking";
 
 export const TEAM_RANKINGS_KEY = "team-rankings" as const;
 
@@ -8,10 +7,6 @@ export const TEAM_RANKINGS_KEY = "team-rankings" as const;
  * The old hook called `/teams/rankings` with no parameters;
  * the backend requires a roundId via `GET /rounds/{roundId}/rankings`.
  */
-export function useTeamRankings(roundId: string) {
-  return useQuery({
-    queryKey: [TEAM_RANKINGS_KEY, roundId],
-    queryFn: () => rankingApi.getRankings(roundId),
-    enabled: !!roundId,
-  });
+export function useTeamRankings(roundId: string, trackId?: string) {
+  return useRoundRankings(roundId, trackId);
 }

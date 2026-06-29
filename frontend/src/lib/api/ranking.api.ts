@@ -1,4 +1,7 @@
 import { api } from "./api-client";
+import type { AdvancementStatus, RoundType } from "./types";
+
+export type PublishedAdvancementStatus = Extract<AdvancementStatus, "ADVANCED" | "ELIMINATED">;
 
 // ═══ Types ═══
 
@@ -23,6 +26,7 @@ export interface EventRankingBoard {
   year: number;
   roundId: string;
   roundName: string;
+  roundType: RoundType | null;
   tracks: { id: string; name: string; description?: string | null; maxTeams: number; eventId: string; scoringTemplateId?: string | null }[];
   rankings: RankingResponse[];
 }
@@ -32,7 +36,7 @@ export interface AdvancementResponse {
   teamId: string;
   teamName: string | null;
   roundId: string;
-  status: "ADVANCED" | "ELIMINATED";
+  status: PublishedAdvancementStatus;
   rank: number | null;
   finalScore: number | null;
 }
@@ -72,12 +76,19 @@ export interface DisputeResponse {
 // ═══ API calls ═══
 
 export const rankingApi = {
-  getSeasonRankings(params?: { season?: string; year?: number; trackId?: string }): Promise<EventRankingBoard[]> {
+  getSeasonRankings(params?: {
+    season?: string;
+    year?: number;
+    trackId?: string;
+    roundType?: RoundType;
+  }): Promise<EventRankingBoard[]> {
     return api.get<EventRankingBoard[]>("/ranking", { params });
   },
 
-  getRankings(roundId: string): Promise<RankingResponse[]> {
-    return api.get<RankingResponse[]>(`/rounds/${roundId}/rankings`);
+  getRankings(roundId: string, trackId?: string): Promise<RankingResponse[]> {
+    return api.get<RankingResponse[]>(`/rounds/${roundId}/rankings`, {
+      params: trackId ? { trackId } : undefined,
+    });
   },
 
   getTeamRanking(roundId: string, teamId: string): Promise<RankingResponse> {

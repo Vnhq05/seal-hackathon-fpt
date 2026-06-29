@@ -66,6 +66,8 @@ public class UpdateEventRequest {
     @Size(max = 1000)
     private String tiebreakerCriteria;
 
+    private List<UUID> tiebreakerCriterionIds;
+
     @Valid
     private List<PrizeRequest> prizes;
 

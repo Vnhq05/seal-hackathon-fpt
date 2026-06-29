@@ -47,8 +47,10 @@ export const mentorInvitationApi = {
     return api.get<MentorInvitationResponse[]>(`/events/${eventId}/mentor-invitations/team/${teamId}`);
   },
 
-  getAvailableMentors(eventId: string): Promise<MentorAssignmentResponse[]> {
-    return api.get<MentorAssignmentResponse[]>(`/events/${eventId}/mentor-invitations/available-mentors`);
+  getAvailableMentors(eventId: string, trackId: string): Promise<MentorAssignmentResponse[]> {
+    return api.get<MentorAssignmentResponse[]>(`/events/${eventId}/mentor-invitations/available-mentors`, {
+      params: { trackId },
+    });
   },
 
   getPendingForMentor(eventId: string): Promise<MentorInvitationResponse[]> {

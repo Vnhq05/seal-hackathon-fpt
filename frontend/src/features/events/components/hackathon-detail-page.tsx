@@ -7,6 +7,11 @@ import { HackathonRounds } from "@/features/events/components/hackathon-rounds";
 import { HackathonCriteriaTable } from "@/features/events/components/hackathon-criteria-table";
 import type { RoundResponse } from "@/lib/api/round.api";
 import type { CompetitionRound, JudgingCriterion } from "@/features/events/types/hackathon-detail.types";
+import { DEFAULT_MAX_SCORE, DEFAULT_MIN_SCORE } from "@/features/judging/constants/scoring-scale";
+import { useEventParticipationGate } from "@/features/events/hooks/use-event-participation-gate";
+import { useProfile } from "@/features/profile/hooks/use-profile";
+import { ParticipationBlockBanner } from "@/features/events/components/participation-block-banner";
+import { useAuthStore } from "@/features/auth/store/auth.store";
 
 interface HackathonDetailPageProps {
   hackathonId: string;
@@ -69,12 +74,30 @@ function mapCriteria(rounds: RoundResponse[]): JudgingCriterion[] {
     name: criterion.name,
     description: criterion.description ?? "",
     weight: criterion.weight,
+    minScore: criterion.minScore ?? DEFAULT_MIN_SCORE,
+    maxScore: criterion.maxScore ?? DEFAULT_MAX_SCORE,
   }));
 }
 
 export function HackathonDetailPage({ hackathonId }: HackathonDetailPageProps) {
   const { data: event, isLoading: eventLoading } = useHackathonPage(hackathonId);
   const { data: rounds = [], isLoading: roundsLoading } = useHackathonRounds(hackathonId);
+  const { isAuthenticated } = useAuthStore();
+  const { data: profile } = useProfile({ enabled: isAuthenticated });
+  const userEligibility =
+    isAuthenticated && profile
+      ? {
+          studentStanding: profile.studentStanding ?? "ENROLLED" as const,
+          semester: profile.semester,
+        }
+      : undefined;
+  const { canEnroll, enrollmentBlockReason, registrationClosedReason } =
+    useEventParticipationGate(event ?? undefined, userEligibility);
+  const showRegisterCta =
+    !!event &&
+    (event.status === "OPEN" || event.status === "ACTIVE") &&
+    canEnroll;
+  const registerBlockReason = enrollmentBlockReason ?? registrationClosedReason;
 
   if (eventLoading || roundsLoading) return <PageSkeleton />;
 
@@ -264,19 +287,42 @@ export function HackathonDetailPage({ hackathonId }: HackathonDetailPageProps) {
               )}
             </div>
             {(event.status === "OPEN" || event.status === "ACTIVE") && (
-              <Link
-                href={`/hackathons/${hackathonId}/register`}
-                className="flex items-center justify-center border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]"
-                style={{
-                  backgroundColor: "#059669",
-                  color: "#ffffff",
-                  fontSize: 14,
-                  fontWeight: 600,
-                  padding: "10px 16px",
-                }}
-              >
-                Register now
-              </Link>
+              <div className="flex flex-col gap-2">
+                {showRegisterCta ? (
+                  <Link
+                    href={`/hackathons/${hackathonId}/register`}
+                    className="flex items-center justify-center border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]"
+                    style={{
+                      backgroundColor: "#059669",
+                      color: "#ffffff",
+                      fontSize: 14,
+                      fontWeight: 600,
+                      padding: "10px 16px",
+                    }}
+                  >
+                    Register now
+                  </Link>
+                ) : (
+                  <>
+                    <span
+                      className="flex items-center justify-center"
+                      style={{
+                        backgroundColor: "#e5e7eb",
+                        color: "#6b7280",
+                        fontSize: 14,
+                        fontWeight: 600,
+                        padding: "10px 16px",
+                        cursor: "not-allowed",
+                      }}
+                    >
+                      Registration unavailable
+                    </span>
+                    {registerBlockReason && (
+                      <ParticipationBlockBanner reason={registerBlockReason} />
+                    )}
+                  </>
+                )}
+              </div>
             )}
           </div>
         </div>

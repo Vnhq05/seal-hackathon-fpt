@@ -2,15 +2,20 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { invitationApi } from "@/lib/api";
-import type { InvitationResponse } from "@/lib/api";
+import type { EventResponse, InvitationResponse } from "@/lib/api";
+import { ENROLLMENT_KEY } from "@/features/events/hooks/use-enrollment";
 import { TEAM_INVITATION_KEY } from "@/features/teams/hooks/use-team-invitation";
+import { JOINABLE_TEAMS_KEY } from "@/features/teams/hooks/use-joinable-teams";
+import { useInvitationParticipationGate } from "@/features/teams/hooks/use-invitation-participation-gate";
 
 interface PendingInvitationsBannerProps {
   invitations: InvitationResponse[];
+  event?: EventResponse | null;
 }
 
-export function PendingInvitationsBanner({ invitations }: PendingInvitationsBannerProps) {
+export function PendingInvitationsBanner({ invitations, event }: PendingInvitationsBannerProps) {
   const qc = useQueryClient();
+  const { canModifyMembers, registrationClosedReason } = useInvitationParticipationGate(event);
   const pending = invitations.filter((i) => i.status === "PENDING");
 
   const accept = useMutation({
@@ -18,8 +23,8 @@ export function PendingInvitationsBanner({ invitations }: PendingInvitationsBann
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: [TEAM_INVITATION_KEY] });
       qc.invalidateQueries({ queryKey: ["my-teams-all-events"] });
-      qc.invalidateQueries({ queryKey: ["waiting-list"] });
-      qc.invalidateQueries({ queryKey: ["joinable-teams"] });
+      qc.invalidateQueries({ queryKey: [ENROLLMENT_KEY] });
+      qc.invalidateQueries({ queryKey: [JOINABLE_TEAMS_KEY] });
     },
   });
 
@@ -35,6 +40,9 @@ export function PendingInvitationsBanner({ invitations }: PendingInvitationsBann
   return (
     <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
       <p className="text-sm font-semibold text-blue-900">Pending team invitations</p>
+      {!canModifyMembers && registrationClosedReason && (
+        <p className="mt-1 text-xs text-amber-700">{registrationClosedReason}</p>
+      )}
       <div className="mt-2 flex flex-col gap-2">
         {pending.map((inv) => (
           <div key={inv.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-white/60 px-3 py-2">
@@ -44,7 +52,7 @@ export function PendingInvitationsBanner({ invitations }: PendingInvitationsBann
             <div className="flex gap-2">
               <button
                 onClick={() => accept.mutate(inv.id)}
-                disabled={accept.isPending || reject.isPending}
+                disabled={!canModifyMembers || accept.isPending || reject.isPending}
                 className="rounded-md bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
               >
                 Accept

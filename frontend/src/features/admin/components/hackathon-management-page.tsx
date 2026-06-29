@@ -101,6 +101,13 @@ function ActionMenu({ event, onError }: { event: EventResponse; onError: (msg: s
       label: "Enrollments",
       onClick: () => { setOpen(false); router.push(`/admin/hackathons/${event.id}/enrollments`); },
     });
+    actions.push({
+      label: "Email Domains",
+      onClick: () => {
+        setOpen(false);
+        router.push(`/admin/hackathons/${event.id}#allowed-email-domains`);
+      },
+    });
   }
 
   if (event.status !== "COMPLETED" && event.status !== "CANCELLED") {

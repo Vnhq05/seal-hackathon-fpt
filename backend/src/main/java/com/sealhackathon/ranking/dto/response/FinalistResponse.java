@@ -1,5 +1,6 @@
 package com.sealhackathon.ranking.dto.response;
 
+import com.sealhackathon.ranking.domain.enums.FinalistSelectionMethod;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -23,4 +24,6 @@ public class FinalistResponse {
     private Integer preliminaryRank;
     private String selectedReason;
     private LocalDateTime selectedAt;
+    private FinalistSelectionMethod selectionMethod;
+    private boolean needsPenaltyEvaluation;
 }

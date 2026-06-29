@@ -1,6 +1,7 @@
 package com.sealhackathon.team.repository;
 
 import com.sealhackathon.team.domain.TeamMember;
+import com.sealhackathon.team.domain.enums.TeamStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -31,4 +32,9 @@ public interface TeamMemberRepository extends JpaRepository<TeamMember, UUID> {
 
     @Query("SELECT tm.team.id FROM TeamMember tm WHERE tm.userId = :userId AND tm.team.eventId = :eventId")
     Optional<UUID> findTeamIdByUserIdAndEventId(@Param("userId") UUID userId, @Param("eventId") UUID eventId);
+
+    @Query("SELECT tm FROM TeamMember tm JOIN tm.team t "
+            + "WHERE t.eventId = :eventId AND t.status = :status")
+    List<TeamMember> findByEventIdAndTeamStatus(
+            @Param("eventId") UUID eventId, @Param("status") TeamStatus status);
 }

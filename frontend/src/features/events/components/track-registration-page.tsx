@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useTrackRegistrationData } from "@/features/events/hooks/use-track-registration-data";
 
 const bgStyle: React.CSSProperties = { backgroundColor: "#eef0f6" };
@@ -38,7 +39,7 @@ export function TrackRegistrationPage({ hackathonId }: TrackRegistrationPageProp
         </h1>
         <p className="mt-2 text-center text-sm text-seal-text-secondary">
           {isSeal
-            ? "BTC phân bảng và bốc thăm chủ đề. Bạn không tự chọn bảng."
+            ? "Đội trưởng tự chọn bảng trong phiên bốc thăm do BTC tổ chức."
             : `Track assignment for ${data.hackathonName}`}
         </p>
 
@@ -60,11 +61,21 @@ export function TrackRegistrationPage({ hackathonId }: TrackRegistrationPageProp
               )}
             </div>
           ) : (
-            <p className="mt-6 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-              {isSeal
-                ? "Đội chưa được BTC phân bảng. Vui lòng chờ lễ bốc thăm."
-                : "No track assigned yet."}
-            </p>
+            <div className="mt-6 space-y-3">
+              <p className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                {isSeal
+                  ? "Đội chưa chọn bảng. Trưởng đội vào phiên bốc thăm khi đến lượt."
+                  : "No track assigned yet."}
+              </p>
+              {isSeal && data.teamId && (
+                <Link
+                  href="/student/tracks/draw"
+                  className="inline-block rounded bg-navy px-4 py-2 text-sm font-semibold text-white hover:bg-navy/90"
+                >
+                  Vào phiên bốc thăm
+                </Link>
+              )}
+            </div>
           )}
         </div>
 

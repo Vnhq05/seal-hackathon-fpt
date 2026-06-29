@@ -27,4 +27,8 @@ public class JudgeScoringAssignmentResponse {
     private UUID submissionId;
     private String scoringStatus;
     private LocalDateTime scoringDeadline;
+    private boolean conflictOfInterest;
+    private String conflictReason;
+    private boolean hasOpenScoreReview;
+    private UUID openScoreReviewId;
 }

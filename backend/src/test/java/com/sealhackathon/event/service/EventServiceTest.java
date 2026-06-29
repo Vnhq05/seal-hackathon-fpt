@@ -12,6 +12,7 @@ import com.sealhackathon.event.domain.enums.EventStatus;
 import com.sealhackathon.event.dto.request.CreateEventRequest;
 import com.sealhackathon.event.dto.request.PrizeRequest;
 import com.sealhackathon.event.dto.request.UpdateEventRequest;
+import com.sealhackathon.event.dto.request.UpdateEventStatusRequest;
 import com.sealhackathon.event.domain.enums.PrizeRank;
 import com.sealhackathon.event.dto.response.EventResponse;
 import com.sealhackathon.event.repository.HackathonEventRepository;
@@ -37,6 +38,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -295,6 +297,98 @@ class EventServiceTest {
 
         assertThat(result.getStatus()).isEqualTo(EventStatus.OPEN);
         verify(auditService).log(any(), any(), any(), any(), any(), any(), any());
+    }
+
+    // ── Status transitions ──
+
+    @Test
+    void updateEventStatus_shouldTransitionOpenToClosedRegistration() {
+        UUID eventId = UUID.randomUUID();
+        HackathonEvent event = buildEvent(eventId, EventStatus.UPCOMING);
+        event.setRegistrationOpenDate(LocalDate.now().minusDays(1));
+        event.setStartDate(LocalDate.now().plusDays(2));
+        event.setEndDate(LocalDate.now().plusDays(30));
+        event.setRegistrationDeadline(LocalDate.now().plusDays(1));
+
+        when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
+        when(eventRepository.save(any(HackathonEvent.class))).thenAnswer(i -> i.getArgument(0));
+
+        EventResponse result = eventService.updateEventStatus(
+                eventId,
+                UpdateEventStatusRequest.builder().status(EventStatus.CLOSED_REGISTRATION).build(),
+                "127.0.0.1");
+
+        assertThat(result.getStatus()).isEqualTo(EventStatus.CLOSED_REGISTRATION);
+        verify(auditService).log(any(), eq("EVENT_STATUS_CHANGE"), eq(eventId), any(), any(), any(), any());
+    }
+
+    @Test
+    void updateEventStatus_shouldRejectInvalidTransition() {
+        UUID eventId = UUID.randomUUID();
+        HackathonEvent event = buildEvent(eventId, EventStatus.UPCOMING);
+        event.setRegistrationOpenDate(LocalDate.now().plusDays(5));
+        event.setStartDate(LocalDate.now().plusDays(10));
+        event.setEndDate(LocalDate.now().plusDays(40));
+        event.setRegistrationDeadline(LocalDate.now().plusDays(8));
+
+        when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
+
+        assertThatThrownBy(() -> eventService.updateEventStatus(
+                eventId,
+                UpdateEventStatusRequest.builder().status(EventStatus.SCORING).build(),
+                "127.0.0.1"))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("Cannot transition from UPCOMING to SCORING");
+    }
+
+    @Test
+    void updateEventStatus_shouldRejectCancelledTarget() {
+        UUID eventId = UUID.randomUUID();
+        HackathonEvent event = buildEvent(eventId, EventStatus.UPCOMING);
+        when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
+
+        assertThatThrownBy(() -> eventService.updateEventStatus(
+                eventId,
+                UpdateEventStatusRequest.builder().status(EventStatus.CANCELLED).build(),
+                "127.0.0.1"))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("Use cancel endpoint");
+    }
+
+    @Test
+    void updateEventStatus_shouldUseResolvedStatus_notPersistedActive_beforeStartDate() {
+        UUID eventId = UUID.randomUUID();
+        HackathonEvent event = buildEvent(eventId, EventStatus.ACTIVE);
+        event.setRegistrationOpenDate(LocalDate.now().minusDays(1));
+        event.setStartDate(LocalDate.now().plusDays(2));
+        event.setEndDate(LocalDate.now().plusDays(30));
+        event.setRegistrationDeadline(LocalDate.now().plusDays(1));
+
+        when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
+
+        assertThatThrownBy(() -> eventService.updateEventStatus(
+                eventId,
+                UpdateEventStatusRequest.builder().status(EventStatus.SCORING).build(),
+                "127.0.0.1"))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("Cannot transition from OPEN to SCORING");
+    }
+
+    @Test
+    void updateEventStatus_shouldAllowClosedRegistrationToActive() {
+        UUID eventId = UUID.randomUUID();
+        HackathonEvent event = buildEvent(eventId, EventStatus.CLOSED_REGISTRATION);
+        event.setStartDate(LocalDate.now());
+        event.setEndDate(LocalDate.now().plusDays(30));
+        when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
+        when(eventRepository.save(any(HackathonEvent.class))).thenAnswer(i -> i.getArgument(0));
+
+        EventResponse result = eventService.updateEventStatus(
+                eventId,
+                UpdateEventStatusRequest.builder().status(EventStatus.ACTIVE).build(),
+                "127.0.0.1");
+
+        assertThat(result.getStatus()).isEqualTo(EventStatus.ACTIVE);
     }
 
     private HackathonEvent buildEvent(UUID id, EventStatus status) {

@@ -13,12 +13,14 @@ import com.sealhackathon.auth.event.PasswordResetEvent;
 import com.sealhackathon.auth.event.UserLoggedInEvent;
 import com.sealhackathon.auth.security.JwtProvider;
 import com.sealhackathon.common.enums.AccountStatus;
+import com.sealhackathon.common.enums.StudentStanding;
 import com.sealhackathon.common.enums.UserType;
 import com.sealhackathon.common.exception.AccountLockedException;
 import com.sealhackathon.common.exception.AccountNotActivatedException;
 import com.sealhackathon.common.exception.BusinessException;
 import com.sealhackathon.common.exception.DuplicateResourceException;
 import com.sealhackathon.common.exception.InvalidCredentialsException;
+import com.sealhackathon.event.service.AllowedEmailDomainService;
 import com.sealhackathon.user.dto.snapshot.LockState;
 import com.sealhackathon.user.dto.snapshot.UserSnapshot;
 import com.sealhackathon.user.service.UserPublicService;
@@ -47,6 +49,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final ApplicationEventPublisher eventPublisher;
     private final AuthEmailService authEmailService;
+    private final AllowedEmailDomainService allowedEmailDomainService;
 
     private static final int MAX_FAILED_ATTEMPTS = 5;
     private static final int LOCK_DURATION_MINUTES = 15;
@@ -79,9 +82,15 @@ public class AuthService {
             if (request.getStudentId() == null || request.getStudentId().isBlank()) {
                 throw new BusinessException("Student ID is required for external students", HttpStatus.BAD_REQUEST) {};
             }
-            if (request.getUniversityName() == null || request.getUniversityName().isBlank()) {
-                throw new BusinessException("University name is required for external students", HttpStatus.BAD_REQUEST) {};
-            }
+            allowedEmailDomainService.validateExternalRegistration(
+                    request.getEmail().trim(),
+                    request.getUniversityName());
+        }
+
+        if (request.getStudentStanding() == StudentStanding.GRADUATED) {
+            throw new BusinessException(
+                    "Graduated students are not eligible to participate",
+                    HttpStatus.BAD_REQUEST) {};
         }
 
         // BR-04: email unique
@@ -103,7 +112,8 @@ public class AuthService {
                     request.getUniversityName(),
                     request.getUserType(),
                     request.getSemester(),
-                    false
+                    false,
+                    request.getStudentStanding()
             );
         } catch (DataIntegrityViolationException e) {
             throw new DuplicateResourceException("Account", "email", request.getEmail());

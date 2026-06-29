@@ -16,6 +16,8 @@ public class JudgeAssignmentResponse {
 
     private UUID id;
     private UUID roundId;
+    private UUID trackId;
+    private String trackName;
     private UUID judgeUserId;
     private String judgeFullName;
     private String judgeEmail;

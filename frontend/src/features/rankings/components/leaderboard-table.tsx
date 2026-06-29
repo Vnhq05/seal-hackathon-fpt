@@ -19,17 +19,36 @@ const headerCellStyle: React.CSSProperties = {
   whiteSpace: "nowrap" as const,
 };
 
-const COLUMNS = [
-  { label: "Rank", width: 64, align: "left" as const },
-  { label: "Team Name", width: 256, align: "left" as const },
-  { label: "Track", width: 124, align: "left" as const },
-  { label: "R1 Score", width: 125, align: "right" as const },
-  { label: "R2 Score", width: 129, align: "right" as const },
-  { label: "Total", width: 118, align: "right" as const },
-  { label: "Status", width: 174, align: "center" as const },
-];
+function buildColumns(rankings: LeaderboardTeam[], showTrack: boolean) {
+  const roundLabels = rankings[0]?.roundScores.map((r) => r.roundName) ?? ["Score"];
+  type Col = { label: string; width: number; align: "left" | "right" | "center"; key: string };
+  const fixed: Col[] = [
+    { label: "Rank", width: 64, align: "left", key: "rank" },
+    { label: "Team Name", width: 256, align: "left", key: "team" },
+  ];
+  const trackCol: Col[] = showTrack
+    ? [{ label: "Track", width: 124, align: "left", key: "track" }]
+    : [];
+  const scoreCols: Col[] = roundLabels.map((label, index) => ({
+    label,
+    width: 125,
+    align: "right" as const,
+    key: `score-${index}`,
+  }));
+  const totalCol: Col[] =
+    roundLabels.length > 1
+      ? [{ label: "Total", width: 118, align: "right", key: "total" }]
+      : [];
+  return [
+    ...fixed,
+    ...trackCol,
+    ...scoreCols,
+    ...totalCol,
+    { label: "Status", width: 174, align: "center" as const, key: "status" },
+  ];
+}
 
-function TableSkeleton() {
+function TableSkeleton({ columnCount }: { columnCount: number }) {
   return (
     <>
       {Array.from({ length: 5 }).map((_, rowIdx) => (
@@ -37,14 +56,8 @@ function TableSkeleton() {
           key={rowIdx}
           style={{ borderBottom: rowIdx < 4 ? "1px solid rgba(223,226,236,0.8)" : "none" }}
         >
-          {COLUMNS.map((col, colIdx) => (
-            <td
-              key={colIdx}
-              style={{
-                padding: "18px 16px",
-                width: col.width,
-              }}
-            >
+          {Array.from({ length: columnCount }).map((_, colIdx) => (
+            <td key={colIdx} style={{ padding: "18px 16px" }}>
               <div
                 className="animate-pulse rounded"
                 style={{
@@ -61,18 +74,12 @@ function TableSkeleton() {
   );
 }
 
-function EmptyState() {
+function EmptyState({ columnCount, message }: { columnCount: number; message?: string }) {
   return (
     <tr>
-      <td colSpan={COLUMNS.length} style={{ padding: "64px 24px" }}>
+      <td colSpan={columnCount} style={{ padding: "64px 24px" }}>
         <div className="flex flex-col items-center justify-center">
-          <svg
-            width="48"
-            height="48"
-            viewBox="0 0 48 48"
-            fill="none"
-            aria-hidden="true"
-          >
+          <svg width="48" height="48" viewBox="0 0 48 48" fill="none" aria-hidden="true">
             <rect x="4" y="28" width="12" height="16" rx="2" stroke="rgba(223,226,236,0.8)" strokeWidth="2" fill="none" />
             <rect x="18" y="12" width="12" height="32" rx="2" stroke="rgba(223,226,236,0.8)" strokeWidth="2" fill="none" />
             <rect x="32" y="20" width="12" height="24" rx="2" stroke="rgba(223,226,236,0.8)" strokeWidth="2" fill="none" />
@@ -81,7 +88,7 @@ function EmptyState() {
             No rankings yet
           </p>
           <p style={{ fontSize: 14, color: "#8891a5", marginTop: 4, textAlign: "center", maxWidth: 360 }}>
-            Rankings will appear here once teams have been scored.
+            {message ?? "Rankings will appear here once teams have been scored."}
           </p>
         </div>
       </td>
@@ -92,20 +99,26 @@ function EmptyState() {
 interface LeaderboardTableProps {
   rankings: LeaderboardTeam[];
   isLoading: boolean;
+  showTrack?: boolean;
+  emptyMessage?: string;
 }
 
 export function LeaderboardTable({
   rankings,
   isLoading,
+  showTrack = true,
+  emptyMessage,
 }: LeaderboardTableProps) {
+  const columns = buildColumns(rankings, showTrack);
+
   return (
     <div style={tableContainerStyle}>
       <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 800 }}>
         <thead>
           <tr style={{ backgroundColor: "#dcfce7", borderBottom: "1px solid rgba(223,226,236,0.8)" }}>
-            {COLUMNS.map((col) => (
+            {columns.map((col) => (
               <th
-                key={col.label}
+                key={col.key}
                 style={{
                   ...headerCellStyle,
                   width: col.width,
@@ -119,15 +132,16 @@ export function LeaderboardTable({
         </thead>
         <tbody>
           {isLoading ? (
-            <TableSkeleton />
+            <TableSkeleton columnCount={columns.length} />
           ) : rankings.length === 0 ? (
-            <EmptyState />
+            <EmptyState columnCount={columns.length} message={emptyMessage} />
           ) : (
             rankings.map((team, idx) => (
               <LeaderboardTableRow
                 key={team.id}
                 team={team}
                 isLast={idx === rankings.length - 1}
+                showTrack={showTrack}
               />
             ))
           )}

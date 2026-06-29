@@ -10,7 +10,9 @@ import {
   useCreateEvent,
   useUpdateEvent,
 } from "@/features/admin/hooks/use-admin-hackathons";
-import type { EventResponse, UpdateEventRequest } from "@/lib/api";
+import type { EventResponse, UpdateEventRequest, CreateEventRequest } from "@/lib/api";
+import { EventPhasePanel } from "@/features/events/components/event-phase-panel";
+import { AllowedEmailDomainsPanel } from "@/features/events/components/allowed-email-domains-panel";
 
 const inputStyle: React.CSSProperties = {
   border: "1px solid rgba(223,226,236,0.8)",
@@ -49,6 +51,18 @@ function toDateInput(value: string | null | undefined): string {
   return value ? value.split("T")[0] : "";
 }
 
+function buildCreatePayload(values: HackathonFormValues): CreateEventRequest {
+  return {
+    name: values.name,
+    season: values.season,
+    year: values.year,
+    startDate: values.startDate,
+    endDate: values.endDate,
+    registrationOpenDate: values.registrationOpenDate,
+    registrationDeadline: values.registrationDeadline,
+  };
+}
+
 function buildUpdatePayload(
   values: HackathonFormValues,
   existing: EventResponse,
@@ -66,10 +80,11 @@ function buildUpdatePayload(
     format: existing.format ?? undefined,
     minTeam: existing.minTeam ?? undefined,
     maxTeam: existing.maxTeam ?? undefined,
-    semesterMin: existing.semesterMin ?? undefined,
-    semesterMax: existing.semesterMax ?? undefined,
+    semesterMin: values.semesterMin ?? undefined,
+    semesterMax: values.semesterMax ?? undefined,
     scoringTemplateId: existing.scoringTemplateId ?? undefined,
     tiebreakerCriteria: existing.tiebreakerCriteria ?? undefined,
+    tiebreakerCriterionIds: existing.tiebreakerCriterionIds ?? undefined,
     prizes: existing.prizes.map((p) => ({
       trackId: p.trackId ?? undefined,
       rank: p.rank,
@@ -108,6 +123,8 @@ export function HackathonFormPage({ hackathonId }: { hackathonId?: string }) {
           endDate: toDateInput(existing.endDate),
           registrationOpenDate: toDateInput(existing.registrationOpenDate),
           registrationDeadline: toDateInput(existing.registrationDeadline),
+          semesterMin: existing.semesterMin ?? undefined,
+          semesterMax: existing.semesterMax ?? undefined,
         }
       : undefined,
   });
@@ -124,7 +141,7 @@ export function HackathonFormPage({ hackathonId }: { hackathonId?: string }) {
         },
       );
     } else {
-      create(values, {
+      create(buildCreatePayload(values), {
         onSuccess: () => router.push("/admin/hackathons"),
         onError: (err) => setSaveError(err instanceof Error ? err.message : "Failed to save event"),
       });
@@ -149,6 +166,18 @@ export function HackathonFormPage({ hackathonId }: { hackathonId?: string }) {
           {isEdit ? "Update event details." : "Fill in the details to create a new event."}
         </p>
       </div>
+
+      {isEdit && hackathonId && existing && (
+        <div style={{ marginBottom: 24, maxWidth: 720 }}>
+          <EventPhasePanel eventId={hackathonId} currentStatus={existing.status} />
+        </div>
+      )}
+
+      {isEdit && hackathonId && (
+        <div id="allowed-email-domains" style={{ marginBottom: 24, maxWidth: 720 }}>
+          <AllowedEmailDomainsPanel eventId={hackathonId} />
+        </div>
+      )}
 
       <form
         onSubmit={handleSubmit(onSubmit)}
@@ -203,6 +232,39 @@ export function HackathonFormPage({ hackathonId }: { hackathonId?: string }) {
             {errors.registrationDeadline && <span style={errorStyle}>{errors.registrationDeadline.message}</span>}
           </div>
         </div>
+
+        {isEdit && (
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col">
+              <label style={labelStyle}>Semester min (eligibility)</label>
+              <input
+                type="number"
+                {...register("semesterMin", {
+                  setValueAs: (v) => (v === "" || Number.isNaN(Number(v)) ? undefined : Number(v)),
+                })}
+                style={inputStyle}
+                min={1}
+                max={10}
+                placeholder="e.g. 4"
+              />
+              {errors.semesterMin && <span style={errorStyle}>{errors.semesterMin.message}</span>}
+            </div>
+            <div className="flex flex-col">
+              <label style={labelStyle}>Semester max (eligibility)</label>
+              <input
+                type="number"
+                {...register("semesterMax", {
+                  setValueAs: (v) => (v === "" || Number.isNaN(Number(v)) ? undefined : Number(v)),
+                })}
+                style={inputStyle}
+                min={1}
+                max={10}
+                placeholder="e.g. 8"
+              />
+              {errors.semesterMax && <span style={errorStyle}>{errors.semesterMax.message}</span>}
+            </div>
+          </div>
+        )}
 
         {saveError && <div style={bannerErrorStyle}>{saveError}</div>}
 

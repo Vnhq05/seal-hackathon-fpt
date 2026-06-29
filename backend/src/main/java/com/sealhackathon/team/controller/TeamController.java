@@ -8,6 +8,10 @@ import com.sealhackathon.team.dto.request.CreateTeamRequest;
 import com.sealhackathon.team.dto.request.JoinTeamRequest;
 import com.sealhackathon.team.dto.request.RenameTeamRequest;
 import com.sealhackathon.team.dto.request.SelectTrackRequest;
+import com.sealhackathon.team.dto.request.SelfDrawTrackRequest;
+import com.sealhackathon.team.dto.request.UpdateTeamRecruitmentRequest;
+import com.sealhackathon.team.dto.response.TrackAssignmentResponse;
+import com.sealhackathon.event.service.TrackDrawSessionService;
 import com.sealhackathon.team.dto.response.TeamResponse;
 import com.sealhackathon.team.service.MentorTeamService;
 import com.sealhackathon.team.service.TeamService;
@@ -43,6 +47,7 @@ public class TeamController {
 
     private final TeamService teamService;
     private final MentorTeamService mentorTeamService;
+    private final TrackDrawSessionService trackDrawSessionService;
     private final AuthPublicService authPublicService;
 
     @PostMapping
@@ -75,7 +80,9 @@ public class TeamController {
     public ResponseEntity<ApiResponse<Page<TeamResponse>>> getTeams(
             @PathVariable UUID eventId,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        Page<TeamResponse> page = teamService.getTeamsByEvent(eventId, pageable);
+        UUID userId = authPublicService.getCurrentUserId();
+        var role = authPublicService.getCurrentUserRole();
+        Page<TeamResponse> page = teamService.getTeamsByEvent(eventId, userId, role, pageable);
         return ResponseEntity.ok(ApiResponse.success(page));
     }
 
@@ -91,8 +98,21 @@ public class TeamController {
     @Operation(summary = "Get team by ID")
     public ResponseEntity<ApiResponse<TeamResponse>> getTeam(
             @PathVariable UUID eventId, @PathVariable UUID teamId) {
-        TeamResponse response = teamService.getTeamById(teamId);
+        UUID userId = authPublicService.getCurrentUserId();
+        var role = authPublicService.getCurrentUserRole();
+        TeamResponse response = teamService.getTeamById(teamId, userId, role);
         return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @PutMapping("/{teamId}/recruitment")
+    @Operation(summary = "Update team recruitment settings (leader only)")
+    public ResponseEntity<ApiResponse<TeamResponse>> updateRecruitment(
+            @PathVariable UUID eventId,
+            @PathVariable UUID teamId,
+            @Valid @RequestBody UpdateTeamRecruitmentRequest request) {
+        UUID leaderId = authPublicService.getCurrentUserId();
+        TeamResponse response = teamService.updateRecruitment(leaderId, eventId, teamId, request);
+        return ResponseEntity.ok(ApiResponse.success("Recruitment settings updated", response));
     }
 
     @PutMapping("/{teamId}")
@@ -142,6 +162,18 @@ public class TeamController {
         UUID leaderId = authPublicService.getCurrentUserId();
         TeamResponse response = teamService.selectTrack(leaderId, teamId, request);
         return ResponseEntity.ok(ApiResponse.success("Track selected", response));
+    }
+
+    @PostMapping("/{teamId}/track/draw")
+    @Operation(summary = "Team leader self-selects track during draw session (SEAL format)")
+    public ResponseEntity<ApiResponse<TrackAssignmentResponse>> selfDrawTrack(
+            @PathVariable UUID eventId,
+            @PathVariable UUID teamId,
+            @Valid @RequestBody SelfDrawTrackRequest request) {
+        UUID leaderId = authPublicService.getCurrentUserId();
+        TrackAssignmentResponse response = trackDrawSessionService.selfDrawTrack(
+                eventId, teamId, leaderId, request);
+        return ResponseEntity.ok(ApiResponse.success("Track selected via draw", response));
     }
 
     @PostMapping("/mentor-team")

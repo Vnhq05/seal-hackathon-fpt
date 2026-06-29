@@ -1,6 +1,10 @@
 "use client";
 
+import { useMyActiveEnrollment } from "@/features/events/hooks/use-enrollment";
+import { useHackathonPage } from "@/features/events/hooks/use-hackathon-page";
+import { useInvitationParticipationGate } from "@/features/teams/hooks/use-invitation-participation-gate";
 import { useTeamInvitation } from "@/features/teams/hooks/use-team-invitation";
+import { ParticipationBlockBanner } from "@/features/events/components/participation-block-banner";
 import { useRespondInvitation } from "@/features/teams/hooks/use-respond-invitation";
 import { InvitationDetailCard } from "./invitation-detail-card";
 import type { InvitationResponse } from "@/lib/api";
@@ -40,6 +44,9 @@ export function JoinTeamPage({ invitationId }: JoinTeamPageProps) {
     | null
     | undefined;
   const { respond, isPending } = useRespondInvitation(invitationId);
+  const { data: activeEnrollment } = useMyActiveEnrollment();
+  const { data: event } = useHackathonPage(activeEnrollment?.eventId ?? "");
+  const { canModifyMembers, registrationClosedReason } = useInvitationParticipationGate(event);
 
   if (isLoading) {
     return (
@@ -114,10 +121,14 @@ export function JoinTeamPage({ invitationId }: JoinTeamPageProps) {
               </p>
             </div>
 
+            {!canModifyMembers && registrationClosedReason && (
+              <ParticipationBlockBanner reason={registrationClosedReason} />
+            )}
+
             <div className="flex flex-col gap-2 pt-2">
               <button
                 type="button"
-                disabled={isPending}
+                disabled={isPending || !canModifyMembers}
                 onClick={() => respond("accept")}
                 style={{
                   ...acceptBtnStyle,

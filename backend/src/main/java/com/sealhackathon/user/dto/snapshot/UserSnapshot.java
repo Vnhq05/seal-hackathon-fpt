@@ -1,6 +1,7 @@
 package com.sealhackathon.user.dto.snapshot;
 
 import com.sealhackathon.common.enums.AccountStatus;
+import com.sealhackathon.common.enums.StudentStanding;
 import com.sealhackathon.common.enums.UserType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -25,4 +26,5 @@ public class UserSnapshot {
     private UserType userType;
     private AccountStatus status;
     private Integer semester;
+    private StudentStanding studentStanding;
 }

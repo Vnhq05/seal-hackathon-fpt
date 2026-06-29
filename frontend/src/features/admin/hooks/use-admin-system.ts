@@ -3,7 +3,6 @@ import { systemConfigApi, auditApi, type SystemConfigRequest, type AuditExportRe
 
 export const SYSTEM_CONFIG_KEY = "system-config" as const;
 export const EXPORT_PREVIEW_KEY = "export-preview" as const;
-export const JUDGE_VARIANCE_KEY = "judge-variance" as const;
 export const CALIBRATION_SESSIONS_KEY = "calibration-sessions" as const;
 
 // ═══════════════════════════════════════════════
@@ -46,23 +45,8 @@ export function useDownloadExport() {
 }
 
 // ═══════════════════════════════════════════════
-//  Analytics — NOT supported by backend yet
+//  Analytics — calibration stubs (not implemented)
 // ═══════════════════════════════════════════════
-
-/** @deprecated Judge variance endpoint does not exist. Returns empty data. */
-export function useJudgeVariance(_eventId?: string) {
-  return useQuery({
-    queryKey: [JUDGE_VARIANCE_KEY, _eventId],
-    queryFn: () =>
-      Promise.resolve({
-        entries: [] as never[],
-        interRaterReliability: 0,
-        averageVariance: 0,
-        chartData: [] as never[],
-      }),
-    enabled: false,
-  });
-}
 
 /** @deprecated Calibration endpoint does not exist. Returns empty data. */
 export function useCalibrationSessions() {

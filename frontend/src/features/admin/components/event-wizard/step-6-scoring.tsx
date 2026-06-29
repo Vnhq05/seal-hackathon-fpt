@@ -115,8 +115,44 @@ export function Step6Scoring({ onNext, onBack }: { onNext: () => void; onBack: (
       setValidationError("Each track must have a scoring template assigned");
       return false;
     }
+    if (data.tiebreakerCriterionIds.length === 0) {
+      setValidationError("Select at least one tiebreaker criterion in priority order");
+      return false;
+    }
     setValidationError(null);
     return true;
+  };
+
+  const activeTemplate = data.applyToAllTracks
+    ? selectedSharedTemplate
+    : allTemplates.find((t) => t.id === data.tracks[0]?.scoringTemplateId);
+
+  const syncTiebreakerFromTemplate = (template: ScoringTemplateResponse | undefined) => {
+    if (!template) return;
+    const validIds = new Set(template.criteria.map((c) => c.id));
+    const filtered = data.tiebreakerCriterionIds.filter((id) => validIds.has(id));
+    if (filtered.length === data.tiebreakerCriterionIds.length && filtered.length > 0) return;
+    const defaultIds = [...template.criteria]
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map((c) => c.id);
+    updateData({
+      tiebreakerCriterionIds: defaultIds,
+      tiebreakerCriteria: defaultIds
+        .map((id) => template.criteria.find((c) => c.id === id)?.name)
+        .filter(Boolean)
+        .join(", "),
+    });
+  };
+
+  const moveTiebreaker = (index: number, direction: -1 | 1) => {
+    const ids = [...data.tiebreakerCriterionIds];
+    const target = index + direction;
+    if (target < 0 || target >= ids.length) return;
+    [ids[index], ids[target]] = [ids[target], ids[index]];
+    const names = ids
+      .map((id) => activeTemplate?.criteria.find((c) => c.id === id)?.name)
+      .filter(Boolean);
+    updateData({ tiebreakerCriterionIds: ids, tiebreakerCriteria: names.join(", ") });
   };
 
   const handleModeChange = (applyAll: boolean) => {
@@ -133,6 +169,9 @@ export function Step6Scoring({ onNext, onBack }: { onNext: () => void; onBack: (
       i === trackIndex ? { ...t, scoringTemplateId: templateId } : t
     );
     updateData({ tracks: updatedTracks });
+    if (trackIndex === 0 && templateId) {
+      syncTiebreakerFromTemplate(allTemplates.find((t) => t.id === templateId));
+    }
   };
 
   return (
@@ -200,7 +239,11 @@ export function Step6Scoring({ onNext, onBack }: { onNext: () => void; onBack: (
           <label style={labelStyle}>Scoring Template</label>
           <TemplateSelect
             value={data.scoringTemplateId}
-            onChange={(id) => updateData({ scoringTemplateId: id })}
+            onChange={(id) => {
+              updateData({ scoringTemplateId: id });
+              const template = allTemplates.find((t) => t.id === id);
+              syncTiebreakerFromTemplate(template);
+            }}
             templates={allTemplates}
             isLoading={isLoading}
             isError={isError}
@@ -249,6 +292,30 @@ export function Step6Scoring({ onNext, onBack }: { onNext: () => void; onBack: (
               );
             })
           )}
+        </div>
+      )}
+
+      {activeTemplate && (
+        <div style={{ padding: 16, backgroundColor: "#f8f9fc", borderRadius: 10, border: "1px solid rgba(223,226,236,0.8)" }}>
+          <label style={labelStyle}>Tiebreaker priority (first wins ties)</label>
+          <p style={{ fontSize: 12, color: "#8891a5", marginBottom: 8 }}>
+            Order criteria used when teams have the same round score.
+          </p>
+          <div className="flex flex-col gap-2">
+            {data.tiebreakerCriterionIds.map((id, index) => {
+              const criterion = activeTemplate.criteria.find((c) => c.id === id);
+              if (!criterion) return null;
+              return (
+                <div key={id} className="flex items-center justify-between gap-2" style={{ padding: "8px 12px", backgroundColor: "#fff", borderRadius: 6 }}>
+                  <span style={{ fontSize: 14 }}>{index + 1}. {criterion.name}</span>
+                  <div className="flex gap-1">
+                    <button type="button" onClick={() => moveTiebreaker(index, -1)} disabled={index === 0} style={{ padding: "4px 8px", fontSize: 12 }}>↑</button>
+                    <button type="button" onClick={() => moveTiebreaker(index, 1)} disabled={index === data.tiebreakerCriterionIds.length - 1} style={{ padding: "4px 8px", fontSize: 12 }}>↓</button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 

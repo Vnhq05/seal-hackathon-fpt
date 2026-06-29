@@ -19,14 +19,14 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
- * BR-14  Mentors are assigned at the event level (not per round).
+ * BR-14  Mentors are assigned per track (support teams in their track).
  *        Notification sent on assignment.
  *
  * References User (mentor) by ID — cross-module, no JPA relationship.
  */
 @Entity
 @Table(name = "mentor_assignments", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"event_id", "mentor_user_id"})
+        @UniqueConstraint(columnNames = {"event_id", "track_id", "mentor_user_id"})
 })
 @Getter
 @Setter
@@ -44,7 +44,8 @@ public class MentorAssignment extends BaseEntity {
     @Column(name = "mentor_user_id", nullable = false)
     private UUID mentorUserId;
 
-    @Column(name = "track_id")
+    @NotNull
+    @Column(name = "track_id", nullable = false)
     private UUID trackId;
 
     @NotNull

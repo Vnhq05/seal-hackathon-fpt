@@ -1,6 +1,5 @@
 import { eventApi, type PublishEventRequest } from "@/lib/api/event.api";
 import { roundApi } from "@/lib/api/round.api";
-import { assignmentApi } from "@/lib/api/assignment.api";
 import type { EventWizardData } from "@/features/admin/store/event-wizard.store";
 import { getEventEndDate } from "@/features/admin/utils/event-wizard.utils";
 
@@ -34,8 +33,8 @@ export function buildPublishPayload(
     semesterMax: data.semesterMax ?? undefined,
     scoringTemplateId: data.applyToAllTracks ? data.scoringTemplateId ?? undefined : undefined,
     tiebreakerCriteria: data.tiebreakerCriteria || undefined,
-    mentorUserIds: data.mentorUserIds.length > 0 ? data.mentorUserIds : undefined,
-    judgeUserIds: data.judgeUserIds.length > 0 ? data.judgeUserIds : undefined,
+    tiebreakerCriterionIds:
+      data.tiebreakerCriterionIds.length > 0 ? data.tiebreakerCriterionIds : undefined,
     tracks:
       data.competitionFormat === "SEAL_RAG_2026"
         ? undefined
@@ -72,18 +71,10 @@ export function buildPublishPayload(
             scoringDeadline: r.endDate,
             advancementCutoff: r.advancementCutoff,
             roundWeight: data.rounds.length === 1 ? 100 : r.roundWeight,
+            roundType:
+              data.rounds.length > 1 && i === data.rounds.length - 1 ? "FINAL" : "PRELIMINARY",
           })),
   };
-}
-
-export function validatePublishReadiness(data: EventWizardData): string | null {
-  if (data.competitionFormat === "SEAL_RAG_2026") {
-    return null;
-  }
-  if (data.rounds.length > 0 && data.judgeUserIds.length === 0) {
-    return "At least one lecturer with JUDGE or BOTH role is required when the event has rounds.";
-  }
-  return null;
 }
 
 function isPublishEndpointMissing(err: unknown): boolean {
@@ -92,28 +83,24 @@ function isPublishEndpointMissing(err: unknown): boolean {
   return msg.includes("404") || msg.includes("not found") || msg.includes("no static resource");
 }
 
-async function publishWithRollback(payload: PublishEventRequest): Promise<void> {
+async function publishWithRollback(payload: PublishEventRequest): Promise<string> {
   const { rounds = [], ...eventPayload } = payload;
   let eventId: string | null = null;
 
   try {
-    const created = await eventApi.create({
-      ...eventPayload,
-      judgeUserIds: eventPayload.judgeUserIds,
-    });
+    const created = await eventApi.create(eventPayload);
     eventId = created.id;
 
     if (eventPayload.competitionFormat === "SEAL_RAG_2026") {
-      return;
+      return eventId!;
     }
 
     for (let i = 0; i < rounds.length; i++) {
-      const round = await roundApi.create(created.id, rounds[i]);
-      const judgeIds = eventPayload.judgeUserIds ?? [];
-      for (const judgeId of judgeIds) {
-        await assignmentApi.assignJudge(created.id, round.id, { judgeUserId: judgeId });
-      }
+      const roundRequest = rounds[i];
+      await roundApi.create(created.id, roundRequest);
     }
+
+    return eventId!;
   } catch (err) {
     if (eventId) {
       try {
@@ -134,13 +121,13 @@ async function publishWithRollback(payload: PublishEventRequest): Promise<void> 
   }
 }
 
-export async function publishEvent(payload: PublishEventRequest): Promise<void> {
+export async function publishEvent(payload: PublishEventRequest): Promise<string | null> {
   try {
-    await eventApi.publish(payload);
+    const response = await eventApi.publish(payload);
+    return response.id ?? null;
   } catch (err) {
     if (isPublishEndpointMissing(err)) {
-      await publishWithRollback(payload);
-      return;
+      return publishWithRollback(payload);
     }
     throw err;
   }

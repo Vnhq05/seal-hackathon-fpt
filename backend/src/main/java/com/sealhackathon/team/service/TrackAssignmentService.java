@@ -98,6 +98,11 @@ public class TrackAssignmentService {
 
     private TrackAssignmentResponse assignOne(UUID eventId, UUID assignedBy, UUID teamId, UUID trackId,
                                                TrackAssignmentMethod method) {
+        return assignOneInternal(eventId, assignedBy, teamId, trackId, method);
+    }
+
+    public TrackAssignmentResponse assignOneInternal(UUID eventId, UUID assignedBy, UUID teamId, UUID trackId,
+                                               TrackAssignmentMethod method) {
         Team team = teamRepository.findById(teamId)
                 .orElseThrow(() -> new ResourceNotFoundException("Team", "id", teamId));
         if (!team.getEventId().equals(eventId)) {
@@ -108,6 +113,9 @@ public class TrackAssignmentService {
                 .orElseThrow(() -> new ResourceNotFoundException("Track", "id", trackId));
         if (!track.getHackathonEvent().getId().equals(eventId)) {
             throw new BusinessException("Track does not belong to this event", HttpStatus.BAD_REQUEST);
+        }
+        if (track.getStatus() == com.sealhackathon.event.domain.enums.TrackStatus.LOCKED) {
+            throw new BusinessException("Track '" + track.getName() + "' is locked", HttpStatus.CONFLICT);
         }
 
         formatRuleEngine.validateTrackCapacity(eventId, trackId);

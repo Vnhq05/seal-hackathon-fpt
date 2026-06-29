@@ -19,12 +19,16 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class CriteriaService {
 
+    private static final int DEFAULT_MIN_SCORE = 1;
+    private static final int DEFAULT_MAX_SCORE = 5;
+
     private final CriteriaRepository criteriaRepository;
     private final RoundService roundService;
 
     @Transactional
     public CriteriaResponse addCriteria(UUID roundId, CriteriaRequest request) {
         Round round = roundService.getRound(roundId);
+        validateScoreRange(request);
 
         int currentSum = criteriaRepository.sumWeightsByRoundId(roundId);
         if (currentSum + request.getWeight() > 100) {
@@ -40,6 +44,8 @@ public class CriteriaService {
                 .description(request.getDescription())
                 .weight(request.getWeight())
                 .sortOrder(request.getSortOrder() != null ? request.getSortOrder() : 0)
+                .minScore(resolveMinScore(request))
+                .maxScore(resolveMaxScore(request))
                 .build();
 
         criteria = criteriaRepository.save(criteria);
@@ -49,6 +55,7 @@ public class CriteriaService {
     @Transactional
     public CriteriaResponse updateCriteria(UUID criteriaId, CriteriaRequest request) {
         Criteria criteria = getCriteria(criteriaId);
+        validateScoreRange(request);
 
         if (criteriaRepository.countScoresByCriteriaId(criteriaId) > 0) {
             throw new BusinessException(
@@ -71,6 +78,8 @@ public class CriteriaService {
         if (request.getSortOrder() != null) {
             criteria.setSortOrder(request.getSortOrder());
         }
+        criteria.setMinScore(resolveMinScore(request));
+        criteria.setMaxScore(resolveMaxScore(request));
 
         criteria = criteriaRepository.save(criteria);
         return toResponse(criteria);
@@ -106,6 +115,10 @@ public class CriteriaService {
                     HttpStatus.BAD_REQUEST) {};
         }
 
+        for (CriteriaRequest req : requests) {
+            validateScoreRange(req);
+        }
+
         criteriaRepository.deleteAllByRoundId(roundId);
         criteriaRepository.flush();
 
@@ -116,6 +129,8 @@ public class CriteriaService {
                         .description(req.getDescription())
                         .weight(req.getWeight())
                         .sortOrder(req.getSortOrder() != null ? req.getSortOrder() : 0)
+                        .minScore(resolveMinScore(req))
+                        .maxScore(resolveMaxScore(req))
                         .build())
                 .toList();
 
@@ -137,6 +152,24 @@ public class CriteriaService {
                 .orElseThrow(() -> new ResourceNotFoundException("Criteria", "id", criteriaId));
     }
 
+    private void validateScoreRange(CriteriaRequest request) {
+        int minScore = resolveMinScore(request);
+        int maxScore = resolveMaxScore(request);
+        if (minScore >= maxScore) {
+            throw new BusinessException(
+                    "minScore must be less than maxScore",
+                    HttpStatus.BAD_REQUEST) {};
+        }
+    }
+
+    private int resolveMinScore(CriteriaRequest request) {
+        return request.getMinScore() != null ? request.getMinScore() : DEFAULT_MIN_SCORE;
+    }
+
+    private int resolveMaxScore(CriteriaRequest request) {
+        return request.getMaxScore() != null ? request.getMaxScore() : DEFAULT_MAX_SCORE;
+    }
+
     private CriteriaResponse toResponse(Criteria c) {
         return CriteriaResponse.builder()
                 .id(c.getId())
@@ -144,6 +177,8 @@ public class CriteriaService {
                 .description(c.getDescription())
                 .weight(c.getWeight())
                 .sortOrder(c.getSortOrder())
+                .minScore(c.getMinScore())
+                .maxScore(c.getMaxScore())
                 .build();
     }
 }

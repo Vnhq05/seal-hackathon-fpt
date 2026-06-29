@@ -2,7 +2,9 @@
 
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { eventApi, roundApi, rankingApi } from "@/lib/api";
+import { eventApi, roundApi, trackApi } from "@/lib/api";
+import type { RoundType } from "@/lib/api/types";
+import { useRoundRankings } from "@/features/rankings/hooks/use-ranking";
 import { useDownloadRanking } from "@/features/rankings/hooks/use-download-ranking";
 import { getPrizeLabel } from "@/lib/prize.utils";
 
@@ -64,14 +66,23 @@ export function LeaderboardPage({ roundId: initialRoundId }: LeaderboardPageProp
   });
 
   const [roundId, setRoundId] = useState<string>(initialRoundId || "");
-  const [roundTypeFilter, setRoundTypeFilter] = useState<string>("");
+  const [roundTypeFilter, setRoundTypeFilter] = useState<RoundType | "">("");
+  const [trackId, setTrackId] = useState<string>("");
   const activeRoundId = roundId || rounds[0]?.id || "";
+  const activeRound = rounds.find((r) => r.id === activeRoundId);
 
-  const { data: rankings, isLoading } = useQuery({
-    queryKey: ["leaderboard-rankings", activeRoundId],
-    queryFn: () => rankingApi.getRankings(activeRoundId),
-    enabled: !!activeRoundId,
+  const { data: tracks = [] } = useQuery({
+    queryKey: ["leaderboard-tracks", activeEventId],
+    queryFn: () => trackApi.list(activeEventId),
+    enabled: !!activeEventId && roundTypeFilter === "PRELIMINARY",
   });
+
+  const effectiveTrackId =
+    roundTypeFilter === "PRELIMINARY" || activeRound?.roundType === "PRELIMINARY"
+      ? trackId || undefined
+      : undefined;
+
+  const { data: rankings, isLoading } = useRoundRankings(activeRoundId, effectiveTrackId);
 
   const sortedRankings = useMemo(() => {
     if (!rankings) return [];
@@ -117,8 +128,10 @@ export function LeaderboardPage({ roundId: initialRoundId }: LeaderboardPageProp
         <select
           value={roundTypeFilter}
           onChange={(e) => {
-            setRoundTypeFilter(e.target.value);
-            const match = rounds.find((r) => r.roundType === e.target.value);
+            const next = e.target.value as RoundType | "";
+            setRoundTypeFilter(next);
+            setTrackId("");
+            const match = rounds.find((r) => r.roundType === next);
             if (match) setRoundId(match.id);
           }}
           className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] px-3 py-2 text-sm text-seal-text outline-none focus:border-royal/40"
@@ -141,6 +154,20 @@ export function LeaderboardPage({ roundId: initialRoundId }: LeaderboardPageProp
           ))}
           {rounds.length === 0 && <option value="">No rounds</option>}
         </select>
+
+        {(roundTypeFilter === "PRELIMINARY" || activeRound?.roundType === "PRELIMINARY") && tracks.length > 0 && (
+          <select
+            value={trackId}
+            onChange={(e) => setTrackId(e.target.value)}
+            className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] px-3 py-2 text-sm text-seal-text outline-none focus:border-royal/40"
+            style={{ minWidth: 160 }}
+          >
+            <option value="">All tracks</option>
+            {tracks.map((t) => (
+              <option key={t.id} value={t.id}>{t.name}</option>
+            ))}
+          </select>
+        )}
 
         {selectedEvent && (
           <span className={`ml-auto rounded-full px-3 py-1 text-xs font-semibold ${

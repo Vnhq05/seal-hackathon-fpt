@@ -57,6 +57,8 @@ class CriteriaServiceTest {
 
         assertThat(result.getName()).isEqualTo("Technical");
         assertThat(result.getWeight()).isEqualTo(40);
+        assertThat(result.getMinScore()).isEqualTo(1);
+        assertThat(result.getMaxScore()).isEqualTo(5);
     }
 
     @Test

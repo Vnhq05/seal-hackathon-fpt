@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useForm, Controller, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
@@ -12,9 +13,11 @@ import { PasswordStrength } from "@/features/auth/components/password-strength";
 import { PasswordField } from "@/features/auth/components/password-field";
 import { useRegister } from "@/features/auth/hooks/use-register";
 import {
-  registerSchema,
+  createRegisterSchema,
   type RegisterFormValues,
 } from "@/features/auth/schemas/register.schema";
+import { useRegistrationAllowedDomains } from "@/features/events/hooks/use-allowed-email-domains";
+import { uniqueUniversityLabels } from "@/lib/email-domain";
 
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
@@ -24,6 +27,18 @@ function getErrorMessage(error: unknown): string {
 export function RegisterForm() {
   const { register: doRegister, isPending, isError, error, isSuccess } = useRegister();
 
+  const { data: allowedDomains = [], isLoading: domainsLoading } = useRegistrationAllowedDomains();
+
+  const registerSchema = useMemo(
+    () => createRegisterSchema(allowedDomains),
+    [allowedDomains],
+  );
+
+  const universityOptions = useMemo(
+    () => uniqueUniversityLabels(allowedDomains),
+    [allowedDomains],
+  );
+
   const {
     register,
     handleSubmit,
@@ -31,11 +46,14 @@ export function RegisterForm() {
     formState: { errors },
   } = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
-    defaultValues: { userType: "FPT_STUDENT", agreeToTerms: false },
+    defaultValues: { userType: "FPT_STUDENT", agreeToTerms: false, confirmEnrolled: false },
   });
 
   const userType = useWatch({ control, name: "userType" });
   const password = useWatch({ control, name: "password" }) ?? "";
+
+  const externalDomainsBlocked =
+    userType === "EXTERNAL_STUDENT" && (domainsLoading || allowedDomains.length === 0);
 
   if (isSuccess) {
     return (
@@ -142,17 +160,43 @@ export function RegisterForm() {
         </div>
 
         {userType === "EXTERNAL_STUDENT" && (
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="universityName">Tên trường</Label>
-            <Input
-              id="universityName"
-              type="text"
-              placeholder="VD: Đại học Bách Khoa Hà Nội"
-              autoComplete="organization"
-              error={errors.universityName?.message}
-              {...register("universityName")}
-            />
-          </div>
+          <>
+            {domainsLoading ? (
+              <div className="rounded-md border border-seal-border bg-seal-surface-muted px-3 py-2 text-xs text-seal-text-secondary">
+                Đang tải danh sách domain email được phép...
+              </div>
+            ) : allowedDomains.length === 0 ? (
+              <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                Không có domain email được phép. Vui lòng thử lại sau hoặc liên hệ ban tổ chức.
+              </div>
+            ) : (
+              <div className="rounded-md border border-seal-border bg-seal-surface-muted px-3 py-2 text-xs text-seal-text-secondary">
+                <p className="font-medium text-seal-text">Email trường được phép</p>
+                <p className="mt-1">
+                  {allowedDomains.map((d) => `@${d.domain}`).join(", ")}
+                </p>
+              </div>
+            )}
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="universityName">Trường đại học</Label>
+              <select
+                id="universityName"
+                className="h-10 w-full rounded-md border border-seal-border-dark bg-white px-3 text-sm text-seal-text outline-none focus:border-seal-cyan"
+                aria-invalid={!!errors.universityName}
+                {...register("universityName")}
+              >
+                <option value="">Chọn trường</option>
+                {universityOptions.map((label) => (
+                  <option key={label} value={label}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+              {errors.universityName && (
+                <p className="text-xs text-seal-error">{errors.universityName.message}</p>
+              )}
+            </div>
+          </>
         )}
 
         <div className="flex flex-col gap-1.5">
@@ -189,6 +233,22 @@ export function RegisterForm() {
             <input
               type="checkbox"
               className="mt-0.5 h-4 w-4 cursor-pointer rounded border-seal-border-dark accent-seal-cyan"
+              {...register("confirmEnrolled")}
+            />
+            <span className="text-[13px] leading-relaxed text-seal-text-secondary">
+              Tôi xác nhận đang là sinh viên đang theo học (chưa tốt nghiệp).
+            </span>
+          </label>
+          {errors.confirmEnrolled && (
+            <p className="text-xs text-seal-error">{errors.confirmEnrolled.message}</p>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <label className="flex cursor-pointer items-start gap-2">
+            <input
+              type="checkbox"
+              className="mt-0.5 h-4 w-4 cursor-pointer rounded border-seal-border-dark accent-seal-cyan"
               {...register("agreeToTerms")}
             />
             <span className="text-[13px] leading-relaxed text-seal-text-secondary">
@@ -208,7 +268,13 @@ export function RegisterForm() {
           )}
         </div>
 
-        <Button type="submit" isLoading={isPending} size="lg" className="mt-1">
+        <Button
+          type="submit"
+          isLoading={isPending}
+          size="lg"
+          className="mt-1"
+          disabled={externalDomainsBlocked}
+        >
           {isPending ? "Creating account..." : "Create account"}
         </Button>
       </form>

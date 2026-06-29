@@ -4,10 +4,13 @@ import com.sealhackathon.common.exception.DuplicateResourceException;
 import com.sealhackathon.common.exception.ResourceNotFoundException;
 import com.sealhackathon.event.domain.HackathonEvent;
 import com.sealhackathon.event.domain.Track;
+import com.sealhackathon.event.domain.enums.TrackStatus;
+import com.sealhackathon.event.dto.request.AssignTrackTopicRequest;
 import com.sealhackathon.event.dto.request.CreateTrackRequest;
 import com.sealhackathon.event.dto.response.TrackResponse;
 import com.sealhackathon.event.repository.HackathonEventRepository;
 import com.sealhackathon.event.repository.TrackRepository;
+import com.sealhackathon.team.repository.TeamRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +24,7 @@ public class TrackService {
 
     private final TrackRepository trackRepository;
     private final HackathonEventRepository eventRepository;
+    private final TeamRepository teamRepository;
 
     @Transactional
     public TrackResponse createTrack(UUID eventId, CreateTrackRequest request) {
@@ -73,6 +77,18 @@ public class TrackService {
     }
 
     @Transactional
+    public TrackResponse assignTopic(UUID eventId, UUID trackId, AssignTrackTopicRequest request) {
+        Track track = getTrackEntity(trackId, eventId);
+        if (track.getStatus() == TrackStatus.LOCKED) {
+            throw new com.sealhackathon.common.exception.BusinessException(
+                    "Cannot update topic on a locked track",
+                    org.springframework.http.HttpStatus.CONFLICT);
+        }
+        track.setTopic(request.getTopic().trim());
+        return toResponse(trackRepository.save(track));
+    }
+
+    @Transactional
     public void deleteTrack(UUID eventId, UUID trackId) {
         Track track = getTrackEntity(trackId, eventId);
         trackRepository.delete(track);
@@ -88,14 +104,18 @@ public class TrackService {
     }
 
     private TrackResponse toResponse(Track track) {
+        UUID eventId = track.getHackathonEvent().getId();
+        long assignedCount = teamRepository.countByEventIdAndTrackId(eventId, track.getId());
         return TrackResponse.builder()
                 .id(track.getId())
-                .eventId(track.getHackathonEvent().getId())
+                .eventId(eventId)
                 .name(track.getName())
                 .description(track.getDescription())
                 .topic(track.getTopic())
                 .maxTeams(track.getMaxTeams())
                 .scoringTemplateId(track.getScoringTemplateId())
+                .status(track.getStatus())
+                .assignedTeamCount((int) assignedCount)
                 .build();
     }
 }

@@ -5,12 +5,14 @@ import com.sealhackathon.common.exception.ResourceNotFoundException;
 import com.sealhackathon.event.domain.HackathonEvent;
 import com.sealhackathon.event.domain.Round;
 import com.sealhackathon.event.domain.Track;
+import com.sealhackathon.event.domain.enums.RoundType;
 import com.sealhackathon.event.dto.response.EventJudgeResponse;
 import com.sealhackathon.event.repository.HackathonEventRepository;
 import com.sealhackathon.event.repository.RoundRepository;
 import com.sealhackathon.event.repository.TrackRepository;
 import com.sealhackathon.event.service.EventJudgeService;
 import com.sealhackathon.event.service.EventService;
+import com.sealhackathon.event.service.JudgeAssignmentService;
 import com.sealhackathon.judging.domain.TeamJudgeAssignment;
 import com.sealhackathon.judging.dto.request.CreateTeamAssignmentsRequest;
 import com.sealhackathon.judging.dto.response.EventAssignmentsOverviewResponse;
@@ -51,6 +53,7 @@ public class AssignmentOverviewService {
     private final SubmissionRepository submissionRepository;
     private final TeamJudgeAssignmentRepository assignmentRepository;
     private final EventJudgeService eventJudgeService;
+    private final JudgeAssignmentService judgeAssignmentService;
     private final TeamJudgeAssignmentService teamJudgeAssignmentService;
     private final TeamPublicService teamPublicService;
     private final TeamMemberRepository teamMemberRepository;
@@ -78,14 +81,14 @@ public class AssignmentOverviewService {
 
         eventService.enforceEventOwnership(eventId);
 
-        List<EventJudgeResponse> eligibleJudges = eventJudgeService.getEventJudges(eventId);
-
-        Map<UUID, String> trackNames = trackRepository.findByHackathonEventId(eventId).stream()
-                .collect(Collectors.toMap(Track::getId, Track::getName));
-
         List<Team> teams = teamRepository.findByEventId(eventId).stream()
                 .filter(t -> trackId == null || trackId.equals(t.getTrackId()))
                 .toList();
+
+        List<EventJudgeResponse> eligibleJudges = resolveEligibleJudges(eventId, round, roundId, trackId, teams);
+
+        Map<UUID, String> trackNames = trackRepository.findByHackathonEventId(eventId).stream()
+                .collect(Collectors.toMap(Track::getId, Track::getName));
 
         Map<UUID, List<TeamJudgeAssignment>> assignmentsByTeam = assignmentRepository
                 .findByRoundId(roundId).stream()
@@ -135,7 +138,7 @@ public class AssignmentOverviewService {
         }
 
         for (UUID judgeId : judgeIds) {
-            validateJudgeCandidate(request.getEventId(), request.getTeamId(), judgeId);
+            validateJudgeCandidate(request.getEventId(), request.getRoundId(), request.getTeamId(), judgeId);
         }
 
         assignmentRepository.findByTeamIdAndRoundId(request.getTeamId(), request.getRoundId())
@@ -159,17 +162,56 @@ public class AssignmentOverviewService {
         assignmentRepository.delete(assignment);
     }
 
-    private void validateJudgeCandidate(UUID eventId, UUID teamId, UUID judgeUserId) {
+    private void validateJudgeCandidate(UUID eventId, UUID roundId, UUID teamId, UUID judgeUserId) {
         if (!eventJudgeService.isEventJudge(eventId, judgeUserId)) {
             throw new BusinessException(
                     "Judge must be assigned to the event with role JUDGE or BOTH",
                     HttpStatus.BAD_REQUEST) {};
         }
+
+        Team team = teamRepository.findById(teamId)
+                .orElseThrow(() -> new ResourceNotFoundException("Team", "id", teamId));
+
+        if (!judgeAssignmentService.isJudgeAssignedToRoundScope(roundId, judgeUserId, team.getTrackId())) {
+            throw new BusinessException(
+                    "Judge is not assigned to this round and track",
+                    HttpStatus.BAD_REQUEST) {};
+        }
+
         if (teamPublicService.isMentorOfTeam(judgeUserId, teamId)) {
             throw new BusinessException(
                     "Cannot assign judge who is the mentor of this team (conflict of interest)",
                     HttpStatus.CONFLICT) {};
         }
+    }
+
+    private List<EventJudgeResponse> resolveEligibleJudges(
+            UUID eventId, Round round, UUID roundId, UUID trackId, List<Team> teams) {
+        List<UUID> judgeUserIds;
+        if (round.getRoundType() == RoundType.FINAL) {
+            judgeUserIds = judgeAssignmentService.getEligibleJudgeUserIds(roundId, null);
+        } else if (trackId != null) {
+            judgeUserIds = judgeAssignmentService.getEligibleJudgeUserIds(roundId, trackId);
+        } else {
+            judgeUserIds = teams.stream()
+                    .map(Team::getTrackId)
+                    .filter(java.util.Objects::nonNull)
+                    .distinct()
+                    .flatMap(tid -> judgeAssignmentService.getEligibleJudgeUserIds(roundId, tid).stream())
+                    .distinct()
+                    .toList();
+        }
+
+        return judgeUserIds.stream()
+                .map(judgeUserId -> {
+                    var judge = userPublicService.findById(judgeUserId).orElse(null);
+                    return EventJudgeResponse.builder()
+                            .judgeUserId(judgeUserId)
+                            .judgeFullName(judge != null ? judge.getFullName() : null)
+                            .judgeEmail(judge != null ? judge.getEmail() : null)
+                            .build();
+                })
+                .toList();
     }
 
     private TeamAssignmentOverviewResponse buildTeamRow(

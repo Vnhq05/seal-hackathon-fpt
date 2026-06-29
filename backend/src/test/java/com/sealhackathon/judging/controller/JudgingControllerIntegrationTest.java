@@ -80,7 +80,8 @@ class JudgingControllerIntegrationTest extends BaseIntegrationTest {
         roundId = round.getId();
 
         Criteria criteria = criteriaRepository.save(Criteria.builder()
-                .round(round).name("Technical").weight(100).sortOrder(1).build());
+                .round(round).name("Technical").weight(100).sortOrder(1)
+                .minScore(0).maxScore(10).build());
         criteriaId = criteria.getId();
 
         judgeAssignmentRepository.save(JudgeAssignment.builder()
@@ -107,7 +108,7 @@ class JudgingControllerIntegrationTest extends BaseIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(String.format("""
                                 {"submissionId":"%s","scores":[
-                                  {"criteriaId":"%s","score":85}
+                                  {"criteriaId":"%s","score":8}
                                 ]}
                                 """, submissionId, criteriaId)))
                 .andExpect(status().isCreated())
@@ -123,7 +124,7 @@ class JudgingControllerIntegrationTest extends BaseIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(String.format("""
                                 {"submissionId":"%s","scores":[
-                                  {"criteriaId":"%s","score":30}
+                                  {"criteriaId":"%s","score":0}
                                 ]}
                                 """, submissionId, criteriaId)))
                 .andExpect(status().isBadRequest())
@@ -138,7 +139,7 @@ class JudgingControllerIntegrationTest extends BaseIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(String.format("""
                                 {"submissionId":"%s","scores":[
-                                  {"criteriaId":"%s","score":95,"comment":"Outstanding work"}
+                                  {"criteriaId":"%s","score":10,"comment":"Outstanding work"}
                                 ]}
                                 """, submissionId, criteriaId)))
                 .andExpect(status().isCreated());
@@ -155,7 +156,7 @@ class JudgingControllerIntegrationTest extends BaseIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(String.format("""
                                 {"submissionId":"%s","scores":[
-                                  {"criteriaId":"%s","score":70}
+                                  {"criteriaId":"%s","score":7}
                                 ]}
                                 """, submissionId, criteriaId)))
                 .andExpect(status().isForbidden());

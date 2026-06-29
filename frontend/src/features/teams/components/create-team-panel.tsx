@@ -3,23 +3,28 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { teamApi, invitationApi } from "@/lib/api";
-import { useWaitingList } from "@/features/events/hooks/use-enrollment";
+import { useWaitingList, enrollmentWaitingListKey } from "@/features/events/hooks/use-enrollment";
+import { useEventParticipationGate } from "@/features/events/hooks/use-event-participation-gate";
+import { resolveEventTeamSize } from "@/features/events/utils/participation-gate.utils";
 import { useSystemTeamConfig } from "@/features/teams/hooks/use-system-team-config";
 import type { EventResponse } from "@/lib/api";
+import { HACKATHON_SKILL_ROLE_LABELS } from "@/lib/api/types";
+import { JOINABLE_TEAMS_KEY } from "@/features/teams/hooks/use-joinable-teams";
 
 interface CreateTeamPanelProps {
   event: EventResponse;
   onCreated?: () => void;
 }
 
-function isRegistrationDeadlinePassed(deadline: string): boolean {
-  return Date.now() > new Date(`${deadline.split("T")[0]}T23:59:59`).getTime();
-}
-
 export function CreateTeamPanel({ event, onCreated }: CreateTeamPanelProps) {
   const qc = useQueryClient();
   const { data: config } = useSystemTeamConfig();
-  const minTeamMembers = config?.minTeamMembers ?? 3;
+  const { minTeam: minTeamMembers } = resolveEventTeamSize(
+    event,
+    config?.minTeamMembers ?? 3,
+    config?.maxTeamMembers ?? 5,
+  );
+  const { canModifyMembers, registrationClosedReason } = useEventParticipationGate(event);
   const { data: waitingList, isLoading: waitingLoading } = useWaitingList(event.id);
   const [teamName, setTeamName] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -47,8 +52,8 @@ export function CreateTeamPanel({ event, onCreated }: CreateTeamPanelProps) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["my-teams-all-events"] });
-      qc.invalidateQueries({ queryKey: ["waiting-list", event.id] });
-      qc.invalidateQueries({ queryKey: ["joinable-teams", event.id] });
+      qc.invalidateQueries({ queryKey: enrollmentWaitingListKey(event.id) });
+      qc.invalidateQueries({ queryKey: [JOINABLE_TEAMS_KEY, event.id] });
       onCreated?.();
     },
   });
@@ -72,9 +77,7 @@ export function CreateTeamPanel({ event, onCreated }: CreateTeamPanelProps) {
   };
 
   const available = (waitingList ?? []).filter((e) => e.status === "APPROVED");
-  const registrationClosed = event.registrationDeadline
-    ? isRegistrationDeadlinePassed(event.registrationDeadline)
-    : false;
+  const registrationClosed = !canModifyMembers;
 
   return (
     <div className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-6">
@@ -118,7 +121,19 @@ export function CreateTeamPanel({ event, onCreated }: CreateTeamPanelProps) {
                     className="rounded border-seal-border"
                   />
                   <div className="min-w-0">
-                    <div className="truncate text-sm text-seal-text">{e.userFullName || e.userEmail}</div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="truncate text-sm text-seal-text">{e.userFullName || e.userEmail}</div>
+                      {e.isLookingForTeam && (
+                        <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                          Looking for team
+                        </span>
+                      )}
+                      {e.preferredRole && (
+                        <span className="rounded-md bg-seal-cyan/10 px-2 py-0.5 text-[10px] font-medium text-seal-cyan">
+                          {HACKATHON_SKILL_ROLE_LABELS[e.preferredRole]}
+                        </span>
+                      )}
+                    </div>
                     <div className="truncate text-xs text-seal-text-muted">
                       {e.userEmail}
                       {e.userStudentId ? ` · ${e.userStudentId}` : ""}
@@ -135,7 +150,7 @@ export function CreateTeamPanel({ event, onCreated }: CreateTeamPanelProps) {
 
         {registrationClosed && (
           <div className="rounded-lg bg-amber-50 p-3 text-xs font-medium text-amber-800">
-            Registration deadline has passed. Team creation is no longer available.
+            {registrationClosedReason ?? "Registration is closed. Team changes are no longer available."}
           </div>
         )}
 

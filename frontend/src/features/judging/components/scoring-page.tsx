@@ -1,22 +1,34 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useSubmissionScoring } from "@/features/judging/hooks/use-submission-scoring";
 import { useSubmitScores } from "@/features/judging/hooks/use-submit-scores";
 import { useSaveScoringDraft } from "@/features/judging/hooks/use-save-scoring-draft";
-import { scoringFormSchema, type ScoringFormValues } from "@/features/judging/schemas/scoring.schema";
+import {
+  createScoringFormSchema,
+  scoringFormSchema,
+  type ScoringFormValues,
+  needsCommentForScore,
+  computeWeightedScore,
+  computeMaxWeightedScore,
+} from "@/features/judging/schemas/scoring.schema";
+import { getScoreLabel } from "@/features/judging/constants/scoring-scale";
 import { usePortalBase } from "@/shared/hooks/use-portal-base";
 import type { SubmissionForScoring } from "@/features/judging/types/judge.types";
 
-function needsComment(score: number): boolean {
-  return score < 5 || score > 9;
-}
-
 function hasScore(score: number | null | undefined): score is number {
   return score != null;
+}
+
+function conflictMessage(reason: string | null): string {
+  if (reason === "MENTOR_OF_TEAM") {
+    return "Bạn là mentor của team này nên không thể chấm điểm bài nộp.";
+  }
+  return reason ?? "Xung đột lợi ích — không thể chấm điểm.";
 }
 
 export function ScoringPage({ teamId, roundId }: { teamId: string; roundId: string }) {
@@ -41,8 +53,16 @@ export function ScoringPage({ teamId, roundId }: { teamId: string; roundId: stri
     });
   }, [submission]);
 
+  const formSchema = useMemo(
+    () =>
+      submission?.criteria.length
+        ? createScoringFormSchema(submission.criteria)
+        : scoringFormSchema,
+    [submission],
+  );
+
   const { handleSubmit, setValue, reset, control } = useForm<ScoringFormValues>({
-    resolver: zodResolver(scoringFormSchema),
+    resolver: zodResolver(formSchema),
     defaultValues: { scores: defaultScores },
   });
 
@@ -53,16 +73,26 @@ export function ScoringPage({ teamId, roundId }: { teamId: string; roundId: stri
   const watchedScores = useWatch({ control, name: "scores" });
 
   const allScored = useMemo(() => {
-    return (watchedScores ?? []).every((s) => hasScore(s.score) && s.score <= 10);
-  }, [watchedScores]);
+    if (!submission) return false;
+    return (watchedScores ?? []).every((s) => {
+      if (!hasScore(s.score)) return false;
+      const criterion = submission.criteria.find((c) => c.id === s.criterionId);
+      if (!criterion) return false;
+      return s.score >= criterion.minScore && s.score <= criterion.maxScore;
+    });
+  }, [watchedScores, submission]);
 
   const commentErrors = useMemo(() => {
-    return (watchedScores ?? []).map((s) =>
-      hasScore(s.score) && needsComment(s.score) && !s.feedback.trim()
-        ? "Bắt buộc khi điểm < 5 hoặc > 9"
-        : null,
-    );
-  }, [watchedScores]);
+    if (!submission) return [];
+    return (watchedScores ?? []).map((s) => {
+      const criterion = submission.criteria.find((c) => c.id === s.criterionId);
+      if (!criterion || !hasScore(s.score)) return null;
+      return needsCommentForScore(s.score, criterion.minScore, criterion.maxScore)
+        && !s.feedback.trim()
+        ? "Bắt buộc khi điểm ở mức tối thiểu hoặc tối đa"
+        : null;
+    });
+  }, [watchedScores, submission]);
 
   const totalWeighted = useMemo(() => {
     if (!submission) return 0;
@@ -70,9 +100,14 @@ export function ScoringPage({ teamId, roundId }: { teamId: string; roundId: stri
       if (!hasScore(s.score)) return sum;
       const criterion = submission.criteria.find((c) => c.id === s.criterionId);
       if (!criterion) return sum;
-      return sum + (s.score * criterion.weight) / 10;
+      return sum + computeWeightedScore(s.score, criterion.weight);
     }, 0);
   }, [watchedScores, submission]);
+
+  const maxWeighted = useMemo(
+    () => (submission ? computeMaxWeightedScore(submission.criteria) : 5),
+    [submission],
+  );
 
   const buildPayload = (values: ScoringFormValues, complete: boolean) => ({
     roundId,
@@ -133,11 +168,37 @@ export function ScoringPage({ teamId, roundId }: { teamId: string; roundId: stri
     );
   }
 
+  if (!submission.isAssigned) {
+    return (
+      <div className="mx-auto max-w-lg p-8 text-center">
+        <p className="text-sm text-red-600">Bạn không được phân công chấm team này.</p>
+        <Link href={`${portalBase}/scoring`} className="mt-4 inline-block text-sm font-semibold text-royal hover:underline">
+          ← Quay lại danh sách
+        </Link>
+      </div>
+    );
+  }
+
+  if (submission.conflictOfInterest) {
+    return (
+      <div className="mx-auto max-w-lg p-8 text-center">
+        <p className="text-lg font-semibold text-red-700">Xung đột lợi ích</p>
+        <p className="mt-2 text-sm text-seal-text-secondary">
+          {conflictMessage(submission.conflictReason)}
+        </p>
+        <Link href={`${portalBase}/scoring`} className="mt-4 inline-block text-sm font-semibold text-royal hover:underline">
+          ← Quay lại danh sách
+        </Link>
+      </div>
+    );
+  }
+
   return (
     <ScoringPageContent
       submission={submission}
       watchedScores={watchedScores}
       totalWeighted={totalWeighted}
+      maxWeighted={maxWeighted}
       commentErrors={commentErrors}
       allScored={allScored}
       readOnly={readOnly}
@@ -156,6 +217,7 @@ function ScoringPageContent({
   submission,
   watchedScores,
   totalWeighted,
+  maxWeighted,
   commentErrors,
   allScored,
   readOnly,
@@ -170,6 +232,7 @@ function ScoringPageContent({
   submission: SubmissionForScoring;
   watchedScores: ScoringFormValues["scores"];
   totalWeighted: number;
+  maxWeighted: number;
   commentErrors: (string | null)[];
   allScored: boolean;
   readOnly: boolean;
@@ -207,14 +270,14 @@ function ScoringPageContent({
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        {submission.githubUrl && (
+        {(submission.sourceCodeUrl ?? submission.githubUrl) && (
           <a
-            href={submission.githubUrl}
+            href={submission.sourceCodeUrl ?? submission.githubUrl ?? undefined}
             target="_blank"
             rel="noopener noreferrer"
             className="border-2 border-navy bg-white p-3 text-sm font-medium text-royal shadow-[4px_4px_0_0_#0c1228] hover:bg-seal-surface-sunken"
           >
-            GitHub Repository →
+            Source Code →
           </a>
         )}
         {submission.demoUrl && (
@@ -248,31 +311,47 @@ function ScoringPageContent({
             <tr>
               <th className="px-4 py-3">Tiêu chí</th>
               <th className="px-4 py-3 w-24">Trọng số</th>
-              <th className="px-4 py-3 w-28">Điểm (0-10)</th>
+              <th className="px-4 py-3 w-28">Điểm</th>
               <th className="px-4 py-3">Nhận xét</th>
             </tr>
           </thead>
           <tbody>
             {submission.criteria.map((c, i) => {
               const score = watchedScores?.[i]?.score ?? null;
-              const showComment = hasScore(score) && needsComment(score);
+              const showComment =
+                hasScore(score) && needsCommentForScore(score, c.minScore, c.maxScore);
               return (
                 <tr key={c.id} className="border-t border-seal-border align-top">
-                  <td className="px-4 py-3 font-medium text-seal-text">{c.name}</td>
+                  <td className="px-4 py-3 font-medium text-seal-text">
+                    {c.name}
+                    {hasScore(score) && getScoreLabel(score) && (
+                      <span className="ml-2 text-xs font-normal text-seal-text-muted">
+                        ({getScoreLabel(score)})
+                      </span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-seal-text-secondary">{c.weight}%</td>
                   <td className="px-4 py-3">
                     <input
                       type="number"
-                      min={0}
-                      max={10}
+                      min={c.minScore}
+                      max={c.maxScore}
                       disabled={disabled}
                       value={hasScore(score) ? score : ""}
                       onChange={(e) => {
                         const v = e.target.value === "" ? null : Number(e.target.value);
-                        onScoreChange(i, v == null ? null : Math.min(10, Math.max(0, v)));
+                        onScoreChange(
+                          i,
+                          v == null
+                            ? null
+                            : Math.min(c.maxScore, Math.max(c.minScore, v)),
+                        );
                       }}
                       className="w-20 rounded border border-seal-border px-2 py-1 text-center disabled:opacity-50"
                     />
+                    <span className="ml-1 text-xs text-seal-text-muted">
+                      ({c.minScore}–{c.maxScore})
+                    </span>
                   </td>
                   <td className="px-4 py-3">
                     {(showComment || (watchedScores?.[i]?.feedback ?? "")) && (
@@ -305,7 +384,7 @@ function ScoringPageContent({
           <div className="text-xs text-seal-text-muted">Tổng điểm có trọng số</div>
           <div className="text-2xl font-bold text-seal-text">
             {totalWeighted.toFixed(2)}
-            <span className="text-sm font-normal text-seal-text-muted"> / 10</span>
+            <span className="text-sm font-normal text-seal-text-muted"> / {maxWeighted.toFixed(1)}</span>
           </div>
         </div>
         {!disabled && (

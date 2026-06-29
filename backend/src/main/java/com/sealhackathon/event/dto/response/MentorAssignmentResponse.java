@@ -16,6 +16,8 @@ public class MentorAssignmentResponse {
 
     private UUID id;
     private UUID eventId;
+    private UUID trackId;
+    private String trackName;
     private UUID mentorUserId;
     private String mentorFullName;
     private String mentorEmail;

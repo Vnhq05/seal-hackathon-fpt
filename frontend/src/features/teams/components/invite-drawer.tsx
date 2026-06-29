@@ -6,15 +6,24 @@ import { Drawer } from "@/shared/ui/drawer";
 import { InviteSearchInput } from "@/features/teams/components/invite-search-input";
 import { InviteSearchResults } from "@/features/teams/components/invite-search-results";
 import { InvitePendingSection } from "@/features/teams/components/invite-pending-section";
+import { ParticipationBlockBanner } from "@/features/events/components/participation-block-banner";
 import { useDebounce } from "@/features/teams/hooks/use-debounce";
 
 interface InviteDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   team: Team;
+  registrationClosed?: boolean;
+  registrationClosedReason?: string | null;
 }
 
-export function InviteDrawer({ isOpen, onClose, team }: InviteDrawerProps) {
+export function InviteDrawer({
+  isOpen,
+  onClose,
+  team,
+  registrationClosed = false,
+  registrationClosedReason,
+}: InviteDrawerProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearch = useDebounce(searchTerm, 300);
 
@@ -84,7 +93,12 @@ export function InviteDrawer({ isOpen, onClose, team }: InviteDrawerProps) {
       {/* Content */}
       <div className="flex flex-1 flex-col overflow-auto">
         <div style={{ padding: "24px 24px 16px" }}>
-          <InviteSearchInput value={searchTerm} onChange={setSearchTerm} />
+          {registrationClosed && registrationClosedReason && (
+            <div style={{ marginBottom: 12 }}>
+              <ParticipationBlockBanner reason={registrationClosedReason} />
+            </div>
+          )}
+          <InviteSearchInput value={searchTerm} onChange={setSearchTerm} disabled={registrationClosed} />
         </div>
 
         <div
@@ -93,7 +107,11 @@ export function InviteDrawer({ isOpen, onClose, team }: InviteDrawerProps) {
             borderBottom: "1px solid rgba(223,226,236,0.8)",
           }}
         >
-          <InviteSearchResults teamId={team.id} search={debouncedSearch} />
+          <InviteSearchResults
+            teamId={team.id}
+            search={debouncedSearch}
+            registrationClosed={registrationClosed}
+          />
         </div>
 
         <InvitePendingSection teamId={team.id} />

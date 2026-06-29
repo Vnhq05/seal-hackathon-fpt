@@ -1,6 +1,20 @@
 import { api } from "./api-client";
 import type { RoundType } from "./types";
 
+export interface LeaderboardParams {
+  trackId?: string;
+  roundType?: RoundType;
+  roundId?: string;
+}
+
+export type LiveScoreStatus =
+  | "NOT_SUBMITTED"
+  | "WAITING_FOR_SCORE"
+  | "PARTIALLY_SCORED"
+  | "FULLY_SCORED"
+  | "LOCKED"
+  | "PUBLISHED";
+
 export interface TrackInfo {
   id: string;
   name: string;
@@ -14,7 +28,7 @@ export interface LiveScoreEntry {
   finalScore: number;
   rank: number;
   previousRank: number | null;
-  scoreStatus: string;
+  scoreStatus: LiveScoreStatus;
   judgesScored: number;
   judgesAssigned: number;
   calculatedAt: string;
@@ -27,6 +41,7 @@ export interface LiveScoreBoard {
   year: number;
   roundId: string;
   roundName: string;
+  roundType: RoundType | null;
   tracks: TrackInfo[];
   rankings: LiveScoreEntry[];
   scoresLocked: boolean;
@@ -44,12 +59,6 @@ export interface RankingEvent {
   newRank: number | null;
   oldRank: number | null;
   timestamp: string;
-}
-
-export interface LeaderboardParams {
-  trackId?: string;
-  roundId?: string;
-  roundType?: RoundType;
 }
 
 export const livescoreApi = {

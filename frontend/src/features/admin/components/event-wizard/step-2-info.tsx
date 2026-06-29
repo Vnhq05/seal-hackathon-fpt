@@ -4,10 +4,7 @@ import { useState } from "react";
 import {
   useEventWizardStore,
   type WizardTrack,
-  type LecturerRole,
-  type WizardLecturerAssignment,
 } from "@/features/admin/store/event-wizard.store";
-import { useLecturerOptions } from "@/features/admin/hooks/use-lecturer-options";
 
 const inputStyle: React.CSSProperties = {
   border: "1px solid rgba(223,226,236,0.8)", borderRadius: 8, padding: "11px 16px", fontSize: 14, width: "100%", outline: "none",
@@ -18,24 +15,12 @@ const errorStyle: React.CSSProperties = { fontSize: 12, color: "#ef4444", margin
 const TRACK_MIN = 16;
 const TRACK_MAX = 40;
 
-function syncRoleIds(assignments: WizardLecturerAssignment[]) {
-  const mentorUserIds = assignments
-    .filter((a) => a.role === "MENTOR" || a.role === "BOTH")
-    .map((a) => a.userId);
-  const judgeUserIds = assignments
-    .filter((a) => a.role === "JUDGE" || a.role === "BOTH")
-    .map((a) => a.userId);
-  return { mentorUserIds, judgeUserIds };
-}
-
 export function Step2Info({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
   const { data, updateData } = useEventWizardStore();
-  const { data: lecturers = [], isLoading: loadingLecturers } = useLecturerOptions();
   const [trackName, setTrackName] = useState("");
   const [trackDescription, setTrackDescription] = useState("");
   const [trackMaxTeams, setTrackMaxTeams] = useState(20);
   const [trackError, setTrackError] = useState<string | null>(null);
-  const [lecturerFilter, setLecturerFilter] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const addTrack = () => {
@@ -61,29 +46,6 @@ export function Step2Info({ onNext, onBack }: { onNext: () => void; onBack: () =
     updateData({ tracks: data.tracks.filter((_, i) => i !== idx) });
   };
 
-  const addLecturer = (userId: string, role: LecturerRole) => {
-    const person = lecturers.find((l) => l.id === userId);
-    if (!person) return;
-    const existing = data.lecturerAssignments.find((a) => a.userId === userId);
-    let next: WizardLecturerAssignment[];
-    if (existing) {
-      next = data.lecturerAssignments.map((a) =>
-        a.userId === userId ? { ...a, role } : a
-      );
-    } else {
-      next = [
-        ...data.lecturerAssignments,
-        { userId, fullName: person.fullName, email: person.email, role },
-      ];
-    }
-    updateData({ lecturerAssignments: next, ...syncRoleIds(next) });
-  };
-
-  const removeLecturer = (userId: string) => {
-    const next = data.lecturerAssignments.filter((a) => a.userId !== userId);
-    updateData({ lecturerAssignments: next, ...syncRoleIds(next) });
-  };
-
   const validate = () => {
     const errs: Record<string, string> = {};
     if (data.tracks.length < 1) errs.tracks = "At least 1 track is required";
@@ -93,14 +55,6 @@ export function Step2Info({ onNext, onBack }: { onNext: () => void; onBack: () =
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
-
-  const availableLecturers = lecturers.filter(
-    (l) =>
-      !data.lecturerAssignments.some((a) => a.userId === l.id) &&
-      (lecturerFilter === "" ||
-        l.fullName.toLowerCase().includes(lecturerFilter.toLowerCase()) ||
-        l.email.toLowerCase().includes(lecturerFilter.toLowerCase()))
-  );
 
   return (
     <div className="flex flex-col gap-5" style={{ maxWidth: 700 }}>
@@ -157,57 +111,6 @@ export function Step2Info({ onNext, onBack }: { onNext: () => void; onBack: () =
             <button onClick={() => removeTrack(idx)} style={{ color: "#991b1b", background: "none", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Remove</button>
           </div>
         ))}
-      </div>
-
-      <div>
-        <label style={labelStyle}>Lecturer Assignment</label>
-        <p style={{ fontSize: 12, color: "#8891a5", marginBottom: 8 }}>Assign role: Mentor, Judge, or Both</p>
-
-        {data.lecturerAssignments.length > 0 && (
-          <div style={{ marginBottom: 10, border: "1px solid rgba(16,185,129,0.3)", borderRadius: 8, overflow: "hidden" }}>
-            {data.lecturerAssignments.map((a) => (
-              <div key={a.userId} className="flex items-center justify-between" style={{ padding: "8px 12px", backgroundColor: "#f0fdf4", borderBottom: "1px solid rgba(16,185,129,0.15)" }}>
-                <div>
-                  <span style={{ fontWeight: 600, fontSize: 13 }}>{a.fullName}</span>
-                  <span style={{ color: "#8891a5", marginLeft: 8, fontSize: 12 }}>{a.role}</span>
-                </div>
-                <button type="button" onClick={() => removeLecturer(a.userId)} style={{ fontSize: 12, color: "#991b1b", background: "none", border: "none", cursor: "pointer" }}>Remove</button>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {loadingLecturers ? (
-          <div className="animate-pulse rounded" style={{ height: 44, backgroundColor: "rgba(223,226,236,0.8)" }} />
-        ) : (
-          <>
-            <input value={lecturerFilter} onChange={(e) => setLecturerFilter(e.target.value)} style={{ ...inputStyle, marginBottom: 6 }} placeholder="Filter lecturers..." />
-            <div style={{ border: "1px solid rgba(223,226,236,0.8)", borderRadius: 8, maxHeight: 200, overflowY: "auto" }}>
-              {availableLecturers.map((person) => (
-                <div key={person.id} className="flex items-center justify-between" style={{ padding: "8px 12px", borderBottom: "1px solid rgba(223,226,236,0.3)" }}>
-                  <div>
-                    <span style={{ fontWeight: 600, fontSize: 13 }}>{person.fullName}</span>
-                    <span style={{ color: "#8891a5", marginLeft: 8, fontSize: 12 }}>{person.email}</span>
-                  </div>
-                  <select
-                    defaultValue=""
-                    onChange={(e) => {
-                      const role = e.target.value as LecturerRole;
-                      if (role) addLecturer(person.id, role);
-                      e.target.value = "";
-                    }}
-                    style={{ ...inputStyle, width: 120, padding: "6px 8px" }}
-                  >
-                    <option value="">Add as...</option>
-                    <option value="MENTOR">Mentor</option>
-                    <option value="JUDGE">Judge</option>
-                    <option value="BOTH">Both</option>
-                  </select>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
       </div>
 
       <div className="grid grid-cols-2 gap-4">

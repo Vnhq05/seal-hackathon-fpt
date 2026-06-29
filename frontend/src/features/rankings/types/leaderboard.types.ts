@@ -1,14 +1,26 @@
-export type TeamStatus = "promoted" | "active" | "at_risk" | "eliminated";
+import type { RoundType } from "@/lib/api/types";
+
+export type { LeaderboardParams } from "@/lib/api/livescore.api";
+
+export type LeaderboardTeamStatus = "active" | "finalist" | "eliminated";
+
+export interface RoundScoreColumn {
+  roundId: string;
+  roundName: string;
+  roundType: RoundType | null;
+  score: number;
+}
 
 export interface LeaderboardTeam {
   id: string;
+  teamId: string;
   rank: number;
   name: string;
+  trackId: string | null;
   trackName: string;
-  round1Score: number;
-  round2Score: number;
+  roundScores: RoundScoreColumn[];
   totalScore: number;
-  status: TeamStatus;
+  status: LeaderboardTeamStatus;
   rankChange: number;
   isCurrentUserTeam: boolean;
 }
@@ -30,6 +42,3 @@ export interface LeaderboardResponse {
   rankings: LeaderboardTeam[];
 }
 
-export interface LeaderboardParams {
-  track?: string;
-}

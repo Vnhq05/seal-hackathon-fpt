@@ -17,3 +17,5 @@ app:
     password-reset-token-expiration-minutes: 15
   cors:
     allowed-origins: http://localhost:3000
+  seeder:
+    resync-dev-accounts: true

@@ -12,7 +12,13 @@ public interface JudgeAssignmentRepository extends JpaRepository<JudgeAssignment
 
     List<JudgeAssignment> findByRoundId(UUID roundId);
 
-    boolean existsByRoundIdAndJudgeUserId(UUID roundId, UUID judgeUserId);
+    List<JudgeAssignment> findByRoundIdAndTrackId(UUID roundId, UUID trackId);
+
+    List<JudgeAssignment> findByRoundIdAndTrackIdIsNull(UUID roundId);
+
+    boolean existsByRoundIdAndJudgeUserIdAndTrackId(UUID roundId, UUID judgeUserId, UUID trackId);
+
+    boolean existsByRoundIdAndJudgeUserIdAndTrackIdIsNull(UUID roundId, UUID judgeUserId);
 
     List<JudgeAssignment> findByJudgeUserId(UUID judgeUserId);
 

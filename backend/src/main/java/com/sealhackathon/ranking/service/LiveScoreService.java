@@ -3,6 +3,7 @@ package com.sealhackathon.ranking.service;
 import com.sealhackathon.common.enums.UserType;
 import com.sealhackathon.common.exception.BusinessException;
 import com.sealhackathon.common.exception.ResourceNotFoundException;
+import com.sealhackathon.event.domain.enums.RoundType;
 import com.sealhackathon.event.dto.snapshot.EventSnapshot;
 import com.sealhackathon.event.dto.snapshot.RoundSnapshot;
 import com.sealhackathon.event.dto.snapshot.TrackSnapshot;
@@ -138,6 +139,10 @@ public class LiveScoreService {
                 .sorted(Comparator.comparingInt(LiveScoreEntry::getRank))
                 .toList();
 
+        if (trackId != null && round.getRoundType() == RoundType.PRELIMINARY) {
+            entries = RankingDisplayHelper.reRankLiveScoreWithinTrack(entries);
+        }
+
         boolean canManage = role.map(r ->
                 r == UserType.SYSTEM_ADMIN || r == UserType.EVENT_COORDINATOR).orElse(false);
 
@@ -148,6 +153,7 @@ public class LiveScoreService {
                 .year(event.getYear())
                 .roundId(round.getId())
                 .roundName(round.getName())
+                .roundType(round.getRoundType())
                 .tracks(tracks.stream()
                         .map(t -> TrackInfo.builder().id(t.getId()).name(t.getName()).build())
                         .toList())

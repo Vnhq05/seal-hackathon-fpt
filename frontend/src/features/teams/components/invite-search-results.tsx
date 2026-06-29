@@ -6,6 +6,7 @@ import { InviteUserCard } from "@/features/teams/components/invite-user-card";
 interface InviteSearchResultsProps {
   teamId: string;
   search: string;
+  registrationClosed?: boolean;
 }
 
 function ResultSkeleton() {
@@ -17,7 +18,11 @@ function ResultSkeleton() {
   );
 }
 
-export function InviteSearchResults({ teamId, search }: InviteSearchResultsProps) {
+export function InviteSearchResults({
+  teamId,
+  search,
+  registrationClosed = false,
+}: InviteSearchResultsProps) {
   const { data: candidates = [], isLoading } = useInviteSearch(teamId, search);
 
   if (search.length < 2) return null;
@@ -52,7 +57,12 @@ export function InviteSearchResults({ teamId, search }: InviteSearchResultsProps
       ) : (
         <div className="flex flex-col gap-1">
           {candidates.map((c) => (
-            <InviteUserCard key={c.id} candidate={c} teamId={teamId} />
+            <InviteUserCard
+              key={c.id}
+              candidate={c}
+              teamId={teamId}
+              registrationClosed={registrationClosed}
+            />
           ))}
         </div>
       )}

@@ -8,6 +8,8 @@ export interface ScoringTemplateCriterionResponse {
   description: string | null;
   weight: number;
   sortOrder: number;
+  minScore: number;
+  maxScore: number;
 }
 
 export interface ScoringTemplateResponse {
@@ -23,6 +25,8 @@ export interface CriterionRequest {
   description?: string;
   weight: number;
   sortOrder?: number;
+  minScore?: number;
+  maxScore?: number;
 }
 
 export interface CreateScoringTemplateRequest {

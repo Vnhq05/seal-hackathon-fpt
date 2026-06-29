@@ -7,7 +7,13 @@ import type { ExternalRegistrationFormValues } from "@/features/events/schemas/e
 export function useExternalEnrollment(eventId: string) {
   const mutation = useMutation({
     mutationFn: (values: ExternalRegistrationFormValues) =>
-      enrollmentApi.enrollExternal(eventId, values),
+      enrollmentApi.enrollExternal(eventId, {
+        fullName: values.fullName,
+        email: values.email,
+        studentId: values.studentId,
+        universityName: values.universityName,
+        studentStanding: "ENROLLED",
+      }),
   });
 
   return {

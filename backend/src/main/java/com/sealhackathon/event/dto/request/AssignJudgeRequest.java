@@ -16,4 +16,7 @@ public class AssignJudgeRequest {
 
     @NotNull(message = "Judge user ID is required")
     private UUID judgeUserId;
+
+    /** Required for PRELIMINARY rounds; must be null for FINAL rounds. */
+    private UUID trackId;
 }

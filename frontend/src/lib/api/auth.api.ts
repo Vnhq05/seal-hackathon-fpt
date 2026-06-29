@@ -1,5 +1,6 @@
 import { api } from "./api-client";
-import type { UserType, AccountStatus } from "./types";
+import type { UserType, AccountStatus, StudentStanding } from "./types";
+import type { AllowedEmailDomainResponse } from "./event.api";
 
 // ═══ Request types ═══
 
@@ -11,6 +12,7 @@ export interface RegisterRequest {
   studentId?: string;
   universityName?: string;
   userType: Extract<UserType, "FPT_STUDENT" | "EXTERNAL_STUDENT">;
+  studentStanding: Extract<StudentStanding, "ENROLLED">;
   semester?: number;
 }
 
@@ -53,6 +55,10 @@ export interface AuthResponse {
 // ═══ API calls ═══
 
 export const authApi = {
+  listRegistrationAllowedDomains(): Promise<AllowedEmailDomainResponse[]> {
+    return api.get<AllowedEmailDomainResponse[]>("/public/registration/allowed-email-domains");
+  },
+
   register(body: RegisterRequest): Promise<string> {
     return api.post<string>("/auth/register", body);
   },

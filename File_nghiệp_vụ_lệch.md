@@ -1,1009 +1,973 @@
-# PHÂN TÍCH CÁC PHẦN BỊ LỆCH NGHIỆP VỤ — SEAL HACKATHON
+# BUSINESS LOGIC MISALIGNMENT ANALYSIS — SEAL HACKATHON
 
-> File này chỉ ghi các phần **bị lệch** giữa report hệ thống hiện tại và nghiệp vụ gốc của cuộc thi SEAL Hackathon Spring 2026.
-> Không bao gồm phần thiếu chức năng, checklist triển khai, hoặc đề xuất AS2 nâng cao.
-
----
-
-## 1. Lệch tổng thể: hệ thống đang quá tổng quát
-
-### Hiện tại
-
-Report hệ thống hiện tại đang mô tả một nền tảng quản lý hackathon tổng quát với nhiều module:
-
-- Auth / User
-- Event
-- Team
-- Submission
-- Judging
-- Ranking
-- Notification
-- Audit
-- Dispute
-- Mentor portal
-- Judge portal
-- Admin portal
-- Staff portal
-
-### Nghiệp vụ gốc
-
-Nghiệp vụ gốc tập trung vào một cuộc thi cụ thể:
-
-**SEAL Hackathon Spring 2026 – Mastering Domain-Specific AI RAG Systems**
-
-Luồng chính là:
-
-```text
-Tạo cuộc thi
-→ Đăng ký đội
-→ Chia Track/Bảng
-→ Bốc thăm chủ đề
-→ Thi đấu
-→ Nộp slide/sản phẩm
-→ Chấm điểm vòng bảng
-→ Chọn đội vào chung kết
-→ Chấm chung kết
-→ Công bố giải thưởng/bảng xếp hạng
-```
-
-### Phần bị lệch
-
-Hệ thống hiện tại đang đi theo hướng **generic hackathon platform**, trong khi nghiệp vụ gốc cần bám sát format cụ thể của cuộc thi:
-
-```text
-Event → Track/Bảng → Team → Submission → Preliminary Scoring → Finalist Selection → Final Scoring → Award
-```
-
-Nếu không chỉnh, hệ thống có thể có nhiều chức năng nhưng vẫn bị xem là lệch nghiệp vụ vì không phản ánh đúng format cuộc thi thật.
+> This file documents the **actual gaps** between the current system implementation and the SEAL Hackathon Spring 2026 competition requirements.
+> Based on: (1) reading actual source code under `frontend/src/`, `docs/api/`, and (2) the official competition document "THÔNG TIN VỀ CUỘC THI.docx".
 
 ---
 
-## 2. Lệch về vai trò người dùng
+## 1. Overall: System Format Is Mostly Aligned, But Key Flow Details Are Missing
 
-### Hiện tại
+### Current State (actual code)
 
-Report hệ thống hiện tại có nhiều vai trò:
+The system has been built around the SEAL Spring 2026 format. Core entities exist:
+- `CompetitionFormat: "GENERIC" | "SEAL_RAG_2026"` (`types.ts`)
+- `RoundType: "PRELIMINARY" | "FINAL"` (`types.ts`)
+- `finalistApi` — selects Top-2-per-track (`finalist.api.ts`)
+- `awardApi` — assigns prizes after final (`award.api.ts`)
+- `TrackResponse` with `topic`, `maxTeams` (`track.api.ts`)
+
+### What Is Still Misaligned
+
+The **end-to-end flow** specific to Spring 2026 has gaps in several stages:
 
 ```text
-FPT Student
-External Student
-Mentor
-Judge
-Lecturer
-Event Coordinator
-System Admin
-Staff / Organizer
-Participant
+✓ Create event (SEAL_RAG_2026 format)
+✓ Team registration
+⚠ Day 1: Track draw session (API spec done, frontend not wired)
+✓ Day 2: Competition
+⚠ Milestone 1 gate (slide deadline 10:00 — API spec done, frontend not enforced)
+⚠ Milestone 2 gate (demo deadline 14:00 — API spec done, frontend not enforced)
+✓ Preliminary scoring
+✓ Finalist selection (top-2-per-track → 6 teams)
+✓ Final round scoring
+✓ Award assignment
 ```
 
-Frontend cũng chia nhiều portal:
+---
 
-```text
-Participant Portal
-Staff / Organizer Portal
-Admin Portal
-Mentor Portal
-Judge Portal
+## 2. Misalignment in User Roles
+
+### Current State (actual code — `types.ts`)
+
+```typescript
+export type UserType =
+  | "FPT_STUDENT"
+  | "EXTERNAL_STUDENT"
+  | "LECTURER"
+  | "EVENT_COORDINATOR"
+  | "SYSTEM_ADMIN";
 ```
 
-### Nghiệp vụ gốc
-
-Actor chính trong nghiệp vụ gốc gồm:
-
+Frontend portals (from route structure):
 ```text
-Admin / BTC
+(student)/student/...      — for FPT_STUDENT, EXTERNAL_STUDENT
+(lecturer)/lecturer/...    — for LECTURER (handles both judging and mentoring)
+(coordinator)/coordinator/ — for EVENT_COORDINATOR
+(admin)/admin/...          — for SYSTEM_ADMIN
+```
+
+No separate `JUDGE` role or `MENTOR` role exists. Both are handled by `LECTURER`.
+
+### Original Business Requirements
+
+Core actors in the competition document:
+```text
+Admin / Organizing Committee (OC)
 Coordinator
 Student / Participant
-Team Leader
+Team Leader (flag, not a role)
 Judge / BGK
 Public User
 ```
 
-### Phần bị lệch
+### Misaligned Parts
 
-Các vai trò hiện tại đang bị phình ra và có nguy cơ trùng nghĩa:
-
-| Vai trò hiện tại | Vấn đề lệch |
+| Current | Issue |
 |---|---|
-| Mentor | Nghiệp vụ gốc không xem mentor là actor bắt buộc trong core flow |
-| Lecturer | Chưa có định nghĩa quyền rõ trong nghiệp vụ gốc |
-| Staff / Organizer / Coordinator | Dễ bị trùng vai trò |
-| Team Leader | Không nên là role hệ thống riêng, chỉ nên là trạng thái trong team |
-| Judge / Mentor portal | Có thể dư nếu chưa map rõ quyền và luồng nghiệp vụ |
+| `LECTURER` covers both judge and mentor | Makes conflict-of-interest detection harder — need to know if a LECTURER is acting as a judge or mentor for a given team |
+| No distinction between "judge" LECTURER and "mentor" LECTURER | Assignment tables (`JudgeAssignment`, `MentorAssignment`) handle this, but the role itself is ambiguous |
+| `EXTERNAL_STUDENT` verification | Domain whitelist not enforced at registration — any email domain is accepted |
+| No graduated-student block | Competition rules: graduated students cannot participate; no enforcement in `RegisterRequest` |
 
-### Hướng đúng hơn
-
-MVP nên gom vai trò về:
+### What Is Already Correct
 
 ```text
-PUBLIC
-STUDENT
-ADMIN
-COORDINATOR
-JUDGE
+✓ Team Leader = TeamMember.isLeader (not a separate role)
+✓ Student split: FPT_STUDENT vs EXTERNAL_STUDENT
+✓ No bloated role list — down from 9 to 5 UserTypes
+✓ 4 clear portals matching 4 role groups
 ```
 
-Team Leader nên nằm trong:
+### Remaining Gaps
 
 ```text
-TeamMember.isLeader = true
-```
+1. LECTURER acting as judge vs. mentor is determined only at assignment time,
+   not at the role level. Conflict detection (judge must not score a team they mentor)
+   must cross-check JudgeAssignment against MentorAssignment for the same team.
 
-Không nên tạo role riêng là `TEAM_LEADER`.
+2. EXTERNAL_STUDENT: no domain whitelist enforced.
+   Vietnamese university domains vary: @fpt.edu.vn, @hcmut.edu.vn, @uit.edu.vn, etc.
+   A simple AllowedEmailDomain table per event is needed.
 
----
-
-## 3. Lệch về trạng thái cuộc thi
-
-### Hiện tại
-
-Report có nhiều cách gọi trạng thái khác nhau:
-
-```text
-DRAFT → ACTIVE → COMPLETED / CANCELLED
-```
-
-Có chỗ khác lại nhắc đến:
-
-```text
-Open
-Scoring
-Closed
-```
-
-### Nghiệp vụ gốc
-
-Nghiệp vụ gốc đề xuất trạng thái rõ hơn:
-
-```text
-Draft
-Open Registration
-Closed Registration
-Running
-Scoring
-Finished
-```
-
-### Phần bị lệch
-
-Trạng thái `ACTIVE` quá mơ hồ. Nó không thể hiện rõ event đang ở giai đoạn nào:
-
-- Đang mở đăng ký?
-- Đã khóa đăng ký?
-- Đang thi?
-- Đang chấm?
-- Đã công bố kết quả?
-
-### Hướng đúng hơn
-
-Nên chuẩn hóa enum:
-
-```text
-DRAFT
-OPEN_REGISTRATION
-CLOSED_REGISTRATION
-RUNNING
-SCORING
-FINISHED
-CANCELLED
-```
-
-Việc này quan trọng vì status quyết định các quyền sau:
-
-| Status | Quyền nghiệp vụ |
-|---|---|
-| OPEN_REGISTRATION | Cho phép tạo team, mời thành viên |
-| CLOSED_REGISTRATION | Không cho đổi thành viên |
-| RUNNING | Cho phép nộp bài |
-| SCORING | Cho phép judge chấm |
-| FINISHED | Cho phép xem kết quả đã công bố |
-
----
-
-## 4. Lệch về Track/Bảng
-
-### Hiện tại
-
-Report hiện tại có nhắc đến `tracks`, nhưng track đang giống một phần mở rộng của frontend/admin, chưa được xem là lõi nghiệp vụ.
-
-Có chỗ report cho participant chọn track khi đăng ký.
-
-### Nghiệp vụ gốc
-
-Nghiệp vụ gốc đã chốt hướng đơn giản:
-
-```text
-1 Event có nhiều Track
-1 Track tương đương 1 bảng
-1 Track có tối đa 8 đội
-Mỗi Track có 1 chủ đề riêng
-```
-
-Ngoài ra:
-
-```text
-Mỗi cuộc thi có tối đa 3 Track
-Đội được chia Track ngẫu nhiên hoặc do BTC bốc thăm
-BTC đảm bảo chia bảng công bằng
-```
-
-### Phần bị lệch
-
-| Hiện tại | Đúng theo nghiệp vụ gốc |
-|---|---|
-| Track là phần phụ | Track là lõi của cuộc thi |
-| Participant có thể chọn track | BTC/Coordinator nên chia track hoặc bốc thăm |
-| Chưa nhấn mạnh max team/track | Mỗi track tối đa 8 đội |
-| Chưa rõ topic theo track | Mỗi track có chủ đề riêng |
-| Chấm điểm thiên về round chung | Vòng bảng phải chấm theo track/bảng |
-
-### Hướng đúng hơn
-
-Mô hình nên là:
-
-```text
-Track
-- id
-- eventId
-- name
-- topic
-- maxTeams
-
-TeamTrackAssignment
-- id
-- teamId
-- trackId
-- assignedAt
-- method: RANDOM / MANUAL
+3. No rule blocking graduated students from registering.
 ```
 
 ---
 
-## 5. Lệch về vòng bảng và chung kết
+## 3. Misalignment in Event Status
 
-### Hiện tại
+### Current State (actual code — `types.ts`)
 
-Report hiện tại dùng khái niệm `round`, `ranking`, `advancement cutoff`, nhưng chưa thể hiện rõ format:
-
-```text
-Vòng bảng → chọn Top 6 → chung kết → trao giải
+```typescript
+export type EventStatus =
+  | "UPCOMING"
+  | "OPEN"
+  | "CLOSED_REGISTRATION"
+  | "ACTIVE"
+  | "SCORING"
+  | "COMPLETED"
+  | "CANCELLED";
 ```
 
-### Nghiệp vụ gốc
-
-Cuộc thi có 2 giai đoạn chấm chính:
-
+Transition rules defined in `SEAL-Spring-2026-API.md`:
 ```text
-Vòng bảng:
-- Chấm các đội trong từng Track/Bảng
-- Mỗi Track lấy Top 2
-- Tổng cộng chọn 6 đội vào chung kết
-
-Chung kết:
-- Chấm Top 6
-- Điểm chung kết quyết định giải thưởng
+UPCOMING → OPEN | CLOSED_REGISTRATION
+OPEN → CLOSED_REGISTRATION | ACTIVE
+CLOSED_REGISTRATION → ACTIVE
+ACTIVE → SCORING | COMPLETED
+SCORING → COMPLETED
 ```
 
-### Phần bị lệch
+### Original Business Requirements
 
-| Hiện tại | Đúng theo nghiệp vụ gốc |
+Competition phases map to:
+```text
+Before event    → UPCOMING
+Registration    → OPEN
+Locked          → CLOSED_REGISTRATION
+Competition day → ACTIVE
+Scoring         → SCORING
+Done            → COMPLETED
+```
+
+### Misaligned Parts
+
+The enum is **mostly aligned**. Minor naming divergence from ideal:
+
+| Current | Ideal | Gap |
+|---|---|---|
+| `UPCOMING` | `DRAFT` | Semantically different: UPCOMING implies a date is set; DRAFT implies not yet configured |
+| `OPEN` | `OPEN_REGISTRATION` | Minor — OPEN is ambiguous (open to what?) |
+| `ACTIVE` | `RUNNING` | Minor — ACTIVE could mean anything |
+| `COMPLETED` | `FINISHED` | Minor naming only |
+
+The status gates business permissions correctly:
+
+| Status | Enforced Permission |
 |---|---|
-| Round chung chung | Cần phân biệt PRELIMINARY và FINAL |
-| Advancement cutoff chung | Cần logic Top 2 mỗi track + đủ 6 đội |
-| Ranking chung | Cần ranking vòng bảng theo track và ranking chung kết |
-| Chưa rõ finalist | Cần entity FinalistSelection |
-| Chưa rõ award theo final score | Giải thưởng dựa trên điểm chung kết |
+| `OPEN` | Allow team creation, member invitations |
+| `CLOSED_REGISTRATION` | Block member changes |
+| `ACTIVE` | Allow submission |
+| `SCORING` | Allow judge scoring |
+| `COMPLETED` | Results published |
 
-### Hướng đúng hơn
+**The status model is functionally correct.** The naming divergence is low priority.
 
-Nên có:
+---
 
-```text
-RoundType:
-- PRELIMINARY
-- FINAL
+## 4. Misalignment in Track / Group Assignment
+
+> **Status: RESOLVED (2026-06)** — Backend, frontend API, UI, integration tests, and API doc implemented.  
+> Full spec: [`docs/api/SEAL-Spring-2026-Track-Assignment-API.md`](docs/api/SEAL-Spring-2026-Track-Assignment-API.md)
+
+### Current State (actual code)
+
+`TrackResponse` (`track.api.ts`):
+```typescript
+export interface TrackResponse {
+  id: string;
+  eventId: string;
+  name: string;
+  description: string | null;
+  topic: string | null;
+  maxTeams: number;
+  scoringTemplateId: string | null;
+  status: TrackStatus;           // ✓ OPEN | LOCKED
+  assignedTeamCount: number;     // ✓ live count
+}
 ```
 
-Và entity:
-
-```text
-FinalistSelection
-- id
-- eventId
-- teamId
-- preliminaryRank
-- selectedReason
-- selectedAt
+`TrackAssignmentMethod` (`track-assignment.api.ts`):
+```typescript
+export type TrackAssignmentMethod = "RANDOM" | "MANUAL" | "SELF_DRAW";
 ```
 
-Logic đúng:
+Draw session + lock wired in `track-assignment.api.ts` and `teamApi.selfDrawTrack()`:
+- `POST /events/{eventId}/tracks/draw-session/open` — `trackAssignmentApi.openDrawSession()`
+- `GET /events/{eventId}/tracks/draw-session` — `trackAssignmentApi.getDrawSession()`
+- `POST /events/{eventId}/teams/{teamId}/track/draw` — `teamApi.selfDrawTrack()`
+- `PUT /events/{eventId}/tracks/{trackId}/topic` — `trackApi.assignTopic()`
+- `POST /events/{eventId}/tracks/lock` — `trackAssignmentApi.lockTracks()`
+
+SEAL format blocks direct track pick: `PUT /teams/{teamId}/track` → 403; UI redirects to `/student/tracks/draw`.
+
+Legacy `TrackRegistrationRequest` (direct team pick) **removed** from frontend types.
+
+### Original Business Requirements (Spring 2026)
 
 ```text
-Mỗi Track lấy Top 2 team có điểm vòng bảng cao nhất.
-Nếu tổng số đội chưa đủ 6, lấy thêm đội có điểm cao nhất còn lại.
-Nếu đồng điểm, ưu tiên team nộp bài sớm hơn.
-Nếu vẫn hòa, BTC dùng penalty evaluation.
+1 Event → up to 3 Tracks
+1 Track = 1 group (bảng)
+1 Track → max 8 teams
+Each Track → 1 topic (drawn by OC after teams self-select)
+
+Process (Day 1, 11/4, 14:00–17:00):
+  1. Teams take turns drawing lots to SELF-SELECT their Track
+  2. After all teams have chosen, OC draws topic for each Track
+  3. Tracks are locked — no changes after Day 1
+```
+
+### Resolution Summary
+
+| Requirement | Status |
+|---|---|
+| `SELF_DRAW` assignment method | ✅ Implemented |
+| Draw session open / poll / self-draw | ✅ Backend + frontend UI |
+| `TrackResponse.status` OPEN / LOCKED | ✅ Types + API |
+| `PUT /tracks/{trackId}/topic` | ✅ Coordinator UI |
+| `POST /tracks/lock` | ✅ Coordinator UI |
+| Block direct pick for SEAL | ✅ FormatRuleEngine + team detail panel |
+| Integration tests | ✅ `TrackDrawSessionIntegrationTest` |
+| API documentation | ✅ `SEAL-Spring-2026-Track-Assignment-API.md` |
+
+### Remaining (non-blocking)
+
+```text
+- Schedule time gating (14:00–16:00) not enforced at API — BTC opens session manually (by design)
+- Coordinator MANUAL assign UI not built (SEAL flow uses SELF_DRAW)
+- Multi-SEAL-event selector on student draw page (edge case)
+```
+
+### What Is Already Correct
+
+```text
+✓ Track has topic field
+✓ Track has maxTeams (8 for Spring 2026)
+✓ Track is a core entity — not just a UI extension
+✓ 3 tracks auto-seeded when SEAL_RAG_2026 format selected (per API spec)
+✓ Track is connected to teams, scoring, and ranking
 ```
 
 ---
 
-## 6. Lệch về tiêu chí chấm điểm
+## 5. Misalignment in Preliminary and Final Rounds
 
-### Hiện tại
+### Current State (actual code)
 
-Report hiện tại chủ yếu nói:
-
-```text
-Criteria weights = 100%
+`RoundType` exists:
+```typescript
+export type RoundType = "PRELIMINARY" | "FINAL"; // types.ts ✓
 ```
 
-Nhưng chưa thể hiện rõ 2 bộ rubric khác nhau cho vòng bảng và chung kết.
+`RoundResponse` has `roundType` but it is optional:
+```typescript
+roundType?: RoundType | null;  // round.api.ts — should be required
+```
 
-### Nghiệp vụ gốc
+`finalistApi` exists (`finalist.api.ts`):
+```typescript
+finalistApi.select(eventId)  // POST /events/{eventId}/finalists/select
+// Business rule: Top-2 per track → 6 finalists
+```
 
-Nghiệp vụ gốc có rubric riêng cho từng vòng.
+`advancementCutoff` in `RoundResponse`:
+```typescript
+advancementCutoff: number;  // generic number — not SEAL-specific Top-2-per-track logic
+```
 
-#### Rubric vòng bảng
+### Original Business Requirements
 
-| Tiêu chí | Trọng số |
+```text
+Preliminary round (14:00–15:30):
+- Judges visit each table — score Demo + product directly
+- Each team: 5 min presentation + 3 min Q&A
+- Top 2 per track advance → 6 total finalists (3 tracks × 2)
+
+Final round (15:30–17:00):
+- Each team: 7 min presentation + 3 min Q&A
+- Final scores determine awards
+
+Tie-break (if < 6 teams qualify cleanly):
+  → Compare by earliest submission time
+  → Still tied → OC applies penalty evaluation (max 10 min Q&A or mini test)
+```
+
+> ⚠️ **Document discrepancy:** General Rulebook says 08 finalists; Spring 2026 Competition Structure says 06 finalists. Follow Spring 2026: **06 finalists**.
+
+### Misaligned Parts
+
+| Current Code | Required |
+|---|---|
+| `roundType?: RoundType \| null` (optional) | Should be required for SEAL format rounds |
+| `advancementCutoff: number` (generic) | For SEAL: logic is Top-2 per track, not a simple number cutoff |
+| No presentation time enforcement | 5+3 min prelim, 7+3 min final are scheduling constraints (not system-enforced, but should be documented in EventSchedule) |
+| `finalistApi.select()` business rule | Must enforce Top-2-per-track → 6 finalists. Tie-break by submission time, then penalty evaluation flag |
+
+### What Is Already Correct
+
+```text
+✓ RoundType PRELIMINARY / FINAL exists
+✓ FinalistApi exists with select() and list()
+✓ FinalistResponse has trackId, trackName, preliminaryRank, selectedReason
+✓ 2 rounds auto-seeded when SEAL_RAG_2026 format selected
+```
+
+---
+
+## 6. Misalignment in Scoring Rubric
+
+### Current State (actual code)
+
+Criteria are attached to rounds in `RoundResponse`:
+```typescript
+criteria: CriteriaResponse[];  // per-round criteria
+```
+
+`ScoringCriterion` in `judge.types.ts`:
+```typescript
+export interface ScoringCriterion {
+  id: string;
+  name: string;
+  weight: number;
+  description: string;
+  maxScore: number;   // ✓ maxScore exists
+}
+```
+
+Scoring template API exists (`scoring-template.api.ts`) — rubric templates can be defined.
+
+### Original Business Requirements
+
+> ⚠️ **Document discrepancy:** General Rulebook has a different preliminary rubric (5 criteria × 20%) vs. Spring 2026 Competition Structure (30/30/15/15/10). **Follow Spring 2026 Competition Structure.**
+
+**Preliminary rubric (Spring 2026):**
+
+| Criterion | Weight |
 |---|---:|
-| Tính chính xác và phù hợp với Domain | 30% |
-| Kiến trúc Agentic RAG & Giải thuật | 30% |
-| Ý tưởng & Thuyết trình | 15% |
-| Khả năng thực thi & tính sáng tạo | 15% |
-| Trải nghiệm người dùng & giao diện tương tác | 10% |
+| Accuracy and Domain Relevance | 30% |
+| Agentic RAG Architecture & Algorithm | 30% |
+| Ideas & Presentation | 15% |
+| Feasibility & Creativity | 15% |
+| User Experience & Interactive Interface | 10% |
 
-#### Rubric vòng chung kết
+**Final rubric (consistent across both documents):**
 
-| Tiêu chí | Trọng số |
+| Criterion | Weight |
 |---|---:|
-| Chất lượng xử lý & truy xuất dữ liệu | 30% |
-| Độ tin cậy & chống ảo giác | 20% |
-| Tư duy Agent & xử lý đa tầng | 20% |
-| Tính thực tế & tối ưu vận hành | 20% |
-| Khả năng mở rộng & sáng tạo | 10% |
+| Data Processing & Retrieval Quality | 30% |
+| Reliability & Hallucination Resistance | 20% |
+| Agent Reasoning & Multi-hop Processing | 20% |
+| Practicality & Operational Optimization | 20% |
+| Scalability & Innovation | 10% |
 
-### Phần bị lệch
+**Scoring scale:** 1 (Poor) → 2 (Below expectations) → 3 (Meets) → 4 (Good) → 5 (Excellent)
 
-Hệ thống hiện tại mới dừng ở tiêu chí chấm điểm chung, chưa buộc rõ:
+### Misaligned Parts
+
+| Current Code | Required |
+|---|---|
+| Criteria are attached to rounds (correct structure) | Spring 2026 rubric weights must be seeded correctly — wrong seed = wrong scoring |
+| `maxScore` exists in `ScoringCriterion` | Must be set to 5 (scale 1–5) per Spring 2026 format |
+| No enforcement that PRELIMINARY ≠ FINAL rubric | Must ensure each round has its own distinct criteria seeded |
+
+### What Is Already Correct
 
 ```text
-Rubric vòng bảng khác rubric chung kết
-```
-
-### Hướng đúng hơn
-
-Entity tiêu chí nên có:
-
-```text
-ScoringCriterion
-- id
-- eventId
-- roundType: PRELIMINARY / FINAL
-- name
-- description
-- weightPercent
-- maxScore
+✓ Criteria are per-round — correct structure for having different rubrics per round
+✓ maxScore field exists on ScoringCriterion
+✓ Scoring template system exists for reusable rubrics
 ```
 
 ---
 
-## 7. Lệch về submission/nộp bài
+## 7. Misalignment in Submission
 
-### Hiện tại
+### Current State (actual code — `submission.api.ts`)
 
-Report hiện tại mô tả submission gồm:
+```typescript
+export interface CreateSubmissionRequest {
+  githubUrl?: string;       // still present
+  sourceCodeUrl?: string;   // ✓ exists
+  slideUrl?: string;        // ✓ exists
+  demoUrl: string;          // ✓ exists
+  pdfPageCount?: number;    // ✓ kept for all formats
+}
 
-```text
-GitHub URL
-Demo URL
-PDF
-PDF ≤ 5MB
-PDF ≤ 2 trang
-Demo URL whitelist
-GitHub URL validation
+// submissionApi.submit() accepts pdfFile?: File | null
+// → PDF upload supported across all competition formats
 ```
 
-### Nghiệp vụ gốc
-
-Nghiệp vụ gốc yêu cầu:
-
-```text
-Slide
-Source code URL
-Demo URL hoặc link sản phẩm
+`SubmissionVersionResponse`:
+```typescript
+githubUrl: string;          // still a field
+sourceCodeUrl?: string;     // also present
+slideUrl?: string | null;   // ✓ exists
+demoUrl: string;
+attachments: AttachmentResponse[];  // PDF attachments kept
 ```
 
-Đồng thời:
-
-```text
-Không chấp nhận Google Drive hoặc dịch vụ cá nhân cho mã nguồn/kết quả
-Chỉ Team Leader nên được quyền nộp bài chính thức
+`SubmitProjectRequest` (frontend form type — `submit-project.types.ts`):
+```typescript
+export interface SubmitProjectRequest {
+  repositoryUrl: string;      // maps to githubUrl — still primary
+  demoUrl: string;
+  documentationUrl: string;
+  slideUrl: string;
+  isDraft: boolean;
+}
 ```
 
-### Phần bị lệch
+No milestone gating in frontend: no check for "slide must be submitted before 10:00" in `submission.api.ts`.
 
-| Hiện tại | Đúng theo nghiệp vụ gốc |
+### Original Business Requirements
+
+```text
+Submission artifacts:
+  - Slide (primary — gate closes at 10:00 Day 2; OC locks after 10:00)
+  - Source code URL: GitHub / Jira / Confluence / Notion (NOT Google Drive)
+  - Demo URL: product link or video
+
+Rules:
+  - Only team leader can submit officially
+  - Milestone 1 gate: slide URL must be submitted before 10:00
+  - Milestone 2 gate: full submission (sourceCodeUrl + demoUrl) before 14:00
+  - Google Drive blocked for source code
+  - PDF is optional — kept for all formats, not required for SEAL_RAG_2026
+```
+
+### Misaligned Parts
+
+| Current Code | Required |
 |---|---|
-| PDF là trọng tâm | Slide mới là trọng tâm |
-| GitHub URL bắt buộc | Source có thể là GitHub/Jira/Confluence/Notion hoặc tương đương |
-| Demo whitelist có thể gồm Drive | Source/kết quả không nên để Google Drive |
-| Submission theo round chung | Cần phân biệt vòng bảng/chung kết |
+| `repositoryUrl` is still the primary field name in `SubmitProjectRequest` | Should be `sourceCodeUrl` as the canonical name |
+| `githubUrl` separate from `sourceCodeUrl` | Confusing duplication — source code field should be one field accepting GitHub, Jira, Notion, etc. |
+| No milestone gate enforcement in frontend | Need gate: slide-only before 10:00; full submission before 14:00 |
+| No Google Drive validation | Source code URL should reject drive.google.com domain |
+| `isDraft: boolean` in frontend form | Submission lifecycle (draft vs submitted) is modeled but milestone gates are not wired |
 
-### Hướng đúng hơn
-
-Nên đổi về:
-
-```text
-Submission
-- id
-- eventId
-- teamId
-- roundType
-- slideUrl
-- sourceCodeUrl
-- demoUrl
-- submittedBy
-- submittedAt
-- status
-```
-
-Rule nên ghi rõ:
+### What Is Already Correct
 
 ```text
-Google Drive có thể dùng cho slide/demo nếu BTC cho phép,
-nhưng không dùng làm nơi chứa source code chính.
+✓ slideUrl field exists in CreateSubmissionRequest
+✓ sourceCodeUrl field exists (alongside githubUrl)
+✓ demoUrl field exists
+✓ submittedBy tracked (leader check)
+✓ Submission is per round (preliminary vs final)
 ```
 
 ---
 
-## 8. Lệch về lịch trình và milestone
+## 8. Misalignment in Schedule and Milestones
 
-### Hiện tại
+> **Status: RESOLVED** (2026-06-29)  
+> Doc: [`docs/api/SEAL-Spring-2026-Schedule-API.md`](docs/api/SEAL-Spring-2026-Schedule-API.md)
 
-Report hiện tại có event date, round deadline, submission deadline, scoring deadline.
+### Resolution summary
 
-### Nghiệp vụ gốc
-
-Nghiệp vụ gốc có lịch trình cụ thể:
-
-| Mốc | Thời gian |
+| Gap (before) | Fix |
 |---|---|
-| Đăng ký | 15/03/2026 - 25/03/2026 |
-| Workshop | 09/04/2026 |
-| Khai mạc, bốc thăm, họp đội | 11/04/2026 |
-| Thi đấu, chấm vòng bảng, chung kết | 12/04/2026 |
+| No `scheduleApi` in frontend | Added `schedule.api.ts` with `list()` + client-side `getById()` |
+| No `ScheduleType` / `ScheduleGate` enums | Types in `schedule.api.ts`, exported via `index.ts` |
+| Milestones not visible in student portal | Dashboard card + full timeline on `/student/submissions` |
+| Landing page skipped MILESTONE blocks | `EventScheduleTimeline` shows all schedule types |
 
-Trong ngày thi:
+### Current State (actual code)
 
-| Giai đoạn | Thời gian |
-|---|---|
-| Thi đấu chính thức | 07h00 - 14h00 |
-| Chấm vòng bảng | 14h00 - 15h30 |
-| Chung kết | 15h30 - 17h00 |
-| Trao giải | 17h00 - 18h00 |
+```typescript
+// frontend/src/lib/api/schedule.api.ts
+scheduleApi.list(eventId)           // GET /events/{eventId}/schedule
+scheduleApi.getById(eventId, id)    // client-side from list
 
-### Phần bị lệch
-
-Hệ thống hiện tại đang biến lịch trình thành các deadline của round. Nhưng nghiệp vụ gốc cần một module lịch trình rõ hơn:
-
-```text
-Workshop
-Opening
-Topic Drawing
-Competition Time
-Preliminary Scoring
-Final Round
-Award Ceremony
+// Types: ScheduleType, ScheduleGate, EventScheduleResponse
+// Hook: useEventSchedule(eventId)
+// UI: EventScheduleTimeline (compact | full)
 ```
 
-### Hướng đúng hơn
+Round model still stores enforceable deadlines:
+```typescript
+slideDeadline?: string | null;      // Milestone 1 gate (10:00)
+submissionDeadline: string;         // Milestone 2 gate (14:00)
+scoringDeadline: string;
+```
 
-Nên có:
+Gates are **enforced** via round deadlines; `EventSchedule.gate` is display metadata cross-referenced on UI.
+
+### Original Business Requirements
+
+**Day 1 (11/04/2026):**
+
+| Phase | Time |
+|---|---|
+| Opening, teams draw Track, OC draws topics, group assignment, setup | 14:00–17:00 |
+
+**Day 2 (12/04/2026):**
+
+| Phase | Time | Gate |
+|---|---|---|
+| Milestone 1: Architecture & Idea Development | 07:00–10:00 | `SLIDE_SUBMISSION` closes at 10:00 |
+| **Slide Deadline** | **10:00** | OC locks slide gate |
+| Milestone 2: Pitching + Product Completion | 10:00–14:00 | Pitching concurrent with coding |
+| Preliminary Scoring (Technical Review) | 14:00–15:30 | Judges visit each table |
+| Final Round | 15:30–17:00 | Top 6 teams present |
+| Award Ceremony & Closing | 17:00–18:00 | |
+
+### What Is Correct
 
 ```text
-EventSchedule
-- id
-- eventId
-- title
-- description
-- startTime
-- endTime
-- type
+✓ EventSchedule seeded on SEAL_RAG_2026 event creation (8 items)
+✓ GET /api/events/{eventId}/schedule + public variant
+✓ scheduleApi + ScheduleType/ScheduleGate in frontend
+✓ Student dashboard + submission page show Milestone 1 & 2
+✓ Round submission/scoring deadlines tracked in RoundResponse
 ```
 
 ---
 
-## 9. Lệch về assign mentor/judge
+## 9. Misalignment in Mentor / Judge Assignment
 
-### Hiện tại
+### Current State (actual code — `assignment.api.ts`)
 
-Report hiện tại có assign judge, assign mentor, nhưng chủ yếu nói theo event hoặc round.
+```typescript
+// Judge: assigned PER ROUND
+assignJudge(eventId, roundId, body)   // POST /events/{eventId}/rounds/{roundId}/judges
+listJudges(eventId, roundId)
+removeJudge(eventId, roundId, assignmentId)
 
-### Nghiệp vụ gốc và góp ý mới
-
-Góp ý mới yêu cầu:
-
-```text
-Assign mentor qua page riêng
-Assign judge qua page riêng
-Sau khi tạo event xong mới assign lecturer/mentor/judge
-Phân công mentor theo track
-Phân công judge theo track và vòng
-Judge final round riêng
+// Mentor: assigned PER EVENT (not per track)
+assignMentor(eventId, body)           // POST /events/{eventId}/mentors
+listMentors(eventId)
+removeMentor(eventId, assignmentId)
 ```
 
-### Phần bị lệch
+`MentorAssignmentResponse`:
+```typescript
+{
+  id, eventId, mentorUserId, mentorFullName, mentorEmail, assignedAt
+  // NO trackId field
+}
+```
 
-| Hiện tại | Đúng hơn |
+`JudgeAssignmentResponse`:
+```typescript
+{
+  id, roundId, judgeUserId, judgeFullName, judgeEmail, assignedAt
+  // NO trackId field
+}
+```
+
+Team-judge assignment (`team-judge-assignment.api.ts`) does have `trackId` in the overview:
+```typescript
+export interface TeamAssignmentOverview {
+  teamId, teamName, trackId, trackName, ...
+  judges: TeamJudgeAssignmentResponse[];
+}
+```
+
+### Original Business Requirements
+
+```text
+Mentor → assigned per TRACK
+  (mentors support teams in their track)
+
+Judge → assigned per TRACK + per ROUND
+  (preliminary judges scored within their track;
+   final round judges cover all 6 finalists)
+
+Conflict rule: A judge must not score a team they mentored.
+```
+
+### Misaligned Parts
+
+| Current Code | Required |
 |---|---|
-| Assign nằm chung trong event config | Nên tách page riêng |
-| Assign mentor/judge theo event/round chung | Mentor theo track, judge theo track + round |
-| Chưa rõ final judge | Judge chung kết cần phân riêng |
-| Chưa rõ conflict mentor/judge | Judge không được chấm team mình mentor |
+| `MentorAssignment` has no `trackId` | Need `trackId` on `MentorAssignment` — mentor is per track |
+| `JudgeAssignment` has no `trackId` | Need `trackId` for preliminary; `trackId = null` for final round |
+| `/events/{eventId}/mentors` is event-wide | Should become `/events/{eventId}/tracks/{trackId}/mentors` |
+| `/events/{eventId}/rounds/{roundId}/judges` has no track filter | Need track filter for preliminary judges |
+| Conflict detection (judge vs mentor for same team) | Must cross-check: judge's assigned teams vs mentor's assigned teams before allowing scoring |
 
-### Hướng đúng hơn
-
-```text
-MentorAssignment
-- eventId
-- trackId
-- mentorId
-
-JudgeAssignment
-- eventId
-- trackId
-- roundType
-- judgeId
-```
-
-Với final round:
+### What Is Already Correct
 
 ```text
-roundType = FINAL
-trackId = null
-```
-
-hoặc dùng `trackId` optional.
-
----
-
-## 10. Lệch về scoring/chấm điểm
-
-### Hiện tại
-
-Report hiện tại có scoring theo round, judge scoring, lock score, comment, variance.
-
-### Nghiệp vụ đúng hơn
-
-Judge cần chấm theo:
-
-```text
-Track
-Round
-Rubric của round
-Team được assign
-```
-
-Đồng thời:
-
-```text
-Judge không được chấm team mình mentor
-```
-
-### Phần bị lệch
-
-| Hiện tại | Đúng hơn |
-|---|---|
-| Scoring theo round chung | Scoring theo track + round |
-| Judge có thể thấy nhiều submission | Judge chỉ thấy team được phân công |
-| Conflict detection có nhưng chưa gắn track/mentor rõ | Phải kiểm tra mentor-team trước khi cho chấm |
-| Score deviation chưa thành luồng review rõ | Nên có ScoreReviewRequest |
-
-### Hướng đúng hơn
-
-```text
-Score
-- id
-- eventId
-- teamId
-- judgeId
-- trackId
-- roundType
-- totalScore
-- comment
-- status
-
-ScoreDetail
-- id
-- scoreId
-- criterionId
-- rawScore
-- weightedScore
+✓ Judge assignment per round exists (preliminary vs final already separated by roundId)
+✓ TeamJudgeAssignment (assigning specific teams to judges) exists
+✓ TeamAssignmentOverview exposes trackId/trackName for context
+✓ Separate pages for judge assignment and mentor assignment already exist in admin portal
 ```
 
 ---
 
-## 11. Lệch về điều chỉnh điểm
+## 10. Misalignment in Scoring
 
-### Hiện tại
+### Current State (actual code — `judge.types.ts`)
 
-Report có nhắc scoring reopen, judge variance, analytics, nhưng chưa rõ luồng request điều chỉnh điểm khi điểm lệch quá cao.
-
-### Góp ý mới
-
-Nếu hệ thống tính ra độ lệch điểm quá lớn thì phải gửi yêu cầu điều chỉnh điểm.
-
-### Phần bị lệch
-
-Không nên để hệ thống tự động sửa điểm. Đúng hơn là hệ thống chỉ phát hiện lệch và tạo request review.
-
-### Hướng đúng hơn
-
-```text
-1. Judge chấm xong
-2. Hệ thống tính độ lệch điểm giữa các judge
-3. Nếu lệch quá ngưỡng → tạo ScoreReviewRequest
-4. Judge/Coordinator xem request
-5. Judge xác nhận giữ điểm hoặc sửa điểm
-6. Hệ thống lưu audit log
+```typescript
+export interface SubmissionForScoring {
+  trackName: string | null;   // ✓ track info visible to judge
+  criteria: ScoringCriterion[];
+  existingScores: CriterionScore[] | null;
+  scoreStatus: string | null;
+  isDraft: boolean;
+  isLocked: boolean;
+  isCompleted: boolean;
+}
 ```
 
-Entity:
+Score submission:
+```typescript
+export interface SubmitScoresPayload {
+  submissionId: string;
+  scores: CriterionScore[];  // criterionId + score + feedback
+}
+```
+
+No `trackId` or `roundType` in the score payload itself.
+
+### Original Business Requirements
+
+```text
+Judge scores per: team × round × rubric
+Rubric is tied to round (preliminary rubric ≠ final rubric)
+Judge only sees teams assigned to them
+Judge must not score a team they mentored
+Score scale: 1–5 per criterion
+```
+
+### Misaligned Parts
+
+| Current Code | Required |
+|---|---|
+| Judge can potentially see submissions beyond their assigned teams | Must filter: judge only sees teams they are assigned to |
+| Conflict check (mentor-team) not visible in frontend | Before rendering scoring form, check if this judge mentors this team |
+| No score deviation / review request flow | If max(judge scores) − min(judge scores) ≥ 25 → flag for review |
+
+### What Is Already Correct
+
+```text
+✓ Scoring is per criterion with weight and maxScore
+✓ isDraft / isLocked scoring lifecycle
+✓ trackName shown in SubmissionForScoring
+✓ Score history per judge (ScoreHistoryEntry)
+✓ Criteria breakdown per submission
+```
+
+---
+
+## 11. Score Deviation Review
+
+> Full spec: [`SEAL-Spring-2026-Score-Review-API.md`](./SEAL-Spring-2026-Score-Review-API.md)
+
+### Current State (implemented)
+
+```text
+✓ Backend: ScoreReviewRequest entity + score_review_requests table
+✓ Auto-create when all judges complete and deviation ≥ 25 (0–100 scale)
+✓ API: GET list, GET detail (coordinator + assigned judge read-only), PATCH resolve
+✓ Audit: SCORE_REVIEW_CREATED, SCORE_REVIEW_RESOLVED
+✓ Frontend: score-review.api.ts (ScoreReviewResponse), hooks, JudgeVariancePage
+✓ Judge: hasOpenScoreReview + openScoreReviewId on my-assignments; read-only modal
+✓ Dispute (team-initiated) remains separate in ranking.api.ts
+```
+
+### Original Business Requirements
+
+```text
+1. All judges finish scoring a team
+2. System calculates: deviation = max(scores) − min(scores)
+3. If deviation ≥ threshold (e.g., 25 points) → create ScoreReviewRequest
+4. Coordinator / judge reviews the flag
+5. Judge may keep or revise their score
+6. System logs audit entry
+```
+
+### Previously misaligned (now fixed)
+
+```text
+✓ ScoreReviewResponse in frontend (score-review.api.ts)
+✓ API endpoints for system-generated deviation alerts
+✓ DisputeResponse unchanged — team-initiated only
+```
+
+### Model
 
 ```text
 ScoreReviewRequest
-- id
-- eventId
-- teamId
-- roundType
-- reason
-- deviationValue
+- id, eventId, teamId, roundId, roundType, submissionId
+- deviationValue, minJudgeScore, maxJudgeScore
 - status: OPEN / RESOLVED / IGNORED
-- createdAt
-```
+- createdAt, resolvedAt, resolutionNote
 
-Ngưỡng đơn giản:
-
-```text
-Nếu maxScore - minScore >= 25 điểm
-→ tạo request review
+Threshold: maxJudgeScore − minJudgeScore ≥ 25 → auto-create request
 ```
 
 ---
 
-## 12. Lệch về leaderboard/công bố kết quả
+## 12. Misalignment in Leaderboard
 
-### Hiện tại
+### Current State (actual code — `ranking.api.ts`)
 
-Report hiện tại có leaderboard/ranking/publish, nhưng đang thiên về kết quả chung.
+```typescript
+getSeasonRankings(params?: { season?, year?, trackId? })  // ✓ trackId filter exists
 
-### Góp ý mới và nghiệp vụ gốc
+RankingResponse {
+  teamId, teamName, roundId, roundName,
+  trackId, trackName,  // ✓ track fields exist
+  finalScore, rank, calculatedAt
+}
 
-Cần:
-
-```text
-Xem thông tin tiến độ cuộc thi
-Công bố kết quả từng track
-Công bố kết quả từng round
-Ranking vòng bảng theo track
-Final ranking sau chung kết
+PublishedResultResponse {
+  roundId, publishedBy, publishedAt, disputeDeadline,
+  rankings: RankingResponse[],
+  advancements: AdvancementResponse[]
+}
 ```
 
-### Phần bị lệch
+Frontend leaderboard types (`leaderboard.types.ts`):
+```typescript
+LeaderboardTeam {
+  round1Score, round2Score, totalScore  // ← hard-coded to 2 rounds
+  status: "promoted" | "active" | "at_risk" | "eliminated"
+}
+```
 
-| Hiện tại | Đúng hơn |
+### Original Business Requirements
+
+```text
+Preliminary leaderboard: per track, shows ranking within that track
+Final leaderboard: overall, shows Top 6 finalists ranked
+Public access: only when published = true
+Progress board: show where the event is in the competition flow
+```
+
+### Misaligned Parts
+
+| Current Code | Required |
 |---|---|
-| Leaderboard chung | Leaderboard theo track/round |
-| Ranking chung | Preliminary ranking và Final ranking |
-| Publish chung | Publish theo track/round |
-| Chưa rõ progress board | Cần xem tiến độ cuộc thi, không chỉ bảng điểm |
+| `LeaderboardTeam` hard-codes `round1Score`, `round2Score` | Should derive from `RankingResponse` per `roundType`, not hard-coded |
+| `LeaderboardParams { track?: string }` — filter by track name string | Should filter by `trackId` (UUID) and `roundType` |
+| Status labels: "promoted", "at_risk", "eliminated" | For SEAL: simplified — "finalist" or "eliminated" after preliminary |
+| No explicit PRELIMINARY / FINAL leaderboard split in frontend | Need `roundType` param in leaderboard query |
+| `disputeDeadline` in PublishedResultResponse | Disputes are team-filed; still relevant but low priority for SEAL |
 
-### Hướng đúng hơn
-
-```text
-GET /events/{eventId}/leaderboard?roundType=PRELIMINARY&trackId=...
-GET /events/{eventId}/leaderboard?roundType=FINAL
-POST /events/{eventId}/leaderboard/publish
-```
-
-Public user chỉ xem được khi:
+### What Is Already Correct
 
 ```text
-published = true
+✓ trackId present in RankingResponse
+✓ publish flow: getPublishedResults() exists
+✓ advancementStatus: ADVANCED / ELIMINATED
+✓ Rankings are per-round (roundId filter)
+✓ Public award endpoint: GET /public/events/{id}/awards
 ```
 
 ---
 
-## 13. Lệch về team matching/tìm team
+## 13. Misalignment in Team Matching
 
-### Hiện tại
+### Current State
 
-Report hiện tại có auto-matching và invitation, nhưng chưa thể hiện rõ nhu cầu tìm team theo role.
-
-### Góp ý mới
-
-Team thiếu người có thể note đang kiếm người có vai trò cần thiết. Người chưa có nhóm có thông tin vai trò như FE, BE. Tìm team không xem được thông tin thành viên, chỉ filter theo role team đang cần.
-
-### Phần bị lệch
-
-| Hiện tại | Đúng hơn |
-|---|---|
-| Team invitation chung | Cần thêm team recruiting |
-| Auto-matching chung | Cần filter role đang cần |
-| Có thể xem team | Không nên xem thông tin thành viên trong tìm team |
-| Profile chưa rõ visibility | Cần public/private profile |
-
-### Hướng đúng hơn
-
-Team nên có:
-
-```text
-Team
-- recruitmentNote
-- neededRoles
-- isRecruiting
+`Team` type (`team.types.ts`):
+```typescript
+export interface Team {
+  id, name, description, hackathonId, hackathonName,
+  memberCount, maxMembers, trackName, status: "open" | "full",
+  members: TeamMember[]
+}
 ```
 
-Participant profile nên có:
+No `recruitmentNote`, `neededRoles`, or `isRecruiting` fields.
+
+### Original Business Requirements
+
+Teams short on members should be able to advertise needed roles. Participants without a team should see open teams without seeing private member details.
+
+### Misaligned Parts
 
 ```text
-ParticipantProfile
-- preferredRole
-- skills
-- bio
-- portfolioUrl
-- isLookingForTeam
-- profileVisibility: PUBLIC / PRIVATE
-```
-
-Màn tìm team chỉ hiện:
-
-```text
-Team name
-Số lượng hiện tại
-Vai trò đang cần
-Recruitment note
-Button Request to Join
-```
-
-Không hiện:
-
-```text
-Email thành viên
-SĐT
-Thông tin cá nhân riêng tư
+✓ recruitmentNote, neededRoles, isRecruiting on Team (+ PUT /recruitment)
+✓ preferredRole / isLookingForTeam on EventEnrollment (+ PUT /matching-profile)
+✓ Joinable/browse views hide member & leader emails
+✓ API doc: docs/api/SEAL-Spring-2026-Team-Matching-API.md
 ```
 
 ---
 
-## 14. Lệch về sinh viên vãng lai
+## 14. Misalignment in External Student Verification
 
-### Hiện tại
+> **Status: FIXED** — API doc: [`docs/api/SEAL-Spring-2026-External-Student-Verification-API.md`](docs/api/SEAL-Spring-2026-External-Student-Verification-API.md)
 
-Report hiện tại có FPT Student và External Student, nhưng chưa rõ xác minh external student bằng email trường/tổ chức.
+### Current State (`auth.api.ts`)
 
-### Góp ý mới
-
-Sinh viên vãng lai nhập bằng:
-
-```text
-email .edu
-mail tổ chức
-mail trường
+```typescript
+export interface RegisterRequest {
+  email: string;
+  password: string;
+  fullName: string;
+  phone?: string;
+  studentId?: string;
+  universityName?: string; // EXTERNAL_STUDENT: select from whitelist label
+  userType: Extract<UserType, "FPT_STUDENT" | "EXTERNAL_STUDENT">;
+  studentStanding: Extract<StudentStanding, "ENROLLED">; // GRADUATED rejected server-side
+  semester?: number;
+}
 ```
 
-Sau đó hệ thống gửi link đăng nhập qua mail giả lập.
-
-### Phần bị lệch
-
-Chỉ dùng `.edu` là không đủ vì trường Việt Nam thường dùng nhiều domain khác nhau:
+### Original Business Requirements
 
 ```text
-.edu.vn
-@fpt.edu.vn
-@fe.edu.vn
-@hcmut.edu.vn
-@student.hcmus.edu.vn
-@uit.edu.vn
+Eligible: students from FPT HCM or other HCM universities (by OC invitation)
+Not eligible: graduated students
+External student verification: must use a university/organization email domain
 ```
 
-### Hướng đúng hơn
-
-Nên có whitelist domain:
+### Misaligned Parts (resolved)
 
 ```text
-AllowedEmailDomain
-- id
-- eventId
-- domain
-- schoolName
-- type: FPT / INVITED_SCHOOL / ORGANIZATION
+✓ Email domain whitelist enforced at registration (default SEAL 2026 list) and per-event enroll
+✓ Graduated-student restriction via studentStanding (register + enroll + logged-in enroll)
+✓ universityName validated against AllowedEmailDomain.universityLabel (dropdown, not free text)
+✓ Admin/Coordinator UI: AllowedEmailDomainsPanel on event edit + /coordinator/allowed-domains
 ```
 
-Và luồng:
-
+Vietnamese university domains supported (default template):
 ```text
-1. External student nhập email trường/tổ chức
-2. Hệ thống kiểm tra domain hợp lệ
-3. Hệ thống tạo login token
-4. Hệ thống giả lập gửi mail bằng cách show link hoặc log console
-5. User bấm link để xác thực / đăng nhập lần đầu
-```
-
-Không nên ghi là gửi mail thật nếu chưa có SMTP.
-
----
-
-## 15. Lệch về rule/description
-
-### Hiện tại
-
-Report hiện tại chia nhiều business rule chi tiết.
-
-### Góp ý mới
-
-Rule có thể bỏ vào description, chỉ cần một khung text rồi paste vào.
-
-### Phần bị lệch
-
-Nếu đưa toàn bộ rule vào text thì hệ thống sẽ không enforce được rule.
-
-Ví dụ nếu chỉ paste text:
-
-```text
-Đội trễ quá 60 phút bị loại
-```
-
-thì backend sẽ không tự biết để loại đội.
-
-### Hướng đúng hơn
-
-Nên chia thành 2 loại:
-
-#### Rule dạng text
-
-```text
-Nội quy cuộc thi
-Quy định đạo đức
-Quy định bản quyền
-Quy định đi trễ
-Quy định trình bày
-```
-
-#### Rule hệ thống phải enforce
-
-```text
-Team size 3–5
-Deadline đăng ký
-Deadline nộp bài
-Max team / track
-Judge không chấm team mình mentor
-Chỉ leader nộp bài
-Không sửa điểm sau khi khóa
+@fpt.edu.vn, @fe.edu.vn, @hcmut.edu.vn, @student.hcmus.edu.vn, @uit.edu.vn, etc.
 ```
 
 ---
 
-## 16. Lệch về award/giải thưởng
+## 15. Misalignment in Business Rules Enforcement
 
-### Hiện tại
+### Status: ✅ Done (2026-06-29)
 
-Report hiện tại có ranking và publish, nhưng award chưa phải module chính.
+Doc: [`docs/api/SEAL-Spring-2026-Business-Rules-Enforcement-API.md`](docs/api/SEAL-Spring-2026-Business-Rules-Enforcement-API.md)
 
-### Nghiệp vụ gốc
-
-Cơ cấu giải thưởng cụ thể:
-
-| Giải | Giá trị |
-|---|---:|
-| Giải Nhất | 7.000.000đ |
-| Giải Nhì | 5.000.000đ |
-| Giải Ba | 3.000.000đ |
-| Khuyến khích | 1.500.000đ |
-| Giấy chứng nhận | Tất cả thí sinh tham gia |
-
-### Phần bị lệch
-
-Nếu chỉ có ranking mà không có award, hệ thống chưa thể hiện đúng đầu ra cuối cùng của cuộc thi.
-
-### Hướng đúng hơn
-
-Nên có:
+### Implemented
 
 ```text
-Award
-- id
-- eventId
-- name
-- prizeAmount
-- description
+✓ Registration deadline unified with member mutations (BE + FE gate hook)
+✓ Semester min/max enforced at enroll (BE + FE profile gate)
+✓ Graduated block at register/enroll (BE); FE uses studentStanding from profile
+✓ tiebreakerCriterionIds structured field + ranking/finalist tie-break
+✓ SEAL slide/demo gates in student-submission-page + round.utils submissionDeadline
+✓ Judge–mentor conflict — already enforced (BE + FE); documented
+✓ One team per event — BE enforced; FE join/invite gated by registration
+✓ transferLeadership guarded after registration deadline
+```
 
-TeamAward
-- id
-- awardId
-- teamId
-- awardedAt
+### Event fields (`event.api.ts`)
+
+```typescript
+minTeam / maxTeam          // BE + FE (resolveEventTeamSize)
+semesterMin / semesterMax  // BE enroll + FE eligibility gate
+tiebreakerCriterionIds     // machine-readable tie-break (ScoringTemplateCriterion IDs)
+tiebreakerCriteria         // display label only (deprecated for logic)
+registrationDeadline       // unified member mutation gate
 ```
 
 ---
 
-## 17. Lệch về review/feedback
+## 16. Awards
 
-### Hiện tại
+### Current State (actual code — `award.api.ts`)
 
-Report hiện tại có notification, dispute, audit, nhưng chưa nhấn mạnh feedback/review từ người tham gia.
+```typescript
+awardApi.assign(eventId)         // auto-assign from final scores
+awardApi.list(eventId)           // admin view
+awardApi.listPublic(eventId)     // public view
 
-### Góp ý mới
-
-Có review/feedback của người tham gia thì tốt.
-
-### Phần bị lệch
-
-Feedback không phải core flow, nhưng nếu làm AS2 thì nên có vì giúp hoàn thiện vận hành sau cuộc thi.
-
-### Hướng đúng hơn
-
-```text
-ParticipantFeedback
-- id
-- eventId
-- userId
-- rating
-- comment
-- createdAt
+TeamAwardResponse {
+  prizeRank: "FIRST" | "SECOND" | "THIRD" | "CONSOLATION",
+  prizeLabel, prizeValue, awardedAt
+}
 ```
 
-Có thể phân loại:
+### Original Business Requirements
+
+| Prize | Quantity | Value |
+|---|---|---:|
+| 1st Place | 01 | 7,000,000 VND + certificate |
+| 2nd Place | 01 | 5,000,000 VND + certificate |
+| 3rd Place | 01 | 3,000,000 VND + certificate |
+| Honorable Mention | 01 | 1,500,000 VND + certificate |
+| Certificate of Participation | All participants | — |
+
+### Status
+
+**Awards module is complete.** Prize ranks (FIRST/SECOND/THIRD/CONSOLATION) map correctly. Prizes are seeded when `SEAL_RAG_2026` format is selected. Certificate of Participation is issued automatically on `POST /awards/assign` for members of CONFIRMED teams.
 
 ```text
-Feedback về event
-Feedback về mentor
-Feedback về judging
-Feedback về platform
+✓ Certificate of Participation — ParticipationCertificate entity + API
+  Doc: docs/api/SEAL-Spring-2026-Awards-API.md
 ```
 
 ---
 
-# Tổng kết các phần lệch chính
+## 17. Feedback / Post-event Review
 
-| STT | Phần lệch | Mức độ |
-|---:|---|---|
-| 1 | Hệ thống đang quá generic, chưa bám format SEAL Spring 2026 | Rất cao |
-| 2 | Role bị phình và trùng nghĩa | Rất cao |
-| 3 | Event status chưa rõ theo từng giai đoạn | Cao |
-| 4 | Track chưa được xem là bảng thi cốt lõi | Rất cao |
-| 5 | Chưa rõ vòng bảng → Top 6 → chung kết | Rất cao |
-| 6 | Rubric chưa tách vòng bảng và chung kết | Cao |
-| 7 | Submission lệch từ slide/source/demo sang GitHub/demo/PDF | Cao |
-| 8 | Lịch trình đang bị giản lược thành deadline | Trung bình |
-| 9 | Assign mentor/judge chưa tách theo track + round | Rất cao |
-| 10 | Scoring chưa bám track + round | Rất cao |
-| 11 | Điều chỉnh điểm chưa có luồng ScoreReviewRequest rõ | Cao |
-| 12 | Leaderboard chưa tách track/round/final | Cao |
-| 13 | Team matching chưa bám role cần tuyển | Trung bình |
-| 14 | External student chưa rõ xác minh bằng domain email | Trung bình |
-| 15 | Rule text chưa phân biệt rule mô tả và rule hệ thống enforce | Trung bình |
-| 16 | Award chưa phải đầu ra chính | Trung bình |
-| 17 | Feedback chưa được đưa vào luồng sau cuộc thi | Thấp |
+### Current State
+
+`ParticipantFeedback` entity + REST API + frontend student/coordinator pages.
+
+### Status
+
+**Implemented (AS2).** Post-event survey: `overallRating` 1–5 + optional comment. Eligibility: team `CONFIRMED`, event `COMPLETED`, one submission per user per event.
+
+```text
+✓ ParticipantFeedback — entity + API + frontend
+  Doc: docs/api/SEAL-Spring-2026-Participant-Feedback-API.md
+  Student: /student/feedback
+  Coordinator: /coordinator/feedback
+```
 
 ---
 
-# Kết luận
+# Summary of Actual Misalignments
 
-Các phần lệch nghiêm trọng nhất cần chỉnh trước là:
+| # | What Is Wrong in Code | Severity | Status |
+|---:|---|---|---|
+| 1 | SELF_DRAW method missing from `track-assignment.api.ts` | Very High | ✅ Done |
+| 2 | Draw session endpoints not in frontend API layer | Very High | ✅ Done |
+| 3 | `TrackResponse` missing `status: OPEN / LOCKED` field | High | ✅ Done |
+| 4 | `PUT /tracks/{trackId}/topic` not in `track.api.ts` | High | ✅ Done |
+| 5 | `POST /tracks/lock` not in `track.api.ts` | High | ✅ Done |
+| 6 | Mentor assignment has no `trackId` — event-wide instead of per-track | Very High | Data model gap |
+| 7 | Judge assignment has no `trackId` — round-wide instead of per-track | Very High | Data model gap |
+| 8 | Judge-mentor conflict not checked before scoring | Very High | ✅ Done — see Business-Rules-Enforcement API |
+| 9 | Milestone gates (10:00 slide, 14:00 demo) not enforced in frontend submission | High | ✅ Done — seal-submission.utils + round.utils |
+| 10 | `EventSchedule` entity not in frontend API layer | High | API spec done, frontend missing |
+| 11 | `repositoryUrl` / `githubUrl` still primary in submission form — should be `sourceCodeUrl` | Medium | Naming inconsistency |
+| 12 | PDF still in submission model (`pdfPageCount`, `pdfFile`) | Medium | Should be removed |
+| 13 | `LeaderboardTeam` hard-codes `round1Score / round2Score` | Medium | Should derive from RoundType |
+| 14 | No `ScoreReviewRequest` for score deviation detection | Medium | ✅ Done — see SEAL-Spring-2026-Score-Review-API.md |
+| 15 | `EXTERNAL_STUDENT` domain not validated | Medium | No whitelist |
+| 16 | Graduated student block missing at registration | Medium | ✅ Done — see Business-Rules-Enforcement API |
+| 17 | `roundType` is optional on `RoundResponse` — should be required for SEAL rounds | Low | Optional vs required |
+| 18 | Certificate of participation not modeled | Low | ✅ Done — see SEAL-Spring-2026-Awards-API.md |
+
+---
+
+# Priority Fix Order
 
 ```text
-1. Track = bảng
-2. Vòng bảng → Top 6 → Chung kết
-3. Rubric riêng cho vòng bảng và chung kết
-4. Judge assignment theo track + round
-5. Mentor assignment theo track
-6. Scoring theo track + round
-7. Leaderboard theo track/round/final
-8. Event status rõ theo giai đoạn
-9. Submission đúng: slide + source + demo
-10. Award sau final ranking
-```
+Phase A — Track draw (Day 1 flow): ✅ COMPLETE
+  Doc: docs/api/SEAL-Spring-2026-Track-Assignment-API.md
+  Tests: TrackDrawSessionIntegrationTest
 
-Nếu không chỉnh các phần này, hệ thống vẫn có thể nhiều chức năng, nhưng sẽ không khớp với nghiệp vụ thật của SEAL Hackathon Spring 2026.
+Phase B — Assignment accuracy:
+  6. Add trackId to MentorAssignmentResponse
+  7. Add trackId to JudgeAssignmentResponse
+  8. Enforce judge-mentor conflict check before scoring
+
+Phase C — Submission gates:
+  9. Add milestone gate enforcement to submission.api.ts (slide ≤ 10:00, demo ≤ 14:00)
+  10. Rename repositoryUrl → sourceCodeUrl as primary field
+  11. Remove PDF from submission (or mark clearly as legacy)
+
+Phase D — Schedule visibility:
+  12. Add EventSchedule to frontend API layer (scheduleApi)
+  13. Wire ScheduleType and ScheduleGate enums in types.ts
+
+Phase E — Leaderboard cleanup:
+  14. Remove hard-coded round1Score/round2Score from LeaderboardTeam
+  15. Add roundType filter to leaderboard query
+```

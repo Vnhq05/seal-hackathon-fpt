@@ -30,8 +30,10 @@ public class SeasonRankingController {
     public ResponseEntity<ApiResponse<List<EventRankingBoard>>> getSeasonRankings(
             @RequestParam(required = false) String season,
             @RequestParam(required = false) Integer year,
-            @RequestParam(required = false) UUID trackId) {
-        List<EventRankingBoard> boards = seasonRankingService.getSeasonRankings(season, year, trackId);
+            @RequestParam(required = false) UUID trackId,
+            @RequestParam(required = false) String roundType) {
+        List<EventRankingBoard> boards = seasonRankingService.getSeasonRankings(
+                season, year, trackId, roundType);
         return ResponseEntity.ok(ApiResponse.success(boards));
     }
 }

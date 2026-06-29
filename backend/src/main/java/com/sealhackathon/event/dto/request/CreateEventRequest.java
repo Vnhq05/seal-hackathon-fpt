@@ -2,6 +2,7 @@ package com.sealhackathon.event.dto.request;
 
 import com.sealhackathon.event.domain.enums.CompetitionFormat;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -71,6 +72,8 @@ public class CreateEventRequest {
     @Size(max = 1000)
     private String tiebreakerCriteria;
 
+    private List<UUID> tiebreakerCriterionIds;
+
     @Valid
     private List<CreateTrackRequest> tracks;
 
@@ -83,4 +86,9 @@ public class CreateEventRequest {
     private List<UUID> mentorUserIds;
 
     private List<UUID> judgeUserIds;
+
+    /** SYSTEM_ADMIN only — assign event ownership to a coordinator at creation time. */
+    @Email
+    @Size(max = 255)
+    private String coordinatorEmail;
 }

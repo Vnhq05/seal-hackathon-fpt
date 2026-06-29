@@ -5,10 +5,12 @@ import com.sealhackathon.auth.dto.request.RegisterRequest;
 import com.sealhackathon.auth.dto.response.AuthResponse;
 import com.sealhackathon.auth.security.JwtProvider;
 import com.sealhackathon.common.enums.AccountStatus;
+import com.sealhackathon.common.enums.StudentStanding;
 import com.sealhackathon.common.enums.UserType;
 import com.sealhackathon.common.exception.AccountNotActivatedException;
 import com.sealhackathon.common.exception.DuplicateResourceException;
 import com.sealhackathon.common.exception.InvalidCredentialsException;
+import com.sealhackathon.event.service.AllowedEmailDomainService;
 import com.sealhackathon.user.dto.snapshot.LockState;
 import com.sealhackathon.user.dto.snapshot.UserSnapshot;
 import com.sealhackathon.user.service.UserPublicService;
@@ -40,6 +42,7 @@ class AuthServiceTest {
     @Mock private JwtProvider jwtProvider;
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private ApplicationEventPublisher eventPublisher;
+    @Mock private AllowedEmailDomainService allowedEmailDomainService;
 
     @InjectMocks private AuthService authService;
 
@@ -53,13 +56,15 @@ class AuthServiceTest {
                 .fullName("Nguyen Van A")
                 .studentId("SE123456")
                 .userType(UserType.FPT_STUDENT)
+                .studentStanding(StudentStanding.ENROLLED)
                 .build();
 
         UUID expectedId = UUID.randomUUID();
         when(userPublicService.existsByEmail(anyString())).thenReturn(false);
         when(passwordEncoder.encode(anyString())).thenReturn("hashed");
         when(userPublicService.createParticipant(
-                anyString(), anyString(), anyString(), any(), anyString(), any(), eq(UserType.FPT_STUDENT), any(), anyBoolean()))
+                anyString(), anyString(), anyString(), any(), anyString(), any(),
+                eq(UserType.FPT_STUDENT), any(), anyBoolean(), eq(StudentStanding.ENROLLED)))
                 .thenReturn(expectedId);
 
         UUID result = authService.register(request);
@@ -174,15 +179,63 @@ class AuthServiceTest {
     @Test
     void register_shouldThrow_whenExternalStudentMissingUniversity() {
         RegisterRequest request = RegisterRequest.builder()
-                .email("ext@test.com")
+                .email("ext@hcmut.edu.vn")
                 .password("password123")
                 .fullName("External")
                 .studentId("EXT001")
                 .userType(UserType.EXTERNAL_STUDENT)
+                .studentStanding(StudentStanding.ENROLLED)
                 .build();
+
+        org.mockito.Mockito.doThrow(new com.sealhackathon.common.exception.BusinessException(
+                "University name is required", org.springframework.http.HttpStatus.BAD_REQUEST) {})
+                .when(allowedEmailDomainService)
+                .validateExternalRegistration("ext@hcmut.edu.vn", null);
 
         assertThatThrownBy(() -> authService.register(request))
                 .hasMessageContaining("University name is required");
+    }
+
+    @Test
+    void register_shouldCreateExternalStudent_whenValidDomainAndUniversity() {
+        RegisterRequest request = RegisterRequest.builder()
+                .email("student@hcmut.edu.vn")
+                .password("password123")
+                .fullName("External")
+                .studentId("EXT001")
+                .universityName("ĐH Bách khoa TP.HCM")
+                .userType(UserType.EXTERNAL_STUDENT)
+                .studentStanding(StudentStanding.ENROLLED)
+                .build();
+
+        UUID expectedId = UUID.randomUUID();
+        when(userPublicService.existsByEmail(anyString())).thenReturn(false);
+        when(passwordEncoder.encode(anyString())).thenReturn("hashed");
+        when(userPublicService.createParticipant(
+                anyString(), anyString(), anyString(), any(), anyString(), anyString(),
+                eq(UserType.EXTERNAL_STUDENT), any(), anyBoolean(), eq(StudentStanding.ENROLLED)))
+                .thenReturn(expectedId);
+
+        UUID result = authService.register(request);
+
+        assertThat(result).isEqualTo(expectedId);
+        verify(allowedEmailDomainService).validateExternalRegistration(
+                "student@hcmut.edu.vn", "ĐH Bách khoa TP.HCM");
+    }
+
+    @Test
+    void register_shouldThrow_whenGraduatedStudent() {
+        RegisterRequest request = RegisterRequest.builder()
+                .email("grad@test.com")
+                .password("password123")
+                .fullName("Graduated")
+                .studentId("SE123456")
+                .userType(UserType.FPT_STUDENT)
+                .studentStanding(StudentStanding.GRADUATED)
+                .build();
+
+        assertThatThrownBy(() -> authService.register(request))
+                .hasMessageContaining("Graduated students are not eligible");
     }
 
     @Test
@@ -193,13 +246,15 @@ class AuthServiceTest {
                 .fullName("Nguyen Van A")
                 .studentId("SE123456")
                 .userType(UserType.FPT_STUDENT)
+                .studentStanding(StudentStanding.ENROLLED)
                 .build();
 
         UUID expectedId = UUID.randomUUID();
         when(userPublicService.existsByEmail(anyString())).thenReturn(false);
         when(passwordEncoder.encode(anyString())).thenReturn("hashed");
         when(userPublicService.createParticipant(
-                anyString(), anyString(), anyString(), any(), anyString(), any(), eq(UserType.FPT_STUDENT), any(), anyBoolean()))
+                anyString(), anyString(), anyString(), any(), anyString(), any(),
+                eq(UserType.FPT_STUDENT), any(), anyBoolean(), eq(StudentStanding.ENROLLED)))
                 .thenReturn(expectedId);
 
         UUID result = authService.register(request);
@@ -210,12 +265,13 @@ class AuthServiceTest {
     @Test
     void register_shouldThrow_whenExternalStudentMissingStudentId() {
         RegisterRequest request = RegisterRequest.builder()
-                .email("ext@test.com")
+                .email("ext@hcmut.edu.vn")
                 .password("password123")
                 .fullName("External")
                 .studentId("   ")
-                .universityName("HUST")
+                .universityName("ĐH Bách khoa TP.HCM")
                 .userType(UserType.EXTERNAL_STUDENT)
+                .studentStanding(StudentStanding.ENROLLED)
                 .build();
 
         assertThatThrownBy(() -> authService.register(request))

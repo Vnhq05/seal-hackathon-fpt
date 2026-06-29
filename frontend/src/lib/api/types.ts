@@ -27,6 +27,8 @@ export type UserType =
 
 export type AccountStatus = "PENDING" | "ACTIVE" | "REJECTED" | "LOCKED";
 
+export type StudentStanding = "ENROLLED" | "GRADUATED";
+
 export type EventStatus =
   | "UPCOMING"
   | "OPEN"
@@ -43,6 +45,31 @@ export type RoundType = "PRELIMINARY" | "FINAL";
 export type TeamStatus = "FORMING" | "CONFIRMED" | "DISBANDED";
 
 export type TeamMemberRole = "LEADER" | "MEMBER";
+
+export type HackathonSkillRole =
+  | "FRONTEND"
+  | "BACKEND"
+  | "FULLSTACK"
+  | "MOBILE"
+  | "AI_ML"
+  | "DESIGN"
+  | "DEVOPS"
+  | "DATA"
+  | "PM"
+  | "OTHER";
+
+export const HACKATHON_SKILL_ROLE_LABELS: Record<HackathonSkillRole, string> = {
+  FRONTEND: "Frontend",
+  BACKEND: "Backend",
+  FULLSTACK: "Full-stack",
+  MOBILE: "Mobile",
+  AI_ML: "AI / ML",
+  DESIGN: "Design",
+  DEVOPS: "DevOps",
+  DATA: "Data",
+  PM: "Product / PM",
+  OTHER: "Other",
+};
 
 export type InvitationStatus = "PENDING" | "ACCEPTED" | "REJECTED" | "EXPIRED" | "CANCELLED";
 

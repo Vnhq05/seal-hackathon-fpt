@@ -8,6 +8,7 @@ interface JoinRequestCardProps {
   onReject: () => void;
   isAccepting: boolean;
   isRejecting: boolean;
+  disabled?: boolean;
 }
 
 export function JoinRequestCard({
@@ -16,6 +17,7 @@ export function JoinRequestCard({
   onReject,
   isAccepting,
   isRejecting,
+  disabled = false,
 }: JoinRequestCardProps) {
   const sentAt = new Date(request.createdAt).toLocaleString();
 
@@ -33,14 +35,14 @@ export function JoinRequestCard({
       <div className="flex items-center gap-2 flex-shrink-0">
         <button
           onClick={onAccept}
-          disabled={isAccepting || isRejecting}
+          disabled={disabled || isAccepting || isRejecting}
           className="rounded-md bg-emerald-600 px-2.5 py-1 text-[10px] font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
         >
           Accept
         </button>
         <button
           onClick={onReject}
-          disabled={isAccepting || isRejecting}
+          disabled={disabled || isAccepting || isRejecting}
           className="rounded-md border border-red-200 px-2.5 py-1 text-[10px] font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50"
         >
           Reject

@@ -2,6 +2,19 @@ import { api } from "./api-client";
 import { apiClient } from "@/lib/axios";
 import type { ApiResponse, SubmissionStatus } from "./types";
 
+/** Max PDF upload size for non-SEAL submissions (5 MB). */
+export const SUBMISSION_MAX_PDF_BYTES = 5 * 1024 * 1024;
+
+/** Normalize backend file path for apiClient (base URL already includes `/api`). */
+export function normalizeSubmissionFilePath(fileUrl: string): string {
+  if (fileUrl.startsWith("http://") || fileUrl.startsWith("https://")) {
+    const path = new URL(fileUrl).pathname;
+    return path.startsWith("/api/") ? path.slice(4) : path;
+  }
+  if (fileUrl.startsWith("/api/")) return fileUrl.slice(4);
+  return fileUrl.startsWith("/") ? fileUrl : `/${fileUrl}`;
+}
+
 // ═══ Types ═══
 
 export interface AttachmentResponse {
@@ -15,10 +28,12 @@ export interface AttachmentResponse {
 export interface SubmissionVersionResponse {
   id: string;
   versionNumber: number;
-  githubUrl: string;
-  sourceCodeUrl?: string;
+  /** Canonical source code URL */
+  sourceCodeUrl?: string | null;
   slideUrl?: string | null;
-  demoUrl: string;
+  demoUrl?: string | null;
+  /** @deprecated Use sourceCodeUrl — backend alias for backward compatibility */
+  githubUrl?: string | null;
   submittedAt: string;
   attachments: AttachmentResponse[];
 }
@@ -36,10 +51,13 @@ export interface SubmissionResponse {
 }
 
 export interface CreateSubmissionRequest {
-  githubUrl?: string;
+  /** Canonical source code URL (GitHub, Jira, Confluence, Notion) */
   sourceCodeUrl?: string;
   slideUrl?: string;
-  demoUrl: string;
+  demoUrl?: string;
+  /** @deprecated Use sourceCodeUrl — still accepted by backend */
+  githubUrl?: string;
+  /** Legacy non-SEAL PDF upload metadata */
   pdfPageCount?: number;
 }
 
@@ -101,5 +119,13 @@ export const submissionApi = {
     return api.get<SubmissionResponse[]>(`/rounds/${roundId}/submissions/mentor`, {
       params: { eventId },
     });
+  },
+
+  /** GET /api/files/submissions/** — download PDF attachment (inline). */
+  async downloadAttachment(fileUrl: string): Promise<Blob> {
+    const { data } = await apiClient.get(normalizeSubmissionFilePath(fileUrl), {
+      responseType: "blob",
+    });
+    return data as Blob;
   },
 };

@@ -1,5 +1,7 @@
 package com.sealhackathon.team.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.sealhackathon.team.domain.enums.HackathonSkillRole;
 import com.sealhackathon.team.domain.enums.TeamStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -28,4 +30,8 @@ public class TeamResponse {
     private boolean canSelectTrack;
     private List<TeamMemberResponse> members;
     private LocalDateTime createdAt;
+    @Getter(onMethod_ = {@JsonProperty("isRecruiting")})
+    private boolean isRecruiting;
+    private String recruitmentNote;
+    private List<HackathonSkillRole> neededRoles;
 }

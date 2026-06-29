@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -33,8 +34,9 @@ public class RankingController {
     @GetMapping
     @Operation(summary = "Get latest rankings for a round")
     public ResponseEntity<ApiResponse<List<RankingResponse>>> getRankings(
-            @PathVariable UUID roundId) {
-        List<RankingResponse> rankings = rankingService.getLatestRankings(roundId);
+            @PathVariable UUID roundId,
+            @RequestParam(required = false) UUID trackId) {
+        List<RankingResponse> rankings = rankingService.getLatestRankings(roundId, trackId);
         return ResponseEntity.ok(ApiResponse.success(rankings));
     }
 

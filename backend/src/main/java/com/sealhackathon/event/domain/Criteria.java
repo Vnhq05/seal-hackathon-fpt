@@ -61,4 +61,20 @@ public class Criteria extends BaseEntity {
     @Column(name = "sort_order", nullable = false)
     @Builder.Default
     private Integer sortOrder = 0;
+
+    /** Per-criterion scoring scale minimum (SEAL Spring 2026: 1). */
+    @NotNull
+    @Min(0)
+    @Max(100)
+    @Column(name = "min_score", nullable = false)
+    @Builder.Default
+    private Integer minScore = 1;
+
+    /** Per-criterion scoring scale maximum (SEAL Spring 2026: 5). */
+    @NotNull
+    @Min(1)
+    @Max(100)
+    @Column(name = "max_score", nullable = false)
+    @Builder.Default
+    private Integer maxScore = 5;
 }

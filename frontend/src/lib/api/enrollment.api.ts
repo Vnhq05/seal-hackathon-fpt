@@ -1,4 +1,5 @@
 import { api } from "./api-client";
+import type { HackathonSkillRole, StudentStanding } from "./types";
 
 // ═══ Types ═══
 
@@ -14,6 +15,21 @@ export interface EnrollmentResponse {
   userEmail: string;
   userStudentId?: string | null;
   userUniversityName?: string | null;
+  isLookingForTeam: boolean;
+  preferredRole: HackathonSkillRole | null;
+}
+
+export interface UpdateMatchingProfileRequest {
+  isLookingForTeam: boolean;
+  preferredRole?: HackathonSkillRole | null;
+}
+
+export interface ExternalEnrollmentRequest {
+  fullName: string;
+  email: string;
+  studentId: string;
+  universityName: string;
+  studentStanding: Extract<StudentStanding, "ENROLLED">;
 }
 
 // ═══ API calls ═══
@@ -25,6 +41,13 @@ export const enrollmentApi = {
 
   getMyEnrollment(eventId: string): Promise<EnrollmentResponse> {
     return api.get<EnrollmentResponse>(`/events/${eventId}/enrollments/my`);
+  },
+
+  updateMatchingProfile(
+    eventId: string,
+    body: UpdateMatchingProfileRequest,
+  ): Promise<EnrollmentResponse> {
+    return api.put<EnrollmentResponse>(`/events/${eventId}/enrollments/my/matching-profile`, body);
   },
 
   getMyActiveEnrollment(): Promise<EnrollmentResponse | null> {
@@ -53,12 +76,7 @@ export const enrollmentApi = {
     return api.post<void>(`/events/${eventId}/enrollments/withdraw`);
   },
 
-  enrollExternal(eventId: string, body: {
-    fullName: string;
-    email: string;
-    studentId: string;
-    universityName: string;
-  }): Promise<EnrollmentResponse> {
+  enrollExternal(eventId: string, body: ExternalEnrollmentRequest): Promise<EnrollmentResponse> {
     return api.post<EnrollmentResponse>(`/public/events/${eventId}/enrollments`, body);
   },
 };

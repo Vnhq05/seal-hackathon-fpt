@@ -8,6 +8,7 @@ import {
   useDeleteCriteriaTemplate,
 } from "@/features/admin/hooks/use-admin-criteria";
 import type { ScoringTemplateResponse, ScoringTemplateCriterionResponse } from "@/lib/api";
+import { DEFAULT_MAX_SCORE, DEFAULT_MIN_SCORE } from "@/features/judging/constants/scoring-scale";
 
 const headerCell: React.CSSProperties = {
   fontSize: 12, fontWeight: 600, color: "#8891a5",
@@ -32,10 +33,16 @@ function parsePositiveWeight(value: string): number | undefined {
   return Math.min(parsed, 100);
 }
 
-interface CriterionForm { name: string; description: string; weight?: number }
+interface CriterionForm {
+  name: string;
+  description: string;
+  weight?: number;
+  minScore: number;
+  maxScore: number;
+}
 
 function emptyCriterion(): CriterionForm {
-  return { name: "", description: "", weight: undefined };
+  return { name: "", description: "", weight: undefined, minScore: DEFAULT_MIN_SCORE, maxScore: DEFAULT_MAX_SCORE };
 }
 
 function criteriaFromTemplate(template: ScoringTemplateResponse): CriterionForm[] {
@@ -43,6 +50,8 @@ function criteriaFromTemplate(template: ScoringTemplateResponse): CriterionForm[
     name: c.name,
     description: c.description ?? "",
     weight: c.weight,
+    minScore: c.minScore ?? DEFAULT_MIN_SCORE,
+    maxScore: c.maxScore ?? DEFAULT_MAX_SCORE,
   }));
 }
 
@@ -88,6 +97,7 @@ function TemplateRow({ t, onDelete, onEdit, expanded, onToggle }: {
                   <tr>
                     <th style={{ ...headerCell, backgroundColor: "transparent" }}>Criterion</th>
                     <th style={{ ...headerCell, backgroundColor: "transparent", width: 100 }}>Weight</th>
+                    <th style={{ ...headerCell, backgroundColor: "transparent", width: 80 }}>Scale</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -95,6 +105,9 @@ function TemplateRow({ t, onDelete, onEdit, expanded, onToggle }: {
                     <tr key={c.id} style={{ borderTop: "1px solid rgba(198,198,205,0.2)" }}>
                       <td style={{ ...bodyCell, fontSize: 13 }}>{c.name}</td>
                       <td style={{ ...bodyCell, fontSize: 13, fontWeight: 600 }}>{c.weight}%</td>
+                      <td style={{ ...bodyCell, fontSize: 13, color: "#8891a5" }}>
+                        {c.minScore}–{c.maxScore}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -169,6 +182,8 @@ function TemplateForm({
         description: c.description || undefined,
         weight: c.weight!,
         sortOrder: i,
+        minScore: c.minScore,
+        maxScore: c.maxScore,
       })),
     };
 
@@ -240,10 +255,10 @@ function TemplateForm({
 
         {criteria.map((c, idx) => (
           <div key={idx} className="grid grid-cols-12 gap-2" style={{ marginBottom: 8 }}>
-            <div className="col-span-4">
+            <div className="col-span-3">
               <input value={c.name} onChange={(e) => updateCriterion(idx, "name", e.target.value)} style={inputStyle} placeholder="Name" required />
             </div>
-            <div className="col-span-5">
+            <div className="col-span-4">
               <input value={c.description} onChange={(e) => updateCriterion(idx, "description", e.target.value)} style={inputStyle} placeholder="Description" />
             </div>
             <div className="col-span-2">
@@ -256,6 +271,28 @@ function TemplateForm({
                 onKeyDown={blockInvalidKeys}
                 style={inputStyle}
                 placeholder="Weight %"
+                required
+              />
+            </div>
+            <div className="col-span-1">
+              <input
+                type="number"
+                min={1}
+                value={c.minScore}
+                onChange={(e) => updateCriterion(idx, "minScore", Number(e.target.value))}
+                style={inputStyle}
+                placeholder="Min"
+                required
+              />
+            </div>
+            <div className="col-span-1">
+              <input
+                type="number"
+                min={c.minScore + 1}
+                value={c.maxScore}
+                onChange={(e) => updateCriterion(idx, "maxScore", Number(e.target.value))}
+                style={inputStyle}
+                placeholder="Max"
                 required
               />
             </div>

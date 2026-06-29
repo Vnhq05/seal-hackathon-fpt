@@ -5,6 +5,15 @@ import { useAdminEvents } from "@/features/admin/hooks/use-admin-hackathons";
 import { useAdminRounds } from "@/features/admin/hooks/use-admin-rounds";
 import { useRoundCriteria, useReplaceAllCriteria } from "@/features/admin/hooks/use-admin-criteria";
 import type { CriteriaResponse } from "@/lib/api";
+import { DEFAULT_MAX_SCORE, DEFAULT_MIN_SCORE } from "@/features/judging/constants/scoring-scale";
+
+interface CriteriaOverride {
+  name: string;
+  weight: number;
+  description: string;
+  minScore: number;
+  maxScore: number;
+}
 
 const inputStyle: React.CSSProperties = {
   border: "1px solid rgba(223,226,236,0.8)", borderRadius: 8, padding: "11px 16px", fontSize: 14, width: "100%", outline: "none",
@@ -22,7 +31,7 @@ const bodyCell: React.CSSProperties = {
 export function EventCriteriaPage() {
   const [eventId, setEventId] = useState("");
   const [roundId, setRoundId] = useState("");
-  const [overrides, setOverrides] = useState<{ name: string; weight: number; description: string }[]>([]);
+  const [overrides, setOverrides] = useState<CriteriaOverride[]>([]);
 
   const { data: eventsPage } = useAdminEvents();
   const { data: rounds } = useAdminRounds(eventId);
@@ -32,7 +41,15 @@ export function EventCriteriaPage() {
   // When criteria load, populate overrides
   const syncOverrides = () => {
     if (existingCriteria && existingCriteria.length > 0 && overrides.length === 0) {
-      setOverrides(existingCriteria.map((c: CriteriaResponse) => ({ name: c.name, weight: c.weight, description: c.description ?? "" })));
+      setOverrides(
+        existingCriteria.map((c: CriteriaResponse) => ({
+          name: c.name,
+          weight: c.weight,
+          description: c.description ?? "",
+          minScore: c.minScore ?? DEFAULT_MIN_SCORE,
+          maxScore: c.maxScore ?? DEFAULT_MAX_SCORE,
+        })),
+      );
     }
   };
   syncOverrides();
@@ -51,6 +68,8 @@ export function EventCriteriaPage() {
       weight: o.weight,
       description: o.description || undefined,
       sortOrder: idx,
+      minScore: o.minScore,
+      maxScore: o.maxScore,
     })));
   };
 
@@ -92,6 +111,7 @@ export function EventCriteriaPage() {
                   <tr style={{ backgroundColor: "#eef0f6" }}>
                     <th style={headerCell}>Criterion</th>
                     <th style={{ ...headerCell, width: 120 }}>Weight</th>
+                    <th style={{ ...headerCell, width: 100 }}>Scale</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -106,6 +126,9 @@ export function EventCriteriaPage() {
                           style={{ ...inputStyle, width: 80 }}
                           min={0}
                         />
+                      </td>
+                      <td style={{ ...bodyCell, color: "#8891a5" }}>
+                        {o.minScore}–{o.maxScore}
                       </td>
                     </tr>
                   ))}

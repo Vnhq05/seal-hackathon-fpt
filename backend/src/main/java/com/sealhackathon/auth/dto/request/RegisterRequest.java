@@ -1,6 +1,7 @@
 package com.sealhackathon.auth.dto.request;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
+import com.sealhackathon.common.enums.StudentStanding;
 import com.sealhackathon.common.enums.UserType;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -43,6 +44,9 @@ public class RegisterRequest {
 
     @NotNull(message = "User type is required")
     private UserType userType;
+
+    @NotNull(message = "Student standing is required")
+    private StudentStanding studentStanding;
 
     private Integer semester;
 }

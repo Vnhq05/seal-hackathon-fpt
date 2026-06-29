@@ -1,6 +1,7 @@
 package com.sealhackathon.event.domain;
 
 import com.sealhackathon.common.entity.BaseEntity;
+import com.sealhackathon.event.domain.enums.AdvancementRule;
 import com.sealhackathon.event.domain.enums.RoundType;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -75,6 +76,10 @@ public class Round extends BaseEntity {
     @Column(name = "submission_deadline", nullable = false)
     private LocalDateTime submissionDeadline;
 
+    /** SEAL format: slide must be submitted before this time (e.g. 10:00 Day 2). */
+    @Column(name = "slide_deadline")
+    private LocalDateTime slideDeadline;
+
     // ── BR-40: scores locked after this deadline ──
     @NotNull
     @Column(name = "scoring_deadline", nullable = false)
@@ -95,6 +100,10 @@ public class Round extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "round_type")
     private RoundType roundType;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "advancement_rule")
+    private AdvancementRule advancementRule;
 
     // ── Child: criteria for this round ──
     @OneToMany(mappedBy = "round", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)

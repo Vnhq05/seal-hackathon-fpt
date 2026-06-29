@@ -1,6 +1,7 @@
 import { api } from "./api-client";
 import type { Page, PageParams } from "./types";
 import type { EventResponse } from "./event.api";
+import type { EventScheduleResponse } from "./schedule.api";
 import type { RoundResponse } from "./round.api";
 
 export interface PlatformStats {
@@ -20,6 +21,10 @@ export const publicApi = {
 
   getRounds(eventId: string): Promise<RoundResponse[]> {
     return api.get<RoundResponse[]>(`/public/events/${eventId}/rounds`);
+  },
+
+  getSchedule(eventId: string): Promise<EventScheduleResponse[]> {
+    return api.get<EventScheduleResponse[]>(`/public/events/${eventId}/schedule`);
   },
 
   getStats(): Promise<PlatformStats> {

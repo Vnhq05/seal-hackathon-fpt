@@ -1,5 +1,6 @@
 package com.sealhackathon.event.dto.response;
 
+import com.sealhackathon.event.domain.enums.TrackStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -20,4 +21,6 @@ public class TrackResponse {
     private String topic;
     private Integer maxTeams;
     private UUID scoringTemplateId;
+    private TrackStatus status;
+    private Integer assignedTeamCount;
 }

@@ -7,6 +7,7 @@ import com.sealhackathon.event.domain.JudgeAssignment;
 import com.sealhackathon.event.domain.MentorAssignment;
 import com.sealhackathon.event.domain.Round;
 import com.sealhackathon.event.domain.ScoringTemplate;
+import com.sealhackathon.event.domain.ScoringTemplateCriterion;
 import com.sealhackathon.event.domain.Track;
 import com.sealhackathon.event.domain.enums.EventStatus;
 import com.sealhackathon.event.repository.HackathonEventRepository;
@@ -16,6 +17,7 @@ import com.sealhackathon.team.domain.MentorTeam;
 import com.sealhackathon.team.domain.Team;
 import com.sealhackathon.team.domain.TeamMember;
 import com.sealhackathon.team.domain.enums.EnrollmentStatus;
+import com.sealhackathon.team.domain.enums.HackathonSkillRole;
 import com.sealhackathon.team.domain.enums.TeamMemberRole;
 import com.sealhackathon.team.domain.enums.TeamStatus;
 import com.sealhackathon.team.repository.EventEnrollmentRepository;
@@ -31,6 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -39,7 +42,10 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class EventDemoSeeder {
 
-    private static final String DEMO_EVENT_NAME = "SEAL Fall Hackathon Demo";
+    public static final String DEV_COORDINATOR_EMAIL = "coordinator@seal.com";
+
+    public static final String DEMO_EVENT_NAME_FALL = "SEAL Fall Hackathon Demo";
+    private static final String DEMO_EVENT_NAME = DEMO_EVENT_NAME_FALL;
     private static final String FALL = "Fall";
     private static final int YEAR = 2026;
 
@@ -55,7 +61,7 @@ public class EventDemoSeeder {
     public void seed() {
         normalizeExistingSeasons();
 
-        if (hasFallEvent(YEAR)) {
+        if (hasFallDemoEvent()) {
             log.info("Fall {} demo event already present — skipping seed", YEAR);
             return;
         }
@@ -77,6 +83,11 @@ public class EventDemoSeeder {
         LocalDateTime now = LocalDateTime.now();
         List<UUID> judgeIds = List.of(lecturer1.getId(), lecturer2.getId(), lecturer3.getId());
 
+        List<UUID> tiebreakerIds = template.getCriteria().stream()
+                .sorted(java.util.Comparator.comparingInt(ScoringTemplateCriterion::getSortOrder))
+                .map(ScoringTemplateCriterion::getId)
+                .toList();
+
         HackathonEvent event = HackathonEvent.builder()
                 .name(DEMO_EVENT_NAME)
                 .season(FALL)
@@ -93,9 +104,19 @@ public class EventDemoSeeder {
                 .semesterMin(4)
                 .semesterMax(8)
                 .scoringTemplateId(template.getId())
-                .tiebreakerCriteria("Higher technical score wins")
+                .tiebreakerCriteria(tiebreakerIds.stream()
+                        .map(id -> template.getCriteria().stream()
+                                .filter(c -> c.getId().equals(id))
+                                .map(ScoringTemplateCriterion::getName)
+                                .findFirst()
+                                .orElse(""))
+                        .filter(name -> !name.isBlank())
+                        .reduce((a, b) -> a + ", " + b)
+                        .orElse(null))
                 .status(EventStatus.OPEN)
                 .build();
+        event.setCreatedBy(DEV_COORDINATOR_EMAIL);
+        event.getTiebreakerCriterionIds().addAll(tiebreakerIds);
 
         Track softwareTrack = Track.builder()
                 .hackathonEvent(event)
@@ -144,21 +165,24 @@ public class EventDemoSeeder {
                     .build());
         }
 
-        event.getMentorAssignments().add(MentorAssignment.builder()
-                .hackathonEvent(event)
-                .mentorUserId(lecturer4.getId())
-                .assignedAt(now)
-                .build());
-        event.getMentorAssignments().add(MentorAssignment.builder()
-                .hackathonEvent(event)
-                .mentorUserId(lecturer5.getId())
-                .assignedAt(now)
-                .build());
-
         HackathonEvent savedEvent = eventRepository.save(event);
         UUID eventId = savedEvent.getId();
         UUID softwareTrackId = savedEvent.getTracks().get(0).getId();
         UUID aiTrackId = savedEvent.getTracks().get(1).getId();
+
+        savedEvent.getMentorAssignments().add(MentorAssignment.builder()
+                .hackathonEvent(savedEvent)
+                .trackId(softwareTrackId)
+                .mentorUserId(lecturer4.getId())
+                .assignedAt(now)
+                .build());
+        savedEvent.getMentorAssignments().add(MentorAssignment.builder()
+                .hackathonEvent(savedEvent)
+                .trackId(aiTrackId)
+                .mentorUserId(lecturer5.getId())
+                .assignedAt(now)
+                .build());
+        savedEvent = eventRepository.save(savedEvent);
 
         User student4 = requireUser("student4@fpt.edu.vn");
         User student5 = requireUser("student5@fpt.edu.vn");
@@ -169,12 +193,17 @@ public class EventDemoSeeder {
         seedEnrollment(student3.getId(), eventId, now);
         seedEnrollment(student4.getId(), eventId, now);
         seedEnrollment(student5.getId(), eventId, now);
-        seedEnrollment(student6.getId(), eventId, now);
+        seedEnrollment(student6.getId(), eventId, now, true, HackathonSkillRole.FRONTEND);
 
         Team alpha = seedTeam(eventId, "Team Alpha", student1.getId(), softwareTrackId, now,
-                List.of(student1.getId(), student2.getId(), student3.getId()));
+                List.of(student1.getId(), student2.getId(), student3.getId()), TeamStatus.CONFIRMED, null);
         Team beta = seedTeam(eventId, "Team Beta", student4.getId(), aiTrackId, now,
-                List.of(student4.getId(), student5.getId(), student6.getId()));
+                List.of(student4.getId(), student5.getId()), TeamStatus.FORMING,
+                TeamRecruitmentSeed.builder()
+                        .isRecruiting(true)
+                        .recruitmentNote("Looking for a backend developer to complete our team!")
+                        .neededRoles(List.of(HackathonSkillRole.BACKEND, HackathonSkillRole.FULLSTACK))
+                        .build());
 
         mentorTeamRepository.save(MentorTeam.builder()
                 .mentorUserId(lecturer4.getId())
@@ -201,9 +230,11 @@ public class EventDemoSeeder {
         });
     }
 
-    private boolean hasFallEvent(int year) {
+    private boolean hasFallDemoEvent() {
         return eventRepository.findAll().stream()
-                .anyMatch(e -> FALL.equalsIgnoreCase(e.getSeason()) && year == e.getYear());
+                .anyMatch(e -> FALL.equalsIgnoreCase(e.getSeason())
+                        && YEAR == e.getYear()
+                        && DEMO_EVENT_NAME.equals(e.getName()));
     }
 
     private User requireUser(String email) {
@@ -211,8 +242,18 @@ public class EventDemoSeeder {
                 .orElseThrow(() -> new IllegalStateException("Required user not found: " + email));
     }
 
-    private void seedEnrollment(UUID userId, UUID eventId, LocalDateTime now) {
+    private void seedEnrollment(
+            UUID userId,
+            UUID eventId,
+            LocalDateTime now,
+            boolean isLookingForTeam,
+            HackathonSkillRole preferredRole) {
         if (enrollmentRepository.existsByUserIdAndEventId(userId, eventId)) {
+            enrollmentRepository.findByUserIdAndEventId(userId, eventId).ifPresent(existing -> {
+                existing.setLookingForTeam(isLookingForTeam);
+                existing.setPreferredRole(preferredRole);
+                enrollmentRepository.save(existing);
+            });
             return;
         }
         enrollmentRepository.save(EventEnrollment.builder()
@@ -220,7 +261,48 @@ public class EventDemoSeeder {
                 .eventId(eventId)
                 .status(EnrollmentStatus.APPROVED)
                 .enrolledAt(now)
+                .isLookingForTeam(isLookingForTeam)
+                .preferredRole(preferredRole)
                 .build());
+    }
+
+    private void seedEnrollment(UUID userId, UUID eventId, LocalDateTime now) {
+        seedEnrollment(userId, eventId, now, false, null);
+    }
+
+    private record TeamRecruitmentSeed(
+            boolean isRecruiting,
+            String recruitmentNote,
+            List<HackathonSkillRole> neededRoles) {
+
+        static TeamRecruitmentSeedBuilder builder() {
+            return new TeamRecruitmentSeedBuilder();
+        }
+
+        static final class TeamRecruitmentSeedBuilder {
+            private boolean isRecruiting;
+            private String recruitmentNote;
+            private List<HackathonSkillRole> neededRoles = List.of();
+
+            TeamRecruitmentSeedBuilder isRecruiting(boolean value) {
+                this.isRecruiting = value;
+                return this;
+            }
+
+            TeamRecruitmentSeedBuilder recruitmentNote(String value) {
+                this.recruitmentNote = value;
+                return this;
+            }
+
+            TeamRecruitmentSeedBuilder neededRoles(List<HackathonSkillRole> value) {
+                this.neededRoles = value;
+                return this;
+            }
+
+            TeamRecruitmentSeed build() {
+                return new TeamRecruitmentSeed(isRecruiting, recruitmentNote, neededRoles);
+            }
+        }
     }
 
     private Team seedTeam(
@@ -229,7 +311,9 @@ public class EventDemoSeeder {
             UUID leaderId,
             UUID trackId,
             LocalDateTime now,
-            List<UUID> memberIds) {
+            List<UUID> memberIds,
+            TeamStatus status,
+            TeamRecruitmentSeed recruitment) {
         if (teamRepository.existsByEventIdAndName(eventId, name)) {
             return teamRepository.findByEventId(eventId).stream()
                     .filter(t -> name.equals(t.getName()))
@@ -237,13 +321,21 @@ public class EventDemoSeeder {
                     .orElseThrow();
         }
 
-        Team team = Team.builder()
+        Team.TeamBuilder teamBuilder = Team.builder()
                 .eventId(eventId)
                 .name(name)
                 .leaderId(leaderId)
-                .status(TeamStatus.CONFIRMED)
-                .trackId(trackId)
-                .build();
+                .status(status)
+                .trackId(trackId);
+
+        if (recruitment != null) {
+            teamBuilder
+                    .isRecruiting(recruitment.isRecruiting())
+                    .recruitmentNote(recruitment.recruitmentNote())
+                    .neededRoles(new ArrayList<>(recruitment.neededRoles()));
+        }
+
+        Team team = teamBuilder.build();
         team = teamRepository.save(team);
 
         for (UUID memberId : memberIds) {

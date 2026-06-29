@@ -4,12 +4,16 @@ import com.sealhackathon.common.entity.BaseEntity;
 import com.sealhackathon.event.domain.enums.CompetitionFormat;
 import com.sealhackathon.event.domain.enums.EventStatus;
 import jakarta.persistence.CascadeType;
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderColumn;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -107,6 +111,16 @@ public class HackathonEvent extends BaseEntity {
     @Size(max = 1000)
     @Column(name = "tiebreaker_criteria", length = 1000)
     private String tiebreakerCriteria;
+
+    /** Ordered scoring-template criterion IDs for machine-readable tie-break (BR-47). */
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(
+            name = "event_tiebreaker_criteria",
+            joinColumns = @JoinColumn(name = "event_id"))
+    @OrderColumn(name = "sort_order")
+    @Column(name = "template_criterion_id", nullable = false)
+    @Builder.Default
+    private List<UUID> tiebreakerCriterionIds = new ArrayList<>();
 
     @Column(name = "leaderboard_public", nullable = false, columnDefinition = "BIT NOT NULL DEFAULT 0")
     @Builder.Default

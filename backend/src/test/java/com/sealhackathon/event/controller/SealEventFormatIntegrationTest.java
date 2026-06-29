@@ -1,6 +1,8 @@
 package com.sealhackathon.event.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sealhackathon.event.domain.Criteria;
+import com.sealhackathon.event.domain.enums.AdvancementRule;
 import com.sealhackathon.event.domain.enums.CompetitionFormat;
 import com.sealhackathon.event.domain.enums.RoundType;
 import com.sealhackathon.event.dto.request.CreateEventRequest;
@@ -15,6 +17,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -44,6 +49,7 @@ class SealEventFormatIntegrationTest {
                 .year(2026)
                 .startDate(LocalDate.of(2026, 4, 12))
                 .endDate(LocalDate.of(2026, 4, 12))
+                .registrationOpenDate(LocalDate.of(2026, 3, 15))
                 .registrationDeadline(LocalDate.of(2026, 3, 25))
                 .competitionFormat(CompetitionFormat.SEAL_RAG_2026)
                 .build();
@@ -63,10 +69,48 @@ class SealEventFormatIntegrationTest {
 
         assertThat(saved.getCompetitionFormat()).isEqualTo(CompetitionFormat.SEAL_RAG_2026);
         assertThat(saved.getTracks()).hasSize(3);
-        assertThat(saved.getTracks().get(0).getTopic()).isNotBlank();
+        assertThat(saved.getTracks().get(0).getTopic()).isNull();
         assertThat(saved.getRounds()).hasSize(2);
         assertThat(saved.getRounds().get(0).getRoundType()).isEqualTo(RoundType.PRELIMINARY);
+        assertThat(saved.getRounds().get(0).getAdvancementRule()).isEqualTo(AdvancementRule.PER_TRACK_TOP_N);
+        assertThat(saved.getRounds().get(0).getSlideDeadline()).isNotNull();
         assertThat(saved.getRounds().get(1).getRoundType()).isEqualTo(RoundType.FINAL);
+        assertThat(saved.getRounds().get(1).getAdvancementRule()).isEqualTo(AdvancementRule.FINALIST_POOL);
         assertThat(saved.getPrizes()).hasSize(4);
+
+        var preliminary = saved.getRounds().get(0);
+        var finalRound = saved.getRounds().get(1);
+
+        assertThat(preliminary.getCriteria()).hasSize(5);
+        assertThat(finalRound.getCriteria()).hasSize(5);
+
+        List<Integer> preWeights = preliminary.getCriteria().stream()
+                .sorted((a, b) -> Integer.compare(a.getSortOrder(), b.getSortOrder()))
+                .map(Criteria::getWeight)
+                .toList();
+        assertThat(preWeights).containsExactly(30, 30, 15, 15, 10);
+
+        List<Integer> finalWeights = finalRound.getCriteria().stream()
+                .sorted((a, b) -> Integer.compare(a.getSortOrder(), b.getSortOrder()))
+                .map(Criteria::getWeight)
+                .toList();
+        assertThat(finalWeights).containsExactly(30, 20, 20, 20, 10);
+
+        preliminary.getCriteria().forEach(c -> {
+            assertThat(c.getMinScore()).isEqualTo(1);
+            assertThat(c.getMaxScore()).isEqualTo(5);
+        });
+        finalRound.getCriteria().forEach(c -> {
+            assertThat(c.getMinScore()).isEqualTo(1);
+            assertThat(c.getMaxScore()).isEqualTo(5);
+        });
+
+        Set<String> preNames = preliminary.getCriteria().stream()
+                .map(Criteria::getName)
+                .collect(Collectors.toSet());
+        Set<String> finalNames = finalRound.getCriteria().stream()
+                .map(Criteria::getName)
+                .collect(Collectors.toSet());
+        assertThat(preNames).doesNotContainAnyElementsOf(finalNames);
     }
 }

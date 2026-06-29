@@ -1,9 +1,10 @@
 interface InviteSearchInputProps {
   value: string;
   onChange: (value: string) => void;
+  disabled?: boolean;
 }
 
-export function InviteSearchInput({ value, onChange }: InviteSearchInputProps) {
+export function InviteSearchInput({ value, onChange, disabled = false }: InviteSearchInputProps) {
   return (
     <div className="relative w-full">
       <div
@@ -30,6 +31,7 @@ export function InviteSearchInput({ value, onChange }: InviteSearchInputProps) {
         placeholder="Search by name or email..."
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
         className="w-full"
         style={{
           backgroundColor: "#ffffff",

@@ -37,6 +37,7 @@ public class EventResponse {
     private Integer semesterMax;
     private UUID scoringTemplateId;
     private String tiebreakerCriteria;
+    private List<UUID> tiebreakerCriterionIds;
     private int roundCount;
     private int mentorCount;
     private int trackCount;

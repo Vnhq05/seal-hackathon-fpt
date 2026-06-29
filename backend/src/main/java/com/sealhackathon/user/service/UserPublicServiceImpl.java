@@ -1,6 +1,7 @@
 package com.sealhackathon.user.service;
 
 import com.sealhackathon.common.enums.AccountStatus;
+import com.sealhackathon.common.enums.StudentStanding;
 import com.sealhackathon.common.enums.UserType;
 import com.sealhackathon.common.exception.ResourceNotFoundException;
 import com.sealhackathon.user.domain.User;
@@ -98,7 +99,9 @@ public class UserPublicServiceImpl implements UserPublicService {
     @Transactional
     public UUID createParticipant(String email, String passwordHash, String fullName,
                                   String phone, String studentId, String universityName,
-                                  UserType userType, Integer semester, boolean temporaryAccount) {
+                                  UserType userType, Integer semester, boolean temporaryAccount,
+                                  StudentStanding studentStanding) {
+        StudentStanding standing = studentStanding != null ? studentStanding : StudentStanding.ENROLLED;
         User user = User.builder()
                 .email(email)
                 .passwordHash(passwordHash)
@@ -109,6 +112,7 @@ public class UserPublicServiceImpl implements UserPublicService {
                 .userType(userType)
                 .status(AccountStatus.PENDING)
                 .semester(semester)
+                .studentStanding(standing)
                 .temporaryAccount(temporaryAccount)
                 .build();
         return userRepository.save(user).getId();
@@ -169,6 +173,7 @@ public class UserPublicServiceImpl implements UserPublicService {
                 .userType(user.getUserType())
                 .status(user.getStatus())
                 .semester(user.getSemester())
+                .studentStanding(user.getStudentStanding())
                 .build();
     }
 }

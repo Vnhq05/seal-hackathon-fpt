@@ -2,6 +2,9 @@ package com.sealhackathon.ranking.service;
 
 import com.sealhackathon.common.exception.BusinessException;
 import com.sealhackathon.common.exception.ResourceNotFoundException;
+import com.sealhackathon.event.domain.Round;
+import com.sealhackathon.event.domain.enums.RoundType;
+import com.sealhackathon.event.repository.RoundRepository;
 import com.sealhackathon.ranking.domain.PublishedResult;
 import com.sealhackathon.ranking.domain.Ranking;
 import com.sealhackathon.ranking.dto.response.AdvancementResponse;
@@ -28,6 +31,7 @@ public class RankingService {
 
     private final RankingRepository rankingRepository;
     private final PublishedResultRepository publishedResultRepository;
+    private final RoundRepository roundRepository;
     private final AggregationService aggregationService;
     private final AdvancementService advancementService;
     private final TeamPublicService teamPublicService;
@@ -37,13 +41,32 @@ public class RankingService {
 
     @Transactional(readOnly = true)
     public List<RankingResponse> getLatestRankings(UUID roundId) {
+        return getLatestRankings(roundId, null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<RankingResponse> getLatestRankings(UUID roundId, UUID trackId) {
         int version = rankingRepository.findMaxVersionByRoundId(roundId);
         if (version == 0) {
             return List.of();
         }
-        return rankingRepository.findByRoundIdAndVersionOrderByRankAsc(roundId, version).stream()
+        List<RankingResponse> rankings = rankingRepository
+                .findByRoundIdAndVersionOrderByRankAsc(roundId, version).stream()
                 .map(this::toResponse)
+                .filter(r -> trackId == null || trackId.equals(r.getTrackId()))
                 .toList();
+
+        if (trackId != null && isPreliminaryRound(roundId)) {
+            return RankingDisplayHelper.reRankWithinTrack(rankings);
+        }
+        return rankings;
+    }
+
+    private boolean isPreliminaryRound(UUID roundId) {
+        return roundRepository.findById(roundId)
+                .map(Round::getRoundType)
+                .map(t -> t == RoundType.PRELIMINARY)
+                .orElse(false);
     }
 
     @Transactional(readOnly = true)

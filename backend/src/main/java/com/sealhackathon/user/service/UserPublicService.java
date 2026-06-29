@@ -1,5 +1,6 @@
 package com.sealhackathon.user.service;
 
+import com.sealhackathon.common.enums.StudentStanding;
 import com.sealhackathon.common.enums.UserType;
 import com.sealhackathon.user.dto.snapshot.LockState;
 import com.sealhackathon.user.dto.snapshot.UserSnapshot;
@@ -31,7 +32,8 @@ public interface UserPublicService {
 
     UUID createParticipant(String email, String passwordHash, String fullName,
                            String phone, String studentId, String universityName,
-                           UserType userType, Integer semester, boolean temporaryAccount);
+                           UserType userType, Integer semester, boolean temporaryAccount,
+                           StudentStanding studentStanding);
 
     void activateParticipant(UUID userId);
 

@@ -3,7 +3,7 @@ import { z } from "zod";
 export const hackathonRegistrationSchema = z.object({
   confirmStudent: z
     .boolean()
-    .refine((v) => v === true, "You must confirm your student status."),
+    .refine((v) => v === true, "You must confirm you are currently enrolled as a student."),
   agreeCodeOfConduct: z
     .boolean()
     .refine((v) => v === true, "You must agree to the Code of Conduct and Rules."),

@@ -2,6 +2,10 @@ package com.sealhackathon.event.controller;
 
 import com.sealhackathon.auth.service.AuthPublicService;
 import com.sealhackathon.common.response.ApiResponse;
+import com.sealhackathon.event.dto.request.OpenTrackDrawSessionRequest;
+import com.sealhackathon.event.dto.response.TrackDrawSessionResponse;
+import com.sealhackathon.event.dto.response.TrackLockResponse;
+import com.sealhackathon.event.service.TrackDrawSessionService;
 import com.sealhackathon.team.dto.request.TrackAssignRequest;
 import com.sealhackathon.team.dto.request.TrackDrawRequest;
 import com.sealhackathon.team.dto.response.TrackAssignmentResponse;
@@ -14,6 +18,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -31,6 +36,7 @@ import java.util.UUID;
 public class TrackAssignmentController {
 
     private final TrackAssignmentService trackAssignmentService;
+    private final TrackDrawSessionService trackDrawSessionService;
     private final AuthPublicService authPublicService;
 
     @PostMapping("/assign")
@@ -53,5 +59,30 @@ public class TrackAssignmentController {
         UUID userId = authPublicService.getCurrentUserId();
         TrackDrawResultResponse result = trackAssignmentService.drawTracks(eventId, userId);
         return ResponseEntity.ok(ApiResponse.success("Track draw completed", result));
+    }
+
+    @PostMapping("/draw-session/open")
+    @PreAuthorize("hasAnyRole('SYSTEM_ADMIN', 'EVENT_COORDINATOR')")
+    @Operation(summary = "Open track self-draw session (SEAL format, Day 1)")
+    public ResponseEntity<ApiResponse<TrackDrawSessionResponse>> openDrawSession(
+            @PathVariable UUID eventId,
+            @RequestBody(required = false) OpenTrackDrawSessionRequest request) {
+        UUID userId = authPublicService.getCurrentUserId();
+        TrackDrawSessionResponse result = trackDrawSessionService.openDrawSession(eventId, userId, request);
+        return ResponseEntity.ok(ApiResponse.success("Track draw session opened", result));
+    }
+
+    @GetMapping("/draw-session")
+    @Operation(summary = "Get current track draw session state")
+    public ResponseEntity<ApiResponse<TrackDrawSessionResponse>> getDrawSession(@PathVariable UUID eventId) {
+        return ResponseEntity.ok(ApiResponse.success(trackDrawSessionService.getDrawSession(eventId)));
+    }
+
+    @PostMapping("/lock")
+    @PreAuthorize("hasAnyRole('SYSTEM_ADMIN', 'EVENT_COORDINATOR')")
+    @Operation(summary = "Lock all tracks after Day 1 assignment")
+    public ResponseEntity<ApiResponse<TrackLockResponse>> lockTracks(@PathVariable UUID eventId) {
+        TrackLockResponse result = trackDrawSessionService.lockAllTracks(eventId);
+        return ResponseEntity.ok(ApiResponse.success("All tracks locked", result));
     }
 }

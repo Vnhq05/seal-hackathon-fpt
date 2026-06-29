@@ -52,4 +52,18 @@ public class ScoringTemplateCriterion extends BaseEntity {
     @Column(name = "sort_order", nullable = false)
     @Builder.Default
     private Integer sortOrder = 0;
+
+    @NotNull
+    @Min(0)
+    @Max(100)
+    @Column(name = "min_score", nullable = false)
+    @Builder.Default
+    private Integer minScore = 1;
+
+    @NotNull
+    @Min(1)
+    @Max(100)
+    @Column(name = "max_score", nullable = false)
+    @Builder.Default
+    private Integer maxScore = 5;
 }

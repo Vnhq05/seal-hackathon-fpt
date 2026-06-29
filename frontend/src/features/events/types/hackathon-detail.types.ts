@@ -34,6 +34,8 @@ export interface JudgingCriterion {
   name: string;
   description: string;
   weight: number;
+  minScore: number;
+  maxScore: number;
 }
 
 export interface CompetitionRound {

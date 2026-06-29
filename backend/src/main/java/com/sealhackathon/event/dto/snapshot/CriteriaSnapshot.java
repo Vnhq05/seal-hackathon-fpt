@@ -17,4 +17,6 @@ public class CriteriaSnapshot {
     private String name;
     private Integer weight;
     private Integer sortOrder;
+    private Integer minScore;
+    private Integer maxScore;
 }

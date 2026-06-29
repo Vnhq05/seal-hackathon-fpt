@@ -6,9 +6,14 @@ import { useTeamJoinRequests, useJoinRequestMutations } from "@/features/teams/h
 interface JoinRequestsSectionProps {
   eventId: string;
   teamId: string;
+  canModifyMembers?: boolean;
 }
 
-export function JoinRequestsSection({ eventId, teamId }: JoinRequestsSectionProps) {
+export function JoinRequestsSection({
+  eventId,
+  teamId,
+  canModifyMembers = true,
+}: JoinRequestsSectionProps) {
   const { data, isLoading } = useTeamJoinRequests(eventId, teamId);
   const { accept, reject } = useJoinRequestMutations(eventId, teamId);
   const pending = (data ?? []).filter((r) => r.status === "PENDING");
@@ -43,6 +48,7 @@ export function JoinRequestsSection({ eventId, teamId }: JoinRequestsSectionProp
             onReject={() => reject.mutate(req.id)}
             isAccepting={accept.isPending}
             isRejecting={reject.isPending}
+            disabled={!canModifyMembers}
           />
         ))}
       </div>

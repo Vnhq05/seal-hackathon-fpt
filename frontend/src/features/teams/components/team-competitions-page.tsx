@@ -9,6 +9,7 @@ import { NoTeamPanel } from "@/features/teams/components/no-team-panel";
 import { PastParticipationTab } from "@/features/teams/components/past-participation-tab";
 import { PendingInvitationsBanner } from "@/features/teams/components/pending-invitations-banner";
 import { useMyActiveEnrollment } from "@/features/events/hooks/use-enrollment";
+import { useHackathonPage } from "@/features/events/hooks/use-hackathon-page";
 import { useTeamInvitation } from "@/features/teams/hooks/use-team-invitation";
 import type { InvitationResponse } from "@/lib/api";
 
@@ -35,6 +36,7 @@ export function TeamCompetitionsPage() {
   const qc = useQueryClient();
   const { data: allTeams, isLoading } = useMyTeamsAllEvents();
   const { data: activeEnrollment } = useMyActiveEnrollment();
+  const { data: enrollmentEvent } = useHackathonPage(activeEnrollment?.eventId ?? "");
   const { data: invitations } = useTeamInvitation();
   const [tab, setTab] = useState<"current" | "past">("current");
   const [selectedIdx, setSelectedIdx] = useState(0);
@@ -85,7 +87,10 @@ export function TeamCompetitionsPage() {
         </span>
       </div>
 
-      <PendingInvitationsBanner invitations={pendingInvitations as InvitationResponse[]} />
+      <PendingInvitationsBanner
+        invitations={pendingInvitations as InvitationResponse[]}
+        event={enrollmentEvent}
+      />
 
       <div className="flex gap-1 border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-1 self-start">
         {([

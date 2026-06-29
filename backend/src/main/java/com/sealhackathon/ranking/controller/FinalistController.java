@@ -1,7 +1,9 @@
 package com.sealhackathon.ranking.controller;
 
 import com.sealhackathon.common.response.ApiResponse;
+import com.sealhackathon.ranking.dto.response.ContestedSlotResponse;
 import com.sealhackathon.ranking.dto.response.FinalistResponse;
+import com.sealhackathon.ranking.dto.response.FinalistSelectResultResponse;
 import com.sealhackathon.ranking.service.FinalistSelectionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -30,14 +32,20 @@ public class FinalistController {
     @PostMapping("/select")
     @PreAuthorize("hasAnyRole('SYSTEM_ADMIN', 'EVENT_COORDINATOR')")
     @Operation(summary = "Select finalists (Top 2 per track for SEAL format)")
-    public ResponseEntity<ApiResponse<List<FinalistResponse>>> selectFinalists(@PathVariable UUID eventId) {
-        List<FinalistResponse> finalists = finalistSelectionService.selectFinalists(eventId);
-        return ResponseEntity.ok(ApiResponse.success("Finalists selected", finalists));
+    public ResponseEntity<ApiResponse<FinalistSelectResultResponse>> selectFinalists(@PathVariable UUID eventId) {
+        FinalistSelectResultResponse result = finalistSelectionService.selectFinalists(eventId);
+        return ResponseEntity.ok(ApiResponse.success("Finalists selected", result));
     }
 
     @GetMapping
     @Operation(summary = "List selected finalists")
     public ResponseEntity<ApiResponse<List<FinalistResponse>>> getFinalists(@PathVariable UUID eventId) {
         return ResponseEntity.ok(ApiResponse.success(finalistSelectionService.getFinalists(eventId)));
+    }
+
+    @GetMapping("/contested")
+    @Operation(summary = "List contested slots requiring OC penalty evaluation")
+    public ResponseEntity<ApiResponse<List<ContestedSlotResponse>>> getContestedSlots(@PathVariable UUID eventId) {
+        return ResponseEntity.ok(ApiResponse.success(finalistSelectionService.getContestedSlots(eventId)));
     }
 }

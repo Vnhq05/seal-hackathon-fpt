@@ -10,8 +10,9 @@ import com.sealhackathon.common.util.PrizeAmountUtils;
 import com.sealhackathon.common.util.SeasonUtils;
 import com.sealhackathon.event.domain.HackathonEvent;
 import com.sealhackathon.event.domain.HonoredGuest;
-import com.sealhackathon.event.domain.MentorAssignment;
 import com.sealhackathon.event.domain.Prize;
+import com.sealhackathon.event.domain.ScoringTemplate;
+import com.sealhackathon.event.domain.ScoringTemplateCriterion;
 import com.sealhackathon.event.domain.Track;
 import com.sealhackathon.event.domain.enums.CompetitionFormat;
 import com.sealhackathon.event.domain.enums.EventStatus;
@@ -19,6 +20,7 @@ import com.sealhackathon.event.domain.enums.PrizeRank;
 import com.sealhackathon.event.dto.request.CreateEventRequest;
 import com.sealhackathon.event.dto.request.PrizeRequest;
 import com.sealhackathon.event.dto.request.UpdateEventRequest;
+import com.sealhackathon.event.dto.request.UpdateEventStatusRequest;
 import com.sealhackathon.event.dto.response.EventResponse;
 import com.sealhackathon.event.dto.response.HonoredGuestResponse;
 import com.sealhackathon.event.dto.response.PrizeResponse;
@@ -26,6 +28,9 @@ import com.sealhackathon.event.dto.response.TrackResponse;
 import com.sealhackathon.event.event.EventCreatedEvent;
 import com.sealhackathon.event.template.SealSpring2026Template;
 import com.sealhackathon.event.repository.HackathonEventRepository;
+import com.sealhackathon.event.repository.ScoringTemplateRepository;
+import com.sealhackathon.user.dto.snapshot.UserSnapshot;
+import com.sealhackathon.user.service.UserPublicService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
@@ -38,9 +43,12 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import java.util.regex.Pattern;
 
 @Service
@@ -59,6 +67,10 @@ public class EventService {
     private final AuditService auditService;
     private final AuthPublicService authPublicService;
     private final EventJudgeService eventJudgeService;
+    private final EventScheduleService eventScheduleService;
+    private final AllowedEmailDomainService allowedEmailDomainService;
+    private final ScoringTemplateRepository scoringTemplateRepository;
+    private final UserPublicService userPublicService;
 
     @Transactional
     public EventResponse createEvent(CreateEventRequest request) {
@@ -96,6 +108,9 @@ public class EventService {
                 .status(EventStatus.UPCOMING)
                 .build();
 
+        applyTiebreakerCriterionIds(event, request.getTiebreakerCriterionIds());
+        applyCoordinatorOwner(event, request.getCoordinatorEmail());
+
         List<PrizeRequest> prizeRequests = request.getPrizes();
         if (prizeRequests != null && !prizeRequests.isEmpty()) {
             validatePrizes(prizeRequests);
@@ -129,21 +144,15 @@ public class EventService {
             });
         }
 
-        if (request.getMentorUserIds() != null) {
-            request.getMentorUserIds().forEach(mentorId -> {
-                MentorAssignment assignment = MentorAssignment.builder()
-                        .hackathonEvent(event)
-                        .mentorUserId(mentorId)
-                        .assignedAt(LocalDateTime.now())
-                        .build();
-                event.getMentorAssignments().add(assignment);
-            });
-        }
-
         eventJudgeService.seedFromEvent(event, request.getJudgeUserIds());
 
         HackathonEvent saved = eventRepository.save(event);
         eventRepository.flush();
+
+        if (competitionFormat == CompetitionFormat.SEAL_RAG_2026) {
+            eventScheduleService.seedSchedules(saved, SealSpring2026Template.buildSchedules(saved));
+            allowedEmailDomainService.seedDomains(saved.getId(), SealSpring2026Template.buildDefaultEmailDomains());
+        }
 
         if (prizeRequests != null && competitionFormat != CompetitionFormat.SEAL_RAG_2026) {
             for (PrizeRequest p : prizeRequests) {
@@ -197,6 +206,9 @@ public class EventService {
         event.setSemesterMax(request.getSemesterMax());
         event.setScoringTemplateId(request.getScoringTemplateId());
         event.setTiebreakerCriteria(request.getTiebreakerCriteria());
+        if (request.getTiebreakerCriterionIds() != null) {
+            applyTiebreakerCriterionIds(event, request.getTiebreakerCriterionIds());
+        }
 
         if (request.getPrizes() != null) {
             if (!request.getPrizes().isEmpty()) {
@@ -310,6 +322,57 @@ public class EventService {
                 ipAddress);
 
         return response;
+    }
+
+    @Transactional
+    public EventResponse updateEventStatus(UUID eventId, UpdateEventStatusRequest request, String ipAddress) {
+        HackathonEvent event = getEvent(eventId);
+        enforceOwnership(event);
+
+        if (event.getStatus() == EventStatus.CANCELLED) {
+            throw new BusinessException("Cannot change status of a cancelled event", HttpStatus.BAD_REQUEST);
+        }
+
+        EventStatus target = request.getStatus();
+        validateStatusTransition(event, target);
+
+        String oldStatus = event.getStatus().name();
+        event.setStatus(target);
+        EventResponse response = toResponse(eventRepository.save(event));
+
+        auditService.log(
+                authPublicService.getCurrentUserId(),
+                "EVENT_STATUS_CHANGE",
+                eventId,
+                "HackathonEvent",
+                "{\"from\":\"" + oldStatus + "\"}",
+                "{\"to\":\"" + target.name() + "\"}",
+                ipAddress);
+
+        return response;
+    }
+
+    private void validateStatusTransition(HackathonEvent event, EventStatus target) {
+        if (target == EventStatus.CANCELLED) {
+            throw new BusinessException("Use cancel endpoint to cancel an event", HttpStatus.BAD_REQUEST);
+        }
+        EventStatus current = resolveStatus(event);
+        if (current == target) {
+            return;
+        }
+        List<EventStatus> allowed = switch (current) {
+            case UPCOMING -> List.of(EventStatus.OPEN, EventStatus.CLOSED_REGISTRATION);
+            case OPEN -> List.of(EventStatus.CLOSED_REGISTRATION, EventStatus.ACTIVE);
+            case CLOSED_REGISTRATION -> List.of(EventStatus.ACTIVE);
+            case ACTIVE -> List.of(EventStatus.SCORING, EventStatus.COMPLETED);
+            case SCORING -> List.of(EventStatus.COMPLETED);
+            case COMPLETED, CANCELLED -> List.of();
+        };
+        if (!allowed.contains(target)) {
+            throw new BusinessException(
+                    "Cannot transition from " + current + " to " + target,
+                    HttpStatus.BAD_REQUEST);
+        }
     }
 
     @Transactional(readOnly = true)
@@ -429,6 +492,25 @@ public class EventService {
         if (!currentEmail.equals(event.getCreatedBy())) {
             throw new BusinessException("You can only manage events you created", HttpStatus.FORBIDDEN) {};
         }
+    }
+
+    private void applyCoordinatorOwner(HackathonEvent event, String coordinatorEmail) {
+        if (coordinatorEmail == null || coordinatorEmail.isBlank()) {
+            return;
+        }
+        if (authPublicService.getCurrentUserRole() != UserType.SYSTEM_ADMIN) {
+            throw new BusinessException(
+                    "Only system admins can assign event ownership to a coordinator",
+                    HttpStatus.FORBIDDEN) {};
+        }
+        UserSnapshot owner = userPublicService.findByEmail(coordinatorEmail.trim())
+                .orElseThrow(() -> new ResourceNotFoundException("User", "email", coordinatorEmail));
+        if (owner.getUserType() != UserType.EVENT_COORDINATOR) {
+            throw new BusinessException(
+                    "Assigned owner must be an EVENT_COORDINATOR",
+                    HttpStatus.BAD_REQUEST) {};
+        }
+        event.setCreatedBy(owner.getEmail());
     }
 
     public void enforceEventOwnership(UUID eventId) {
@@ -582,6 +664,7 @@ public class EventService {
                 .semesterMax(event.getSemesterMax())
                 .scoringTemplateId(event.getScoringTemplateId())
                 .tiebreakerCriteria(event.getTiebreakerCriteria())
+                .tiebreakerCriterionIds(List.copyOf(event.getTiebreakerCriterionIds()))
                 .roundCount(event.getRounds().size())
                 .mentorCount(event.getMentorAssignments().size())
                 .trackCount(event.getTracks().size())
@@ -594,6 +677,7 @@ public class EventService {
                                 .topic(t.getTopic())
                                 .maxTeams(t.getMaxTeams())
                                 .scoringTemplateId(t.getScoringTemplateId())
+                                .status(t.getStatus())
                                 .build())
                         .toList())
                 .prizes(event.getPrizes().stream()
@@ -615,5 +699,61 @@ public class EventService {
                         .toList())
                 .createdAt(event.getCreatedAt())
                 .build();
+    }
+
+    private void applyTiebreakerCriterionIds(HackathonEvent event, List<UUID> ids) {
+        if (ids == null) {
+            return;
+        }
+        validateTiebreakerCriterionIds(event.getScoringTemplateId(), ids);
+        event.getTiebreakerCriterionIds().clear();
+        event.getTiebreakerCriterionIds().addAll(ids);
+        if (event.getTiebreakerCriteria() == null || event.getTiebreakerCriteria().isBlank()) {
+            event.setTiebreakerCriteria(buildTiebreakerDisplayLabel(event.getScoringTemplateId(), ids));
+        }
+    }
+
+    private void validateTiebreakerCriterionIds(UUID scoringTemplateId, List<UUID> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return;
+        }
+        if (scoringTemplateId == null) {
+            throw new BusinessException(
+                    "scoringTemplateId is required when tiebreakerCriterionIds is set",
+                    HttpStatus.BAD_REQUEST) {};
+        }
+        ScoringTemplate template = scoringTemplateRepository.findById(scoringTemplateId)
+                .orElseThrow(() -> new ResourceNotFoundException("ScoringTemplate", "id", scoringTemplateId));
+        Set<UUID> validIds = template.getCriteria().stream()
+                .map(ScoringTemplateCriterion::getId)
+                .collect(Collectors.toSet());
+        for (UUID id : ids) {
+            if (!validIds.contains(id)) {
+                throw new BusinessException(
+                        "Invalid tiebreaker criterion id: " + id,
+                        HttpStatus.BAD_REQUEST) {};
+            }
+        }
+        if (new HashSet<>(ids).size() != ids.size()) {
+            throw new BusinessException(
+                    "tiebreakerCriterionIds must not contain duplicates",
+                    HttpStatus.BAD_REQUEST) {};
+        }
+    }
+
+    private String buildTiebreakerDisplayLabel(UUID scoringTemplateId, List<UUID> ids) {
+        if (ids == null || ids.isEmpty() || scoringTemplateId == null) {
+            return null;
+        }
+        ScoringTemplate template = scoringTemplateRepository.findById(scoringTemplateId).orElse(null);
+        if (template == null) {
+            return null;
+        }
+        Map<UUID, String> names = template.getCriteria().stream()
+                .collect(Collectors.toMap(ScoringTemplateCriterion::getId, ScoringTemplateCriterion::getName));
+        return ids.stream()
+                .map(names::get)
+                .filter(name -> name != null && !name.isBlank())
+                .collect(Collectors.joining(", "));
     }
 }

@@ -5,7 +5,9 @@ import com.sealhackathon.common.enums.AccountStatus;
 import com.sealhackathon.common.enums.UserType;
 import com.sealhackathon.event.domain.HackathonEvent;
 import com.sealhackathon.event.domain.Round;
+import com.sealhackathon.event.domain.enums.CompetitionFormat;
 import com.sealhackathon.event.domain.enums.EventStatus;
+import com.sealhackathon.event.domain.enums.RoundType;
 import com.sealhackathon.event.repository.HackathonEventRepository;
 import com.sealhackathon.event.repository.RoundRepository;
 import com.sealhackathon.submission.repository.SubmissionRepository;
@@ -121,5 +123,57 @@ class SubmissionControllerIntegrationTest extends BaseIntegrationTest {
                         .file(submission)
                         .header("Authorization", "Bearer " + tokenFor(member)))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void submit_shouldReturn201_forSealSlideOnlyWithoutPdf() throws Exception {
+        submissionRepository.deleteAll();
+        roundRepository.deleteAll();
+        eventRepository.deleteAll();
+
+        leader = createUser("seal-leader@fpt.edu.vn", UserType.FPT_STUDENT, AccountStatus.ACTIVE);
+
+        HackathonEvent event = eventRepository.save(HackathonEvent.builder()
+                .name("SEAL Submit Event").season("Spring").year(2026)
+                .startDate(LocalDate.of(2026, 1, 1))
+                .endDate(LocalDate.of(2026, 12, 31))
+                .registrationDeadline(LocalDate.of(2026, 12, 1))
+                .competitionFormat(CompetitionFormat.SEAL_RAG_2026)
+                .status(EventStatus.ACTIVE).build());
+
+        LocalDateTime slideDeadline = LocalDateTime.now().plusHours(3);
+        Round round = roundRepository.save(Round.builder()
+                .hackathonEvent(event).roundNumber(1).name("Preliminary")
+                .roundType(RoundType.PRELIMINARY)
+                .startDate(LocalDateTime.now().minusHours(1))
+                .endDate(LocalDateTime.now().plusDays(1))
+                .slideDeadline(slideDeadline)
+                .submissionDeadline(slideDeadline.plusHours(4))
+                .scoringDeadline(slideDeadline.plusHours(6))
+                .advancementCutoff(2).build());
+        UUID sealRoundId = round.getId();
+
+        Team team = teamRepository.save(Team.builder()
+                .eventId(event.getId()).name("SEAL Team")
+                .leaderId(leader.getId()).status(TeamStatus.CONFIRMED).build());
+
+        teamMemberRepository.save(TeamMember.builder()
+                .team(team).userId(leader.getId())
+                .role(TeamMemberRole.LEADER)
+                .joinedAt(LocalDateTime.now()).build());
+
+        MockMultipartFile submission = new MockMultipartFile(
+                "submission", "", "application/json",
+                """
+                {"slideUrl":"https://docs.google.com/presentation/d/abc123"}
+                """.getBytes());
+
+        mockMvc.perform(multipart("/api/rounds/" + sealRoundId + "/submissions")
+                        .file(submission)
+                        .header("Authorization", "Bearer " + tokenFor(leader)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.status", is("SUBMITTED")))
+                .andExpect(jsonPath("$.data.latestVersion.slideUrl",
+                        is("https://docs.google.com/presentation/d/abc123")));
     }
 }

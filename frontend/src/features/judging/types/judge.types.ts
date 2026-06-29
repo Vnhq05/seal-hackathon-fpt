@@ -99,6 +99,7 @@ export interface ScoringCriterion {
   name: string;
   weight: number;
   description: string;
+  minScore: number;
   maxScore: number;
 }
 
@@ -118,6 +119,8 @@ export interface SubmissionForScoring {
   roundId: string;
   deadline: string;
   description: string;
+  sourceCodeUrl: string | null;
+  /** @deprecated Use sourceCodeUrl */
   githubUrl: string | null;
   demoUrl: string | null;
   pdfUrl: string | null;
@@ -130,6 +133,9 @@ export interface SubmissionForScoring {
   isDraft: boolean;
   isLocked: boolean;
   isCompleted: boolean;
+  conflictOfInterest: boolean;
+  conflictReason: string | null;
+  isAssigned: boolean;
 }
 
 /* ── Score submission ── */
@@ -138,11 +144,6 @@ export interface CriterionScore {
   criterionId: string;
   score: number;
   feedback: string;
-}
-
-export interface SubmitScoresPayload {
-  submissionId: string;
-  scores: CriterionScore[];
 }
 
 export interface SubmitScoresResponse {

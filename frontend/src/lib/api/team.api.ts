@@ -1,5 +1,6 @@
 import { api } from "./api-client";
-import type { TeamStatus, TeamMemberRole, Page, PageParams } from "./types";
+import type { TrackAssignmentResponse } from "./track-assignment.api";
+import type { HackathonSkillRole, TeamStatus, TeamMemberRole, Page, PageParams } from "./types";
 
 // ═══ Types ═══
 
@@ -25,6 +26,15 @@ export interface TeamResponse {
   canSelectTrack: boolean;
   members: TeamMemberResponse[];
   createdAt: string;
+  isRecruiting: boolean;
+  recruitmentNote: string | null;
+  neededRoles: HackathonSkillRole[];
+}
+
+export interface UpdateTeamRecruitmentRequest {
+  isRecruiting: boolean;
+  recruitmentNote?: string;
+  neededRoles?: HackathonSkillRole[];
 }
 
 export interface CreateTeamRequest {
@@ -39,6 +49,14 @@ export interface JoinTeamRequest {
 export interface AssignMentorTeamRequest {
   mentorUserId: string;
   teamId: string;
+}
+
+export interface SelfDrawTrackRequest {
+  trackId: string;
+}
+
+export interface SelectTrackRequest {
+  trackId: string;
 }
 
 // ═══ API calls ═══
@@ -80,8 +98,12 @@ export const teamApi = {
     return api.put<TeamResponse>(`/events/${eventId}/teams/${teamId}/leader/${newLeaderId}`);
   },
 
-  selectTrack(eventId: string, teamId: string, body: { trackId: string }): Promise<TeamResponse> {
+  selectTrack(eventId: string, teamId: string, body: SelectTrackRequest): Promise<TeamResponse> {
     return api.put<TeamResponse>(`/events/${eventId}/teams/${teamId}/track`, body);
+  },
+
+  selfDrawTrack(eventId: string, teamId: string, body: SelfDrawTrackRequest): Promise<TrackAssignmentResponse> {
+    return api.post<TrackAssignmentResponse>(`/events/${eventId}/teams/${teamId}/track/draw`, body);
   },
 
   assignMentorToTeam(eventId: string, body: AssignMentorTeamRequest): Promise<void> {
@@ -90,5 +112,13 @@ export const teamApi = {
 
   removeMentorFromTeam(eventId: string, assignmentId: string): Promise<void> {
     return api.delete<void>(`/events/${eventId}/teams/mentor-team/${assignmentId}`);
+  },
+
+  updateRecruitment(
+    eventId: string,
+    teamId: string,
+    body: UpdateTeamRecruitmentRequest,
+  ): Promise<TeamResponse> {
+    return api.put<TeamResponse>(`/events/${eventId}/teams/${teamId}/recruitment`, body);
   },
 };

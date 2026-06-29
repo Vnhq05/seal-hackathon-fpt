@@ -1,4 +1,5 @@
 import { api } from "./api-client";
+import type { TrackStatus } from "./track-assignment.api";
 
 // ═══ Types ═══
 
@@ -7,9 +8,11 @@ export interface TrackResponse {
   eventId: string;
   name: string;
   description: string | null;
-  topic?: string | null;
+  topic: string | null;
   maxTeams: number;
   scoringTemplateId: string | null;
+  status: TrackStatus;
+  assignedTeamCount: number | null;
 }
 
 export interface CreateTrackRequest {
@@ -17,6 +20,10 @@ export interface CreateTrackRequest {
   description?: string;
   maxTeams: number;
   scoringTemplateId?: string;
+}
+
+export interface AssignTrackTopicRequest {
+  topic: string;
 }
 
 // ═══ API calls ═══
@@ -40,5 +47,9 @@ export const trackApi = {
 
   delete(eventId: string, trackId: string): Promise<void> {
     return api.delete<void>(`/events/${eventId}/tracks/${trackId}`);
+  },
+
+  assignTopic(eventId: string, trackId: string, body: AssignTrackTopicRequest): Promise<TrackResponse> {
+    return api.put<TrackResponse>(`/events/${eventId}/tracks/${trackId}/topic`, body);
   },
 };

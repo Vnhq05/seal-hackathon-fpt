@@ -18,4 +18,6 @@ public class CriteriaResponse {
     private String description;
     private Integer weight;
     private Integer sortOrder;
+    private Integer minScore;
+    private Integer maxScore;
 }

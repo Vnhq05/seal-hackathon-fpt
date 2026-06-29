@@ -311,6 +311,8 @@ public class UserService {
                 .universityName(user.getUniversityName())
                 .userType(user.getUserType())
                 .status(user.getStatus())
+                .studentStanding(user.getStudentStanding())
+                .semester(user.getSemester())
                 .temporaryAccount(user.isTemporaryAccount())
                 .createdAt(user.getCreatedAt())
                 .build();

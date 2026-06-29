@@ -1,5 +1,9 @@
 import { api } from "./api-client";
+import { scheduleApi } from "./schedule.api";
+import type { EventScheduleResponse } from "./schedule.api";
 import type { CompetitionFormat, EventStatus, Page, PageParams } from "./types";
+
+export type { ScheduleType, ScheduleGate, EventScheduleResponse } from "./schedule.api";
 
 export type { CompetitionFormat };
 import type { TrackResponse } from "./track.api";
@@ -44,6 +48,7 @@ export interface EventResponse {
   semesterMax: number | null;
   scoringTemplateId: string | null;
   tiebreakerCriteria: string | null;
+  tiebreakerCriterionIds?: string[] | null;
   roundCount: number;
   mentorCount: number;
   trackCount: number;
@@ -93,10 +98,13 @@ export interface CreateEventRequest {
   semesterMax?: number;
   scoringTemplateId?: string;
   tiebreakerCriteria?: string;
+  tiebreakerCriterionIds?: string[];
   tracks?: TrackRequest[];
   prizes?: PrizeRequest[];
   honoredGuests?: HonoredGuestRequest[];
+  /** @deprecated Mentors are assigned per track after event creation; not sent on create/publish. */
   mentorUserIds?: string[];
+  /** Lecturers with JUDGE or BOTH role — seeds the event judge pool. */
   judgeUserIds?: string[];
 }
 
@@ -110,6 +118,23 @@ export interface EventListParams extends PageParams {
   status?: EventStatus | EventStatus[] | string;
   season?: string;
   year?: number;
+}
+
+export interface AllowedEmailDomainResponse {
+  id: string | null;
+  eventId: string | null;
+  domain: string;
+  universityLabel: string | null;
+}
+
+export interface AddAllowedEmailDomainRequest {
+  domain: string;
+  universityLabel?: string;
+}
+
+export interface UpdateEventStatusRequest {
+  /** Any EventStatus except CANCELLED — use POST /cancel for cancellation */
+  status: Exclude<EventStatus, "CANCELLED">;
 }
 
 // ═══ API calls ═══
@@ -139,6 +164,10 @@ export const eventApi = {
     return api.post<EventResponse>(`/events/${eventId}/cancel`);
   },
 
+  updateStatus(eventId: string, body: UpdateEventStatusRequest): Promise<EventResponse> {
+    return api.patch<EventResponse>(`/events/${eventId}/status`, body);
+  },
+
   getById(eventId: string): Promise<EventResponse> {
     return api.get<EventResponse>(`/events/${eventId}`);
   },
@@ -149,5 +178,29 @@ export const eventApi = {
       query.status = (query.status as EventStatus[]).join(",");
     }
     return api.get<Page<EventResponse>>("/events", { params: query });
+  },
+
+  /** @deprecated Use scheduleApi.list() */
+  getSchedule(eventId: string): Promise<EventScheduleResponse[]> {
+    return scheduleApi.list(eventId);
+  },
+
+  listAllowedEmailDomains(eventId: string): Promise<AllowedEmailDomainResponse[]> {
+    return api.get<AllowedEmailDomainResponse[]>(`/events/${eventId}/allowed-email-domains`);
+  },
+
+  addAllowedEmailDomain(
+    eventId: string,
+    body: AddAllowedEmailDomainRequest,
+  ): Promise<AllowedEmailDomainResponse> {
+    return api.post<AllowedEmailDomainResponse>(`/events/${eventId}/allowed-email-domains`, body);
+  },
+
+  removeAllowedEmailDomain(eventId: string, domainId: string): Promise<void> {
+    return api.delete<void>(`/events/${eventId}/allowed-email-domains/${domainId}`);
+  },
+
+  listPublicAllowedEmailDomains(eventId: string): Promise<AllowedEmailDomainResponse[]> {
+    return api.get<AllowedEmailDomainResponse[]>(`/public/events/${eventId}/allowed-email-domains`);
   },
 };

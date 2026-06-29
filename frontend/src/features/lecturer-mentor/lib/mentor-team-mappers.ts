@@ -1,7 +1,9 @@
 import type { RoundResponse } from "@/lib/api/round.api";
 import type { SubmissionResponse, TeamResponse } from "@/lib/api";
-import type {
-  MentorRoundSubmission,
+import { resolveFileUrl } from "@/lib/files";
+import { computeMaxWeightedScore } from "@/features/judging/schemas/scoring.schema";
+import { DEFAULT_MAX_SCORE } from "@/features/judging/constants/scoring-scale";
+import type {  MentorRoundSubmission,
   MentorTeam,
   MentorTeamDetail,
   MentorTeamMember,
@@ -64,18 +66,26 @@ function mapSubmissionLinks(submission: SubmissionResponse | null): MentorRoundS
   if (!version) return [];
 
   const links: MentorRoundSubmission["links"] = [];
-  if (version.githubUrl) {
-    links.push({ label: "GitHub", url: version.githubUrl, type: "github" });
+  const sourceUrl = version.sourceCodeUrl ?? version.githubUrl;
+  if (sourceUrl) {
+    links.push({ label: "Source", url: sourceUrl, type: "github" });
+  }
+  if (version.slideUrl) {
+    links.push({ label: "Slide", url: version.slideUrl, type: "demo" });
   }
   if (version.demoUrl) {
     links.push({ label: "Demo", url: version.demoUrl, type: "demo" });
   }
   if (version.attachments.length > 0) {
-    links.push({
-      label: "Document",
-      url: version.attachments[0].fileUrl,
-      type: "document",
-    });
+    const attachment = version.attachments[0];
+    const resolved = resolveFileUrl(attachment.fileUrl);
+    if (resolved) {
+      links.push({
+        label: "Document",
+        url: resolved,
+        type: "document",
+      });
+    }
   }
   return links;
 }
@@ -142,8 +152,14 @@ export function mapTeamToMentorDetail(
         links: mapSubmissionLinks(submission),
         mentorNotes: null,
         aggregateScore: null,
-        maxScore: 100,
-      };
+        maxScore: round.criteria?.length
+          ? computeMaxWeightedScore(
+              round.criteria.map((c) => ({
+                maxScore: c.maxScore ?? DEFAULT_MAX_SCORE,
+                weight: c.weight,
+              })),
+            )
+          : DEFAULT_MAX_SCORE,      };
     }),
   };
 }

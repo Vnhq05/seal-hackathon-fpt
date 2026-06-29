@@ -7,10 +7,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.Optional;
 import java.util.UUID;
 import java.time.LocalDate;
@@ -54,4 +56,8 @@ public interface HackathonEventRepository extends JpaRepository<HackathonEvent, 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT e FROM HackathonEvent e WHERE e.id = :id")
     Optional<HackathonEvent> findByIdForUpdate(@Param("id") UUID id);
+
+    @Modifying
+    @Query("UPDATE HackathonEvent e SET e.createdBy = :ownerEmail WHERE e.id IN :eventIds")
+    int reassignOwnership(@Param("eventIds") Collection<UUID> eventIds, @Param("ownerEmail") String ownerEmail);
 }

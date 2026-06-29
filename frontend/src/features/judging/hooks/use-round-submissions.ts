@@ -1,13 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
-import { submissionApi } from "@/lib/api/submission.api";
+import { criteriaApi } from "@/lib/api/criteria.api";
 import { judgingApi } from "@/lib/api/judging.api";
+import { submissionApi } from "@/lib/api/submission.api";
+import { computeMaxWeightedScore, computeWeightedScore } from "@/features/judging/schemas/scoring.schema";
 import type { RoundSubmissionsResponse, RoundSubmissionsParams } from "@/features/judging/types/judge.types";
 
 export const ROUND_SUBMISSIONS_KEY = "judge-round-submissions" as const;
 
 /**
- * Fetches submissions for a round using submissionApi.list() and enriches with
- * the judge's own scores via judgingApi.getMyScores().
+ * Lists only teams assigned to the current judge for the round.
  */
 export function useRoundSubmissions(
   roundId: string,
@@ -16,39 +17,65 @@ export function useRoundSubmissions(
   return useQuery<RoundSubmissionsResponse>({
     queryKey: [ROUND_SUBMISSIONS_KEY, roundId, params],
     queryFn: async (): Promise<RoundSubmissionsResponse> => {
-      const [submissions, myScores] = await Promise.all([
-        submissionApi.list(roundId),
+      const [assignments, myScores, criteria] = await Promise.all([
+        judgingApi.getMyAssignments(),
         judgingApi.getMyScores(roundId).catch(() => []),
+        criteriaApi.list(roundId).catch(() => []),
       ]);
 
-      const scoredMap = new Map(
-        myScores.map((s) => [s.submissionId, s]),
+      const roundAssignments = assignments.filter((a) => a.roundId === roundId);
+
+      const weightByCriteriaId = new Map(criteria.map((c) => [c.id, c.weight]));
+      const maxWeighted = computeMaxWeightedScore(
+        criteria.map((c) => ({ maxScore: c.maxScore ?? 5, weight: c.weight })),
       );
 
-      let items = submissions.map((sub) => {
-        const score = scoredMap.get(sub.id);
-        const totalScore = score
-          ? score.details.reduce((sum, d) => sum + d.score, 0)
-          : null;
-        return {
-          id: sub.id,
-          teamName: sub.teamId,
-          score: totalScore,
-          maxScore: 100,
-          status: score ? ("scored" as const) : ("unscored" as const),
-          submittedAt: sub.createdAt,
-        };
-      });
+      const scoredMap = new Map(myScores.map((s) => [s.submissionId, s]));
 
-      // Apply filter if provided
+      const submissions = await Promise.all(
+        roundAssignments.map(async (a) => {
+          const sub = a.submissionId
+            ? await submissionApi.getByTeam(roundId, a.teamId).catch(() => null)
+            : null;
+          return { assignment: a, sub };
+        }),
+      );
+
+      let items = submissions
+        .filter((entry) => entry.sub != null)
+        .map(({ assignment: a, sub }) => {
+          const score = scoredMap.get(sub!.id);
+          const totalScore = score
+            ? score.details.reduce(
+                (sum, d) =>
+                  sum +
+                  computeWeightedScore(
+                    d.score,
+                    weightByCriteriaId.get(d.criteriaId) ?? 0,
+                  ),
+                0,
+              )
+            : null;
+          return {
+            id: sub!.id,
+            teamName: a.teamName,
+            score: totalScore,
+            maxScore: maxWeighted || 5,
+            status: score ? ("scored" as const) : ("unscored" as const),
+            submittedAt: sub!.createdAt,
+          };
+        });
+
       if (params?.filter && params.filter !== "all") {
         items = items.filter((i) => i.status === params.filter);
       }
 
+      const first = roundAssignments[0];
+
       return {
         data: items,
-        roundName: "",
-        hackathonName: "",
+        roundName: first?.roundName ?? "",
+        hackathonName: first?.eventName ?? "",
         total: items.length,
         page: params?.page ?? 1,
         limit: params?.limit ?? 20,
