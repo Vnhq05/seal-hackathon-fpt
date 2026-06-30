@@ -1,11 +1,14 @@
 package com.sealhackathon.auth.service;
 
+import com.sealhackathon.auth.domain.EventMagicToken;
 import com.sealhackathon.auth.domain.PasswordResetToken;
 import com.sealhackathon.auth.domain.RefreshToken;
+import com.sealhackathon.auth.repository.EmailOtpTokenRepository;
 import com.sealhackathon.auth.dto.request.ForgotPasswordRequest;
 import com.sealhackathon.auth.dto.request.LoginRequest;
 import com.sealhackathon.auth.dto.request.RegisterRequest;
 import com.sealhackathon.auth.dto.request.ResetPasswordRequest;
+import com.sealhackathon.auth.dto.request.VerifyOtpRequest;
 import com.sealhackathon.auth.dto.response.AuthResponse;
 import com.sealhackathon.auth.dto.response.UserInfoResponse;
 import com.sealhackathon.auth.event.LoginFailedEvent;
@@ -20,12 +23,15 @@ import com.sealhackathon.common.exception.AccountNotActivatedException;
 import com.sealhackathon.common.exception.BusinessException;
 import com.sealhackathon.common.exception.DuplicateResourceException;
 import com.sealhackathon.common.exception.InvalidCredentialsException;
+import com.sealhackathon.common.exception.ResourceNotFoundException;
 import com.sealhackathon.event.service.AllowedEmailDomainService;
 import com.sealhackathon.user.dto.snapshot.LockState;
 import com.sealhackathon.user.dto.snapshot.UserSnapshot;
 import com.sealhackathon.user.service.UserPublicService;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -50,10 +56,25 @@ public class AuthService {
     private final ApplicationEventPublisher eventPublisher;
     private final AuthEmailService authEmailService;
     private final AllowedEmailDomainService allowedEmailDomainService;
+    private final MagicLinkTokenService magicLinkTokenService;
+    private final EmailOtpService emailOtpService;
+    private final EmailOtpTokenRepository emailOtpTokenRepository;
 
-    private static final int MAX_FAILED_ATTEMPTS = 5;
-    private static final int LOCK_DURATION_MINUTES = 15;
-    private static final Pattern FPT_STUDENT_ID_PATTERN = Pattern.compile("^SE[0-9]{6}$");
+    @Value("${app.hackathon.auth.max-failed-attempts:5}")
+    private int maxFailedAttempts;
+
+    @Value("${app.hackathon.auth.lock-duration-minutes:15}")
+    private int lockDurationMinutes;
+
+    @Value("${app.hackathon.auth.fpt-student-id-pattern:^SE[0-9]{6}$}")
+    private String fptStudentIdPatternStr;
+
+    private Pattern fptStudentIdPattern;
+
+    @PostConstruct
+    private void initPatterns() {
+        fptStudentIdPattern = Pattern.compile(fptStudentIdPatternStr);
+    }
 
     private static final Set<UserType> PARTICIPANT_TYPES = Set.of(
             UserType.FPT_STUDENT,
@@ -72,7 +93,7 @@ public class AuthService {
             if (request.getStudentId() == null || request.getStudentId().isBlank()) {
                 throw new BusinessException("Student ID is required for FPT students", HttpStatus.BAD_REQUEST) {};
             }
-            if (!FPT_STUDENT_ID_PATTERN.matcher(request.getStudentId().trim().toUpperCase()).matches()) {
+            if (!fptStudentIdPattern.matcher(request.getStudentId().trim().toUpperCase()).matches()) {
                 throw new BusinessException("Student ID must match format SE followed by 6 digits", HttpStatus.BAD_REQUEST) {};
             }
         }
@@ -93,16 +114,25 @@ public class AuthService {
                     HttpStatus.BAD_REQUEST) {};
         }
 
-        // BR-04: email unique
-        if (userPublicService.existsByEmail(request.getEmail())) {
-            throw new DuplicateResourceException("Account", "email", request.getEmail());
+        // BR-04: email unique — resend OTP for unverified PENDING accounts
+        String email = request.getEmail().trim();
+        if (userPublicService.existsByEmail(email)) {
+            UserSnapshot existing = userPublicService.findByEmail(email)
+                    .orElseThrow(() -> new DuplicateResourceException("Account", "email", email));
+            if (existing.getStatus() == AccountStatus.PENDING
+                    && !emailOtpTokenRepository.existsByUserIdAndUsedTrue(existing.getId())) {
+                String code = emailOtpService.resend(existing.getId());
+                authEmailService.sendOtpEmail(existing.getEmail(), existing.getFullName(), code);
+                return existing.getId();
+            }
+            throw new DuplicateResourceException("Account", "email", email);
         }
 
         String passwordHash = passwordEncoder.encode(request.getPassword());
 
         try {
-            return userPublicService.createParticipant(
-                    request.getEmail().trim(),
+            UUID userId = userPublicService.createParticipant(
+                    email,
                     passwordHash,
                     request.getFullName(),
                     request.getPhone(),
@@ -115,9 +145,38 @@ public class AuthService {
                     false,
                     request.getStudentStanding()
             );
+            String code = emailOtpService.create(userId);
+            authEmailService.sendOtpEmail(email, request.getFullName(), code);
+            return userId;
         } catch (DataIntegrityViolationException e) {
-            throw new DuplicateResourceException("Account", "email", request.getEmail());
+            throw new DuplicateResourceException("Account", "email", email);
         }
+    }
+
+    @Transactional
+    public String verifyOtp(VerifyOtpRequest request) {
+        String email = request.getEmail().trim();
+        UserSnapshot user = userPublicService.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "email", email));
+
+        if (user.getStatus() != AccountStatus.PENDING) {
+            throw new BusinessException(
+                    "Account is not pending verification.", HttpStatus.BAD_REQUEST) {};
+        }
+
+        if (emailOtpTokenRepository.existsByUserIdAndUsedTrue(user.getId())) {
+            throw new BusinessException("Email already verified.", HttpStatus.BAD_REQUEST) {};
+        }
+
+        var token = emailOtpService.validate(user.getId(), request.getOtp());
+        emailOtpService.markUsed(token);
+
+        if (user.getUserType() == UserType.FPT_STUDENT) {
+            userPublicService.activateParticipant(user.getId());
+            return "Email verified. Your account is now active. You can sign in.";
+        }
+
+        return "Email verified. Your account is pending admin approval.";
     }
 
     // ── BR-05: Login ──
@@ -215,6 +274,34 @@ public class AuthService {
         eventPublisher.publishEvent(new PasswordResetEvent(user.getId(), LocalDateTime.now()));
     }
 
+    // ── Magic link login (event registration) ──
+    @Transactional
+    public AuthResponse magicLogin(String token, String ipAddress) {
+        EventMagicToken magicToken = magicLinkTokenService.validateAndConsume(token);
+
+        UserSnapshot user = userPublicService.findById(magicToken.getUserId())
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", magicToken.getUserId()));
+
+        LockState lockState = userPublicService.getLockState(user.getId());
+        if (lockState.isLocked()) {
+            throw new AccountLockedException(lockState.getLockedUntil());
+        }
+
+        userPublicService.activateParticipant(user.getId());
+        userPublicService.resetFailedAttempts(user.getId());
+
+        UserSnapshot activatedUser = userPublicService.findById(user.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", user.getId()));
+
+        String accessToken = jwtProvider.generateAccessToken(
+                activatedUser.getId(), activatedUser.getEmail(), activatedUser.getUserType().name());
+        String refreshToken = tokenService.createRefreshToken(activatedUser.getId());
+
+        eventPublisher.publishEvent(new UserLoggedInEvent(activatedUser.getId(), ipAddress, LocalDateTime.now()));
+
+        return buildAuthResponse(accessToken, refreshToken, activatedUser);
+    }
+
     // ── BR-06: Handle failed login ──
     private void handleFailedLogin(UserSnapshot user, String ipAddress) {
         userPublicService.incrementFailedAttempts(user.getId());
@@ -223,8 +310,8 @@ public class AuthService {
         eventPublisher.publishEvent(new LoginFailedEvent(
                 user.getEmail(), ipAddress, lockState.getFailedAttempts(), LocalDateTime.now()));
 
-        if (lockState.getFailedAttempts() >= MAX_FAILED_ATTEMPTS) {
-            LocalDateTime lockUntil = LocalDateTime.now().plusMinutes(LOCK_DURATION_MINUTES);
+        if (lockState.getFailedAttempts() >= maxFailedAttempts) {
+            LocalDateTime lockUntil = LocalDateTime.now().plusMinutes(lockDurationMinutes);
             userPublicService.lockAccount(user.getId(), lockUntil);
         }
     }

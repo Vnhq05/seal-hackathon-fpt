@@ -126,6 +126,13 @@ public class AdminUserController {
         return ResponseEntity.ok(ApiResponse.success("Account deactivated", result));
     }
 
+    @PatchMapping("/{userId}/reactivate")
+    @Operation(summary = "Reactivate a locked user account (LOCKED → ACTIVE)")
+    public ResponseEntity<ApiResponse<UserProfileResponse>> reactivateUser(@PathVariable UUID userId) {
+        UserProfileResponse result = userService.reactivateUser(userId, authPublicService.getCurrentUserId());
+        return ResponseEntity.ok(ApiResponse.success("Account reactivated", result));
+    }
+
     @DeleteMapping("/{userId}")
     @Operation(summary = "Delete user account when no references exist")
     public ResponseEntity<ApiResponse<Void>> deleteUser(@PathVariable UUID userId) {

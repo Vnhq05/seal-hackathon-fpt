@@ -32,6 +32,7 @@ import com.sealhackathon.event.repository.ScoringTemplateRepository;
 import com.sealhackathon.user.dto.snapshot.UserSnapshot;
 import com.sealhackathon.user.service.UserPublicService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -58,8 +59,12 @@ public class EventService {
     private static final Pattern EVENT_NAME_PATTERN = Pattern.compile("^[a-zA-Z\\s]+$");
     private static final List<PrizeRank> PRIZE_RANK_ORDER = List.of(
             PrizeRank.FIRST, PrizeRank.SECOND, PrizeRank.THIRD);
-    private static final int MIN_TRACK_MAX_TEAMS = 16;
-    private static final int MAX_TRACK_MAX_TEAMS = 40;
+
+    @Value("${app.hackathon.team.min-track-max-teams:16}")
+    private int minTrackMaxTeams;
+
+    @Value("${app.hackathon.team.max-track-max-teams:40}")
+    private int maxTrackMaxTeams;
 
     private final HackathonEventRepository eventRepository;
     private final RoundService roundService;
@@ -71,6 +76,7 @@ public class EventService {
     private final AllowedEmailDomainService allowedEmailDomainService;
     private final ScoringTemplateRepository scoringTemplateRepository;
     private final UserPublicService userPublicService;
+    private final FormatRuleEngine formatRuleEngine;
 
     @Transactional
     public EventResponse createEvent(CreateEventRequest request) {
@@ -117,7 +123,10 @@ public class EventService {
         }
 
         if (competitionFormat == CompetitionFormat.SEAL_RAG_2026) {
-            SealSpring2026Template.apply(event);
+            SealSpring2026Template.apply(event,
+                    formatRuleEngine.getSealMaxTeamsPerTrack(),
+                    formatRuleEngine.getSealTopPerTrack(),
+                    formatRuleEngine.getSealFinalistCount());
         } else if (request.getTracks() != null) {
             request.getTracks().forEach(t -> {
                 validateTrackMaxTeams(t.getMaxTeams());
@@ -559,9 +568,9 @@ public class EventService {
     }
 
     private void validateTrackMaxTeams(Integer maxTeams) {
-        if (maxTeams == null || maxTeams < MIN_TRACK_MAX_TEAMS || maxTeams > MAX_TRACK_MAX_TEAMS) {
+        if (maxTeams == null || maxTeams < minTrackMaxTeams || maxTeams > maxTrackMaxTeams) {
             throw new BusinessException(
-                    "Track max teams must be between " + MIN_TRACK_MAX_TEAMS + " and " + MAX_TRACK_MAX_TEAMS,
+                    "Track max teams must be between " + minTrackMaxTeams + " and " + maxTrackMaxTeams,
                     HttpStatus.BAD_REQUEST) {};
         }
     }

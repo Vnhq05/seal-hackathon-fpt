@@ -22,6 +22,7 @@ function getErrorMessage(error: unknown): string {
 export function LoginForm() {
   const searchParams = useSearchParams();
   const justRegistered = searchParams.get("registered") === "true";
+  const emailVerified = searchParams.get("verified") === "true";
   const [showPassword, setShowPassword] = useState(false);
   const { login, isPending, isError, error } = useLogin();
 
@@ -51,7 +52,22 @@ export function LoginForm() {
       </div>
 
       {/* Registration Success Banner */}
-      {justRegistered && (
+      {emailVerified && (
+        <div
+          role="status"
+          className="mb-6 flex items-center gap-3 border-2 border-seal-success/30 bg-seal-success/10 px-4 py-3"
+        >
+          <svg className="h-5 w-5 flex-shrink-0" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <circle cx="10" cy="10" r="9" fill="var(--color-seal-success)" />
+            <path d="M6.5 10.5L9 13L13.5 7.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <p className="text-sm text-seal-success">
+            Email verified! You can now sign in with your account.
+          </p>
+        </div>
+      )}
+
+      {justRegistered && !emailVerified && (
         <div
           role="status"
           className="mb-6 flex items-center gap-3 border-2 border-seal-success/30 bg-seal-success/10 px-4 py-3"

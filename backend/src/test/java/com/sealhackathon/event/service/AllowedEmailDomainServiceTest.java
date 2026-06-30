@@ -32,7 +32,7 @@ class AllowedEmailDomainServiceTest {
     void validateExternalRegistration_shouldPass_whenEmailAndUniversityMatch() {
         assertThatCode(() -> allowedEmailDomainService.validateExternalRegistration(
                 "student@hcmut.edu.vn",
-                "ĐH Bách khoa TP.HCM"))
+                "Ho Chi Minh City University of Technology"))
                 .doesNotThrowAnyException();
     }
 
@@ -40,7 +40,7 @@ class AllowedEmailDomainServiceTest {
     void validateExternalRegistration_shouldPass_whenSubdomainMatchesParentRule() {
         assertThatCode(() -> allowedEmailDomainService.validateExternalRegistration(
                 "alice@student.hcmus.edu.vn",
-                "ĐH Khoa học Tự nhiên TP.HCM"))
+                "Vietnam National University Ho Chi Minh City - University of Science"))
                 .doesNotThrowAnyException();
     }
 
@@ -48,7 +48,7 @@ class AllowedEmailDomainServiceTest {
     void validateExternalRegistration_shouldThrow_whenEmailDomainNotAllowed() {
         assertThatThrownBy(() -> allowedEmailDomainService.validateExternalRegistration(
                 "user@gmail.com",
-                "ĐH Bách khoa TP.HCM"))
+                "Ho Chi Minh City University of Technology"))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("Email domain is not allowed");
     }
@@ -57,7 +57,7 @@ class AllowedEmailDomainServiceTest {
     void validateExternalRegistration_shouldThrow_whenUniversityDoesNotMatchEmail() {
         assertThatThrownBy(() -> allowedEmailDomainService.validateExternalRegistration(
                 "student@hcmut.edu.vn",
-                "ĐH Công nghệ Thông tin TP.HCM"))
+                "University of Information Technology"))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("University name does not match");
     }
@@ -73,7 +73,7 @@ class AllowedEmailDomainServiceTest {
                 AllowedEmailDomain.builder()
                         .eventId(eventId)
                         .domain("uit.edu.vn")
-                        .universityLabel("ĐH Công nghệ Thông tin TP.HCM")
+                        .universityLabel("University of Information Technology")
                         .build());
 
         when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
@@ -82,7 +82,7 @@ class AllowedEmailDomainServiceTest {
         assertThatCode(() -> allowedEmailDomainService.validateExternalStudentForEvent(
                 eventId,
                 "student@uit.edu.vn",
-                "ĐH Công nghệ Thông tin TP.HCM"))
+                "University of Information Technology"))
                 .doesNotThrowAnyException();
     }
 
@@ -97,7 +97,7 @@ class AllowedEmailDomainServiceTest {
                 AllowedEmailDomain.builder()
                         .eventId(eventId)
                         .domain("uit.edu.vn")
-                        .universityLabel("ĐH Công nghệ Thông tin TP.HCM")
+                        .universityLabel("University of Information Technology")
                         .build());
 
         when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
@@ -106,7 +106,7 @@ class AllowedEmailDomainServiceTest {
         assertThatThrownBy(() -> allowedEmailDomainService.validateExternalStudentForEvent(
                 eventId,
                 "student@uit.edu.vn",
-                "ĐH Bách khoa TP.HCM"))
+                "Ho Chi Minh City University of Technology"))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("University name does not match");
     }

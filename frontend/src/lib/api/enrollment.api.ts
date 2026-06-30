@@ -30,6 +30,7 @@ export interface ExternalEnrollmentRequest {
   studentId: string;
   universityName: string;
   studentStanding: Extract<StudentStanding, "ENROLLED">;
+  semester?: number;
 }
 
 // ═══ API calls ═══
@@ -64,8 +65,16 @@ export const enrollmentApi = {
     return api.get<EnrollmentResponse[]>(`/events/${eventId}/enrollments/waiting-list`);
   },
 
-  approve(eventId: string, enrollmentId: string): Promise<EnrollmentResponse> {
-    return api.put<EnrollmentResponse>(`/events/${eventId}/enrollments/${enrollmentId}/approve`);
+  approve(eventId: string, enrollmentId: string) {
+    return api.putWithMessage<EnrollmentResponse>(
+      `/events/${eventId}/enrollments/${enrollmentId}/approve`,
+    );
+  },
+
+  resendCredentials(eventId: string, enrollmentId: string) {
+    return api.postWithMessage<EnrollmentResponse>(
+      `/events/${eventId}/enrollments/${enrollmentId}/resend-credentials`,
+    );
   },
 
   reject(eventId: string, enrollmentId: string): Promise<EnrollmentResponse> {

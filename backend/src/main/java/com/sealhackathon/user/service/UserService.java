@@ -21,7 +21,9 @@ import com.sealhackathon.user.event.AccountRejectedEvent;
 import com.sealhackathon.user.event.InternalAccountCreatedEvent;
 import com.sealhackathon.user.event.ProfileUpdatedEvent;
 import com.sealhackathon.user.repository.UserRepository;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -32,6 +34,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -47,15 +50,18 @@ public class UserService {
     private final UserReferenceService userReferenceService;
     private final AuthPublicService authPublicService;
 
-    private static final Set<String> PROTECTED_EMAILS = Set.of(
-            "admin@seal.com",
-            "coordinator@seal.com",
-            "lecturer1@fpt.edu.vn",
-            "lecturer2@fpt.edu.vn",
-            "lecturer3@fpt.edu.vn",
-            "lecturer4@fpt.edu.vn",
-            "lecturer5@fpt.edu.vn"
-    );
+    @Value("${app.protected-emails:admin@seal.com,coordinator@seal.com,lecturer1@fpt.edu.vn,lecturer2@fpt.edu.vn,lecturer3@fpt.edu.vn,lecturer4@fpt.edu.vn,lecturer5@fpt.edu.vn}")
+    private String protectedEmailsConfig;
+
+    private Set<String> protectedEmails;
+
+    @PostConstruct
+    private void initProtectedEmails() {
+        this.protectedEmails = Arrays.stream(protectedEmailsConfig.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.toSet());
+    }
 
     private static final Set<UserType> INTERNAL_ROLES = Set.of(
             UserType.LECTURER,
@@ -262,6 +268,25 @@ public class UserService {
     }
 
     @Transactional
+    public UserProfileResponse reactivateUser(UUID userId, UUID currentUserId) {
+        User user = getUser(userId);
+        guardAccountManagement(user, currentUserId);
+
+        if (user.getStatus() == AccountStatus.REJECTED) {
+            throw new BusinessException(
+                    "Rejected accounts cannot be reactivated",
+                    HttpStatus.BAD_REQUEST) {};
+        }
+        if (user.getStatus() == AccountStatus.ACTIVE) {
+            return toProfileResponse(user);
+        }
+
+        user.setStatus(AccountStatus.ACTIVE);
+        user = userRepository.save(user);
+        return toProfileResponse(user);
+    }
+
+    @Transactional
     public void deleteUser(UUID userId, UUID currentUserId) {
         User user = getUser(userId);
         guardAccountManagement(user, currentUserId);
@@ -284,7 +309,7 @@ public class UserService {
     // ═══════════════════════════════════════
 
     private void guardAccountManagement(User user, UUID currentUserId) {
-        if (PROTECTED_EMAILS.contains(user.getEmail().toLowerCase())) {
+        if (protectedEmails.contains(user.getEmail().toLowerCase())) {
             throw new BusinessException(
                     "This account is protected and cannot be modified",
                     HttpStatus.FORBIDDEN) {};

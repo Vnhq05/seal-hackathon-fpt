@@ -4,7 +4,7 @@ import { useState } from "react";
 import { EventScheduleTimeline } from "@/features/events/components/event-schedule-timeline";
 import { useEventSchedule } from "@/features/events/hooks/use-event-schedule";
 import { useEventParticipationGate } from "@/features/events/hooks/use-event-participation-gate";
-import { useEventRounds } from "@/features/dashboard/hooks/use-event-rounds";
+import { useEventRounds } from "@/features/events/hooks/use-event-rounds";
 import { useEnroll, useWithdrawEnrollment } from "@/features/events/hooks/use-enrollment";
 import type { EventResponse, EnrollmentResponse } from "@/lib/api";
 import { getPrizeLabel } from "@/lib/prize.utils";

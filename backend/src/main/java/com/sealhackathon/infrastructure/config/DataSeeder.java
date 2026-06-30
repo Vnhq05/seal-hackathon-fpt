@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -26,6 +27,7 @@ import java.util.UUID;
 
 @Slf4j
 @Component
+@Profile("dev")
 @RequiredArgsConstructor
 public class DataSeeder implements CommandLineRunner {
 
@@ -45,7 +47,11 @@ public class DataSeeder implements CommandLineRunner {
     @Value("${app.seeder.resync-dev-accounts:true}")
     private boolean resyncDevAccounts;
 
-    private static final String DEFAULT_SEED_PASSWORD = "12345678";
+    @Value("${app.seeder.default-password:12345678}")
+    private String defaultSeedPassword;
+
+    @Value("${app.seeder.student-id-prefix:SE19100}")
+    private String studentIdPrefix;
 
     private static final String DEFAULT_RULES = """
             1. Teams must comply with the configured minimum and maximum member limits.
@@ -150,35 +156,35 @@ public class DataSeeder implements CommandLineRunner {
         scoringTemplateRepository.save(research);
 
         ScoringTemplate sealPreliminary = ScoringTemplate.builder()
-                .name("SEAL Spring 2026 — Vòng bảng")
+                .name("SEAL Spring 2026 — Preliminary Round")
                 .description("Preliminary round rubric — scale 1–5")
                 .build();
         sealPreliminary.getCriteria().add(criterion(sealPreliminary,
-                "Tính chính xác và phù hợp với Domain", "Accuracy and Domain Relevance", 30, 0, 1, 5));
+                "Accuracy and Domain Relevance", "Accuracy and Domain Relevance", 30, 0, 1, 5));
         sealPreliminary.getCriteria().add(criterion(sealPreliminary,
-                "Kiến trúc Agentic RAG & Giải thuật", "Agentic RAG Architecture & Algorithm", 30, 1, 1, 5));
+                "Agentic RAG Architecture & Algorithm", "Agentic RAG Architecture & Algorithm", 30, 1, 1, 5));
         sealPreliminary.getCriteria().add(criterion(sealPreliminary,
-                "Ý tưởng & Thuyết trình", "Ideas & Presentation", 15, 2, 1, 5));
+                "Ideas & Presentation", "Ideas & Presentation", 15, 2, 1, 5));
         sealPreliminary.getCriteria().add(criterion(sealPreliminary,
-                "Khả năng thực thi & tính sáng tạo", "Feasibility & Creativity", 15, 3, 1, 5));
+                "Feasibility & Creativity", "Feasibility & Creativity", 15, 3, 1, 5));
         sealPreliminary.getCriteria().add(criterion(sealPreliminary,
-                "Trải nghiệm người dùng & giao diện tương tác", "User Experience & Interactive Interface", 10, 4, 1, 5));
+                "User Experience & Interactive Interface", "User Experience & Interactive Interface", 10, 4, 1, 5));
         scoringTemplateRepository.save(sealPreliminary);
 
         ScoringTemplate sealFinal = ScoringTemplate.builder()
-                .name("SEAL Spring 2026 — Chung kết")
+                .name("SEAL Spring 2026 — Finals")
                 .description("Final round rubric — scale 1–5")
                 .build();
         sealFinal.getCriteria().add(criterion(sealFinal,
-                "Chất lượng xử lý & truy xuất dữ liệu", "Data Processing & Retrieval Quality", 30, 0, 1, 5));
+                "Data Processing & Retrieval Quality", "Data Processing & Retrieval Quality", 30, 0, 1, 5));
         sealFinal.getCriteria().add(criterion(sealFinal,
-                "Độ tin cậy & chống ảo giác", "Reliability & Hallucination Resistance", 20, 1, 1, 5));
+                "Reliability & Hallucination Resistance", "Reliability & Hallucination Resistance", 20, 1, 1, 5));
         sealFinal.getCriteria().add(criterion(sealFinal,
-                "Tư duy Agent & xử lý đa tầng", "Agent Reasoning & Multi-hop Processing", 20, 2, 1, 5));
+                "Agent Reasoning & Multi-hop Processing", "Agent Reasoning & Multi-hop Processing", 20, 2, 1, 5));
         sealFinal.getCriteria().add(criterion(sealFinal,
-                "Tính thực tế & tối ưu vận hành", "Practicality & Operational Optimization", 20, 3, 1, 5));
+                "Practicality & Operational Optimization", "Practicality & Operational Optimization", 20, 3, 1, 5));
         sealFinal.getCriteria().add(criterion(sealFinal,
-                "Khả năng mở rộng & sáng tạo", "Scalability & Innovation", 10, 4, 1, 5));
+                "Scalability & Innovation", "Scalability & Innovation", 10, 4, 1, 5));
         scoringTemplateRepository.save(sealFinal);
 
         log.info("Seeded {} scoring templates", scoringTemplateRepository.count());
@@ -209,7 +215,7 @@ public class DataSeeder implements CommandLineRunner {
 
         User.UserBuilder builder = User.builder()
                 .email(email)
-                .passwordHash(passwordEncoder.encode(DEFAULT_SEED_PASSWORD))
+                .passwordHash(passwordEncoder.encode(defaultSeedPassword))
                 .fullName(fullName)
                 .userType(userType)
                 .status(AccountStatus.ACTIVE)
@@ -217,21 +223,21 @@ public class DataSeeder implements CommandLineRunner {
 
         if (userType == UserType.FPT_STUDENT) {
             String idNum = email.replaceAll("[^0-9]", "");
-            builder.studentId("SE19100" + idNum);
+            builder.studentId(studentIdPrefix + idNum);
             builder.semester(semester);
         }
 
         userRepository.save(builder.build());
-        log.info("Seeded account: {} / {} [{}]", email, DEFAULT_SEED_PASSWORD, userType);
+        log.info("Seeded account: {} [{}]", email, userType);
     }
 
     private void resyncDevAccount(User user) {
-        user.setPasswordHash(passwordEncoder.encode(DEFAULT_SEED_PASSWORD));
+        user.setPasswordHash(passwordEncoder.encode(defaultSeedPassword));
         user.setStatus(AccountStatus.ACTIVE);
         user.setFailedLoginAttempts(0);
         user.setLockedUntil(null);
         user.setStudentStanding(StudentStanding.ENROLLED);
         userRepository.save(user);
-        log.info("Re-synced dev account: {} / {} [{}]", user.getEmail(), DEFAULT_SEED_PASSWORD, user.getUserType());
+        log.info("Re-synced dev account: {} [{}]", user.getEmail(), user.getUserType());
     }
 }

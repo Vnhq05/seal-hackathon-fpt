@@ -24,6 +24,7 @@
 | 12 | Leaderboard | ✅ **[SEAL-Spring-2026-Leaderboard-API.md](./SEAL-Spring-2026-Leaderboard-API.md)** — wired frontend (`/ranking`) |
 | 13 | Team Matching | ✅ **[SEAL-Spring-2026-Team-Matching-API.md](./SEAL-Spring-2026-Team-Matching-API.md)** — wired frontend |
 | 14 | External Student Verification | ✅ **[SEAL-Spring-2026-External-Student-Verification-API.md](./SEAL-Spring-2026-External-Student-Verification-API.md)** — wired frontend |
+| 14b | Magic Link Registration (vãng lai) | ✅ **[SEAL-Spring-2026-Magic-Link-Registration-API.md](./SEAL-Spring-2026-Magic-Link-Registration-API.md)** — mới |
 | 15 | Business Rules Enforcement | ⏳ Một phần (milestone gates → §1.3) |
 | 16 | Awards | 📎 Tham chiếu (đã có sẵn) |
 | 17 | Feedback / Post-event | ✅ **[SEAL-Spring-2026-Participant-Feedback-API.md](./SEAL-Spring-2026-Participant-Feedback-API.md)** — wired frontend |
@@ -422,6 +423,17 @@ Enforcement: `Round.slideDeadline` (10:00) + `Round.submissionDeadline` (14:00) 
 
 Chi tiết request/response giải đội: [`SEAL-Spring-2026-Rounds-Finalists-API.md`](./SEAL-Spring-2026-Rounds-Finalists-API.md).  
 Chi tiết participation certificates: [`SEAL-Spring-2026-Awards-API.md`](./SEAL-Spring-2026-Awards-API.md).
+
+---
+
+### 1.5b Magic Link Registration (external student landing)
+
+> Full spec: [`SEAL-Spring-2026-Magic-Link-Registration-API.md`](./SEAL-Spring-2026-Magic-Link-Registration-API.md)
+
+| Method | Path | Mô tả |
+|---|---|---|
+| POST | `/api/public/events/{eventId}/register` | Gửi email magic link (public) |
+| GET | `/api/auth/magic-login?token={token}` | Kích hoạt tài khoản + trả `AuthResponse` |
 
 ---
 

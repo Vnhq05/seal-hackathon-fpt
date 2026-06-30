@@ -1,9 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAdminEvents, useAdminEvent } from "@/features/admin/hooks/use-admin-hackathons";
-import { useMentorAssignments, useAssignMentor, useRemoveMentor } from "@/features/admin/hooks/use-admin-assignments";
+import {
+  useMentorAssignments,
+  useAllTrackMentorAssignments,
+  useAssignMentor,
+  useRemoveMentor,
+} from "@/features/admin/hooks/use-admin-assignments";
 import { useLecturerOptions } from "@/features/admin/hooks/use-lecturer-options";
 import { trackApi } from "@/lib/api/track.api";
 import type { MentorAssignmentResponse } from "@/lib/api";
@@ -55,6 +60,19 @@ export function MentorAssignmentPage({ defaultEventId }: { defaultEventId?: stri
   });
   const { data: mentors, isLoading } = useMentorAssignments(eventId, trackId);
   const { mutate: assign, isPending } = useAssignMentor(eventId, trackId);
+  const trackIds = tracks.map((t) => t.id);
+  const allTrackMentorQueries = useAllTrackMentorAssignments(eventId, trackIds);
+
+  const mentorTrackConflict = useMemo(() => {
+    const map = new Map<string, string>();
+    tracks.forEach((track, i) => {
+      if (track.id === trackId) return;
+      for (const m of allTrackMentorQueries[i]?.data ?? []) {
+        map.set(m.mentorUserId, track.name);
+      }
+    });
+    return map;
+  }, [tracks, trackId, allTrackMentorQueries]);
 
   const events = eventsPage?.content ?? [];
   const mentorList = mentors ?? [];
@@ -101,7 +119,11 @@ export function MentorAssignmentPage({ defaultEventId }: { defaultEventId?: stri
           <label style={{ fontSize: 12, fontWeight: 600, color: "#8891a5", marginBottom: 4 }}>Track</label>
           <select value={trackId} onChange={(e) => setTrackId(e.target.value)} style={inputStyle} disabled={!eventId}>
             <option value="">Select track</option>
-            {tracks.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+            {tracks.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name} — {t.topic ?? "No topic yet"}
+              </option>
+            ))}
           </select>
         </div>
         <div className="flex flex-col">
@@ -113,11 +135,15 @@ export function MentorAssignmentPage({ defaultEventId }: { defaultEventId?: stri
             disabled={!eventId || !trackId}
           >
             <option value="">Select mentor...</option>
-            {lecturers.map((l) => (
-              <option key={l.id} value={l.id}>
-                {l.fullName ?? l.email}
-              </option>
-            ))}
+            {lecturers.map((l) => {
+              const conflictTrack = mentorTrackConflict.get(l.id);
+              return (
+                <option key={l.id} value={l.id}>
+                  {l.fullName ?? l.email}
+                  {conflictTrack ? ` — ⚠ Already in ${conflictTrack}` : ""}
+                </option>
+              );
+            })}
           </select>
         </div>
         {assignError && (

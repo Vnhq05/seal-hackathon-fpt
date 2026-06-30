@@ -223,7 +223,7 @@ public class TrackDrawSessionService {
     private List<AvailableTrackSlotResponse> buildAvailableTracks(UUID eventId) {
         List<AvailableTrackSlotResponse> slots = new ArrayList<>();
         for (Track track : trackRepository.findByHackathonEventId(eventId)) {
-            int max = track.getMaxTeams() != null ? track.getMaxTeams() : FormatRuleEngine.SEAL_MAX_TEAMS_PER_TRACK;
+            int max = track.getMaxTeams() != null ? track.getMaxTeams() : formatRuleEngine.getSealMaxTeamsPerTrack();
             long current = teamRepository.countByEventIdAndTrackId(eventId, track.getId());
             slots.add(AvailableTrackSlotResponse.builder()
                     .trackId(track.getId())

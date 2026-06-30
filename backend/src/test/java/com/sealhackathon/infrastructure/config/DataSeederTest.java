@@ -52,6 +52,8 @@ class DataSeederTest {
     @BeforeEach
     void setUp() {
         ReflectionTestUtils.setField(dataSeeder, "resyncDevAccounts", true);
+        ReflectionTestUtils.setField(dataSeeder, "defaultSeedPassword", "12345678");
+        ReflectionTestUtils.setField(dataSeeder, "studentIdPrefix", "SE19100");
         lenient().doAnswer(invocation -> {
             invocation.getArgument(0, java.util.function.Consumer.class).accept(null);
             return null;

@@ -4,6 +4,7 @@ import com.sealhackathon.common.exception.ResourceNotFoundException;
 import com.sealhackathon.event.domain.Round;
 import com.sealhackathon.event.domain.enums.AdvancementRule;
 import com.sealhackathon.event.repository.RoundRepository;
+import com.sealhackathon.event.service.FormatRuleEngine;
 import com.sealhackathon.ranking.domain.Advancement;
 import com.sealhackathon.ranking.domain.Ranking;
 import com.sealhackathon.ranking.domain.enums.AdvancementStatus;
@@ -34,6 +35,7 @@ public class AdvancementService {
     private final RankingRepository rankingRepository;
     private final RoundRepository roundRepository;
     private final TeamPublicService teamPublicService;
+    private final FormatRuleEngine formatRuleEngine;
 
     @Transactional
     public List<AdvancementResponse> determineAdvancements(UUID roundId) {
@@ -90,7 +92,9 @@ public class AdvancementService {
     }
 
     private Set<UUID> determinePerTrackAdvanced(Round round, List<Ranking> rankings) {
-        int cutoff = round.getAdvancementCutoff() != null ? round.getAdvancementCutoff() : 2;
+        int cutoff = round.getAdvancementCutoff() != null
+                ? round.getAdvancementCutoff()
+                : formatRuleEngine.getSealTopPerTrack();
         Map<UUID, List<Ranking>> byTrack = new LinkedHashMap<>();
 
         for (Ranking r : rankings) {

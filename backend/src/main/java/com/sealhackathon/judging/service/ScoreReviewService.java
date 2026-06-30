@@ -11,6 +11,7 @@ import com.sealhackathon.judging.domain.JudgeScore;
 import com.sealhackathon.judging.domain.ScoreReviewRequest;
 import com.sealhackathon.judging.domain.enums.ScoreReviewStatus;
 import com.sealhackathon.judging.domain.enums.ScoreStatus;
+import com.sealhackathon.judging.dto.request.JudgeScoreReviewRequest;
 import com.sealhackathon.judging.dto.request.ResolveScoreReviewRequest;
 import com.sealhackathon.judging.dto.response.ScoreReviewJudgeScoreResponse;
 import com.sealhackathon.judging.dto.response.ScoreReviewResponse;
@@ -27,7 +28,9 @@ import com.sealhackathon.team.domain.Team;
 import com.sealhackathon.team.repository.TeamRepository;
 import com.sealhackathon.user.dto.snapshot.UserSnapshot;
 import com.sealhackathon.user.service.UserPublicService;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -47,8 +50,20 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ScoreReviewService {
 
-    public static final BigDecimal DEVIATION_THRESHOLD = BigDecimal.valueOf(25);
-    private static final BigDecimal PERCENT_SCALE = BigDecimal.valueOf(20);
+    @Value("${app.hackathon.judging.deviation-threshold:25}")
+    private int deviationThresholdValue;
+
+    @Value("${app.hackathon.judging.percent-scale:20}")
+    private int percentScaleValue;
+
+    private BigDecimal deviationThreshold;
+    private BigDecimal percentScale;
+
+    @PostConstruct
+    private void initScoreConstants() {
+        deviationThreshold = BigDecimal.valueOf(deviationThresholdValue);
+        percentScale = BigDecimal.valueOf(percentScaleValue);
+    }
 
     private final ScoreReviewRequestRepository scoreReviewRequestRepository;
     private final SubmissionRepository submissionRepository;
@@ -69,37 +84,12 @@ public class ScoreReviewService {
         Submission submission = submissionRepository.findById(submissionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Submission", "id", submissionId));
 
-        long assignedJudges = teamJudgeAssignmentRepository.countByTeamIdAndRoundId(
-                submission.getTeamId(), submission.getRoundId());
-        if (assignedJudges == 0) {
+        Optional<DeviationStats> stats = computeDeviationStats(submission);
+        if (stats.isEmpty() || stats.get().deviation().compareTo(deviationThreshold) < 0) {
             return;
         }
 
-        List<JudgeScore> finishedScores = judgeScoreRepository.findBySubmissionId(submissionId).stream()
-                .filter(s -> s.getStatus() == ScoreStatus.COMPLETED || s.getStatus() == ScoreStatus.LOCKED)
-                .toList();
-
-        if (finishedScores.size() < assignedJudges) {
-            return;
-        }
-
-        List<CriteriaSnapshot> criteria = eventPublicService.getCriteriaByRound(submission.getRoundId());
-        Map<UUID, Integer> weightMap = criteria.stream()
-                .collect(Collectors.toMap(CriteriaSnapshot::getId, CriteriaSnapshot::getWeight));
-
-        List<BigDecimal> percentScores = finishedScores.stream()
-                .map(score -> toPercentScore(score, criteria, weightMap))
-                .sorted()
-                .toList();
-
-        BigDecimal min = percentScores.get(0);
-        BigDecimal max = percentScores.get(percentScores.size() - 1);
-        BigDecimal deviation = max.subtract(min).setScale(2, RoundingMode.HALF_UP);
-
-        if (deviation.compareTo(DEVIATION_THRESHOLD) < 0) {
-            return;
-        }
-
+        DeviationStats deviationStats = stats.get();
         RoundSnapshot round = eventPublicService.getRound(submission.getRoundId())
                 .orElseThrow(() -> new ResourceNotFoundException("Round", "id", submission.getRoundId()));
 
@@ -108,9 +98,9 @@ public class ScoreReviewService {
                 .roundId(submission.getRoundId())
                 .teamId(submission.getTeamId())
                 .submissionId(submissionId)
-                .deviationValue(deviation)
-                .minJudgeScore(min)
-                .maxJudgeScore(max)
+                .deviationValue(deviationStats.deviation())
+                .minJudgeScore(deviationStats.min())
+                .maxJudgeScore(deviationStats.max())
                 .status(ScoreReviewStatus.OPEN)
                 .build();
 
@@ -118,7 +108,87 @@ public class ScoreReviewService {
 
         eventPublisher.publishEvent(new ScoreReviewCreatedEvent(
                 review.getId(), review.getEventId(), submissionId,
-                submission.getTeamId(), deviation));
+                submission.getTeamId(), deviationStats.deviation()));
+    }
+
+    @Transactional
+    public ScoreReviewResponse requestJudgeAdjustment(UUID eventId, UUID judgeId,
+                                                      JudgeScoreReviewRequest request) {
+        Submission submission = submissionRepository.findById(request.getSubmissionId())
+                .orElseThrow(() -> new ResourceNotFoundException("Submission", "id", request.getSubmissionId()));
+
+        RoundSnapshot round = eventPublicService.getRound(submission.getRoundId())
+                .orElseThrow(() -> new ResourceNotFoundException("Round", "id", submission.getRoundId()));
+        if (!round.getEventId().equals(eventId)) {
+            throw new ResourceNotFoundException("Submission", "id", request.getSubmissionId());
+        }
+
+        if (!teamJudgeAssignmentRepository.existsByTeamIdAndRoundIdAndJudgeUserId(
+                submission.getTeamId(), submission.getRoundId(), judgeId)) {
+            throw new BusinessException(
+                    "You are not assigned to this team's scoring for this round",
+                    HttpStatus.FORBIDDEN) {};
+        }
+
+        JudgeScore judgeScore = judgeScoreRepository.findByJudgeUserIdAndSubmissionId(
+                        judgeId, request.getSubmissionId())
+                .orElseThrow(() -> new BusinessException(
+                        "You have not scored this submission",
+                        HttpStatus.BAD_REQUEST) {});
+
+        if (judgeScore.getStatus() != ScoreStatus.COMPLETED
+                && judgeScore.getStatus() != ScoreStatus.LOCKED) {
+            throw new BusinessException(
+                    "You must complete your score before requesting an adjustment",
+                    HttpStatus.BAD_REQUEST) {};
+        }
+
+        if (scoreReviewRequestRepository.existsBySubmissionIdAndStatus(
+                request.getSubmissionId(), ScoreReviewStatus.OPEN)) {
+            throw new BusinessException(
+                    "A deviation review is already open for this submission.",
+                    HttpStatus.CONFLICT) {};
+        }
+
+        DeviationStats deviationStats = computeDeviationStats(submission)
+                .orElseThrow(() -> new BusinessException(
+                        "Not enough completed judge scores to request a review.",
+                        HttpStatus.BAD_REQUEST) {});
+
+        Optional<ScoreReviewRequest> existing = scoreReviewRequestRepository.findBySubmissionId(
+                request.getSubmissionId());
+
+        ScoreReviewRequest review;
+        if (existing.isPresent()) {
+            review = existing.get();
+            review.setStatus(ScoreReviewStatus.OPEN);
+            review.setResolvedAt(null);
+            review.setResolvedBy(null);
+            review.setResolutionNote(request.getNote());
+            review.setDeviationValue(deviationStats.deviation());
+            review.setMinJudgeScore(deviationStats.min());
+            review.setMaxJudgeScore(deviationStats.max());
+            review = scoreReviewRequestRepository.save(review);
+        } else {
+            review = ScoreReviewRequest.builder()
+                    .eventId(eventId)
+                    .roundId(submission.getRoundId())
+                    .teamId(submission.getTeamId())
+                    .submissionId(request.getSubmissionId())
+                    .deviationValue(deviationStats.deviation())
+                    .minJudgeScore(deviationStats.min())
+                    .maxJudgeScore(deviationStats.max())
+                    .status(ScoreReviewStatus.OPEN)
+                    .resolutionNote(request.getNote())
+                    .build();
+            review = scoreReviewRequestRepository.save(review);
+        }
+
+        eventPublisher.publishEvent(new ScoreReviewCreatedEvent(
+                review.getId(), review.getEventId(), request.getSubmissionId(),
+                submission.getTeamId(), deviationStats.deviation()));
+
+        return toDetailResponse(review);
     }
 
     @Transactional(readOnly = true)
@@ -203,6 +273,38 @@ public class ScoreReviewService {
         return review;
     }
 
+    private Optional<DeviationStats> computeDeviationStats(Submission submission) {
+        long assignedJudges = teamJudgeAssignmentRepository.countByTeamIdAndRoundId(
+                submission.getTeamId(), submission.getRoundId());
+        if (assignedJudges == 0) {
+            return Optional.empty();
+        }
+
+        List<JudgeScore> finishedScores = judgeScoreRepository.findBySubmissionId(submission.getId()).stream()
+                .filter(s -> s.getStatus() == ScoreStatus.COMPLETED || s.getStatus() == ScoreStatus.LOCKED)
+                .toList();
+
+        if (finishedScores.size() < assignedJudges) {
+            return Optional.empty();
+        }
+
+        List<CriteriaSnapshot> criteria = eventPublicService.getCriteriaByRound(submission.getRoundId());
+        Map<UUID, Integer> weightMap = criteria.stream()
+                .collect(Collectors.toMap(CriteriaSnapshot::getId, CriteriaSnapshot::getWeight));
+
+        List<BigDecimal> percentScores = finishedScores.stream()
+                .map(score -> toPercentScore(score, criteria, weightMap))
+                .sorted()
+                .toList();
+
+        BigDecimal min = percentScores.get(0);
+        BigDecimal max = percentScores.get(percentScores.size() - 1);
+        BigDecimal deviation = max.subtract(min).setScale(2, RoundingMode.HALF_UP);
+        return Optional.of(new DeviationStats(min, max, deviation));
+    }
+
+    private record DeviationStats(BigDecimal min, BigDecimal max, BigDecimal deviation) {}
+
     private BigDecimal toPercentScore(JudgeScore score, List<CriteriaSnapshot> criteria,
                                       Map<UUID, Integer> weightMap) {
         JudgeScoreSnapshot snapshot = JudgeScoreSnapshot.builder()
@@ -219,7 +321,7 @@ public class ScoreReviewService {
                         .toList())
                 .build();
         BigDecimal weighted = aggregationService.computeWeightedJudgeScore(snapshot, weightMap, criteria);
-        return weighted.multiply(PERCENT_SCALE).setScale(2, RoundingMode.HALF_UP);
+        return weighted.multiply(percentScale).setScale(2, RoundingMode.HALF_UP);
     }
 
     private ScoreReviewResponse toSummaryResponse(ScoreReviewRequest review) {
@@ -256,7 +358,7 @@ public class ScoreReviewService {
                 .filter(s -> s.getStatus() == ScoreStatus.COMPLETED || s.getStatus() == ScoreStatus.LOCKED)
                 .map(score -> {
                     BigDecimal percent = toPercentScore(score, criteria, weightMap);
-                    BigDecimal weighted = percent.divide(PERCENT_SCALE, 4, RoundingMode.HALF_UP);
+                    BigDecimal weighted = percent.divide(percentScale, 4, RoundingMode.HALF_UP);
                     UserSnapshot judge = userPublicService.findById(score.getJudgeUserId()).orElse(null);
                     return ScoreReviewJudgeScoreResponse.builder()
                             .judgeUserId(score.getJudgeUserId())

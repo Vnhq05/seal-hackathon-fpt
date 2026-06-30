@@ -106,9 +106,9 @@ function AssignJudgesModal({
           const isMentor = team.mentorUserId === j.judgeUserId;
           const taken = selected.has(j.judgeUserId) && j.judgeUserId !== value;
           return (
-            <option key={j.judgeUserId} value={j.judgeUserId} disabled={taken}>
+            <option key={j.judgeUserId} value={j.judgeUserId} disabled={taken || isMentor}>
               {j.judgeFullName ?? j.judgeEmail ?? j.judgeUserId}
-              {isMentor ? " — MENTOR CONFLICT" : ""}
+              {isMentor ? " — MENTOR CONFLICT (cannot assign)" : ""}
             </option>
           );
         })}
@@ -238,7 +238,7 @@ export function JudgeAssignmentsPage() {
       <div>
         <h1 className="text-[28px] font-bold tracking-tight text-seal-text">Judge assignments</h1>
         <p className="mt-1 text-sm text-seal-text-secondary">
-          Each team needs exactly 3 judges per round. Judges cannot be the team's mentor.
+          Each team needs exactly 3 judges per round. Judges cannot be the team mentor.
         </p>
       </div>
 
@@ -325,11 +325,16 @@ export function JudgeAssignmentsPage() {
                   <th className="px-4 py-3">Track</th>
                   <th className="px-4 py-3">Submission</th>
                   <th className="px-4 py-3">Judge</th>
+                  <th className="px-4 py-3">COI</th>
                   <th className="px-4 py-3 w-32" />
                 </tr>
               </thead>
               <tbody>
-                {(overview?.teams ?? []).map((team) => (
+                {(overview?.teams ?? []).map((team) => {
+                  const hasCoiRisk =
+                    team.mentorUserId != null &&
+                    team.judges.some((j) => j.judgeUserId === team.mentorUserId);
+                  return (
                   <tr key={team.teamId} className="border-t border-seal-border">
                     <td className="px-4 py-3 text-sm font-medium text-seal-text">{team.teamName}</td>
                     <td className="px-4 py-3 text-sm text-seal-text-secondary">{team.trackName ?? "—"}</td>
@@ -351,6 +356,15 @@ export function JudgeAssignmentsPage() {
                       )}
                     </td>
                     <td className="px-4 py-3">
+                      {hasCoiRisk ? (
+                        <span className="rounded-md bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700">
+                          COI Risk
+                        </span>
+                      ) : (
+                        <span className="text-sm text-seal-text-muted">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
                       <button
                         type="button"
                         onClick={() => setModalTeam(team)}
@@ -360,10 +374,11 @@ export function JudgeAssignmentsPage() {
                       </button>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
                 {(overview?.teams ?? []).length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-4 py-12 text-center text-sm text-seal-text-muted">
+                    <td colSpan={6} className="px-4 py-12 text-center text-sm text-seal-text-muted">
                       No teams found.
                     </td>
                   </tr>

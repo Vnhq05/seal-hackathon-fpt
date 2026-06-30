@@ -5,7 +5,7 @@ spring:
     allow-circular-references: false
 
   datasource:
-    url: ${DB_URL:jdbc:sqlserver://localhost:1433;databaseName=SEAL;encrypt=true;trustServerCertificate=true}
+    url: ${DB_URL:jdbc:sqlserver://localhost:1433;databaseName=SEAL;encrypt=true;trustServerCertificate=true;sendStringParametersAsUnicode=true}
     username: ${DB_USERNAME:sa}
     password: ${DB_PASSWORD}
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
@@ -24,12 +24,16 @@ spring:
     port: 587
     username: ${MAIL_USERNAME:}
     password: ${MAIL_PASSWORD:}
+    from: ${MAIL_FROM:${MAIL_USERNAME:}}
     properties:
       mail:
         smtp:
           auth: true
           starttls:
             enable: true
+          connectiontimeout: 10000
+          timeout: 10000
+          writetimeout: 10000
 
 app:
   jwt:
@@ -39,12 +43,35 @@ app:
     password-reset-token-expiration-minutes: 15
   seeder:
     resync-dev-accounts: ${SEEDER_RESYNC_DEV_ACCOUNTS:true}
-  frontend:
-    url: ${FRONTEND_URL:http://localhost:3000}
-  cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
-  storage:
-    upload-dir: ${UPLOAD_DIR:./uploads}
+  magic-link:
+    expiration-minutes: 30
+  otp:
+    expiration-seconds: 180
+    resend-cooldown-seconds: 300
+  hackathon:
+    judging:
+      max-judges-per-team: 3
+      judge-trim-threshold: 5
+      deviation-threshold: 25
+      percent-scale: 20
+    team:
+      invitation-expiry-days: 7
+      max-skill-roles: 5
+      min-track-max-teams: 16
+      max-track-max-teams: 40
+    auth:
+      max-failed-attempts: 5
+      lock-duration-minutes: 15
+      fpt-student-id-pattern: "^SE[0-9]{6}$"
+    feedback:
+      max-rating: 5
+
+server:
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
 
 springdoc:
   api-docs:

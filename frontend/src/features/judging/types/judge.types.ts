@@ -1,5 +1,7 @@
 /* ── Judge Portal types ── */
 
+import type { JudgeScoringAssignment } from "@/lib/api/judging.api";
+
 export type RoundStatus = "open" | "upcoming" | "closed";
 export type SubmissionScoringStatus = "scored" | "unscored";
 export type SubmissionFilterTab = "all" | "scored" | "unscored";
@@ -43,6 +45,7 @@ export interface JudgeDashboard {
   stats: JudgeDashboardStats;
   assignedRounds: AssignedRoundCard[];
   recentActivity: RecentScoringActivity[];
+  unscoredAssignments: JudgeScoringAssignment[];
 }
 
 /* ── Assigned Rounds ── */
@@ -70,6 +73,7 @@ export interface AssignedRoundsResponse {
 
 export interface RoundSubmission {
   id: string;
+  teamId: string;
   teamName: string;
   score: number | null;
   maxScore: number;
@@ -113,6 +117,7 @@ export interface SubmissionForScoring {
   id: string;
   teamId: string;
   teamName: string;
+  eventId: string | null;
   hackathonName: string;
   roundName: string;
   trackName: string | null;
@@ -123,6 +128,7 @@ export interface SubmissionForScoring {
   /** @deprecated Use sourceCodeUrl */
   githubUrl: string | null;
   demoUrl: string | null;
+  slideUrl: string | null;
   pdfUrl: string | null;
   pdfFileName: string | null;
   links: SubmissionLink[];
@@ -157,6 +163,7 @@ export interface ScoreHistoryEntry {
   id: string;
   teamName: string;
   hackathonName: string;
+  roundId: string;
   roundName: string;
   totalWeightedScore: number;
   maxScore: number;

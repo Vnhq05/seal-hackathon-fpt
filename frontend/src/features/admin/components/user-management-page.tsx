@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useAdminUsers, useApproveOrReject, useCreateInternalAccount, useDeactivateUser, useDeleteUser } from "@/features/admin/hooks/use-admin-users";
+import { useAdminUsers, useApproveOrReject, useCreateInternalAccount, useDeactivateUser, useDeleteUser, useReactivateUser } from "@/features/admin/hooks/use-admin-users";
 import type { UserListItem, CreateInternalAccountRequest } from "@/lib/api";
 import type { UserType, AccountStatus } from "@/lib/api";
 
@@ -165,11 +165,12 @@ function CreateAccountModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-function UserRow({ u, onApprove, onReject, onDeactivate, onDelete, actionError }: {
+function UserRow({ u, onApprove, onReject, onDeactivate, onReactivate, onDelete, actionError }: {
   u: UserListItem;
   onApprove: (id: string) => void;
   onReject: (user: UserListItem) => void;
   onDeactivate: (user: UserListItem) => void;
+  onReactivate: (user: UserListItem) => void;
   onDelete: (user: UserListItem) => void;
   actionError: string | null;
 }) {
@@ -212,10 +213,18 @@ function UserRow({ u, onApprove, onReject, onDeactivate, onDelete, actionError }
             Deactivate
           </button>
         )}
+        {canManage && u.status === "LOCKED" && (
+          <button
+            onClick={() => onReactivate(u)}
+            style={{ fontSize: 12, fontWeight: 600, color: "#166534", background: "none", border: "none", cursor: "pointer" }}
+          >
+            Reactivate
+          </button>
+        )}
         {canManage && u.status !== "PENDING" && (
           <button
             onClick={() => onDelete(u)}
-            style={{ fontSize: 12, fontWeight: 600, color: "#991b1b", background: "none", border: "none", cursor: "pointer", marginLeft: u.status === "ACTIVE" ? 8 : 0 }}
+            style={{ fontSize: 12, fontWeight: 600, color: "#991b1b", background: "none", border: "none", cursor: "pointer", marginLeft: u.status === "ACTIVE" || u.status === "LOCKED" ? 8 : 0 }}
           >
             Delete
           </button>
@@ -250,6 +259,7 @@ export function UserManagementPage() {
 
   const { mutate: approveOrReject } = useApproveOrReject();
   const { mutate: deactivateUser } = useDeactivateUser();
+  const { mutate: reactivateUser } = useReactivateUser();
   const { mutate: deleteUser } = useDeleteUser();
 
   const handleApprove = (userId: string) => {
@@ -283,6 +293,20 @@ export function UserManagementPage() {
       onError: (err) => {
         setActionErrorUserId(user.id);
         setActionError(err instanceof Error ? err.message : "Failed to deactivate user");
+      },
+    });
+  };
+
+  const handleReactivate = (user: UserListItem) => {
+    if (!window.confirm(`Reactivate ${user.fullName} (${user.email})?`)) {
+      return;
+    }
+    setActionError(null);
+    setActionErrorUserId(null);
+    reactivateUser(user.id, {
+      onError: (err) => {
+        setActionErrorUserId(user.id);
+        setActionError(err instanceof Error ? err.message : "Failed to reactivate user");
       },
     });
   };
@@ -380,6 +404,7 @@ export function UserManagementPage() {
                     onApprove={handleApprove}
                     onReject={handleReject}
                     onDeactivate={handleDeactivate}
+                    onReactivate={handleReactivate}
                     onDelete={handleDelete}
                     actionError={actionErrorUserId === u.id ? actionError : null}
                   />

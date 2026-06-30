@@ -2,7 +2,10 @@ package com.sealhackathon.auth.service;
 
 import com.sealhackathon.auth.dto.request.LoginRequest;
 import com.sealhackathon.auth.dto.request.RegisterRequest;
+import com.sealhackathon.auth.dto.request.VerifyOtpRequest;
+import com.sealhackathon.auth.domain.EmailOtpToken;
 import com.sealhackathon.auth.dto.response.AuthResponse;
+import com.sealhackathon.auth.repository.EmailOtpTokenRepository;
 import com.sealhackathon.auth.security.JwtProvider;
 import com.sealhackathon.common.enums.AccountStatus;
 import com.sealhackathon.common.enums.StudentStanding;
@@ -31,6 +34,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -43,6 +47,10 @@ class AuthServiceTest {
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private ApplicationEventPublisher eventPublisher;
     @Mock private AllowedEmailDomainService allowedEmailDomainService;
+    @Mock private AuthEmailService authEmailService;
+    @Mock private EmailOtpService emailOtpService;
+    @Mock private EmailOtpTokenRepository emailOtpTokenRepository;
+    @Mock private MagicLinkTokenService magicLinkTokenService;
 
     @InjectMocks private AuthService authService;
 
@@ -66,10 +74,13 @@ class AuthServiceTest {
                 anyString(), anyString(), anyString(), any(), anyString(), any(),
                 eq(UserType.FPT_STUDENT), any(), anyBoolean(), eq(StudentStanding.ENROLLED)))
                 .thenReturn(expectedId);
+        when(emailOtpService.create(expectedId)).thenReturn("123456");
 
         UUID result = authService.register(request);
 
         assertThat(result).isEqualTo(expectedId);
+        verify(emailOtpService).create(expectedId);
+        verify(authEmailService).sendOtpEmail("student@fpt.edu.vn", "Nguyen Van A", "123456");
     }
 
     @Test
@@ -88,19 +99,110 @@ class AuthServiceTest {
     // ── BR-04: Duplicate email ──
 
     @Test
-    void register_shouldThrowDuplicate_whenEmailExists() {
+    void register_shouldThrowDuplicate_whenEmailExistsAndActive() {
         RegisterRequest request = RegisterRequest.builder()
                 .email("exists@fpt.edu.vn")
                 .password("password123")
                 .fullName("Test")
                 .studentId("SE123456")
                 .userType(UserType.FPT_STUDENT)
+                .studentStanding(StudentStanding.ENROLLED)
                 .build();
 
+        UUID userId = UUID.randomUUID();
         when(userPublicService.existsByEmail("exists@fpt.edu.vn")).thenReturn(true);
+        when(userPublicService.findByEmail("exists@fpt.edu.vn")).thenReturn(Optional.of(
+                UserSnapshot.builder()
+                        .id(userId)
+                        .email("exists@fpt.edu.vn")
+                        .fullName("Test")
+                        .status(AccountStatus.ACTIVE)
+                        .userType(UserType.FPT_STUDENT)
+                        .build()));
 
         assertThatThrownBy(() -> authService.register(request))
                 .isInstanceOf(DuplicateResourceException.class);
+    }
+
+    @Test
+    void register_shouldResendOtp_whenPendingAndNotVerified() {
+        RegisterRequest request = RegisterRequest.builder()
+                .email("pending@fpt.edu.vn")
+                .password("password123")
+                .fullName("Pending User")
+                .studentId("SE123456")
+                .userType(UserType.FPT_STUDENT)
+                .studentStanding(StudentStanding.ENROLLED)
+                .build();
+
+        UUID userId = UUID.randomUUID();
+        when(userPublicService.existsByEmail("pending@fpt.edu.vn")).thenReturn(true);
+        when(userPublicService.findByEmail("pending@fpt.edu.vn")).thenReturn(Optional.of(
+                UserSnapshot.builder()
+                        .id(userId)
+                        .email("pending@fpt.edu.vn")
+                        .fullName("Pending User")
+                        .status(AccountStatus.PENDING)
+                        .userType(UserType.FPT_STUDENT)
+                        .build()));
+        when(emailOtpTokenRepository.existsByUserIdAndUsedTrue(userId)).thenReturn(false);
+        when(emailOtpService.resend(userId)).thenReturn("654321");
+
+        UUID result = authService.register(request);
+
+        assertThat(result).isEqualTo(userId);
+        verify(emailOtpService).resend(userId);
+        verify(authEmailService).sendOtpEmail("pending@fpt.edu.vn", "Pending User", "654321");
+        verify(userPublicService, never()).createParticipant(
+                anyString(), anyString(), anyString(), any(), anyString(), any(),
+                any(), any(), anyBoolean(), any());
+    }
+
+    @Test
+    void verifyOtp_shouldActivateFptStudent() {
+        UUID userId = UUID.randomUUID();
+        EmailOtpToken token = EmailOtpToken.builder().userId(userId).code("123456").build();
+        when(userPublicService.findByEmail("student@fpt.edu.vn")).thenReturn(Optional.of(
+                UserSnapshot.builder()
+                        .id(userId)
+                        .email("student@fpt.edu.vn")
+                        .status(AccountStatus.PENDING)
+                        .userType(UserType.FPT_STUDENT)
+                        .build()));
+        when(emailOtpTokenRepository.existsByUserIdAndUsedTrue(userId)).thenReturn(false);
+        when(emailOtpService.validate(userId, "123456")).thenReturn(token);
+
+        String message = authService.verifyOtp(VerifyOtpRequest.builder()
+                .email("student@fpt.edu.vn")
+                .otp("123456")
+                .build());
+
+        assertThat(message).contains("active");
+        verify(userPublicService).activateParticipant(userId);
+        verify(emailOtpService).markUsed(token);
+    }
+
+    @Test
+    void verifyOtp_shouldKeepExternalPending() {
+        UUID userId = UUID.randomUUID();
+        EmailOtpToken token = EmailOtpToken.builder().userId(userId).code("123456").build();
+        when(userPublicService.findByEmail("ext@hcmut.edu.vn")).thenReturn(Optional.of(
+                UserSnapshot.builder()
+                        .id(userId)
+                        .email("ext@hcmut.edu.vn")
+                        .status(AccountStatus.PENDING)
+                        .userType(UserType.EXTERNAL_STUDENT)
+                        .build()));
+        when(emailOtpTokenRepository.existsByUserIdAndUsedTrue(userId)).thenReturn(false);
+        when(emailOtpService.validate(userId, "123456")).thenReturn(token);
+
+        String message = authService.verifyOtp(VerifyOtpRequest.builder()
+                .email("ext@hcmut.edu.vn")
+                .otp("123456")
+                .build());
+
+        assertThat(message).contains("pending admin approval");
+        verify(userPublicService, never()).activateParticipant(userId);
     }
 
     // ── BR-05: Login ──
@@ -203,7 +305,7 @@ class AuthServiceTest {
                 .password("password123")
                 .fullName("External")
                 .studentId("EXT001")
-                .universityName("ĐH Bách khoa TP.HCM")
+                .universityName("Ho Chi Minh City University of Technology")
                 .userType(UserType.EXTERNAL_STUDENT)
                 .studentStanding(StudentStanding.ENROLLED)
                 .build();
@@ -215,12 +317,14 @@ class AuthServiceTest {
                 anyString(), anyString(), anyString(), any(), anyString(), anyString(),
                 eq(UserType.EXTERNAL_STUDENT), any(), anyBoolean(), eq(StudentStanding.ENROLLED)))
                 .thenReturn(expectedId);
+        when(emailOtpService.create(expectedId)).thenReturn("123456");
 
         UUID result = authService.register(request);
 
         assertThat(result).isEqualTo(expectedId);
         verify(allowedEmailDomainService).validateExternalRegistration(
-                "student@hcmut.edu.vn", "ĐH Bách khoa TP.HCM");
+                "student@hcmut.edu.vn", "Ho Chi Minh City University of Technology");
+        verify(authEmailService).sendOtpEmail("student@hcmut.edu.vn", "External", "123456");
     }
 
     @Test
@@ -256,6 +360,7 @@ class AuthServiceTest {
                 anyString(), anyString(), anyString(), any(), anyString(), any(),
                 eq(UserType.FPT_STUDENT), any(), anyBoolean(), eq(StudentStanding.ENROLLED)))
                 .thenReturn(expectedId);
+        when(emailOtpService.create(expectedId)).thenReturn("123456");
 
         UUID result = authService.register(request);
 
@@ -269,7 +374,7 @@ class AuthServiceTest {
                 .password("password123")
                 .fullName("External")
                 .studentId("   ")
-                .universityName("ĐH Bách khoa TP.HCM")
+                .universityName("Ho Chi Minh City University of Technology")
                 .userType(UserType.EXTERNAL_STUDENT)
                 .studentStanding(StudentStanding.ENROLLED)
                 .build();

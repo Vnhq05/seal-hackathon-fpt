@@ -8,6 +8,7 @@ import { enrollmentApi, type EnrollmentResponse } from "@/lib/api/enrollment.api
 export function EnrollmentApprovalPage() {
   const queryClient = useQueryClient();
   const [eventId, setEventId] = useState<string>("");
+  const [feedback, setFeedback] = useState<{ type: "success" | "warning" | "error"; text: string } | null>(null);
 
   const { data: events = [] } = useQuery({
     queryKey: ["coordinator-events"],
@@ -22,7 +23,14 @@ export function EnrollmentApprovalPage() {
 
   const approveMutation = useMutation({
     mutationFn: (enrollmentId: string) => enrollmentApi.approve(eventId, enrollmentId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["coordinator-enrollments", eventId] }),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["coordinator-enrollments", eventId] });
+      const isWarning = result.message.toLowerCase().includes("email delivery failed");
+      setFeedback({ type: isWarning ? "warning" : "success", text: result.message });
+    },
+    onError: (err) => {
+      setFeedback({ type: "error", text: err instanceof Error ? err.message : "Approve failed" });
+    },
   });
 
   const rejectMutation = useMutation({
@@ -54,6 +62,20 @@ export function EnrollmentApprovalPage() {
           ))}
         </select>
       </div>
+
+      {feedback && (
+        <div
+          className={`rounded border px-4 py-3 text-sm ${
+            feedback.type === "error"
+              ? "border-red-200 bg-red-50 text-red-800"
+              : feedback.type === "warning"
+                ? "border-amber-200 bg-amber-50 text-amber-900"
+                : "border-emerald-200 bg-emerald-50 text-emerald-800"
+          }`}
+        >
+          {feedback.text}
+        </div>
+      )}
 
       {!eventId ? (
         <p className="text-sm text-seal-text-muted">Select an event to view pending enrollments.</p>

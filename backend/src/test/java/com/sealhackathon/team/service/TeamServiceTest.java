@@ -18,7 +18,6 @@ import com.sealhackathon.team.domain.enums.HackathonSkillRole;
 import com.sealhackathon.team.domain.enums.TeamMemberRole;
 import com.sealhackathon.team.domain.enums.TeamStatus;
 import com.sealhackathon.team.dto.request.CreateTeamRequest;
-import com.sealhackathon.team.dto.request.JoinTeamRequest;
 import com.sealhackathon.team.dto.request.UpdateTeamRecruitmentRequest;
 import com.sealhackathon.team.dto.response.TeamResponse;
 import com.sealhackathon.team.repository.TeamMemberRepository;
@@ -172,20 +171,6 @@ class TeamServiceTest {
         assertThatThrownBy(() -> teamService.createTeam(userId, request))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("already a member");
-    }
-
-    // ── BR-15: Max team size — direct join deprecated ──
-
-    @Test
-    void joinTeam_shouldThrow_whenDeprecated() {
-        UUID userId = UUID.randomUUID();
-        UUID teamId = UUID.randomUUID();
-
-        JoinTeamRequest request = JoinTeamRequest.builder().teamId(teamId).build();
-
-        assertThatThrownBy(() -> teamService.joinTeam(userId, request))
-                .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("join request");
     }
 
     // ── Registration closed ──

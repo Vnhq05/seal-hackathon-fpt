@@ -7,7 +7,7 @@ import { useAdminRounds } from "@/features/admin/hooks/use-admin-rounds";
 import { useJudgeAssignments, useAssignJudge, useRemoveJudge } from "@/features/admin/hooks/use-admin-assignments";
 import { useLecturerOptions } from "@/features/admin/hooks/use-lecturer-options";
 import { trackApi } from "@/lib/api/track.api";
-import type { JudgeAssignmentResponse } from "@/lib/api";
+import type { JudgeAssignmentResponse, RoundType } from "@/lib/api";
 
 const headerCell: React.CSSProperties = {
   fontSize: 12, fontWeight: 600, color: "#8891a5",
@@ -19,6 +19,45 @@ const bodyCell: React.CSSProperties = {
 const inputStyle: React.CSSProperties = {
   border: "1px solid rgba(223,226,236,0.8)", borderRadius: 8, padding: "8px 12px", fontSize: 14, outline: "none",
 };
+
+function PhaseTab({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        padding: "8px 16px",
+        fontSize: 13,
+        fontWeight: 600,
+        border: "none",
+        borderBottom: active ? "2px solid #38bdf8" : "2px solid transparent",
+        backgroundColor: "transparent",
+        color: active ? "#0e1528" : "#8891a5",
+        cursor: "pointer",
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
+function ReadinessBadge({ assigned, target }: { assigned: number; target: number }) {
+  const ready = assigned >= target;
+  return (
+    <div className="flex items-center gap-2">
+      <span style={{ fontSize: 13, color: "#8891a5" }}>
+        {assigned} / {target} judges assigned
+      </span>
+      <span
+        className={`rounded-md px-2 py-0.5 text-xs font-semibold ${
+          ready ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"
+        }`}
+      >
+        {ready ? "Ready" : "Insufficient"}
+      </span>
+    </div>
+  );
+}
 
 function JudgeRow({ j, eventId, roundId, trackId }: {
   j: JudgeAssignmentResponse; eventId: string; roundId: string; trackId?: string;
@@ -45,6 +84,7 @@ function JudgeRow({ j, eventId, roundId, trackId }: {
 
 export function JudgeAssignmentPage({ defaultEventId }: { defaultEventId?: string } = {}) {
   const [eventId, setEventId] = useState(defaultEventId ?? "");
+  const [phase, setPhase] = useState<Extract<RoundType, "PRELIMINARY" | "FINAL">>("PRELIMINARY");
   const [roundId, setRoundId] = useState("");
   const [trackId, setTrackId] = useState("");
   const [judgeUserId, setJudgeUserId] = useState("");
@@ -60,24 +100,41 @@ export function JudgeAssignmentPage({ defaultEventId }: { defaultEventId?: strin
     enabled: !!eventId,
   });
 
-  const selectedRound = useMemo(
-    () => (rounds ?? []).find((r) => r.id === roundId),
-    [rounds, roundId],
+  const roundsList = useMemo(() => rounds ?? [], [rounds]);
+  const phaseRounds = useMemo(
+    () => roundsList.filter((r) => r.roundType === phase),
+    [roundsList, phase],
   );
-  const isPreliminary = selectedRound?.roundType === "PRELIMINARY";
+
+  const activeRoundId = useMemo(() => {
+    if (!eventId || phaseRounds.length === 0) return "";
+    if (roundId && phaseRounds.some((r) => r.id === roundId)) return roundId;
+    return phaseRounds[0].id;
+  }, [eventId, phaseRounds, roundId]);
+
+  const selectedRound = useMemo(
+    () => roundsList.find((r) => r.id === activeRoundId),
+    [roundsList, activeRoundId],
+  );
+  const isPreliminary = phase === "PRELIMINARY";
   const listTrackId = isPreliminary ? trackId : undefined;
 
-  const { data: judges, isLoading } = useJudgeAssignments(eventId, roundId, listTrackId, {
+  const { data: judges, isLoading } = useJudgeAssignments(eventId, activeRoundId, listTrackId, {
     requiresTrackId: isPreliminary,
   });
-  const { mutate: assign, isPending } = useAssignJudge(eventId, roundId);
+  const { mutate: assign, isPending } = useAssignJudge(eventId, activeRoundId);
 
   const events = eventsPage?.content ?? [];
-  const roundsList = rounds ?? [];
   const judgeList = judges ?? [];
 
+  const showReadiness =
+    !!eventId &&
+    !!activeRoundId &&
+    !!selectedRound &&
+    (!isPreliminary || !!trackId);
+
   const handleAssign = () => {
-    if (judgeUserId && eventId && roundId && (!isPreliminary || trackId)) {
+    if (judgeUserId && eventId && activeRoundId && (!isPreliminary || trackId)) {
       setAssignError(null);
       assign(
         { judgeUserId, ...(isPreliminary ? { trackId } : {}) },
@@ -101,7 +158,7 @@ export function JudgeAssignmentPage({ defaultEventId }: { defaultEventId?: strin
       </div>
 
       <div className="flex flex-col gap-4 p-5 mb-6 border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]">
-        <div className="flex items-end gap-3">
+        <div className="flex items-end gap-3 flex-wrap">
           <div className="flex flex-col">
             <label style={{ fontSize: 12, fontWeight: 600, color: "#8891a5", marginBottom: 4 }}>Event</label>
             {defaultEventId ? (
@@ -115,23 +172,62 @@ export function JudgeAssignmentPage({ defaultEventId }: { defaultEventId?: strin
               </select>
             )}
           </div>
-          <div className="flex flex-col">
-            <label style={{ fontSize: 12, fontWeight: 600, color: "#8891a5", marginBottom: 4 }}>Round</label>
-            <select value={roundId} onChange={(e) => { setRoundId(e.target.value); setTrackId(""); }} style={inputStyle} disabled={!eventId}>
-              <option value="">Select round</option>
-              {roundsList.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
-            </select>
-          </div>
-          {isPreliminary && (
-            <div className="flex flex-col">
-              <label style={{ fontSize: 12, fontWeight: 600, color: "#8891a5", marginBottom: 4 }}>Track</label>
-              <select value={trackId} onChange={(e) => setTrackId(e.target.value)} style={inputStyle} disabled={!eventId}>
-                <option value="">Select track</option>
-                {tracks.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-              </select>
-            </div>
-          )}
         </div>
+
+        {eventId && (
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div className="flex gap-2" style={{ borderBottom: "1px solid rgba(198,198,205,0.5)", paddingBottom: 1 }}>
+                <PhaseTab
+                  label="Preliminary Round"
+                  active={phase === "PRELIMINARY"}
+                  onClick={() => { setPhase("PRELIMINARY"); setTrackId(""); }}
+                />
+                <PhaseTab
+                  label="Grand Final"
+                  active={phase === "FINAL"}
+                  onClick={() => { setPhase("FINAL"); setTrackId(""); }}
+                />
+              </div>
+              {showReadiness && selectedRound && (
+                <ReadinessBadge assigned={judgeList.length} target={selectedRound.judgeCount} />
+              )}
+            </div>
+
+            {phaseRounds.length === 0 ? (
+              <p style={{ fontSize: 13, color: "#8891a5" }}>
+                No {phase === "PRELIMINARY" ? "preliminary" : "final"} round found for this event.
+              </p>
+            ) : (
+              <div className="flex items-end gap-3 flex-wrap">
+                {phaseRounds.length > 1 && (
+                  <div className="flex flex-col">
+                    <label style={{ fontSize: 12, fontWeight: 600, color: "#8891a5", marginBottom: 4 }}>Round</label>
+                    <select
+                      value={activeRoundId}
+                      onChange={(e) => { setRoundId(e.target.value); setTrackId(""); }}
+                      style={inputStyle}
+                    >
+                      {phaseRounds.map((r) => (
+                        <option key={r.id} value={r.id}>{r.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                {isPreliminary && (
+                  <div className="flex flex-col">
+                    <label style={{ fontSize: 12, fontWeight: 600, color: "#8891a5", marginBottom: 4 }}>Track</label>
+                    <select value={trackId} onChange={(e) => setTrackId(e.target.value)} style={inputStyle}>
+                      <option value="">Select track</option>
+                      {tracks.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                    </select>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="flex items-end gap-3">
           <div className="flex flex-col">
             <label style={{ fontSize: 12, fontWeight: 600, color: "#8891a5", marginBottom: 4 }}>Judge</label>
@@ -139,7 +235,7 @@ export function JudgeAssignmentPage({ defaultEventId }: { defaultEventId?: strin
               value={judgeUserId}
               onChange={(e) => setJudgeUserId(e.target.value)}
               style={inputStyle}
-              disabled={!eventId || !roundId || (isPreliminary && !trackId)}
+              disabled={!eventId || !activeRoundId || (isPreliminary && !trackId)}
             >
               <option value="">Select judge...</option>
               {lecturers.map((l) => (
@@ -154,7 +250,7 @@ export function JudgeAssignmentPage({ defaultEventId }: { defaultEventId?: strin
           )}
           <button
             onClick={handleAssign}
-            disabled={isPending || !judgeUserId || !eventId || !roundId || (isPreliminary && !trackId)}
+            disabled={isPending || !judgeUserId || !eventId || !activeRoundId || (isPreliminary && !trackId)}
             className="border-2 border-navy bg-seal-yellow px-6 py-2.5 text-sm text-navy font-mono font-bold cursor-pointer"
           >
             Assign
@@ -181,15 +277,15 @@ export function JudgeAssignmentPage({ defaultEventId }: { defaultEventId?: strin
                   ))}</tr>
                 ))
               : judgeList.map((j) => (
-                  <JudgeRow key={j.id} j={j} eventId={eventId} roundId={roundId} trackId={listTrackId} />
+                  <JudgeRow key={j.id} j={j} eventId={eventId} roundId={activeRoundId} trackId={listTrackId} />
                 ))
             }
             {!isLoading && judgeList.length === 0 && (
               <tr>
                 <td colSpan={5} style={{ ...bodyCell, textAlign: "center", color: "#8891a5", padding: "48px 16px" }}>
-                  {eventId && roundId && (!isPreliminary || trackId)
+                  {eventId && activeRoundId && phaseRounds.length > 0 && (!isPreliminary || trackId)
                     ? "No judge assignments for this scope."
-                    : "Select event, round" + (isPreliminary ? ", and track" : "") + " to view assignments."}
+                    : `Select event${isPreliminary ? ", track" : ""} to view assignments.`}
                 </td>
               </tr>
             )}

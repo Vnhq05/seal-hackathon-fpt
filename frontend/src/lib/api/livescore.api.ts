@@ -48,6 +48,7 @@ export interface LiveScoreBoard {
   resultsPublished: boolean;
   leaderboardPublic: boolean;
   canManageLeaderboard: boolean;
+  maxScore: number;
 }
 
 export interface RankingEvent {

@@ -1,7 +1,6 @@
 "use client";
 
-// TODO: backend endpoint not implemented yet — /mentor/teams/export does not exist.
-// Export button is kept but uses a placeholder that does nothing.
+import type { TrackTeamEntry } from "@/features/lecturer-mentor/types/mentor-track.types";
 
 function DownloadIcon() {
   return (
@@ -43,17 +42,31 @@ interface MentorTrackHeaderProps {
   trackName: string;
   description: string;
   trackId: string;
+  teams: TrackTeamEntry[];
 }
 
 export function MentorTrackHeader({
   hackathonName,
   trackName,
   description,
-  trackId,
+  trackId: _trackId,
+  teams,
 }: MentorTrackHeaderProps) {
   const handleExport = () => {
-    // TODO: backend endpoint not implemented yet — no CSV export available
-    console.warn("Export CSV: backend endpoint not implemented yet for track", trackId);
+    const csv = [
+      "teamId,teamName,memberCount,submissionStatus,rank",
+      ...teams.map(
+        (t) =>
+          `${t.id},"${t.name}",${t.memberCount},${t.submissionStatus},${t.rank ?? ""}`,
+      ),
+    ].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `track-${trackName.replace(/\s+/g, "-")}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
   };
 
   return (

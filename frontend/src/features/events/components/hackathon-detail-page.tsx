@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useHackathonPage } from "@/features/events/hooks/use-hackathon-page";
-import { useHackathonRounds } from "@/features/events/hooks/use-hackathon-rounds";
+import { useEventRounds } from "@/features/events/hooks/use-event-rounds";
 import { HackathonRounds } from "@/features/events/components/hackathon-rounds";
 import { HackathonCriteriaTable } from "@/features/events/components/hackathon-criteria-table";
 import type { RoundResponse } from "@/lib/api/round.api";
@@ -81,7 +81,7 @@ function mapCriteria(rounds: RoundResponse[]): JudgingCriterion[] {
 
 export function HackathonDetailPage({ hackathonId }: HackathonDetailPageProps) {
   const { data: event, isLoading: eventLoading } = useHackathonPage(hackathonId);
-  const { data: rounds = [], isLoading: roundsLoading } = useHackathonRounds(hackathonId);
+  const { data: rounds = [], isLoading: roundsLoading } = useEventRounds(hackathonId);
   const { isAuthenticated } = useAuthStore();
   const { data: profile } = useProfile({ enabled: isAuthenticated });
   const userEligibility =

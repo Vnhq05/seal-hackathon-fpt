@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useForm, Controller, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
@@ -8,6 +8,7 @@ import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { ErrorBanner } from "@/features/auth/components/error-banner";
+import { OtpVerificationForm } from "@/features/auth/components/otp-verification-form";
 import { RoleSelector } from "@/features/auth/components/role-selector";
 import { PasswordStrength } from "@/features/auth/components/password-strength";
 import { PasswordField } from "@/features/auth/components/password-field";
@@ -18,14 +19,25 @@ import {
 } from "@/features/auth/schemas/register.schema";
 import { useRegistrationAllowedDomains } from "@/features/events/hooks/use-allowed-email-domains";
 import { uniqueUniversityLabels } from "@/lib/email-domain";
+import type { RegisterRequest } from "@/lib/api/auth.api";
+import type { UserType } from "@/lib/api/types";
 
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
   return "Registration failed. Please try again.";
 }
 
+interface OtpStepContext {
+  email: string;
+  userType: Extract<UserType, "FPT_STUDENT" | "EXTERNAL_STUDENT">;
+  registerPayload: RegisterRequest;
+  message: string;
+}
+
 export function RegisterForm() {
-  const { register: doRegister, isPending, isError, error, isSuccess } = useRegister();
+  const { registerAsync, registerPayload, isPending, isError, error } = useRegister();
+  const [otpStep, setOtpStep] = useState<OtpStepContext | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const { data: allowedDomains = [], isLoading: domainsLoading } = useRegistrationAllowedDomains();
 
@@ -55,35 +67,30 @@ export function RegisterForm() {
   const externalDomainsBlocked =
     userType === "EXTERNAL_STUDENT" && (domainsLoading || allowedDomains.length === 0);
 
-  if (isSuccess) {
+  const onSubmit = async (values: RegisterFormValues) => {
+    setSubmitError(null);
+    const payload = registerPayload(values);
+    try {
+      const result = await registerAsync(values);
+      setOtpStep({
+        email: payload.email,
+        userType: payload.userType,
+        registerPayload: payload,
+        message: result.message,
+      });
+    } catch (err) {
+      setSubmitError(getErrorMessage(err));
+    }
+  };
+
+  if (otpStep) {
     return (
-      <div className="flex flex-col items-center gap-4 py-8">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50">
-          <svg
-            width="24"
-            height="24"
-            fill="none"
-            stroke="#10b981"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
-            <path d="M20 6 9 17l-5-5" />
-          </svg>
-        </div>
-        <h2 className="font-mono text-xl font-semibold text-seal-text">Registration successful</h2>
-        <p className="max-w-[360px] text-center text-sm text-seal-text-muted">
-          Awaiting admin approval. You will be notified when your account is activated.
-        </p>
-        <Link
-          href="/login"
-          className="mt-4 font-medium text-royal hover:text-royal/80 hover:underline"
-        >
-          Back to sign in
-        </Link>
-      </div>
+      <OtpVerificationForm
+        email={otpStep.email}
+        userType={otpStep.userType}
+        registerPayload={otpStep.registerPayload}
+        registerMessage={otpStep.message}
+      />
     );
   }
 
@@ -100,13 +107,13 @@ export function RegisterForm() {
         <p className="mt-2 text-sm leading-relaxed text-seal-text-secondary">
           Join the platform to register for upcoming hackathons.
           <br />
-          Organizer review may be required.
+          You will verify your email before your account is activated.
         </p>
       </div>
 
-      {isError && (
+      {(isError || submitError) && (
         <div className="mb-5">
-          <ErrorBanner message={getErrorMessage(error)} />
+          <ErrorBanner message={submitError ?? getErrorMessage(error)} />
         </div>
       )}
 
@@ -120,7 +127,7 @@ export function RegisterForm() {
         />
       </div>
 
-      <form onSubmit={handleSubmit(doRegister)} noValidate className="flex flex-col gap-4">
+      <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="fullName">Full Name</Label>
           <Input

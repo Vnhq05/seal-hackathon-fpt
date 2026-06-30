@@ -21,6 +21,7 @@ import com.sealhackathon.team.repository.TeamRepository;
 import com.sealhackathon.user.dto.snapshot.UserSnapshot;
 import com.sealhackathon.user.service.UserPublicService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -43,6 +44,9 @@ public class ParticipantFeedbackService {
     private final TeamRepository teamRepository;
     private final UserPublicService userPublicService;
     private final ApplicationEventPublisher eventPublisher;
+
+    @Value("${app.hackathon.feedback.max-rating:5}")
+    private int maxRating;
 
     @Transactional
     public ParticipantFeedbackResponse submitFeedback(
@@ -110,7 +114,7 @@ public class ParticipantFeedbackService {
 
         List<ParticipantFeedback> feedbacks = feedbackRepository.findByEventIdOrderBySubmittedAtDesc(eventId);
         Map<String, Integer> distribution = new LinkedHashMap<>();
-        for (int i = 1; i <= 5; i++) {
+        for (int i = 1; i <= maxRating; i++) {
             distribution.put(String.valueOf(i), 0);
         }
         for (ParticipantFeedback feedback : feedbacks) {

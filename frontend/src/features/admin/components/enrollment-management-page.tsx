@@ -1,7 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { useEnrollmentList, useApproveEnrollment, useRejectEnrollment } from "@/features/events/hooks/use-enrollment";
+import {
+  useEnrollmentList,
+  useApproveEnrollment,
+  useRejectEnrollment,
+  useResendCredentials,
+} from "@/features/events/hooks/use-enrollment";
 import type { EnrollmentStatus } from "@/lib/api";
 
 const headerCell: React.CSSProperties = {
@@ -20,9 +25,15 @@ const statusColors: Record<string, { bg: string; text: string }> = {
 
 export function EnrollmentManagementPage({ eventId }: { eventId: string }) {
   const [filter, setFilter] = useState<EnrollmentStatus | undefined>(undefined);
+  const [feedback, setFeedback] = useState<{ type: "success" | "warning" | "error"; text: string } | null>(null);
   const { data: enrollments = [], isLoading } = useEnrollmentList(eventId, filter);
   const { mutate: approve } = useApproveEnrollment(eventId);
   const { mutate: reject } = useRejectEnrollment(eventId);
+  const { mutate: resendCredentials, isPending: isResending } = useResendCredentials(eventId);
+
+  const showFeedback = (type: "success" | "warning" | "error", text: string) => {
+    setFeedback({ type, text });
+  };
 
   return (
     <div style={{ padding: 24 }}>
@@ -49,6 +60,19 @@ export function EnrollmentManagementPage({ eventId }: { eventId: string }) {
         </div>
       </div>
 
+      {feedback && (
+        <div
+          className="mb-4 rounded border px-4 py-3 text-sm"
+          style={{
+            borderColor: feedback.type === "error" ? "#fecaca" : feedback.type === "warning" ? "#fde68a" : "#bbf7d0",
+            backgroundColor: feedback.type === "error" ? "#fef2f2" : feedback.type === "warning" ? "#fffbeb" : "#f0fdf4",
+            color: feedback.type === "error" ? "#991b1b" : feedback.type === "warning" ? "#92400e" : "#166534",
+          }}
+        >
+          {feedback.text}
+        </div>
+      )}
+
       <div className="overflow-hidden border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]">
         <table className="w-full" style={{ borderCollapse: "collapse" }}>
             <thead>
@@ -59,7 +83,7 @@ export function EnrollmentManagementPage({ eventId }: { eventId: string }) {
                 <th style={headerCell}>University</th>
                 <th style={{ ...headerCell, width: 120 }}>Status</th>
                 <th style={{ ...headerCell, width: 160 }}>Enrolled At</th>
-                <th style={{ ...headerCell, width: 160 }}>Actions</th>
+                <th style={{ ...headerCell, width: 200 }}>Actions</th>
               </tr>
             </thead>
           <tbody>
@@ -93,9 +117,33 @@ export function EnrollmentManagementPage({ eventId }: { eventId: string }) {
                     <td style={bodyCell}>
                       {e.status === "PENDING" && (
                         <div className="flex gap-2">
-                          <button onClick={() => approve(e.id)} style={{ fontSize: 12, fontWeight: 600, color: "#065f46", background: "none", border: "none", cursor: "pointer" }}>Approve</button>
+                          <button
+                            onClick={() => approve(e.id, {
+                              onSuccess: (result) => {
+                                const isWarning = result.message.toLowerCase().includes("email delivery failed");
+                                showFeedback(isWarning ? "warning" : "success", result.message);
+                              },
+                              onError: (err) => showFeedback("error", err instanceof Error ? err.message : "Approve failed"),
+                            })}
+                            style={{ fontSize: 12, fontWeight: 600, color: "#065f46", background: "none", border: "none", cursor: "pointer" }}
+                          >
+                            Approve
+                          </button>
                           <button onClick={() => reject(e.id)} style={{ fontSize: 12, fontWeight: 600, color: "#991b1b", background: "none", border: "none", cursor: "pointer" }}>Reject</button>
                         </div>
+                      )}
+                      {e.status === "APPROVED" && (
+                        <button
+                          type="button"
+                          disabled={isResending}
+                          onClick={() => resendCredentials(e.id, {
+                            onSuccess: (result) => showFeedback("success", result.message),
+                            onError: (err) => showFeedback("error", err instanceof Error ? err.message : "Failed to resend login link"),
+                          })}
+                          style={{ fontSize: 12, fontWeight: 600, color: "#1d4ed8", background: "none", border: "none", cursor: "pointer" }}
+                        >
+                          Resend login link
+                        </button>
                       )}
                     </td>
                   </tr>

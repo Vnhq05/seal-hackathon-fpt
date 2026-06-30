@@ -129,6 +129,17 @@ public class UserPublicServiceImpl implements UserPublicService {
     }
 
     @Override
+    @Transactional
+    public void activateParticipantForEnrollment(UUID userId) {
+        User user = getUserEntity(userId);
+        if (user.getStatus() == AccountStatus.PENDING
+                || user.getStatus() == AccountStatus.LOCKED) {
+            user.setStatus(AccountStatus.ACTIVE);
+            userRepository.save(user);
+        }
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public Optional<UserSnapshot> getUser(UUID userId) {
         return findById(userId);
@@ -139,6 +150,14 @@ public class UserPublicServiceImpl implements UserPublicService {
     public void updatePassword(UUID userId, String newPasswordHash) {
         User user = getUserEntity(userId);
         user.setPasswordHash(newPasswordHash);
+        userRepository.save(user);
+    }
+
+    @Override
+    @Transactional
+    public void updateSemester(UUID userId, Integer semester) {
+        User user = getUserEntity(userId);
+        user.setSemester(semester);
         userRepository.save(user);
     }
 

@@ -4,6 +4,7 @@ import com.sealhackathon.auth.service.AuthPublicService;
 import com.sealhackathon.common.enums.UserType;
 import com.sealhackathon.common.response.ApiResponse;
 import com.sealhackathon.judging.domain.enums.ScoreReviewStatus;
+import com.sealhackathon.judging.dto.request.JudgeScoreReviewRequest;
 import com.sealhackathon.judging.dto.request.ResolveScoreReviewRequest;
 import com.sealhackathon.judging.dto.response.ScoreReviewResponse;
 import com.sealhackathon.judging.service.ScoreReviewService;
@@ -12,9 +13,11 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -56,6 +59,19 @@ public class ScoreReviewController {
         ScoreReviewResponse review = scoreReviewService.getReview(
                 eventId, reviewId, requesterId, requesterRole);
         return ResponseEntity.ok(ApiResponse.success(review));
+    }
+
+    @PostMapping("/judge-request")
+    @PreAuthorize("hasRole('LECTURER')")
+    @Operation(summary = "Request coordinator review of judge scores for a submission")
+    public ResponseEntity<ApiResponse<ScoreReviewResponse>> requestJudgeAdjustment(
+            @PathVariable UUID eventId,
+            @Valid @RequestBody JudgeScoreReviewRequest request) {
+        UUID judgeId = authPublicService.getCurrentUserId();
+        ScoreReviewResponse review = scoreReviewService.requestJudgeAdjustment(
+                eventId, judgeId, request);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success("Adjustment request submitted", review));
     }
 
     @PatchMapping("/{reviewId}")

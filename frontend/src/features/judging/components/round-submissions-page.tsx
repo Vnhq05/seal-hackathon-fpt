@@ -42,7 +42,13 @@ function StatusBadge({ status }: { status: "scored" | "unscored" }) {
   );
 }
 
-function SubmissionRow({ submission }: { submission: RoundSubmission }) {
+function SubmissionRow({
+  submission,
+  roundId,
+}: {
+  submission: RoundSubmission;
+  roundId: string;
+}) {
   const portalBase = usePortalBase();
   return (
     <tr style={{ borderBottom: "1px solid rgba(198,198,205,0.3)" }}>
@@ -65,7 +71,7 @@ function SubmissionRow({ submission }: { submission: RoundSubmission }) {
       </td>
       <td style={{ padding: "14px 16px" }}>
         <Link
-          href={`${portalBase}/scoring/${submission.id}`}
+          href={`${portalBase}/scoring/${submission.teamId}/${roundId}`}
           className="inline-block rounded-lg"
           style={{
             backgroundColor: submission.status === "unscored" ? "#38bdf8" : "#dfe2ec",
@@ -165,7 +171,7 @@ export function RoundSubmissionsPage({ roundId }: { roundId: string }) {
               </tr>
             ) : (
               submissions.map((s) => (
-                <SubmissionRow key={s.id} submission={s} />
+                <SubmissionRow key={s.id} submission={s} roundId={roundId} />
               ))
             )}
           </tbody>

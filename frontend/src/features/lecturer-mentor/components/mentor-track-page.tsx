@@ -49,6 +49,7 @@ export function MentorTrackPage() {
         trackName={track.name}
         description={track.description}
         trackId={track.id}
+        teams={track.teams}
       />
 
       <div className="grid grid-cols-12 gap-6">

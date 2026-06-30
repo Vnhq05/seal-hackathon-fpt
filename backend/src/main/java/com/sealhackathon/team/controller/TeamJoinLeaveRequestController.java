@@ -4,7 +4,6 @@ import com.sealhackathon.auth.service.AuthPublicService;
 import com.sealhackathon.common.response.ApiResponse;
 import com.sealhackathon.team.dto.request.CreateJoinRequestRequest;
 import com.sealhackathon.team.dto.request.CreateLeaveRequestRequest;
-import com.sealhackathon.team.dto.request.JoinTeamRequest;
 import com.sealhackathon.team.dto.response.JoinableTeamResponse;
 import com.sealhackathon.team.dto.response.TeamJoinRequestResponse;
 import com.sealhackathon.team.dto.response.TeamLeaveRequestResponse;

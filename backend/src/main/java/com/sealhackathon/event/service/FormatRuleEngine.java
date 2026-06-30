@@ -9,6 +9,7 @@ import com.sealhackathon.event.repository.HackathonEventRepository;
 import com.sealhackathon.event.repository.TrackRepository;
 import com.sealhackathon.team.repository.TeamRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -19,16 +20,39 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class FormatRuleEngine {
 
-    public static final int SEAL_MAX_TRACKS = 3;
-    public static final int SEAL_MAX_TEAMS_PER_TRACK = 8;
-    public static final int SEAL_FINALIST_COUNT = 6;
-    public static final int SEAL_TOP_PER_TRACK = 2;
+    @Value("${app.hackathon.seal.max-tracks:3}")
+    private int sealMaxTracks;
+
+    @Value("${app.hackathon.seal.max-teams-per-track:8}")
+    private int sealMaxTeamsPerTrack;
+
+    @Value("${app.hackathon.seal.finalist-count:6}")
+    private int sealFinalistCount;
+
+    @Value("${app.hackathon.seal.top-per-track:2}")
+    private int sealTopPerTrack;
 
     private final HackathonEventRepository eventRepository;
     private final TrackRepository trackRepository;
     private final TeamRepository teamRepository;
     @Lazy
     private final EventService eventService;
+
+    public int getSealMaxTracks() {
+        return sealMaxTracks;
+    }
+
+    public int getSealMaxTeamsPerTrack() {
+        return sealMaxTeamsPerTrack;
+    }
+
+    public int getSealFinalistCount() {
+        return sealFinalistCount;
+    }
+
+    public int getSealTopPerTrack() {
+        return sealTopPerTrack;
+    }
 
     public CompetitionFormat getFormat(UUID eventId) {
         return eventRepository.findById(eventId)
@@ -47,7 +71,7 @@ public class FormatRuleEngine {
         var track = trackRepository.findById(trackId)
                 .orElseThrow(() -> new BusinessException("Track not found", HttpStatus.NOT_FOUND));
         long count = teamRepository.countByEventIdAndTrackId(eventId, trackId);
-        int max = track.getMaxTeams() != null ? track.getMaxTeams() : SEAL_MAX_TEAMS_PER_TRACK;
+        int max = track.getMaxTeams() != null ? track.getMaxTeams() : sealMaxTeamsPerTrack;
         if (count >= max) {
             throw new BusinessException(
                     "Track '" + track.getName() + "' is full (max " + max + " teams)",

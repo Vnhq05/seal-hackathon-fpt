@@ -230,7 +230,7 @@ function InvitePanel({ eventId, teamId, teamName, trackId, isLeader }: {
         <h3 className="font-semibold text-sm">Invite mentor</h3>
       </div>
       <p className="text-xs text-seal-text-muted mb-4">
-        Choose a mentor from your team's track list. They will receive an invitation and can accept or decline.
+        Choose a mentor from your team track list. They will receive an invitation and can accept or decline.
       </p>
       {!trackId && (
         <p className="text-xs text-amber-600 mb-4">

@@ -18,6 +18,9 @@ public class JwtProvider {
     private final SecretKey signingKey;
     private final long accessTokenExpirationMs;
 
+    @Value("${app.jwt.issuer:seal-hackathon}")
+    private String jwtIssuer;
+
     public JwtProvider(
             @Value("${app.jwt.secret}") String secret,
             @Value("${app.jwt.access-token-expiration-ms:900000}") long accessTokenExpirationMs) {
@@ -33,7 +36,7 @@ public class JwtProvider {
                 .subject(userId.toString())
                 .claim("email", email)
                 .claim("role", role)
-                .issuer("seal-hackathon")
+                .issuer(jwtIssuer)
                 .issuedAt(now)
                 .expiration(expiry)
                 .signWith(signingKey)
@@ -68,7 +71,7 @@ public class JwtProvider {
     private Claims parseClaims(String token) {
         return Jwts.parser()
                 .verifyWith(signingKey)
-                .requireIssuer("seal-hackathon")
+                .requireIssuer(jwtIssuer)
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();

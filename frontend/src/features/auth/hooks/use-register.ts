@@ -28,9 +28,14 @@ export function useRegister() {
   return {
     register: (values: RegisterFormValues) =>
       mutation.mutate(toRegisterRequest(values)),
+    registerAsync: (values: RegisterFormValues) =>
+      mutation.mutateAsync(toRegisterRequest(values)),
+    registerPayload: (values: RegisterFormValues) => toRegisterRequest(values),
+    resendOtp: (payload: RegisterRequest) => mutation.mutate(payload),
     isPending: mutation.isPending,
     error: mutation.error,
     isError: mutation.isError,
     isSuccess: mutation.isSuccess,
+    data: mutation.data,
   };
 }

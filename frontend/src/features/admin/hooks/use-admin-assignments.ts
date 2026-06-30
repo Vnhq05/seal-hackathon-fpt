@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueries, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   assignmentApi,
   type AssignJudgeRequest,
@@ -97,6 +97,17 @@ export function useMentorAssignments(eventId: string, trackId: string) {
   });
 }
 
+/** List mentors for every track in an event (for cross-track conflict detection). */
+export function useAllTrackMentorAssignments(eventId: string, trackIds: string[]) {
+  return useQueries({
+    queries: trackIds.map((trackId) => ({
+      queryKey: [MENTOR_ASSIGNMENTS_KEY, eventId, trackId],
+      queryFn: () => assignmentApi.listMentors(eventId, trackId),
+      enabled: !!eventId && !!trackId,
+    })),
+  });
+}
+
 /** Assign a mentor to a track. */
 export function useAssignMentor(eventId: string, trackId: string) {
   const qc = useQueryClient();
@@ -104,7 +115,7 @@ export function useAssignMentor(eventId: string, trackId: string) {
     mutationFn: (body: AssignMentorRequest) =>
       assignmentApi.assignMentor(eventId, trackId, body),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: [MENTOR_ASSIGNMENTS_KEY, eventId, trackId] });
+      qc.invalidateQueries({ queryKey: [MENTOR_ASSIGNMENTS_KEY, eventId] });
       qc.invalidateQueries({ queryKey: [AVAILABLE_MENTORS_KEY, eventId, trackId] });
     },
   });
@@ -117,7 +128,7 @@ export function useRemoveMentor(eventId: string, trackId: string) {
     mutationFn: (assignmentId: string) =>
       assignmentApi.removeMentor(eventId, trackId, assignmentId),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: [MENTOR_ASSIGNMENTS_KEY, eventId, trackId] });
+      qc.invalidateQueries({ queryKey: [MENTOR_ASSIGNMENTS_KEY, eventId] });
       qc.invalidateQueries({ queryKey: [AVAILABLE_MENTORS_KEY, eventId, trackId] });
     },
   });

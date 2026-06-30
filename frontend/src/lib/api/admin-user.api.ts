@@ -70,6 +70,10 @@ export const adminUserApi = {
     return api.patch<UserProfile>(`/admin/users/${userId}/deactivate`);
   },
 
+  reactivateUser(userId: string): Promise<UserProfile> {
+    return api.patch<UserProfile>(`/admin/users/${userId}/reactivate`);
+  },
+
   deleteUser(userId: string): Promise<void> {
     return api.delete<void>(`/admin/users/${userId}`);
   },

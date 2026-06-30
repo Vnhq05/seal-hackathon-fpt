@@ -1,10 +1,12 @@
 package com.sealhackathon.auth.controller;
 
 import com.sealhackathon.BaseIntegrationTest;
+import com.sealhackathon.auth.repository.EmailOtpTokenRepository;
 import com.sealhackathon.common.enums.AccountStatus;
 import com.sealhackathon.common.enums.UserType;
 import com.sealhackathon.user.domain.User;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 
 import static org.hamcrest.Matchers.is;
@@ -15,19 +17,55 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 class AuthControllerIntegrationTest extends BaseIntegrationTest {
 
-    // ── BR-01: Registration → Pending ──
+    @Autowired private EmailOtpTokenRepository emailOtpTokenRepository;
+
+    // ── BR-01: Registration → OTP ──
 
     @Test
-    void register_shouldReturn201_andStatusPending() throws Exception {
+    void register_shouldReturn201_andOtpMessage() throws Exception {
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"email":"new@fpt.edu.vn","password":"Password123","fullName":"Nguyen A",
-                                 "studentId":"SE123456","userType":"FPT_STUDENT"}
+                                 "studentId":"SE123456","userType":"FPT_STUDENT","studentStanding":"ENROLLED"}
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.message", is("OTP sent to your email. Please verify to continue.")))
                 .andExpect(jsonPath("$.data", notNullValue()));
+    }
+
+    @Test
+    void verifyOtp_shouldActivateFptStudent_andAllowLogin() throws Exception {
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"verify@fpt.edu.vn","password":"Password123","fullName":"Verify User",
+                                 "studentId":"SE123457","userType":"FPT_STUDENT","studentStanding":"ENROLLED"}
+                                """))
+                .andExpect(status().isCreated());
+
+        String otp = emailOtpTokenRepository.findTopByUserIdOrderByCreatedAtDesc(
+                        userRepository.findByEmail("verify@fpt.edu.vn").orElseThrow().getId())
+                .orElseThrow()
+                .getCode();
+
+        mockMvc.perform(post("/api/auth/verify-otp")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"verify@fpt.edu.vn","otp":"%s"}
+                                """.formatted(otp)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.message", is("Email verified. Your account is now active. You can sign in.")));
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"verify@fpt.edu.vn","password":"Password123"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.accessToken", notNullValue()));
     }
 
     // ── BR-02: Internal roles cannot self-register ──
@@ -60,14 +98,14 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
     // ── BR-04: Duplicate email ──
 
     @Test
-    void register_shouldReturn409_whenEmailExists() throws Exception {
-        createUser("exists@fpt.edu.vn", UserType.FPT_STUDENT, AccountStatus.PENDING);
+    void register_shouldReturn409_whenEmailExistsAndActive() throws Exception {
+        createUser("exists@fpt.edu.vn", UserType.FPT_STUDENT, AccountStatus.ACTIVE);
 
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"email":"exists@fpt.edu.vn","password":"Password123","fullName":"Dup",
-                                 "studentId":"SE000002","userType":"FPT_STUDENT"}
+                                 "studentId":"SE000002","userType":"FPT_STUDENT","studentStanding":"ENROLLED"}
                                 """))
                 .andExpect(status().isConflict());
     }

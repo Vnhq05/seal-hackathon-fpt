@@ -30,6 +30,7 @@ import com.sealhackathon.team.service.TeamPublicService;
 import com.sealhackathon.user.dto.snapshot.UserSnapshot;
 import com.sealhackathon.user.service.UserPublicService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -59,6 +60,9 @@ public class AssignmentOverviewService {
     private final TeamMemberRepository teamMemberRepository;
     private final UserPublicService userPublicService;
     private final EventService eventService;
+
+    @Value("${app.hackathon.judging.max-judges-per-team:3}")
+    private int maxJudgesPerTeam;
 
     @Transactional(readOnly = true)
     public EventAssignmentsOverviewResponse getEventAssignments(
@@ -128,12 +132,14 @@ public class AssignmentOverviewService {
         }
 
         List<UUID> judgeIds = request.getJudgeUserIds();
-        if (judgeIds.size() != 3) {
-            throw new BusinessException("Exactly 3 judges must be assigned", HttpStatus.BAD_REQUEST) {};
+        if (judgeIds.size() != maxJudgesPerTeam) {
+            throw new BusinessException(
+                    "Exactly " + maxJudgesPerTeam + " judges must be assigned",
+                    HttpStatus.BAD_REQUEST) {};
         }
 
         Set<UUID> unique = new HashSet<>(judgeIds);
-        if (unique.size() != 3) {
+        if (unique.size() != maxJudgesPerTeam) {
             throw new BusinessException("Judge assignments must be unique", HttpStatus.BAD_REQUEST) {};
         }
 

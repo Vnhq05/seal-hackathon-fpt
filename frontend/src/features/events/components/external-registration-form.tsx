@@ -51,9 +51,14 @@ export function ExternalRegistrationForm({ event }: ExternalRegistrationFormProp
 
   const { data: allowedDomains = [], isLoading: domainsLoading } = usePublicAllowedEmailDomains(eventId);
 
+  const semesterRange =
+    event.semesterMin != null && event.semesterMax != null
+      ? { min: event.semesterMin, max: event.semesterMax }
+      : null;
+
   const externalRegistrationSchema = useMemo(
-    () => createExternalRegistrationSchema(allowedDomains),
-    [allowedDomains],
+    () => createExternalRegistrationSchema(allowedDomains, semesterRange),
+    [allowedDomains, semesterRange],
   );
 
   const universityOptions = useMemo(
@@ -76,7 +81,7 @@ export function ExternalRegistrationForm({ event }: ExternalRegistrationFormProp
     },
   });
 
-  const { submit, isPending, isError, error } = useExternalEnrollment(eventId);
+  const { submit, isPending, isError, error } = useExternalEnrollment(eventId, semesterRange != null);
 
   const domainsBlocked = domainsLoading || allowedDomains.length === 0;
   const canSubmit = isRegistrationOpen && !domainsBlocked;
@@ -175,6 +180,24 @@ export function ExternalRegistrationForm({ event }: ExternalRegistrationFormProp
           </select>
           {errors.universityName && <span style={errorStyle}>{errors.universityName.message}</span>}
         </div>
+
+        {semesterRange && (
+          <div>
+            <label style={labelStyle}>
+              Current semester (required: semester {semesterRange.min}–{semesterRange.max})
+            </label>
+            <input
+              type="number"
+              min={semesterRange.min}
+              max={semesterRange.max}
+              placeholder={`e.g. ${semesterRange.min}`}
+              className="w-full rounded"
+              style={inputStyle}
+              {...register("semester", { valueAsNumber: true })}
+            />
+            {errors.semester && <span style={errorStyle}>{errors.semester.message}</span>}
+          </div>
+        )}
 
         <label className="flex cursor-pointer items-start gap-2">
           <input type="checkbox" className="mt-1" {...register("confirmEnrolled")} />

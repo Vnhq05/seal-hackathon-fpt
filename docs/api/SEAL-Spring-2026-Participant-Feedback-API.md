@@ -33,6 +33,17 @@
 | Comment | Tuỳ chọn, tối đa 2000 ký tự |
 | Coordinator access | `EVENT_COORDINATOR` chỉ xem event do mình tạo; `SYSTEM_ADMIN` xem mọi event |
 
+> **Note:** Không có thay đổi backend/API trong frontend rework (2026-06). Chỉ cập nhật UI client.
+
+### Quick reference
+
+| METHOD | Path | Auth | Request | Response | Notes |
+|---|---|---|---|---|---|
+| `POST` | `/api/events/{eventId}/participant-feedback` | Bearer JWT (participant) | `{ overallRating: 1–5, comment?: string }` | `ParticipantFeedbackResponse` | Event `COMPLETED`; team `CONFIRMED`; duplicate → `409` |
+| `GET` | `/api/events/{eventId}/participant-feedback/me` | Bearer JWT | none | `ParticipantFeedbackResponse` | Chưa submit → `404` |
+| `GET` | `/api/events/{eventId}/participant-feedback` | `SYSTEM_ADMIN`, `EVENT_COORDINATOR` | none | `ParticipantFeedbackResponse[]` | Coordinator chỉ event sở hữu → `403` |
+| `GET` | `/api/events/{eventId}/participant-feedback/summary` | `SYSTEM_ADMIN`, `EVENT_COORDINATOR` | none | `ParticipantFeedbackSummaryResponse` | Coordinator chỉ event sở hữu → `403` |
+
 ---
 
 ## 2. Response types
@@ -275,19 +286,77 @@ Thống kê tổng hợp feedback.
 
 ## 7. Frontend integration
 
-| Endpoint | Client | UI |
+> **No backend/API changes** — frontend-only rework.
+
+### API client & hooks
+
+| Endpoint | Client | Hook |
 |---|---|---|
-| `POST /events/{eventId}/participant-feedback` | `participantFeedbackApi.submit()` | `/student/feedback` — `ParticipantFeedbackPage` |
-| `GET /events/{eventId}/participant-feedback/me` | `participantFeedbackApi.getMine()` | `/student/feedback` — read-only sau submit |
-| `GET /events/{eventId}/participant-feedback` | `participantFeedbackApi.list()` | `/coordinator/feedback` — bảng danh sách |
-| `GET /events/{eventId}/participant-feedback/summary` | `participantFeedbackApi.getSummary()` | `/coordinator/feedback` — summary cards |
+| `POST /events/{eventId}/participant-feedback` | `participantFeedbackApi.submit()` | `useSubmitParticipantFeedback` |
+| `GET /events/{eventId}/participant-feedback/me` | `participantFeedbackApi.getMine()` | `useMyParticipantFeedback` |
+| `GET /events/{eventId}/participant-feedback` | `participantFeedbackApi.list()` | `useParticipantFeedbackList` |
+| `GET /events/{eventId}/participant-feedback/summary` | `participantFeedbackApi.getSummary()` | `useParticipantFeedbackSummary` |
 
-**Files:**
+### Student page (`/student/feedback`)
 
-- API: `frontend/src/lib/api/participant-feedback.api.ts`
-- Hooks: `frontend/src/features/feedback/hooks/use-participant-feedback.ts`
-- Student UI: `frontend/src/features/feedback/components/participant-feedback-page.tsx`
-- Coordinator UI: `frontend/src/features/feedback/components/participant-feedback-review-page.tsx`
+**Component:** `ParticipantFeedbackPage`
+
+**Event resolution:** `useMyTeamsAllEvents()` → active event + team.
+
+**Gate chain (mutually exclusive, in order):**
+
+1. Loading → spinner
+2. No event → info card: "No event found"
+3. Event not `COMPLETED` → "Feedback opens when the event ends"
+4. No `CONFIRMED` team → "You must be on a confirmed team"
+5. Already submitted → read-only view (`GET .../me`)
+6. Eligible → submission form (`POST`)
+
+**Form validation:** `react-hook-form` + Zod (`participant-feedback.schema.ts`):
+
+```ts
+z.object({
+  overallRating: z.number().int().min(1).max(5),
+  comment: z.string().max(2000).optional(),
+})
+```
+
+Field errors render inline; API errors render below the form (no toast).
+
+### Coordinator page (`/coordinator/feedback`)
+
+**Component:** `ParticipantFeedbackReviewPage`
+
+**Event selector:** `useQuery({ queryKey: ["coordinator-events"], queryFn: eventApi.list })` — coordinator chỉ thấy event của mình (không dùng `useAdminEvents`).
+
+**Summary cards:** `useParticipantFeedbackSummary` — Responses, Average rating (`x.x/5`), Distribution bar.
+
+**Feedback table:** `useParticipantFeedbackList` — paginated (10/page), expandable comment row.
+
+**CSV export:** `useDownloadFeedback` — client-side export via `participantFeedbackApi.list()`:
+
+| Column | Field |
+|---|---|
+| `submittedAt` | `submittedAt` |
+| `userFullName` | `userFullName` |
+| `teamName` | `teamName` |
+| `overallRating` | `overallRating` |
+| `comment` | `comment` |
+
+- Filename: `feedback-{eventId}.csv`
+- Button: "Export CSV" (disabled when no event selected or list empty)
+
+### Files
+
+| Layer | Path |
+|---|---|
+| API | `frontend/src/lib/api/participant-feedback.api.ts` |
+| Hooks | `frontend/src/features/feedback/hooks/use-participant-feedback.ts` |
+| CSV hook | `frontend/src/features/feedback/hooks/use-download-feedback.ts` |
+| Zod schema | `frontend/src/features/feedback/schemas/participant-feedback.schema.ts` |
+| Student UI | `frontend/src/features/feedback/components/participant-feedback-page.tsx` |
+| Coordinator UI | `frontend/src/features/feedback/components/participant-feedback-review-page.tsx` |
+| Routes | `src/app/(student)/student/feedback/page.tsx`, `src/app/(coordinator)/coordinator/feedback/page.tsx` |
 
 ---
 

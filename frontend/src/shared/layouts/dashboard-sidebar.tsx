@@ -63,6 +63,15 @@ const NAV_ITEMS = [
     ),
   },
   {
+    href: "/student/results",
+    label: "Results & Awards",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 20 20" {...svgProps}>
+        <path d="M10 2l2.4 4.9 5.4.8-3.9 3.8.9 5.4L10 14.8l-4.8 2.5.9-5.4-3.9-3.8 5.4-.8L10 2z" {...s15} strokeLinejoin="round" />
+      </svg>
+    ),
+  },
+  {
     href: "/student/feedback",
     label: "Feedback",
     icon: (

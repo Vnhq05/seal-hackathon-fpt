@@ -15,7 +15,25 @@ app:
     access-token-expiration-ms: 900000
     refresh-token-expiration-days: 7
     password-reset-token-expiration-minutes: 15
+    issuer: seal-hackathon-test
+  frontend:
+    url: http://localhost:3000
   cors:
     allowed-origins: http://localhost:3000
+  storage:
+    upload-dir: ./uploads
+  protected-emails: admin@seal.com,coordinator@seal.com
   seeder:
     resync-dev-accounts: true
+  otp:
+    expiration-seconds: 180
+    resend-cooldown-seconds: 300
+  hackathon:
+    seal:
+      max-tracks: 3
+      max-teams-per-track: 8
+      finalist-count: 6
+      top-per-track: 2
+  submission:
+    pdf:
+      max-size-bytes: 5242880

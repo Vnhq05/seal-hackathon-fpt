@@ -17,7 +17,6 @@ import com.sealhackathon.team.domain.enums.HackathonSkillRole;
 import com.sealhackathon.team.domain.enums.TeamMemberRole;
 import com.sealhackathon.team.domain.enums.TeamStatus;
 import com.sealhackathon.team.dto.request.CreateTeamRequest;
-import com.sealhackathon.team.dto.request.JoinTeamRequest;
 import com.sealhackathon.team.dto.request.SelectTrackRequest;
 import com.sealhackathon.team.dto.request.UpdateTeamRecruitmentRequest;
 import com.sealhackathon.team.dto.response.TeamMemberResponse;
@@ -32,6 +31,7 @@ import com.sealhackathon.team.repository.TeamRepository;
 import com.sealhackathon.user.dto.snapshot.UserSnapshot;
 import com.sealhackathon.user.service.UserPublicService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -63,6 +63,9 @@ public class TeamService {
     private final SystemConfigService systemConfigService;
     private final TrackRepository trackRepository;
     private final FormatRuleEngine formatRuleEngine;
+
+    @Value("${app.hackathon.team.max-skill-roles:5}")
+    private int maxSkillRoles;
 
     private int getMinTeamSize() {
         return systemConfigService.getConfig().getMinTeamMembers();
@@ -163,15 +166,6 @@ public class TeamService {
             team.setRecruiting(false);
             teamRepository.save(team);
         }
-    }
-
-    // ── BR-16: Direct join deprecated — use join-request flow ──
-    @Deprecated
-    @Transactional
-    public TeamResponse joinTeam(UUID currentUserId, JoinTeamRequest request) {
-        throw new BusinessException(
-                "Direct team join is no longer supported. Submit a join request instead.",
-                HttpStatus.GONE) {};
     }
 
     @Transactional
@@ -457,8 +451,8 @@ public class TeamService {
             return List.of();
         }
         Set<HackathonSkillRole> unique = new LinkedHashSet<>(roles);
-        if (unique.size() > 5) {
-            throw new BusinessException("At most 5 needed roles are allowed", HttpStatus.BAD_REQUEST) {};
+        if (unique.size() > maxSkillRoles) {
+            throw new BusinessException("At most " + maxSkillRoles + " needed roles are allowed", HttpStatus.BAD_REQUEST) {};
         }
         if (unique.contains(null)) {
             throw new BusinessException("Needed roles cannot contain null values", HttpStatus.BAD_REQUEST) {};

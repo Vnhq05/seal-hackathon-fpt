@@ -57,6 +57,9 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class JudgingService {
 
+    private static final int DEFAULT_MIN_SCORE = 1;
+    private static final int DEFAULT_MAX_SCORE = 5;
+
     private final JudgeScoreRepository judgeScoreRepository;
     private final TeamJudgeAssignmentRepository teamJudgeAssignmentRepository;
     private final SubmissionRepository submissionRepository;
@@ -480,8 +483,8 @@ public class JudgingService {
             if (criterion == null) {
                 continue;
             }
-            int min = criterion.getMinScore() != null ? criterion.getMinScore() : 1;
-            int max = criterion.getMaxScore() != null ? criterion.getMaxScore() : 5;
+            int min = criterion.getMinScore() != null ? criterion.getMinScore() : DEFAULT_MIN_SCORE;
+            int max = criterion.getMaxScore() != null ? criterion.getMaxScore() : DEFAULT_MAX_SCORE;
             if (dto.getScore() < min || dto.getScore() > max) {
                 throw new BusinessException(
                         "Score " + dto.getScore() + " for criteria " + dto.getCriteriaId()
@@ -501,8 +504,8 @@ public class JudgingService {
             if (criterion == null) {
                 continue;
             }
-            int min = criterion.getMinScore() != null ? criterion.getMinScore() : 1;
-            int max = criterion.getMaxScore() != null ? criterion.getMaxScore() : 5;
+            int min = criterion.getMinScore() != null ? criterion.getMinScore() : DEFAULT_MIN_SCORE;
+            int max = criterion.getMaxScore() != null ? criterion.getMaxScore() : DEFAULT_MAX_SCORE;
             if ((dto.getScore() == min || dto.getScore() == max)
                     && (dto.getComment() == null || dto.getComment().isBlank())) {
                 throw new BusinessException(

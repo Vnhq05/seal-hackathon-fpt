@@ -10,6 +10,7 @@ import com.sealhackathon.event.repository.HackathonEventRepository;
 import com.sealhackathon.event.repository.RoundRepository;
 import com.sealhackathon.event.repository.TrackRepository;
 import com.sealhackathon.event.service.EventService;
+import com.sealhackathon.event.service.FormatRuleEngine;
 import com.sealhackathon.ranking.domain.FinalistContestedSlot;
 import com.sealhackathon.ranking.domain.FinalistSelection;
 import com.sealhackathon.ranking.domain.Ranking;
@@ -58,6 +59,7 @@ class FinalistSelectionServiceTest {
     @Mock private SubmissionPublicService submissionPublicService;
     @Mock private EventService eventService;
     @Mock private RankingTieBreakComparator tieBreakComparator;
+    @Mock private FormatRuleEngine formatRuleEngine;
 
     @InjectMocks private FinalistSelectionService finalistSelectionService;
 
@@ -74,6 +76,8 @@ class FinalistSelectionServiceTest {
         trackA = UUID.randomUUID();
         trackB = UUID.randomUUID();
         trackC = UUID.randomUUID();
+        when(formatRuleEngine.getSealFinalistCount()).thenReturn(6);
+        when(formatRuleEngine.getSealTopPerTrack()).thenReturn(2);
     }
 
     @Test

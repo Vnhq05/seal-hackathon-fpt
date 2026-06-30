@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -91,7 +92,7 @@ public class EventPublicServiceImpl implements EventPublicService {
         if (deadline == null) {
             return null;
         }
-        return deadline.atTime(23, 59, 59);
+        return deadline.atTime(LocalTime.MAX);
     }
 
     @Override

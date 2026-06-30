@@ -14,6 +14,7 @@ import com.sealhackathon.team.domain.Team;
 import com.sealhackathon.team.repository.TeamRepository;
 import com.sealhackathon.user.service.UserPublicService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,6 +35,9 @@ public class TeamJudgeAssignmentService {
     private final ConflictDetectionService conflictDetectionService;
     private final UserPublicService userPublicService;
 
+    @Value("${app.hackathon.judging.max-judges-per-team:3}")
+    private int maxJudgesPerTeam;
+
     @Transactional
     public TeamJudgeAssignmentResponse assignJudgeToTeam(
             UUID eventId, UUID roundId, UUID teamId, AssignJudgeToTeamRequest request) {
@@ -44,8 +48,10 @@ public class TeamJudgeAssignmentService {
         }
 
         long currentCount = assignmentRepository.countByTeamIdAndRoundId(teamId, roundId);
-        if (currentCount >= 3) {
-            throw new BusinessException("Each team can have at most 3 judges per round", HttpStatus.BAD_REQUEST) {};
+        if (currentCount >= maxJudgesPerTeam) {
+            throw new BusinessException(
+                    "Each team can have at most " + maxJudgesPerTeam + " judges per round",
+                    HttpStatus.BAD_REQUEST) {};
         }
 
         return createAssignment(roundId, teamId, request.getJudgeUserId());

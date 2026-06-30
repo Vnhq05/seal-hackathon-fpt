@@ -33,6 +33,15 @@ export interface ResolveScoreReviewRequest {
   resolutionNote?: string;
 }
 
+export interface JudgeScoreReviewRequest {
+  submissionId: string;
+  note: string;
+}
+
+/** Backend 409 message when an OPEN review already exists for the submission. */
+export const SCORE_REVIEW_ADJUSTMENT_CONFLICT_MESSAGE =
+  "A deviation review is already open for this submission.";
+
 export const scoreReviewApi = {
   list(
     eventId: string,
@@ -58,6 +67,16 @@ export const scoreReviewApi = {
   ): Promise<ScoreReviewResponse> {
     return api.patch<ScoreReviewResponse>(
       `/events/${eventId}/score-reviews/${reviewId}`,
+      body,
+    );
+  },
+
+  requestAdjustment(
+    eventId: string,
+    body: JudgeScoreReviewRequest,
+  ): Promise<ScoreReviewResponse> {
+    return api.post<ScoreReviewResponse>(
+      `/events/${eventId}/score-reviews/judge-request`,
       body,
     );
   },

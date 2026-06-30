@@ -56,6 +56,7 @@ public class FinalistSelectionService {
     private final SubmissionPublicService submissionPublicService;
     private final EventService eventService;
     private final RankingTieBreakComparator tieBreakComparator;
+    private final FormatRuleEngine formatRuleEngine;
 
     @Transactional
     public FinalistSelectResultResponse selectFinalists(UUID eventId) {
@@ -114,7 +115,7 @@ public class FinalistSelectionService {
                 .summary(FinalistSelectionSummaryResponse.builder()
                         .selectedCount(finalistResponses.size())
                         .targetCount(event.getCompetitionFormat() == CompetitionFormat.SEAL_RAG_2026
-                                ? FormatRuleEngine.SEAL_FINALIST_COUNT
+                                ? formatRuleEngine.getSealFinalistCount()
                                 : preliminary.getAdvancementCutoff())
                         .penaltyEvaluationRequired(penaltyRequired)
                         .build())
@@ -142,7 +143,7 @@ public class FinalistSelectionService {
         for (Map.Entry<UUID, List<Ranking>> entry : byTrack.entrySet()) {
             UUID trackId = entry.getKey();
             RankingTieBreakComparator.SelectionCutResult cut = tieBreakComparator.cutTopN(
-                    entry.getValue(), FormatRuleEngine.SEAL_TOP_PER_TRACK, roundId);
+                    entry.getValue(), formatRuleEngine.getSealTopPerTrack(), roundId);
 
             for (Ranking r : cut.selected()) {
                 state.addSelection(r.getTeamId(), FinalistSelectionMethod.TOP_PER_TRACK,
@@ -153,8 +154,8 @@ public class FinalistSelectionService {
             }
         }
 
-        if (state.selectedTeamIds.size() < FormatRuleEngine.SEAL_FINALIST_COUNT) {
-            int needed = FormatRuleEngine.SEAL_FINALIST_COUNT - state.selectedTeamIds.size();
+        if (state.selectedTeamIds.size() < formatRuleEngine.getSealFinalistCount()) {
+            int needed = formatRuleEngine.getSealFinalistCount() - state.selectedTeamIds.size();
             List<Ranking> remaining = rankings.stream()
                     .filter(r -> !state.selectedSet.contains(r.getTeamId()))
                     .toList();
@@ -164,7 +165,7 @@ public class FinalistSelectionService {
 
             for (Ranking r : overflow.selected()) {
                 state.addSelection(r.getTeamId(), FinalistSelectionMethod.OVERFLOW_FILL,
-                        "Overflow fill to reach 6 finalists", false);
+                        "Overflow fill to reach " + formatRuleEngine.getSealFinalistCount() + " finalists", false);
             }
             if (!overflow.contested().isEmpty()) {
                 state.addContested(null, ContestedSlotType.OVERFLOW_FILL, slotIndex, overflow.contested());

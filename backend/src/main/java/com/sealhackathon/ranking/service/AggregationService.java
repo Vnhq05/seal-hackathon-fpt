@@ -15,6 +15,7 @@ import com.sealhackathon.submission.domain.enums.SubmissionStatus;
 import com.sealhackathon.submission.dto.snapshot.SubmissionSnapshot;
 import com.sealhackathon.submission.service.SubmissionPublicService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,6 +42,9 @@ public class AggregationService {
     private final RankingRepository rankingRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final TieBreakComparatorBuilder tieBreakComparatorBuilder;
+
+    @Value("${app.hackathon.judging.judge-trim-threshold:5}")
+    private int judgeTrimThreshold;
 
     @Transactional
     public List<Ranking> recalculate(UUID roundId) {
@@ -142,7 +146,7 @@ public class AggregationService {
     }
 
     /**
-     * RoundScore = mean of weighted judge scores (trimmed when >= 5 judges per BR-46).
+     * RoundScore = mean of weighted judge scores (trimmed when judge count reaches judge-trim-threshold per BR-46).
      */
     BigDecimal computeRoundScore(List<JudgeScoreSnapshot> scores,
                                  Map<UUID, Integer> weightMap,
@@ -154,7 +158,7 @@ public class AggregationService {
                 .sorted()
                 .collect(Collectors.toList());
 
-        if (weightedScores.size() >= 5) {
+        if (weightedScores.size() >= judgeTrimThreshold) {
             weightedScores = weightedScores.subList(1, weightedScores.size() - 1);
         }
 

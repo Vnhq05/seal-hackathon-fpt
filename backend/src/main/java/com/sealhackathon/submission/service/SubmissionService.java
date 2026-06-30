@@ -429,10 +429,10 @@ public class SubmissionService {
                     HttpStatus.BAD_REQUEST);
         }
         if (!hasDemo) {
-            throw new BusinessException("Demo URL is required for Milestone 2", HttpStatus.BAD_REQUEST);
+            throw new BusinessException("Demo URL is required for " + round.getName(), HttpStatus.BAD_REQUEST);
         }
         if (!hasSource) {
-            throw new BusinessException("Source code URL is required for Milestone 2", HttpStatus.BAD_REQUEST);
+            throw new BusinessException("Source code URL is required for " + round.getName(), HttpStatus.BAD_REQUEST);
         }
     }
 

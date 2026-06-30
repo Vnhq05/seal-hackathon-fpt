@@ -54,6 +54,14 @@ export function useDeactivateUser() {
   });
 }
 
+export function useReactivateUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) => adminUserApi.reactivateUser(userId),
+    onSuccess: () => invalidateUserLists(qc),
+  });
+}
+
 export function useDeleteUser() {
   const qc = useQueryClient();
   return useMutation({

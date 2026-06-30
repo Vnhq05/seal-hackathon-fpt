@@ -92,7 +92,18 @@ public class EnrollmentController {
     public ResponseEntity<ApiResponse<EnrollmentResponse>> approve(
             @PathVariable UUID eventId,
             @PathVariable UUID enrollmentId) {
-        return ResponseEntity.ok(ApiResponse.success("Enrollment approved", enrollmentService.approveEnrollment(enrollmentId)));
+        var result = enrollmentService.approveEnrollment(enrollmentId);
+        return ResponseEntity.ok(ApiResponse.success(result.getMessage(), result.getEnrollment()));
+    }
+
+    @PostMapping("/{enrollmentId}/resend-credentials")
+    @PreAuthorize("hasAnyRole('SYSTEM_ADMIN', 'EVENT_COORDINATOR')")
+    @Operation(summary = "Resend login credentials email for an approved external student enrollment")
+    public ResponseEntity<ApiResponse<EnrollmentResponse>> resendCredentials(
+            @PathVariable UUID eventId,
+            @PathVariable UUID enrollmentId) {
+        EnrollmentResponse response = enrollmentService.resendCredentials(enrollmentId);
+        return ResponseEntity.ok(ApiResponse.success("Credentials email sent", response));
     }
 
     @PutMapping("/{enrollmentId}/reject")

@@ -62,7 +62,7 @@ public class TrackAssignmentService {
 
         Map<UUID, Integer> capacity = new HashMap<>();
         for (Track t : tracks) {
-            int max = t.getMaxTeams() != null ? t.getMaxTeams() : FormatRuleEngine.SEAL_MAX_TEAMS_PER_TRACK;
+            int max = t.getMaxTeams() != null ? t.getMaxTeams() : formatRuleEngine.getSealMaxTeamsPerTrack();
             long current = teamRepository.countByEventIdAndTrackId(eventId, t.getId());
             capacity.put(t.getId(), (int) (max - current));
         }

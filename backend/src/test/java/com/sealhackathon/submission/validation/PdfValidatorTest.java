@@ -1,8 +1,10 @@
 package com.sealhackathon.submission.validation;
 
 import com.sealhackathon.common.exception.BusinessException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -10,6 +12,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class PdfValidatorTest {
 
     private final PdfValidator validator = new PdfValidator();
+
+    @BeforeEach
+    void setUp() {
+        ReflectionTestUtils.setField(validator, "maxFileSizeBytes", 5_242_880L);
+    }
 
     @Test
     void shouldAcceptValidPdf() {

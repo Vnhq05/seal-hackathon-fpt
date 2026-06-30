@@ -58,6 +58,7 @@ export function useRoundSubmissions(
             : null;
           return {
             id: sub!.id,
+            teamId: a.teamId,
             teamName: a.teamName,
             score: totalScore,
             maxScore: maxWeighted || 5,

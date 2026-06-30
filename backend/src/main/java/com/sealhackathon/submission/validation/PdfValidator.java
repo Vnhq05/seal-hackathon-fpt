@@ -1,6 +1,7 @@
 package com.sealhackathon.submission.validation;
 
 import com.sealhackathon.common.exception.BusinessException;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
@@ -8,7 +9,9 @@ import org.springframework.web.multipart.MultipartFile;
 @Component
 public class PdfValidator {
 
-    private static final long MAX_FILE_SIZE = 5_242_880L;
+    @Value("${app.submission.pdf.max-size-bytes:5242880}")
+    private long maxFileSizeBytes;
+
     private static final String PDF_CONTENT_TYPE = "application/pdf";
 
     public void validate(MultipartFile file, Integer pageCount) {
@@ -28,10 +31,11 @@ public class PdfValidator {
             throw new BusinessException("File must be a PDF document", HttpStatus.BAD_REQUEST) {};
         }
 
-        if (file.getSize() > MAX_FILE_SIZE) {
+        if (file.getSize() > maxFileSizeBytes) {
+            long maxMb = maxFileSizeBytes / (1024 * 1024);
             throw new BusinessException(
-                    String.format("PDF file size must not exceed 5 MB. Uploaded: %.2f MB",
-                            file.getSize() / 1_048_576.0),
+                    String.format("PDF file size must not exceed %d MB. Uploaded: %.2f MB",
+                            maxMb, file.getSize() / 1_048_576.0),
                     HttpStatus.BAD_REQUEST) {};
         }
 

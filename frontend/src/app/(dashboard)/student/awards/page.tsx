@@ -1,5 +1,5 @@
-import { AwardsResultsPage } from "@/features/rankings/components/awards-results-page";
+import { redirect } from "next/navigation";
 
 export default function Page() {
-  return <AwardsResultsPage />;
+  redirect("/student/results");
 }

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { judgingApi } from "@/lib/api/judging.api";
+import type { JudgeScoringAssignment } from "@/lib/api/judging.api";
 import type { JudgeDashboard, AssignedRoundCard } from "@/features/judging/types/judge.types";
 
 export const JUDGE_DASHBOARD_KEY = "judge-dashboard" as const;
@@ -32,6 +33,26 @@ function groupAssignmentsByRound(
       status: isClosed ? "closed" : "open",
     } as AssignedRoundCard;
   });
+}
+
+function buildUnscoredAssignments(
+  assignments: JudgeScoringAssignment[],
+  assignedRounds: AssignedRoundCard[],
+): JudgeScoringAssignment[] {
+  const nearestOpen = assignedRounds
+    .filter((r) => r.scored < r.total && r.status === "open")
+    .sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime())[0];
+  if (!nearestOpen) return [];
+
+  return assignments
+    .filter((a) => a.roundId === nearestOpen.id)
+    .filter((a) => a.scoringStatus !== "COMPLETED" && a.scoringStatus !== "LOCKED")
+    .filter((a) => !a.conflictOfInterest && a.submissionId)
+    .sort(
+      (a, b) =>
+        new Date(a.scoringDeadline ?? 0).getTime() - new Date(b.scoringDeadline ?? 0).getTime(),
+    )
+    .slice(0, 5);
 }
 
 export function useJudgeDashboard() {
@@ -70,6 +91,7 @@ export function useJudgeDashboard() {
         },
         assignedRounds,
         recentActivity: [],
+        unscoredAssignments: buildUnscoredAssignments(assignments, assignedRounds),
       };
     },
   });

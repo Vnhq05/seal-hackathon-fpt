@@ -18,10 +18,10 @@ END
 UPDATE hackathon_events
 SET name = N'SEAL Hackathon Spring 2026',
     competition_format = 'SEAL_RAG_2026',
-    start_date = '2026-04-12',
-    end_date = '2026-04-12',
+    start_date = '2026-08-15',
+    end_date = '2026-08-15',
     registration_open_date = '2026-03-15',
-    registration_deadline = '2026-03-25',
+    registration_deadline = '2026-07-31',
     description = N'SEAL Hackathon Spring 2026 — Agentic RAG',
     location = N'FPT University Da Nang',
     format = 'OFFLINE',
@@ -39,9 +39,9 @@ IF NOT EXISTS (SELECT 1 FROM tracks WHERE event_id = @eventId)
 BEGIN
     INSERT INTO tracks (id, event_id, name, description, max_teams, status, created_at, updated_at)
     VALUES
-        (NEWID(), @eventId, N'Bảng A', N'SEAL Spring 2026 — Bảng A', 8, 'OPEN', @now, @now),
-        (NEWID(), @eventId, N'Bảng B', N'SEAL Spring 2026 — Bảng B', 8, 'OPEN', @now, @now),
-        (NEWID(), @eventId, N'Bảng C', N'SEAL Spring 2026 — Bảng C', 8, 'OPEN', @now, @now);
+        (NEWID(), @eventId, N'Track A', N'SEAL Spring 2026 — Track A', 8, 'OPEN', @now, @now),
+        (NEWID(), @eventId, N'Track B', N'SEAL Spring 2026 — Track B', 8, 'OPEN', @now, @now),
+        (NEWID(), @eventId, N'Track C', N'SEAL Spring 2026 — Track C', 8, 'OPEN', @now, @now);
 END
 
 -- Rounds
@@ -57,11 +57,11 @@ BEGIN
         slide_deadline, submission_deadline, scoring_deadline,
         advancement_cutoff, advancement_rule, round_weight, created_at, updated_at)
     VALUES
-        (@prelimId, @eventId, 1, N'Vòng bảng', 'PRELIMINARY',
+        (@prelimId, @eventId, 1, N'Preliminary Round', 'PRELIMINARY',
          '2026-04-12 07:00:00', '2026-04-12 15:30:00',
          '2026-04-12 10:00:00', '2026-04-12 14:00:00', '2026-04-12 15:30:00',
          2, 'PER_TRACK_TOP_N', 40, @now, @now),
-        (@finalId, @eventId, 2, N'Chung kết', 'FINAL',
+        (@finalId, @eventId, 2, N'Finals', 'FINAL',
          '2026-04-12 15:30:00', '2026-04-12 17:00:00',
          NULL, '2026-04-12 15:30:00', '2026-04-12 17:00:00',
          6, 'FINALIST_POOL', 60, @now, @now);
@@ -69,20 +69,20 @@ BEGIN
     -- Preliminary criteria
     INSERT INTO criteria (id, round_id, name, description, weight, sort_order, min_score, max_score, created_at, updated_at)
     VALUES
-        (NEWID(), @prelimId, N'Tính chính xác và phù hợp với Domain', N'Accuracy and Domain Relevance', 30, 0, 1, 5, @now, @now),
-        (NEWID(), @prelimId, N'Kiến trúc Agentic RAG & Giải thuật', N'Agentic RAG Architecture & Algorithm', 30, 1, 1, 5, @now, @now),
-        (NEWID(), @prelimId, N'Ý tưởng & Thuyết trình', N'Ideas & Presentation', 15, 2, 1, 5, @now, @now),
-        (NEWID(), @prelimId, N'Khả năng thực thi & tính sáng tạo', N'Feasibility & Creativity', 15, 3, 1, 5, @now, @now),
-        (NEWID(), @prelimId, N'Trải nghiệm người dùng & giao diện tương tác', N'User Experience & Interactive Interface', 10, 4, 1, 5, @now, @now);
+        (NEWID(), @prelimId, N'Accuracy and Domain Relevance', N'Accuracy and Domain Relevance', 30, 0, 1, 5, @now, @now),
+        (NEWID(), @prelimId, N'Agentic RAG Architecture & Algorithm', N'Agentic RAG Architecture & Algorithm', 30, 1, 1, 5, @now, @now),
+        (NEWID(), @prelimId, N'Ideas & Presentation', N'Ideas & Presentation', 15, 2, 1, 5, @now, @now),
+        (NEWID(), @prelimId, N'Feasibility & Creativity', N'Feasibility & Creativity', 15, 3, 1, 5, @now, @now),
+        (NEWID(), @prelimId, N'User Experience & Interactive Interface', N'User Experience & Interactive Interface', 10, 4, 1, 5, @now, @now);
 
     -- Final criteria
     INSERT INTO criteria (id, round_id, name, description, weight, sort_order, min_score, max_score, created_at, updated_at)
     VALUES
-        (NEWID(), @finalId, N'Chất lượng xử lý & truy xuất dữ liệu', N'Data Processing & Retrieval Quality', 30, 0, 1, 5, @now, @now),
-        (NEWID(), @finalId, N'Độ tin cậy & chống ảo giác', N'Reliability & Hallucination Resistance', 20, 1, 1, 5, @now, @now),
-        (NEWID(), @finalId, N'Tư duy Agent & xử lý đa tầng', N'Agent Reasoning & Multi-hop Processing', 20, 2, 1, 5, @now, @now),
-        (NEWID(), @finalId, N'Tính thực tế & tối ưu vận hành', N'Practicality & Operational Optimization', 20, 3, 1, 5, @now, @now),
-        (NEWID(), @finalId, N'Khả năng mở rộng & sáng tạo', N'Scalability & Innovation', 10, 4, 1, 5, @now, @now);
+        (NEWID(), @finalId, N'Data Processing & Retrieval Quality', N'Data Processing & Retrieval Quality', 30, 0, 1, 5, @now, @now),
+        (NEWID(), @finalId, N'Reliability & Hallucination Resistance', N'Reliability & Hallucination Resistance', 20, 1, 1, 5, @now, @now),
+        (NEWID(), @finalId, N'Agent Reasoning & Multi-hop Processing', N'Agent Reasoning & Multi-hop Processing', 20, 2, 1, 5, @now, @now),
+        (NEWID(), @finalId, N'Practicality & Operational Optimization', N'Practicality & Operational Optimization', 20, 3, 1, 5, @now, @now),
+        (NEWID(), @finalId, N'Scalability & Innovation', N'Scalability & Innovation', 10, 4, 1, 5, @now, @now);
 END
 
 -- Prizes
@@ -90,10 +90,10 @@ IF NOT EXISTS (SELECT 1 FROM prizes WHERE event_id = @eventId)
 BEGIN
     INSERT INTO prizes (id, event_id, rank, value, quantity, label, created_at, updated_at)
     VALUES
-        (NEWID(), @eventId, 'FIRST', '7000000', 1, N'Giải Nhất', @now, @now),
-        (NEWID(), @eventId, 'SECOND', '5000000', 1, N'Giải Nhì', @now, @now),
-        (NEWID(), @eventId, 'THIRD', '3000000', 1, N'Giải Ba', @now, @now),
-        (NEWID(), @eventId, 'CONSOLATION', '1500000', 1, N'Khuyến khích', @now, @now);
+        (NEWID(), @eventId, 'FIRST', '7000000', 1, N'First Prize', @now, @now),
+        (NEWID(), @eventId, 'SECOND', '5000000', 1, N'Second Prize', @now, @now),
+        (NEWID(), @eventId, 'THIRD', '3000000', 1, N'Third Prize', @now, @now),
+        (NEWID(), @eventId, 'CONSOLATION', '1500000', 1, N'Consolation Prize', @now, @now);
 END
 
 -- Event schedules
@@ -102,13 +102,13 @@ BEGIN
     INSERT INTO event_schedules (id, event_id, type, title, description, start_time, end_time, gate, sort_order, created_at, updated_at)
     VALUES
         (NEWID(), @eventId, 'WORKSHOP', N'Workshop', NULL, '2026-04-09 09:00:00', '2026-04-09 12:00:00', NULL, 0, @now, @now),
-        (NEWID(), @eventId, 'OPENING', N'Khai mạc & bốc thăm bảng', N'Đội tự chọn bảng theo lượt; BTC bốc thăm topic cho từng bảng', '2026-04-11 14:00:00', '2026-04-11 17:00:00', NULL, 1, @now, @now),
-        (NEWID(), @eventId, 'TRACK_DRAW', N'Bốc thăm chọn bảng', NULL, '2026-04-11 14:00:00', '2026-04-11 16:00:00', NULL, 2, @now, @now),
-        (NEWID(), @eventId, 'MILESTONE', N'Milestone 1 — Hoàn thiện ý tưởng & kiến trúc', N'Thiết kế Agentic RAG architecture', '2026-04-12 07:00:00', '2026-04-12 10:00:00', 'SLIDE_SUBMISSION', 3, @now, @now),
-        (NEWID(), @eventId, 'MILESTONE', N'Milestone 2 — Pitching & hoàn thiện sản phẩm', N'Pitching song song với coding', '2026-04-12 10:00:00', '2026-04-12 14:00:00', 'DEMO_SUBMISSION', 4, @now, @now),
-        (NEWID(), @eventId, 'SCORING', N'Chấm vòng bảng', N'5 phút thuyết trình + 3 phút Q&A', '2026-04-12 14:00:00', '2026-04-12 15:30:00', NULL, 5, @now, @now),
-        (NEWID(), @eventId, 'FINAL', N'Chung kết', N'7 phút thuyết trình + 3 phút Q&A — Top 6 đội', '2026-04-12 15:30:00', '2026-04-12 17:00:00', NULL, 6, @now, @now),
-        (NEWID(), @eventId, 'CEREMONY', N'Trao giải & bế mạc', NULL, '2026-04-12 17:00:00', '2026-04-12 18:00:00', NULL, 7, @now, @now);
+        (NEWID(), @eventId, 'OPENING', N'Opening & track draw', N'Teams pick tracks in turn; organizers draw topics per track', '2026-04-11 14:00:00', '2026-04-11 17:00:00', NULL, 1, @now, @now),
+        (NEWID(), @eventId, 'TRACK_DRAW', N'Track selection draw', NULL, '2026-04-11 14:00:00', '2026-04-11 16:00:00', NULL, 2, @now, @now),
+        (NEWID(), @eventId, 'MILESTONE', N'Milestone 1 — Idea & architecture completion', N'Design Agentic RAG architecture', '2026-04-12 07:00:00', '2026-04-12 10:00:00', 'SLIDE_SUBMISSION', 3, @now, @now),
+        (NEWID(), @eventId, 'MILESTONE', N'Milestone 2 — Pitching & product completion', N'Parallel pitching and coding', '2026-04-12 10:00:00', '2026-04-12 14:00:00', 'DEMO_SUBMISSION', 4, @now, @now),
+        (NEWID(), @eventId, 'SCORING', N'Preliminary scoring', N'5-minute presentation + 3-minute Q&A', '2026-04-12 14:00:00', '2026-04-12 15:30:00', NULL, 5, @now, @now),
+        (NEWID(), @eventId, 'FINAL', N'Finals', N'7-minute presentation + 3-minute Q&A — Top 6 teams', '2026-04-12 15:30:00', '2026-04-12 17:00:00', NULL, 6, @now, @now),
+        (NEWID(), @eventId, 'CEREMONY', N'Awards & closing ceremony', NULL, '2026-04-12 17:00:00', '2026-04-12 18:00:00', NULL, 7, @now, @now);
 END
 
 -- Allowed email domains
@@ -118,13 +118,14 @@ BEGIN
     VALUES
         (NEWID(), @eventId, 'fpt.edu.vn', N'FPT University', @now, @now),
         (NEWID(), @eventId, 'fe.edu.vn', N'FPT Education', @now, @now),
-        (NEWID(), @eventId, 'hcmut.edu.vn', N'ĐH Bách khoa TP.HCM', @now, @now),
-        (NEWID(), @eventId, 'hcmus.edu.vn', N'ĐH Khoa học Tự nhiên TP.HCM', @now, @now),
-        (NEWID(), @eventId, 'student.hcmus.edu.vn', N'ĐH Khoa học Tự nhiên TP.HCM', @now, @now),
-        (NEWID(), @eventId, 'uit.edu.vn', N'ĐH Công nghệ Thông tin TP.HCM', @now, @now),
-        (NEWID(), @eventId, 'hcmute.edu.vn', N'ĐH Sư phạm Kỹ thuật TP.HCM', @now, @now),
-        (NEWID(), @eventId, 'ueh.edu.vn', N'ĐH Kinh tế TP.HCM', @now, @now),
-        (NEWID(), @eventId, 'student.ueh.edu.vn', N'ĐH Kinh tế TP.HCM', @now, @now);
+        (NEWID(), @eventId, 'hcmut.edu.vn', N'Ho Chi Minh City University of Technology', @now, @now),
+        (NEWID(), @eventId, 'hcmus.edu.vn', N'Vietnam National University Ho Chi Minh City - University of Science', @now, @now),
+        (NEWID(), @eventId, 'student.hcmus.edu.vn', N'Vietnam National University Ho Chi Minh City - University of Science', @now, @now),
+        (NEWID(), @eventId, 'uit.edu.vn', N'University of Information Technology', @now, @now),
+        (NEWID(), @eventId, 'hcmute.edu.vn', N'Ho Chi Minh City University of Education and Technology', @now, @now),
+        (NEWID(), @eventId, 'ueh.edu.vn', N'University of Economics Ho Chi Minh City', @now, @now),
+        (NEWID(), @eventId, 'student.ueh.edu.vn', N'University of Economics Ho Chi Minh City', @now, @now),
+        (NEWID(), @eventId, 'student.iuh.edu.vn', N'Industrial University of Ho Chi Minh City', @now, @now);
 END
 
 PRINT 'SEAL Spring 2026 event seeded for event ' + CAST(@eventId AS NVARCHAR(36));

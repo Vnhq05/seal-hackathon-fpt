@@ -63,6 +63,14 @@ export function useApproveEnrollment(eventId: string) {
   });
 }
 
+export function useResendCredentials(eventId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (enrollmentId: string) => enrollmentApi.resendCredentials(eventId, enrollmentId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [ENROLLMENT_KEY, eventId] }),
+  });
+}
+
 export function useRejectEnrollment(eventId: string) {
   const qc = useQueryClient();
   return useMutation({

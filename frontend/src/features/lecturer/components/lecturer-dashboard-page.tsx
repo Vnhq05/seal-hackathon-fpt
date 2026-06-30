@@ -4,6 +4,9 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { mentorInvitationApi } from "@/lib/api/mentor-invitation.api";
 import { useJudgeScoringAssignments } from "@/features/judging/hooks/use-judge-scoring-assignments";
+import { useJudgeDashboard } from "@/features/judging/hooks/use-judge-dashboard";
+import { JudgeUrgencyBanner } from "@/features/judging/components/judge-urgency-banner";
+import { JudgeQuickStart } from "@/features/judging/components/judge-quick-start";
 
 function StatCard({ label, value, href }: { label: string; value: number; href: string }) {
   return (
@@ -19,6 +22,7 @@ function StatCard({ label, value, href }: { label: string; value: number; href: 
 
 export function LecturerDashboardPage() {
   const { data: assignments = [], isLoading: judgingLoading } = useJudgeScoringAssignments();
+  const { data: dashboard } = useJudgeDashboard();
   const { data: mentorRooms = [], isLoading: mentorLoading } = useQuery({
     queryKey: ["lecturer-mentor-rooms"],
     queryFn: () => mentorInvitationApi.getAllMentorActiveRooms(),
@@ -38,7 +42,11 @@ export function LecturerDashboardPage() {
   }
 
   return (
-    <div className="flex flex-col gap-8">
+    <>
+      {dashboard?.urgency && (
+        <JudgeUrgencyBanner urgency={dashboard.urgency} portalBase="/lecturer" />
+      )}
+      <div className="flex flex-col gap-8">
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-seal-text">Lecturer Dashboard</h1>
         <p className="mt-1 text-sm text-seal-text-muted">
@@ -53,20 +61,24 @@ export function LecturerDashboardPage() {
           <StatCard label="Pending scoring" value={pendingScoring} href="/lecturer/scoring" />
           <StatCard label="Completed" value={completedScoring} href="/lecturer/history" />
         </div>
-        <div className="flex flex-wrap gap-3">
-          <Link
-            href="/lecturer/scoring"
-            className="border-2 border-navy bg-seal-yellow px-4 py-2 text-sm text-navy font-mono font-bold shadow-[4px_4px_0_0_#0c1228]"
-          >
-            Go to Scoring
-          </Link>
-          <Link
-            href="/lecturer/rounds"
-            className="border-2 border-navy bg-white px-4 py-2 text-sm font-mono font-bold text-navy shadow-[4px_4px_0_0_#0c1228] hover:bg-seal-surface-sunken"
-          >
-            Assigned Rounds
-          </Link>
-        </div>
+        {dashboard ? (
+          <JudgeQuickStart dashboard={dashboard} portalBase="/lecturer" />
+        ) : (
+          <div className="flex flex-wrap gap-3">
+            <Link
+              href="/lecturer/scoring"
+              className="border-2 border-navy bg-seal-yellow px-4 py-2 text-sm text-navy font-mono font-bold shadow-[4px_4px_0_0_#0c1228]"
+            >
+              Go to Scoring
+            </Link>
+            <Link
+              href="/lecturer/rounds"
+              className="border-2 border-navy bg-white px-4 py-2 text-sm font-mono font-bold text-navy shadow-[4px_4px_0_0_#0c1228] hover:bg-seal-surface-sunken"
+            >
+              Assigned Rounds
+            </Link>
+          </div>
+        )}
       </section>
 
       <section className="flex flex-col gap-4">
@@ -90,5 +102,6 @@ export function LecturerDashboardPage() {
         </div>
       </section>
     </div>
+    </>
   );
 }

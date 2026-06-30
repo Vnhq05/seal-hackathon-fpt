@@ -28,4 +28,5 @@ public class LiveScoreBoard {
     private boolean resultsPublished;
     private boolean leaderboardPublic;
     private boolean canManageLeaderboard;
+    private Integer maxScore;
 }

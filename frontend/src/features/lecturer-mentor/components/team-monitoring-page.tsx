@@ -26,6 +26,7 @@ export function TeamMonitoringPage() {
           totalTeams={data.totalTeams}
           currentRound={data.currentRound}
           deadline={data.deadline}
+          teams={teams}
         />
       )}
 

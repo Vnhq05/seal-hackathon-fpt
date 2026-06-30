@@ -21,6 +21,7 @@ import com.sealhackathon.team.repository.TeamRepository;
 import com.sealhackathon.user.dto.snapshot.UserSnapshot;
 import com.sealhackathon.user.service.UserPublicService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -45,6 +46,9 @@ public class InvitationService {
     private final EventEnrollmentService enrollmentService;
     private final SystemConfigService systemConfigService;
     private final TeamService teamService;
+
+    @Value("${app.hackathon.team.invitation-expiry-days:7}")
+    private int invitationExpiryDays;
 
     private int getMinTeamSize() {
         return systemConfigService.getConfig().getMinTeamMembers();
@@ -88,7 +92,7 @@ public class InvitationService {
                 .inviterId(leaderId)
                 .inviteeEmail(request.getInviteeEmail())
                 .status(InvitationStatus.PENDING)
-                .expiresAt(LocalDateTime.now().plusDays(7))
+                .expiresAt(LocalDateTime.now().plusDays(invitationExpiryDays))
                 .build();
 
         invitation = invitationRepository.save(invitation);

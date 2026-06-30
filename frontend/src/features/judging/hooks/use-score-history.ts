@@ -13,7 +13,23 @@ export function useScoreHistory() {
   return useQuery<ScoreHistoryResponse>({
     queryKey: [SCORE_HISTORY_KEY],
     queryFn: async (): Promise<ScoreHistoryResponse> => {
-      const scores = await judgingApi.getMyScoresHistory();
+      const [scores, assignments] = await Promise.all([
+        judgingApi.getMyScoresHistory(),
+        judgingApi.getMyAssignments(),
+      ]);
+
+      const assignmentBySubmissionId = new Map(
+        assignments
+          .filter((a) => a.submissionId)
+          .map((a) => [a.submissionId!, a] as const),
+      );
+      const roundMetaById = new Map(
+        assignments.map((a) => [
+          a.roundId,
+          { roundName: a.roundName ?? "", eventName: a.eventName ?? "" },
+        ] as const),
+      );
+
       const roundIds = [...new Set(scores.map((s) => s.roundId))];
       const criteriaByRound = new Map(
         await Promise.all(
@@ -38,11 +54,15 @@ export function useScoreHistory() {
               return sum + computeWeightedScore(d.score, c?.weight ?? 0);
             }, 0);
 
+            const assignment = assignmentBySubmissionId.get(s.submissionId);
+            const roundMeta = roundMetaById.get(s.roundId);
+
             return {
               id: s.id,
-              teamName: s.submissionId,
-              hackathonName: "",
-              roundName: s.roundId,
+              teamName: assignment?.teamName ?? s.submissionId,
+              hackathonName: assignment?.eventName ?? roundMeta?.eventName ?? "",
+              roundId: s.roundId,
+              roundName: assignment?.roundName ?? roundMeta?.roundName ?? s.roundId,
               totalWeightedScore,
               maxScore: maxWeighted || 5,
               scoredAt: s.completedAt ?? s.startedAt,

@@ -4,6 +4,7 @@ import com.sealhackathon.common.enums.UserType;
 import com.sealhackathon.common.exception.BusinessException;
 import com.sealhackathon.common.exception.ResourceNotFoundException;
 import com.sealhackathon.event.domain.enums.RoundType;
+import com.sealhackathon.event.dto.snapshot.CriteriaSnapshot;
 import com.sealhackathon.event.dto.snapshot.EventSnapshot;
 import com.sealhackathon.event.dto.snapshot.RoundSnapshot;
 import com.sealhackathon.event.dto.snapshot.TrackSnapshot;
@@ -38,6 +39,8 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class LiveScoreService {
+
+    private static final int DEFAULT_MAX_SCORE = 5;
 
     private final RankingRepository rankingRepository;
     private final PublishedResultRepository publishedResultRepository;
@@ -96,6 +99,13 @@ public class LiveScoreService {
         } else {
             round = rounds.get(rounds.size() - 1);
         }
+
+        List<CriteriaSnapshot> criteria =
+                eventPublicService.getCriteriaByRound(round.getId());
+        int maxScore = criteria.stream()
+                .mapToInt(CriteriaSnapshot::getMaxScore)
+                .max()
+                .orElse(DEFAULT_MAX_SCORE);
 
         boolean scoresLocked = isRoundScoresLocked(eventId, round.getId());
         boolean resultsPublished = publishedResultRepository.existsByRoundId(round.getId());
@@ -162,6 +172,7 @@ public class LiveScoreService {
                 .resultsPublished(resultsPublished)
                 .leaderboardPublic(event.isLeaderboardPublic())
                 .canManageLeaderboard(canManage)
+                .maxScore(maxScore)
                 .build();
     }
 
@@ -290,6 +301,7 @@ public class LiveScoreService {
                 .resultsPublished(false)
                 .leaderboardPublic(event.isLeaderboardPublic())
                 .canManageLeaderboard(canManage)
+                .maxScore(5)
                 .build();
     }
 }

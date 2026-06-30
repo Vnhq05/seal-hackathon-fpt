@@ -5,7 +5,6 @@ import com.sealhackathon.common.response.ApiResponse;
 import com.sealhackathon.team.dto.request.AssignMentorTeamRequest;
 import com.sealhackathon.team.dto.request.CreateTeamBodyRequest;
 import com.sealhackathon.team.dto.request.CreateTeamRequest;
-import com.sealhackathon.team.dto.request.JoinTeamRequest;
 import com.sealhackathon.team.dto.request.RenameTeamRequest;
 import com.sealhackathon.team.dto.request.SelectTrackRequest;
 import com.sealhackathon.team.dto.request.SelfDrawTrackRequest;
@@ -63,16 +62,6 @@ public class TeamController {
         TeamResponse response = teamService.createTeam(userId, fullRequest);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Team created successfully", response));
-    }
-
-    @PostMapping("/join")
-    @Operation(summary = "Deprecated — use join-request flow instead")
-    public ResponseEntity<ApiResponse<TeamResponse>> joinTeam(
-            @PathVariable UUID eventId,
-            @Valid @RequestBody JoinTeamRequest request) {
-        UUID userId = authPublicService.getCurrentUserId();
-        TeamResponse response = teamService.joinTeam(userId, request);
-        return ResponseEntity.ok(ApiResponse.success("Joined team successfully", response));
     }
 
     @GetMapping

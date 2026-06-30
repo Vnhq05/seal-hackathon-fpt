@@ -256,6 +256,94 @@ class ScoreReviewIntegrationTest extends BaseIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
+    @Test
+    void judgeRequest_shouldCreateOpenReview_whenNoReviewExists() throws Exception {
+        submitScore(judge1, 4, "Good work overall");
+        submitScore(judge2, 4, "Solid submission");
+        submitScore(judge3, 3, "Acceptable quality");
+
+        mockMvc.perform(post("/api/events/" + eventId + "/score-reviews/judge-request")
+                        .header("Authorization", "Bearer " + tokenFor(judge1))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(String.format("""
+                                {"submissionId":"%s","note":"Please re-examine the scoring spread for this team."}
+                                """, submissionId)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.status").value("OPEN"))
+                .andExpect(jsonPath("$.data.resolutionNote")
+                        .value("Please re-examine the scoring spread for this team."));
+
+        assertThat(scoreReviewRequestRepository.findBySubmissionId(submissionId)).isPresent();
+    }
+
+    @Test
+    void judgeRequest_shouldReturn409_whenOpenReviewExists() throws Exception {
+        submitScore(judge1, 5, "Excellent");
+        submitScore(judge2, 5, "Top marks");
+        submitScore(judge3, 1, "Poor fit");
+
+        mockMvc.perform(post("/api/events/" + eventId + "/score-reviews/judge-request")
+                        .header("Authorization", "Bearer " + tokenFor(judge1))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(String.format("""
+                                {"submissionId":"%s","note":"Please re-examine the scoring spread for this team."}
+                                """, submissionId)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message")
+                        .value("A deviation review is already open for this submission."));
+    }
+
+    @Test
+    void judgeRequest_shouldReturn403_forUnassignedJudge() throws Exception {
+        submitScore(judge1, 4, "Good work overall");
+        submitScore(judge2, 4, "Solid submission");
+        submitScore(judge3, 3, "Acceptable quality");
+
+        mockMvc.perform(post("/api/events/" + eventId + "/score-reviews/judge-request")
+                        .header("Authorization", "Bearer " + tokenFor(unassignedJudge))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(String.format("""
+                                {"submissionId":"%s","note":"Please re-examine the scoring spread for this team."}
+                                """, submissionId)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void judgeRequest_shouldReopenResolvedReview() throws Exception {
+        submitScore(judge1, 4, "Good work overall");
+        submitScore(judge2, 4, "Solid submission");
+        submitScore(judge3, 3, "Acceptable quality");
+
+        UUID reviewId = scoreReviewRequestRepository.save(
+                com.sealhackathon.judging.domain.ScoreReviewRequest.builder()
+                        .eventId(eventId)
+                        .roundId(roundId)
+                        .teamId(teamId)
+                        .submissionId(submissionId)
+                        .deviationValue(java.math.BigDecimal.valueOf(20))
+                        .minJudgeScore(java.math.BigDecimal.valueOf(60))
+                        .maxJudgeScore(java.math.BigDecimal.valueOf(80))
+                        .status(ScoreReviewStatus.RESOLVED)
+                        .resolvedAt(LocalDateTime.now())
+                        .resolutionNote("Previously closed")
+                        .build()
+        ).getId();
+
+        mockMvc.perform(post("/api/events/" + eventId + "/score-reviews/judge-request")
+                        .header("Authorization", "Bearer " + tokenFor(judge1))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(String.format("""
+                                {"submissionId":"%s","note":"Requesting another review after discussion."}
+                                """, submissionId)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.status").value("OPEN"))
+                .andExpect(jsonPath("$.data.resolutionNote")
+                        .value("Requesting another review after discussion."));
+
+        assertThat(scoreReviewRequestRepository.findById(reviewId).orElseThrow().getStatus())
+                .isEqualTo(ScoreReviewStatus.OPEN);
+    }
+
     private void submitScore(User judge, int score, String comment) throws Exception {
         mockMvc.perform(post("/api/rounds/" + roundId + "/scoring")
                         .header("Authorization", "Bearer " + tokenFor(judge))

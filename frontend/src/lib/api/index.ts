@@ -166,7 +166,9 @@ export type {
   ScoreReviewJudgeScore,
   ScoreReviewStatus,
   ResolveScoreReviewRequest,
+  JudgeScoreReviewRequest,
 } from "./score-review.api";
+export { SCORE_REVIEW_ADJUSTMENT_CONFLICT_MESSAGE } from "./score-review.api";
 
 export { participantFeedbackApi } from "./participant-feedback.api";
 export type {

@@ -96,7 +96,7 @@ public class NotificationEventListener {
         userPublicService.findByEmail(event.inviteeEmail()).ifPresent(invitee ->
                 notify(NotificationType.INVITATION_RECEIVED,
                         "Team Invitation",
-                        "Bạn được mời vào team. Kiểm tra lời mời để chấp nhận hoặc từ chối.",
+                        "You have been invited to a team. Check your invitations to accept or decline.",
                         event.teamId(), "Team",
                         List.of(invitee.getId())));
     }
@@ -105,7 +105,7 @@ public class NotificationEventListener {
     public void onInvitationAccepted(InvitationAcceptedEvent event) {
         notify(NotificationType.INVITATION_ACCEPTED,
                 "Invitation Accepted",
-                event.memberName() + " đã tham gia team " + event.teamName(),
+                event.memberName() + " has joined team " + event.teamName(),
                 event.teamId(), "Team",
                 List.of(event.leaderId()));
     }
@@ -114,7 +114,7 @@ public class NotificationEventListener {
     public void onJoinRequestCreated(JoinRequestCreatedEvent event) {
         notify(NotificationType.JOIN_REQUEST_RECEIVED,
                 "Join Request",
-                "Có yêu cầu tham gia team " + event.teamName(),
+                "There is a request to join team " + event.teamName(),
                 event.teamId(), "Team",
                 List.of(event.leaderId()));
     }
@@ -124,13 +124,13 @@ public class NotificationEventListener {
         if (event.accepted()) {
             notify(NotificationType.JOIN_REQUEST_ACCEPTED,
                     "Join Request Accepted",
-                    "Yêu cầu tham gia team " + event.teamName() + " được chấp nhận",
+                    "Your request to join team " + event.teamName() + " was accepted",
                     event.teamId(), "Team",
                     List.of(event.requesterId()));
         } else {
             notify(NotificationType.JOIN_REQUEST_REJECTED,
                     "Join Request Rejected",
-                    "Yêu cầu tham gia team " + event.teamName() + " bị từ chối",
+                    "Your request to join team " + event.teamName() + " was declined",
                     event.teamId(), "Team",
                     List.of(event.requesterId()));
         }
@@ -140,7 +140,7 @@ public class NotificationEventListener {
     public void onLeaveRequestCreated(LeaveRequestCreatedEvent event) {
         notify(NotificationType.LEAVE_REQUEST_CREATED,
                 "Leave Request",
-                event.userFullName() + " yêu cầu rời team " + event.teamName(),
+                event.userFullName() + " requested to leave team " + event.teamName(),
                 event.teamId(), "Team",
                 event.coordinatorIds());
     }
@@ -151,8 +151,8 @@ public class NotificationEventListener {
                 ? NotificationType.LEAVE_REQUEST_APPROVED
                 : NotificationType.LEAVE_REQUEST_REJECTED;
         String message = event.approved()
-                ? "Yêu cầu rời team " + event.teamName() + " được duyệt"
-                : "Yêu cầu rời team " + event.teamName() + " bị từ chối";
+                ? "Your request to leave team " + event.teamName() + " was approved"
+                : "Your request to leave team " + event.teamName() + " was declined";
         notify(type, event.approved() ? "Leave Approved" : "Leave Rejected",
                 message, event.teamId(), "Team",
                 List.of(event.userId(), event.leaderId()));
@@ -162,7 +162,7 @@ public class NotificationEventListener {
     public void onMemberKicked(MemberKickedEvent event) {
         notify(NotificationType.MEMBER_KICKED,
                 "Removed from Team",
-                "Bạn đã bị xóa khỏi team " + event.teamName(),
+                "You have been removed from team " + event.teamName(),
                 event.teamId(), "Team",
                 List.of(event.userId()));
     }

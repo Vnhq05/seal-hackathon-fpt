@@ -37,9 +37,13 @@ public interface UserPublicService {
 
     void activateParticipant(UUID userId);
 
+    void activateParticipantForEnrollment(UUID userId);
+
     Optional<UserSnapshot> getUser(UUID userId);
 
     void updatePassword(UUID userId, String newPasswordHash);
+
+    void updateSemester(UUID userId, Integer semester);
 
     boolean hasRole(UUID userId, UserType role);
 

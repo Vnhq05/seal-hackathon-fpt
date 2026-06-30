@@ -1,11 +1,26 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useForm, Controller, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   useMyParticipantFeedback,
   useSubmitParticipantFeedback,
 } from "@/features/feedback/hooks/use-participant-feedback";
+import {
+  participantFeedbackSchema,
+  type ParticipantFeedbackFormValues,
+} from "@/features/feedback/schemas/participant-feedback.schema";
 import { useMyTeamsAllEvents } from "@/features/teams/hooks/use-my-teams-all-events";
+import type { ParticipantFeedbackResponse } from "@/lib/api/participant-feedback.api";
+
+const RATING_LABELS: Record<number, string> = {
+  1: "Very Poor",
+  2: "Poor",
+  3: "Fair",
+  4: "Good",
+  5: "Excellent",
+};
 
 const labelStyle: React.CSSProperties = {
   fontSize: 14,
@@ -23,13 +38,42 @@ const inputStyle: React.CSSProperties = {
   outline: "none",
 };
 
+const errorStyle: React.CSSProperties = {
+  fontSize: 12,
+  color: "#dc2626",
+  marginTop: 4,
+};
+
+function LoadingSpinner() {
+  return (
+    <svg
+      className="h-4 w-4 animate-spin"
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+    </svg>
+  );
+}
+
+function FeedbackInfoCard({ message }: { message: string }) {
+  return (
+    <div className="rounded-lg border-2 border-navy bg-white p-6 text-sm text-seal-text-secondary shadow-[3px_3px_0_0_#0c1228]">
+      {message}
+    </div>
+  );
+}
+
 function StarRating({
   value,
   onChange,
   disabled,
 }: {
   value: number;
-  onChange: (v: number) => void;
+  onChange?: (v: number) => void;
   disabled?: boolean;
 }) {
   return (
@@ -39,7 +83,7 @@ function StarRating({
           key={star}
           type="button"
           disabled={disabled}
-          onClick={() => onChange(star)}
+          onClick={() => onChange?.(star)}
           className={`text-2xl transition ${disabled ? "cursor-default" : "cursor-pointer hover:scale-110"}`}
           aria-label={`${star} stars`}
         >
@@ -47,6 +91,132 @@ function StarRating({
         </button>
       ))}
     </div>
+  );
+}
+
+function ReadOnlyFeedbackView({ feedback }: { feedback: ParticipantFeedbackResponse }) {
+  return (
+    <div className="space-y-4 border-2 border-navy bg-white p-6 shadow-[3px_3px_0_0_#0c1228]">
+      <div className="rounded-md bg-royal px-4 py-3 text-sm font-semibold text-white">
+        Thank you for your feedback
+      </div>
+      <div>
+        <p className="text-sm text-seal-text-muted">Overall rating</p>
+        <div className="mt-1 flex items-center gap-3">
+          <StarRating value={feedback.overallRating} disabled />
+          <span className="text-sm font-semibold text-navy">
+            {feedback.overallRating}/5
+          </span>
+          <span className="text-sm text-seal-text-secondary">
+            {RATING_LABELS[feedback.overallRating]}
+          </span>
+        </div>
+      </div>
+      {feedback.comment && (
+        <div>
+          <p className="text-sm text-seal-text-muted">Comment</p>
+          <p className="mt-1 text-sm text-navy">{feedback.comment}</p>
+        </div>
+      )}
+      <p className="text-xs text-seal-text-muted">
+        Submitted at {new Date(feedback.submittedAt).toLocaleString()}
+      </p>
+    </div>
+  );
+}
+
+function FeedbackSubmissionForm({
+  eventId,
+  eventName,
+}: {
+  eventId: string;
+  eventName: string;
+}) {
+  const { mutate: submit, isPending } = useSubmitParticipantFeedback(eventId);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const {
+    register,
+    handleSubmit,
+    control,
+    formState: { errors },
+  } = useForm<ParticipantFeedbackFormValues>({
+    resolver: zodResolver(participantFeedbackSchema),
+    defaultValues: { overallRating: 0, comment: "" },
+  });
+
+  const rating = useWatch({ control, name: "overallRating" });
+  const comment = useWatch({ control, name: "comment" }) ?? "";
+
+  const onSubmit = (data: ParticipantFeedbackFormValues) => {
+    setSubmitError(null);
+    submit(
+      {
+        overallRating: data.overallRating,
+        comment: data.comment?.trim() || undefined,
+      },
+      {
+        onError: (err: Error) => setSubmitError(err.message || "Unable to submit feedback."),
+      },
+    );
+  };
+
+  return (
+    <form
+      onSubmit={handleSubmit(onSubmit)}
+      className="space-y-5 border-2 border-navy bg-white p-6 shadow-[3px_3px_0_0_#0c1228]"
+    >
+      <div>
+        <label style={labelStyle}>Overall rating (1–5 stars) *</label>
+        <div className="mt-1 flex flex-wrap items-center gap-3">
+          <Controller
+            name="overallRating"
+            control={control}
+            render={({ field }) => (
+              <StarRating value={field.value} onChange={field.onChange} />
+            )}
+          />
+          {rating >= 1 && (
+            <span className="text-sm font-medium text-seal-text-secondary">
+              {RATING_LABELS[rating]}
+            </span>
+          )}
+        </div>
+        {errors.overallRating && (
+          <p style={errorStyle}>{errors.overallRating.message}</p>
+        )}
+      </div>
+
+      <div>
+        <label style={labelStyle}>Comment (optional)</label>
+        <textarea
+          {...register("comment")}
+          placeholder={`Share your experience about ${eventName}...`}
+          rows={5}
+          maxLength={2000}
+          style={{ ...inputStyle, resize: "vertical" }}
+        />
+        <div className="mt-1 flex items-center justify-between">
+          {errors.comment ? (
+            <p style={errorStyle}>{errors.comment.message}</p>
+          ) : (
+            <span />
+          )}
+          <span className="text-xs text-seal-text-muted">{comment.length}/2000</span>
+        </div>
+      </div>
+
+      {submitError && <p className="text-sm text-red-600">{submitError}</p>}
+
+      <button
+        type="submit"
+        disabled={isPending}
+        className="flex w-full items-center justify-center gap-2 border-2 border-navy bg-royal px-4 py-3 text-sm font-semibold text-white shadow-[3px_3px_0_0_#0c1228] transition hover:translate-x-px hover:translate-y-px hover:shadow-[2px_2px_0_0_#0c1228] disabled:opacity-60"
+      >
+        {isPending && <LoadingSpinner />}
+        {isPending ? "Submitting..." : "Submit feedback"}
+      </button>
+    </form>
   );
 }
 
@@ -69,38 +239,38 @@ export function ParticipantFeedbackPage() {
   const sealEvent = activeMembership?.event ?? null;
   const team = activeMembership?.team ?? null;
   const eventId = sealEvent?.id ?? "";
-  const teamLoading = membershipsLoading;
 
   const { data: existing, isLoading: feedbackLoading } = useMyParticipantFeedback(eventId);
-  const { mutate: submit, isPending } = useSubmitParticipantFeedback(eventId);
 
-  const [rating, setRating] = useState(0);
-  const [comment, setComment] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const loading = membershipsLoading || (!!eventId && feedbackLoading);
 
-  const canSubmit = useMemo(() => {
-    if (!sealEvent) return false;
-    if (sealEvent.status !== "COMPLETED") return false;
-    if (!team || team.status !== "CONFIRMED") return false;
-    return true;
-  }, [sealEvent, team]);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    if (rating < 1) {
-      setError("Please select a rating from 1 to 5 stars.");
-      return;
+  const renderContent = () => {
+    if (loading) {
+      return (
+        <div className="flex justify-center py-12">
+          <LoadingSpinner />
+        </div>
+      );
     }
-    submit(
-      { overallRating: rating, comment: comment.trim() || undefined },
-      {
-        onError: (err: Error) => setError(err.message || "Unable to submit feedback."),
-      },
-    );
-  };
 
-  const loading = teamLoading || feedbackLoading;
+    if (!sealEvent) {
+      return <FeedbackInfoCard message="No event found" />;
+    }
+
+    if (sealEvent.status !== "COMPLETED") {
+      return <FeedbackInfoCard message="Feedback opens when the event ends" />;
+    }
+
+    if (!team || team.status !== "CONFIRMED") {
+      return <FeedbackInfoCard message="You must be on a confirmed team" />;
+    }
+
+    if (existing) {
+      return <ReadOnlyFeedbackView feedback={existing} />;
+    }
+
+    return <FeedbackSubmissionForm eventId={eventId} eventName={sealEvent.name} />;
+  };
 
   return (
     <div className="mx-auto max-w-2xl space-y-6 p-6">
@@ -108,85 +278,7 @@ export function ParticipantFeedbackPage() {
         <h1 className="text-2xl font-bold text-navy">Post-Event Feedback</h1>
         {sealEvent && <p className="text-sm text-seal-text-secondary">{sealEvent.name}</p>}
       </div>
-
-      {loading && <p className="text-sm text-seal-text-muted">Loading...</p>}
-
-      {!loading && !sealEvent && (
-        <p className="rounded-lg border border-navy/20 bg-white p-6 text-sm text-seal-text-secondary">
-          No events available.
-        </p>
-      )}
-
-      {!loading && sealEvent && sealEvent.status !== "COMPLETED" && (
-        <p className="rounded-lg border border-navy/20 bg-white p-6 text-sm text-seal-text-secondary">
-          Feedback opens only after the event ends (COMPLETED status).
-        </p>
-      )}
-
-      {!loading && sealEvent && sealEvent.status === "COMPLETED" && !team && (
-        <p className="rounded-lg border border-navy/20 bg-white p-6 text-sm text-seal-text-secondary">
-          You must belong to a CONFIRMED team to submit feedback.
-        </p>
-      )}
-
-      {!loading && sealEvent && sealEvent.status === "COMPLETED" && team && team.status !== "CONFIRMED" && (
-        <p className="rounded-lg border border-navy/20 bg-white p-6 text-sm text-seal-text-secondary">
-          Your team is not CONFIRMED yet. Only confirmed team members can submit feedback.
-        </p>
-      )}
-
-      {!loading && existing && (
-        <div className="space-y-4 border-2 border-royal bg-white p-6 shadow-[3px_3px_0_0_#0c1228]">
-          <p className="font-mono text-xs font-bold uppercase text-royal">Feedback submitted</p>
-          <div>
-            <p className="text-sm text-seal-text-muted">Rating</p>
-            <StarRating value={existing.overallRating} onChange={() => {}} disabled />
-          </div>
-          {existing.comment && (
-            <div>
-              <p className="text-sm text-seal-text-muted">Comment</p>
-              <p className="text-sm text-navy">{existing.comment}</p>
-            </div>
-          )}
-          <p className="text-xs text-seal-text-muted">
-            Submitted at {new Date(existing.submittedAt).toLocaleString("en-US")}
-          </p>
-        </div>
-      )}
-
-      {!loading && canSubmit && !existing && (
-        <form
-          onSubmit={handleSubmit}
-          className="space-y-5 border-2 border-navy bg-white p-6 shadow-[3px_3px_0_0_#0c1228]"
-        >
-          <div>
-            <label style={labelStyle}>Overall rating (1–5 stars) *</label>
-            <StarRating value={rating} onChange={setRating} />
-          </div>
-
-          <div>
-            <label style={labelStyle}>Comment (optional)</label>
-            <textarea
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-              placeholder="Share your experience about the event..."
-              rows={5}
-              maxLength={2000}
-              style={{ ...inputStyle, resize: "vertical" }}
-            />
-          </div>
-
-          {error && <p className="text-sm text-red-600">{error}</p>}
-
-          <button
-            type="submit"
-            disabled={isPending}
-            className="w-full border-2 border-navy bg-royal px-4 py-3 text-sm font-semibold text-white shadow-[3px_3px_0_0_#0c1228] transition hover:translate-x-px hover:translate-y-px hover:shadow-[2px_2px_0_0_#0c1228] disabled:opacity-60"
-          >
-            {isPending ? "Submitting..." : "Submit feedback"}
-          </button>
-        </form>
-      )}
+      {renderContent()}
     </div>
   );
 }

@@ -3,7 +3,9 @@ import type { NextRequest } from "next/server";
 
 const PUBLIC_PATHS = [
   "/login",
+  "/magic-login",
   "/register",
+  "/verify-otp",
   "/forgot-password",
   "/reset-password",
   "/privacy",

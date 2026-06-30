@@ -230,6 +230,7 @@ Seed khi tạo event `competitionFormat = SEAL_RAG_2026`:
 | hcmute.edu.vn | ĐH Sư phạm Kỹ thuật TP.HCM |
 | ueh.edu.vn | ĐH Kinh tế TP.HCM |
 | student.ueh.edu.vn | ĐH Kinh tế TP.HCM |
+| student.iuh.edu.vn | ĐH Công nghiệp TP.HCM |
 
 ---
 
