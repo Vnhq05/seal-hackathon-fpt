@@ -45,8 +45,8 @@ public class Prize extends BaseEntity {
     private PrizeRank rank;
 
     @NotBlank
-    @Size(max = 500)
-    @Column(name = "value", nullable = false)
+    @Size(max = 2000)
+    @Column(name = "value", nullable = false, length = 2000)
     private String value;
 
     @NotNull

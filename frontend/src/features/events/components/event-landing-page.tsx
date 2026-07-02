@@ -448,6 +448,30 @@ function DeadlineRow({ label, value, highlight }: { label: string; value: string
 function PrizesSection({ event }: { event: EventResponse }) {
   if (event.prizes.length === 0) return null;
 
+  const freeTextPrize = event.prizes.find(
+    (p) =>
+      p.rank === "CONSOLATION" &&
+      !p.trackId &&
+      (!p.label || p.label === "Prizes"),
+  );
+
+  if (event.prizes.length === 1 && freeTextPrize) {
+    return (
+      <section id="prizes" className="scroll-mt-32 bg-seal-dark py-20">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <SectionHeader
+            dark
+            title="Prizes & Rewards"
+            subtitle="Outstanding teams deserve outstanding recognition."
+          />
+          <div className="mx-auto max-w-3xl whitespace-pre-wrap border border-white/10 bg-white/5 p-6 text-base leading-relaxed text-slate-200">
+            {freeTextPrize.value}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   const podiumRanks: PrizeRank[] = ["SECOND", "FIRST", "THIRD"];
   const podium = podiumRanks
     .map((rank) => event.prizes.find((p) => p.rank === rank && p.trackId == null))

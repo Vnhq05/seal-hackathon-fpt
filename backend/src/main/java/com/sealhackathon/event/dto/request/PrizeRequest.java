@@ -24,7 +24,7 @@ public class PrizeRequest {
     private PrizeRank rank;
 
     @NotBlank(message = "Prize value is required")
-    @Size(max = 500)
+    @Size(max = 2000)
     private String value;
 
     @NotNull(message = "Quantity is required")
