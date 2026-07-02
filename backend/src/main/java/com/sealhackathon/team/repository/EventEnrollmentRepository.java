@@ -31,6 +31,13 @@ public interface EventEnrollmentRepository extends JpaRepository<EventEnrollment
             "AND e.userId NOT IN (SELECT tm.userId FROM TeamMember tm JOIN tm.team t WHERE t.eventId = :eventId)")
     List<EventEnrollment> findWaitingList(@Param("eventId") UUID eventId);
 
+    @Query("SELECT e FROM EventEnrollment e WHERE e.eventId = :eventId AND e.status = 'APPROVED' " +
+            "AND e.isLookingForTeam = true AND e.userId <> :excludeUserId " +
+            "AND e.userId NOT IN (SELECT tm.userId FROM TeamMember tm JOIN tm.team t WHERE t.eventId = :eventId)")
+    List<EventEnrollment> findFindingMembersCandidates(
+            @Param("eventId") UUID eventId,
+            @Param("excludeUserId") UUID excludeUserId);
+
     @Query("SELECT e FROM EventEnrollment e WHERE e.userId = :userId AND e.status IN :statuses")
     Optional<EventEnrollment> findByUserIdAndStatusIn(@Param("userId") UUID userId, @Param("statuses") List<EnrollmentStatus> statuses);
 

@@ -1,5 +1,5 @@
 import { api } from "./api-client";
-import type { HackathonSkillRole, StudentStanding } from "./types";
+import type { StudentStanding } from "./types";
 
 // ═══ Types ═══
 
@@ -16,12 +16,15 @@ export interface EnrollmentResponse {
   userStudentId?: string | null;
   userUniversityName?: string | null;
   isLookingForTeam: boolean;
-  preferredRole: HackathonSkillRole | null;
+  isProfilePublic: boolean;
+  preferredRole: string | null;
+  semester?: number | null;
 }
 
 export interface UpdateMatchingProfileRequest {
   isLookingForTeam: boolean;
-  preferredRole?: HackathonSkillRole | null;
+  isProfilePublic?: boolean;
+  preferredRole?: string | null;
 }
 
 export interface ExternalEnrollmentRequest {

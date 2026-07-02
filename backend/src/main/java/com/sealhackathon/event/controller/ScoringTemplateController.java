@@ -27,14 +27,14 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/admin/scoring-templates")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('SYSTEM_ADMIN')")
-@Tag(name = "Scoring Templates", description = "Manage scoring criteria templates (Admin only)")
+@Tag(name = "Scoring Templates", description = "Manage scoring criteria templates")
 @SecurityRequirement(name = "bearerAuth")
 public class ScoringTemplateController {
 
     private final ScoringTemplateService templateService;
 
     @PostMapping
+    @PreAuthorize("hasRole('SYSTEM_ADMIN')")
     @Operation(summary = "Create a scoring template (weights must sum to 100%)")
     public ResponseEntity<ApiResponse<ScoringTemplateResponse>> createTemplate(
             @Valid @RequestBody CreateScoringTemplateRequest request) {
@@ -44,6 +44,7 @@ public class ScoringTemplateController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('SYSTEM_ADMIN', 'EVENT_COORDINATOR')")
     @Operation(summary = "List all scoring templates")
     public ResponseEntity<ApiResponse<List<ScoringTemplateResponse>>> listTemplates() {
         List<ScoringTemplateResponse> templates = templateService.listTemplates();
@@ -51,6 +52,7 @@ public class ScoringTemplateController {
     }
 
     @GetMapping("/{templateId}")
+    @PreAuthorize("hasAnyRole('SYSTEM_ADMIN', 'EVENT_COORDINATOR')")
     @Operation(summary = "Get a scoring template by ID")
     public ResponseEntity<ApiResponse<ScoringTemplateResponse>> getTemplate(
             @PathVariable UUID templateId) {
@@ -59,6 +61,7 @@ public class ScoringTemplateController {
     }
 
     @PutMapping("/{templateId}")
+    @PreAuthorize("hasRole('SYSTEM_ADMIN')")
     @Operation(summary = "Update a scoring template (weights must sum to 100%)")
     public ResponseEntity<ApiResponse<ScoringTemplateResponse>> updateTemplate(
             @PathVariable UUID templateId,
@@ -68,6 +71,7 @@ public class ScoringTemplateController {
     }
 
     @DeleteMapping("/{templateId}")
+    @PreAuthorize("hasRole('SYSTEM_ADMIN')")
     @Operation(summary = "Delete a scoring template (fails if in use by an event)")
     public ResponseEntity<ApiResponse<Void>> deleteTemplate(@PathVariable UUID templateId) {
         templateService.deleteTemplate(templateId);
@@ -75,6 +79,7 @@ public class ScoringTemplateController {
     }
 
     @DeleteMapping("/{templateId}/criteria/{criterionId}")
+    @PreAuthorize("hasRole('SYSTEM_ADMIN')")
     @Operation(summary = "Delete a criterion from a template (remaining weights must sum to 100%)")
     public ResponseEntity<ApiResponse<ScoringTemplateResponse>> deleteCriterion(
             @PathVariable UUID templateId,

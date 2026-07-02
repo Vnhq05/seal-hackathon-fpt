@@ -41,5 +41,14 @@ IF NOT EXISTS (
     WHERE object_id = OBJECT_ID(N'event_enrollments') AND name = N'preferred_role'
 )
 BEGIN
-    ALTER TABLE event_enrollments ADD preferred_role NVARCHAR(30) NULL;
+    ALTER TABLE event_enrollments ADD preferred_role NVARCHAR(100) NULL;
+END;
+
+IF NOT EXISTS (
+    SELECT 1 FROM sys.columns
+    WHERE object_id = OBJECT_ID(N'event_enrollments') AND name = N'is_profile_public'
+)
+BEGIN
+    ALTER TABLE event_enrollments ADD is_profile_public BIT NOT NULL
+        CONSTRAINT DF_event_enrollments_is_profile_public DEFAULT 0;
 END;

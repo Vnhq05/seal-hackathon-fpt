@@ -2,6 +2,7 @@ package com.sealhackathon.user.service;
 
 import com.sealhackathon.auth.service.AuthPublicService;
 import com.sealhackathon.common.enums.AccountStatus;
+import com.sealhackathon.common.util.UniversityUtils;
 import com.sealhackathon.common.enums.UserType;
 import com.sealhackathon.common.exception.BusinessException;
 import com.sealhackathon.common.exception.DuplicateResourceException;
@@ -333,7 +334,8 @@ public class UserService {
                 .fullName(user.getFullName())
                 .phone(user.getPhone())
                 .studentId(user.getStudentId())
-                .universityName(user.getUniversityName())
+                .universityName(UniversityUtils.resolveUniversityName(
+                        user.getUserType(), user.getUniversityName()))
                 .userType(user.getUserType())
                 .status(user.getStatus())
                 .studentStanding(user.getStudentStanding())
@@ -349,7 +351,8 @@ public class UserService {
                 .email(user.getEmail())
                 .fullName(user.getFullName())
                 .studentId(user.getStudentId())
-                .universityName(user.getUniversityName())
+                .universityName(UniversityUtils.resolveUniversityName(
+                        user.getUserType(), user.getUniversityName()))
                 .userType(user.getUserType())
                 .status(user.getStatus())
                 .createdAt(user.getCreatedAt())

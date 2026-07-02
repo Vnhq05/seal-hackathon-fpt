@@ -7,19 +7,32 @@ import com.sealhackathon.common.enums.UserType;
 import com.sealhackathon.common.exception.BusinessException;
 import com.sealhackathon.common.exception.DuplicateResourceException;
 import com.sealhackathon.common.exception.ResourceNotFoundException;
+import com.sealhackathon.common.service.SystemConfigService;
+import com.sealhackathon.common.util.UniversityUtils;
 import com.sealhackathon.event.dto.snapshot.EventSnapshot;
 import com.sealhackathon.event.service.AllowedEmailDomainService;
 import com.sealhackathon.event.service.EventPublicService;
+import com.sealhackathon.event.service.FormatRuleEngine;
+import com.sealhackathon.ranking.dto.FinalRankResult;
+import com.sealhackathon.ranking.service.RankingService;
 import com.sealhackathon.team.domain.EventEnrollment;
+import com.sealhackathon.team.domain.Invitation;
+import com.sealhackathon.team.domain.Team;
 import com.sealhackathon.team.domain.TeamMember;
 import com.sealhackathon.team.domain.enums.EnrollmentStatus;
+import com.sealhackathon.team.domain.enums.InvitationStatus;
 import com.sealhackathon.team.dto.request.EnrollRequest;
 import com.sealhackathon.team.dto.request.UpdateMatchingProfileRequest;
 import com.sealhackathon.infrastructure.mail.MailSendException;
+import com.sealhackathon.team.dto.response.CompetitionHistoryItem;
 import com.sealhackathon.team.dto.response.EnrollmentActionResult;
 import com.sealhackathon.team.dto.response.EnrollmentResponse;
+import com.sealhackathon.team.dto.response.MatchingCandidateResponse;
+import com.sealhackathon.team.dto.response.PublicMatchingProfileResponse;
 import com.sealhackathon.team.repository.EventEnrollmentRepository;
+import com.sealhackathon.team.repository.InvitationRepository;
 import com.sealhackathon.team.repository.TeamMemberRepository;
+import com.sealhackathon.team.repository.TeamRepository;
 import com.sealhackathon.user.dto.snapshot.UserSnapshot;
 import com.sealhackathon.user.service.UserPublicService;
 import lombok.RequiredArgsConstructor;
@@ -30,9 +43,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -42,10 +59,15 @@ public class EventEnrollmentService {
     private final EventPublicService eventPublicService;
     private final UserPublicService userPublicService;
     private final TeamMemberRepository teamMemberRepository;
+    private final TeamRepository teamRepository;
+    private final InvitationRepository invitationRepository;
+    private final RankingService rankingService;
+    private final FormatRuleEngine formatRuleEngine;
     private final PasswordEncoder passwordEncoder;
     private final AuthEmailService authEmailService;
     private final AllowedEmailDomainService allowedEmailDomainService;
     private final MagicLinkTokenService magicLinkTokenService;
+    private final SystemConfigService systemConfigService;
 
     @Value("${app.frontend.url}")
     private String frontendUrl;
@@ -118,9 +140,7 @@ public class EventEnrollmentService {
         allowedEmailDomainService.validateExternalStudentForEvent(
                 eventId, email, request.getUniversityName().trim());
 
-        if (event.getSemesterMin() != null && event.getSemesterMax() != null) {
-            assertSemesterEligible(request.getSemester(), event);
-        }
+        assertSemesterEligible(request.getSemester());
 
         UUID userId;
         String tempPassword = null;
@@ -354,15 +374,149 @@ public class EventEnrollmentService {
             enrollment.setLookingForTeam(false);
         } else {
             enrollment.setLookingForTeam(request.isLookingForTeam());
+            if (request.isLookingForTeam()) {
+                enrollment.setProfilePublic(request.isProfilePublic());
+            }
         }
-        enrollment.setPreferredRole(request.getPreferredRole());
+        enrollment.setPreferredRole(normalizePreferredRole(request.getPreferredRole()));
 
         return toResponse(enrollmentRepository.save(enrollment), null);
+    }
+
+    public void requireCanManageFindingMembers(UUID leaderId, UUID eventId, UUID teamId) {
+        Team team = teamRepository.findById(teamId)
+                .orElseThrow(() -> new ResourceNotFoundException("Team", "id", teamId));
+
+        if (!team.getEventId().equals(eventId)) {
+            throw new BusinessException("Team does not belong to this event", HttpStatus.BAD_REQUEST) {};
+        }
+        if (!team.getLeaderId().equals(leaderId)) {
+            throw new BusinessException("Only the team leader can manage finding members",
+                    HttpStatus.FORBIDDEN) {};
+        }
+
+        formatRuleEngine.assertCanModifyTeamMembers(eventId);
+        LocalDateTime deadline = eventPublicService.getRegistrationDeadline(eventId);
+        if (deadline != null && LocalDateTime.now().isAfter(deadline)) {
+            throw new BusinessException("Registration deadline has passed", HttpStatus.BAD_REQUEST) {};
+        }
+
+        int currentSize = teamMemberRepository.countByTeamId(teamId);
+        int maxTeamSize = systemConfigService.getConfig().getMaxTeamMembers();
+        if (currentSize >= maxTeamSize) {
+            throw new BusinessException("Team is already full", HttpStatus.BAD_REQUEST) {};
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public List<MatchingCandidateResponse> getFindingMembersCandidates(
+            UUID leaderId, UUID eventId, UUID teamId) {
+        requireCanManageFindingMembers(leaderId, eventId, teamId);
+
+        List<EventEnrollment> enrollments =
+                enrollmentRepository.findFindingMembersCandidates(eventId, leaderId);
+
+        Set<String> pendingInviteeEmails = invitationRepository
+                .findByTeamIdAndStatus(teamId, InvitationStatus.PENDING).stream()
+                .map(Invitation::getInviteeEmail)
+                .map(String::toLowerCase)
+                .collect(Collectors.toCollection(HashSet::new));
+
+        return enrollments.stream()
+                .map(enrollment -> {
+                    UserSnapshot user = userPublicService.findById(enrollment.getUserId())
+                            .orElse(null);
+                    String email = user != null ? user.getEmail().toLowerCase() : "";
+                    boolean hasPendingInvitation = user != null && pendingInviteeEmails.contains(email);
+                    return MatchingCandidateResponse.builder()
+                            .userId(enrollment.getUserId())
+                            .fullName(user != null ? user.getFullName() : null)
+                            .userType(user != null ? user.getUserType() : null)
+                            .universityName(user != null
+                                    ? UniversityUtils.resolveUniversityName(
+                                            user.getUserType(), user.getUniversityName())
+                                    : null)
+                            .semester(user != null ? user.getSemester() : null)
+                            .preferredRole(enrollment.getPreferredRole())
+                            .isProfilePublic(enrollment.isProfilePublic())
+                            .hasPendingInvitation(hasPendingInvitation)
+                            .build();
+                })
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public PublicMatchingProfileResponse getPublicMatchingProfile(
+            UUID targetUserId, UUID leaderId, UUID eventId, UUID teamId) {
+        requireCanManageFindingMembers(leaderId, eventId, teamId);
+
+        EventEnrollment enrollment = enrollmentRepository.findByUserIdAndEventId(targetUserId, eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Enrollment", "userId+eventId",
+                        targetUserId + "+" + eventId));
+
+        if (enrollment.getStatus() != EnrollmentStatus.APPROVED) {
+            throw new BusinessException("Candidate enrollment is not approved", HttpStatus.BAD_REQUEST) {};
+        }
+        if (!enrollment.isLookingForTeam()) {
+            throw new BusinessException("Candidate is not looking for a team", HttpStatus.BAD_REQUEST) {};
+        }
+        if (teamMemberRepository.existsByUserIdAndEventId(targetUserId, eventId)) {
+            throw new BusinessException("Candidate is already on a team", HttpStatus.CONFLICT) {};
+        }
+        if (!enrollment.isProfilePublic()) {
+            throw new BusinessException("This profile is not public", HttpStatus.FORBIDDEN) {};
+        }
+
+        UserSnapshot user = userPublicService.findById(targetUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", targetUserId));
+
+        List<CompetitionHistoryItem> competitions = teamMemberRepository.findByUserId(targetUserId).stream()
+                .map(TeamMember::getTeam)
+                .filter(team -> team != null)
+                .map(team -> {
+                    EventSnapshot event = eventPublicService.getEvent(team.getEventId()).orElse(null);
+                    if (event == null) {
+                        return null;
+                    }
+                    FinalRankResult rankResult = rankingService.getFinalRankForTeam(team.getId(), team.getEventId());
+                    return CompetitionHistoryItem.builder()
+                            .eventId(event.getId())
+                            .eventName(event.getName())
+                            .season(event.getSeason())
+                            .year(event.getYear())
+                            .teamName(team.getName())
+                            .finalRank(rankResult.finalRank())
+                            .outcome(rankResult.outcome())
+                            .build();
+                })
+                .filter(item -> item != null)
+                .sorted(Comparator
+                        .comparing(CompetitionHistoryItem::getYear, Comparator.nullsLast(Comparator.reverseOrder()))
+                        .thenComparing(CompetitionHistoryItem::getSeason, Comparator.nullsLast(Comparator.reverseOrder())))
+                .toList();
+
+        return PublicMatchingProfileResponse.builder()
+                .userId(targetUserId)
+                .fullName(user.getFullName())
+                .userType(user.getUserType())
+                .universityName(UniversityUtils.resolveUniversityName(
+                        user.getUserType(), user.getUniversityName()))
+                .semester(user.getSemester())
+                .competitions(competitions)
+                .build();
     }
 
     private EventEnrollment getEnrollmentEntity(UUID enrollmentId) {
         return enrollmentRepository.findById(enrollmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Enrollment", "id", enrollmentId));
+    }
+
+    private static String normalizePreferredRole(String preferredRole) {
+        if (preferredRole == null) {
+            return null;
+        }
+        String trimmed = preferredRole.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     private EnrollmentResponse toResponse(EventEnrollment enrollment, UserSnapshot user) {
@@ -373,19 +527,22 @@ public class EventEnrollmentService {
                 .status(enrollment.getStatus())
                 .enrolledAt(enrollment.getEnrolledAt())
                 .isLookingForTeam(enrollment.isLookingForTeam())
+                .isProfilePublic(enrollment.isProfilePublic())
                 .preferredRole(enrollment.getPreferredRole());
 
         if (user != null) {
             builder.userFullName(user.getFullName())
                     .userEmail(user.getEmail())
                     .userStudentId(user.getStudentId())
-                    .userUniversityName(user.getUniversityName());
+                    .userUniversityName(user.getUniversityName())
+                    .semester(user.getSemester());
         } else {
             userPublicService.findById(enrollment.getUserId()).ifPresent(u ->
                     builder.userFullName(u.getFullName())
                             .userEmail(u.getEmail())
                             .userStudentId(u.getStudentId())
-                            .userUniversityName(u.getUniversityName()));
+                            .userUniversityName(u.getUniversityName())
+                            .semester(u.getSemester()));
         }
 
         return builder.build();
@@ -397,28 +554,30 @@ public class EventEnrollmentService {
                     "Graduated students are not eligible to participate",
                     HttpStatus.BAD_REQUEST) {};
         }
-        assertSemesterEligible(user, event);
+        assertSemesterEligible(user);
     }
 
-    private void assertSemesterEligible(Integer semester, EventSnapshot event) {
-        if (event.getSemesterMin() == null || event.getSemesterMax() == null) {
+    private void assertSemesterEligible(Integer semester) {
+        Integer semesterMin = systemConfigService.getConfig().getSemesterMin();
+        Integer semesterMax = systemConfigService.getConfig().getSemesterMax();
+        if (semesterMin == null || semesterMax == null) {
             return;
         }
         if (semester == null) {
             throw new BusinessException(
                     "Semester information is required for this event (semester "
-                            + event.getSemesterMin() + "-" + event.getSemesterMax() + ")",
+                            + semesterMin + "-" + semesterMax + ")",
                     HttpStatus.BAD_REQUEST) {};
         }
-        if (semester < event.getSemesterMin() || semester > event.getSemesterMax()) {
+        if (semester < semesterMin || semester > semesterMax) {
             throw new BusinessException(
                     "Your semester (" + semester + ") does not meet the requirement (semester "
-                            + event.getSemesterMin() + "-" + event.getSemesterMax() + ")",
+                            + semesterMin + "-" + semesterMax + ")",
                     HttpStatus.BAD_REQUEST) {};
         }
     }
 
-    private void assertSemesterEligible(UserSnapshot user, EventSnapshot event) {
-        assertSemesterEligible(user.getSemester(), event);
+    private void assertSemesterEligible(UserSnapshot user) {
+        assertSemesterEligible(user.getSemester());
     }
 }

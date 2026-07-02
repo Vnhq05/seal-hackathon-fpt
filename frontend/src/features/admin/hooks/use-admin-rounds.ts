@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { roundApi, type CreateRoundRequest } from "@/lib/api";
+import { ADMIN_EVENT_KEY } from "@/features/admin/hooks/use-admin-hackathons";
 
 export const ADMIN_ROUNDS_KEY = "admin-rounds" as const;
 export const ADMIN_ROUND_KEY = "admin-round" as const;
@@ -30,7 +31,10 @@ export function useCreateRound(eventId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (payload: CreateRoundRequest) => roundApi.create(eventId, payload),
-    onSuccess: () => qc.invalidateQueries({ queryKey: [ADMIN_ROUNDS_KEY, eventId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [ADMIN_ROUNDS_KEY, eventId] });
+      qc.invalidateQueries({ queryKey: [ADMIN_EVENT_KEY, eventId] });
+    },
   });
 }
 
@@ -40,7 +44,10 @@ export function useUpdateRound(eventId: string) {
   return useMutation({
     mutationFn: ({ roundId, ...body }: CreateRoundRequest & { roundId: string }) =>
       roundApi.update(eventId, roundId, body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: [ADMIN_ROUNDS_KEY, eventId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [ADMIN_ROUNDS_KEY, eventId] });
+      qc.invalidateQueries({ queryKey: [ADMIN_EVENT_KEY, eventId] });
+    },
   });
 }
 
@@ -49,6 +56,9 @@ export function useDeleteRound(eventId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (roundId: string) => roundApi.delete(eventId, roundId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: [ADMIN_ROUNDS_KEY, eventId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [ADMIN_ROUNDS_KEY, eventId] });
+      qc.invalidateQueries({ queryKey: [ADMIN_EVENT_KEY, eventId] });
+    },
   });
 }

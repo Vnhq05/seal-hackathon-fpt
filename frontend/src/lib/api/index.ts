@@ -65,6 +65,8 @@ export type {
   MentorAssignmentResponse,
   AssignJudgeRequest,
   AssignMentorRequest,
+  AssignEventStaffRequest,
+  EventStaffResponse,
   EventAssignmentsOverviewResponse,
   TeamAssignmentOverview,
   EventJudgeOption,
@@ -90,7 +92,14 @@ export { notificationApi } from "./notification.api";
 export type { NotificationResponse, NotificationType } from "./notification.api";
 
 export { auditApi } from "./audit.api";
-export type { AuditLogResponse, AuditListParams, AuditRangeParams, AuditExportRequest } from "./audit.api";
+export type {
+  AuditLogResponse,
+  AuditListParams,
+  AuditRangeParams,
+  AuditTargetListParams,
+  AuditExportRequest,
+} from "./audit.api";
+export { toAuditRangeStart, toAuditRangeEnd } from "./audit.api";
 
 export { publicApi } from "./public.api";
 export type { PlatformStats } from "./public.api";
@@ -103,6 +112,14 @@ export type { SystemConfigResponse, SystemConfigRequest } from "./system-config.
 
 export { enrollmentApi } from "./enrollment.api";
 export type { EnrollmentResponse, EnrollmentStatus, ExternalEnrollmentRequest, UpdateMatchingProfileRequest } from "./enrollment.api";
+
+export { matchingApi } from "./matching.api";
+export type {
+  MatchingCandidateResponse,
+  PublicMatchingProfileResponse,
+  CompetitionHistoryItem,
+  CompetitionOutcome,
+} from "./matching.api";
 
 export { mentorChatApi } from "./mentor-chat.api";
 export type { ChatMessageResponse, ChatMessageRequest } from "./mentor-chat.api";

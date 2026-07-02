@@ -22,10 +22,13 @@ Canonical keys trong request/response:
 |---|---|
 | Team recruiting flag | `isRecruiting` |
 | Participant looking-for-team flag | `isLookingForTeam` |
+| Participant profile visibility | `isProfilePublic` |
 
-Request bodies cũng chấp nhận alias ngắn (backward-compat): `recruiting`, `lookingForTeam`.
+Request bodies cũng chấp nhận alias ngắn (backward-compat): `recruiting`, `lookingForTeam`, `profilePublic`.
 
-Response **chỉ** trả canonical keys (`isRecruiting`, `isLookingForTeam`) — không dùng `recruiting` / `lookingForTeam`.
+Response **chỉ** trả canonical keys (`isRecruiting`, `isLookingForTeam`, `isProfilePublic`) — không dùng alias.
+
+> **Finding members (leader browse + public profile):** xem [SEAL-Spring-2026-Finding-Members-API.md](./SEAL-Spring-2026-Finding-Members-API.md)
 
 ---
 

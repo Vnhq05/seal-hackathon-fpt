@@ -23,7 +23,7 @@ const statusColors: Record<string, { bg: string; text: string }> = {
   WITHDRAWN: { bg: "#f3f4f6", text: "#6b7280" },
 };
 
-export function EnrollmentManagementPage({ eventId }: { eventId: string }) {
+export function EnrollmentManagementPage({ eventId, embedded }: { eventId: string; embedded?: boolean }) {
   const [filter, setFilter] = useState<EnrollmentStatus | undefined>(undefined);
   const [feedback, setFeedback] = useState<{ type: "success" | "warning" | "error"; text: string } | null>(null);
   const { data: enrollments = [], isLoading } = useEnrollmentList(eventId, filter);
@@ -36,12 +36,14 @@ export function EnrollmentManagementPage({ eventId }: { eventId: string }) {
   };
 
   return (
-    <div style={{ padding: 24 }}>
-      <div className="flex items-center justify-between" style={{ marginBottom: 24 }}>
-        <div>
-          <h1 style={{ fontSize: 32, fontWeight: 700, color: "#0e1528" }}>Event Enrollments</h1>
-          <p style={{ fontSize: 14, color: "#8891a5", marginTop: 4 }}>Manage student enrollments for this event.</p>
-        </div>
+    <div style={embedded ? undefined : { padding: 24 }}>
+      <div className="flex items-center justify-between" style={{ marginBottom: embedded ? 16 : 24 }}>
+        {!embedded && (
+          <div>
+            <h1 style={{ fontSize: 32, fontWeight: 700, color: "#0e1528" }}>Event Enrollments</h1>
+            <p style={{ fontSize: 14, color: "#8891a5", marginTop: 4 }}>Manage student enrollments for this event.</p>
+          </div>
+        )}
         <div className="flex gap-2">
           {(["ALL", "PENDING", "APPROVED", "REJECTED"] as const).map((s) => (
             <button

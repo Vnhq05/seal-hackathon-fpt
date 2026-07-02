@@ -7,12 +7,19 @@ import type { RoundType } from "@/lib/api/types";
 import { useStompWebSocket } from "./use-websocket";
 import { useEffect, useState, useCallback } from "react";
 
-export function useLiveScoreBoard(eventId: string, trackId?: string, roundId?: string, roundType?: RoundType) {
+export function useLiveScoreBoard(
+  eventId: string,
+  trackId?: string,
+  roundId?: string,
+  roundType?: RoundType,
+  options?: { wsConnected?: boolean },
+) {
+  const wsConnected = options?.wsConnected ?? false;
   return useQuery<LiveScoreBoard>({
     queryKey: ["livescore", eventId, trackId, roundId, roundType],
     queryFn: () => livescoreApi.getLeaderboard(eventId, { trackId, roundId, roundType }),
     enabled: !!eventId,
-    refetchInterval: 15000,
+    refetchInterval: wsConnected ? false : 15_000,
   });
 }
 

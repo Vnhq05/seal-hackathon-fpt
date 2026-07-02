@@ -2,7 +2,7 @@ package com.sealhackathon.team.dto.request;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.sealhackathon.team.domain.enums.HackathonSkillRole;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -21,5 +21,11 @@ public class UpdateMatchingProfileRequest {
     @Setter(onMethod_ = {@JsonProperty("isLookingForTeam")})
     private boolean isLookingForTeam;
 
-    private HackathonSkillRole preferredRole;
+    @JsonAlias("profilePublic")
+    @Getter(onMethod_ = {@JsonProperty("isProfilePublic")})
+    @Setter(onMethod_ = {@JsonProperty("isProfilePublic")})
+    private boolean isProfilePublic;
+
+    @Size(max = 100)
+    private String preferredRole;
 }

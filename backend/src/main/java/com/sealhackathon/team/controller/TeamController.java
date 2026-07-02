@@ -125,7 +125,7 @@ public class TeamController {
     }
 
     @PostMapping("/{teamId}/leave")
-    @Operation(summary = "Deprecated — use leave-request flow instead")
+    @Operation(summary = "Leave team (non-leader member)")
     public ResponseEntity<ApiResponse<Void>> leaveTeam(
             @PathVariable UUID eventId, @PathVariable UUID teamId) {
         UUID userId = authPublicService.getCurrentUserId();

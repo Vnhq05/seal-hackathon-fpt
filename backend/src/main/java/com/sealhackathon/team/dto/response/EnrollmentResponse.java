@@ -2,7 +2,6 @@ package com.sealhackathon.team.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.sealhackathon.team.domain.enums.EnrollmentStatus;
-import com.sealhackathon.team.domain.enums.HackathonSkillRole;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -28,5 +27,8 @@ public class EnrollmentResponse {
     private String userUniversityName;
     @Getter(onMethod_ = {@JsonProperty("isLookingForTeam")})
     private boolean isLookingForTeam;
-    private HackathonSkillRole preferredRole;
+    @Getter(onMethod_ = {@JsonProperty("isProfilePublic")})
+    private boolean isProfilePublic;
+    private String preferredRole;
+    private Integer semester;
 }

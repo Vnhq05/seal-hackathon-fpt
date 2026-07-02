@@ -1,6 +1,7 @@
 import { useQuery, useQueries, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   assignmentApi,
+  type AssignEventStaffRequest,
   type AssignJudgeRequest,
   type AssignMentorRequest,
 } from "@/lib/api";
@@ -8,7 +9,67 @@ import { AVAILABLE_MENTORS_KEY } from "@/features/teams/hooks/use-mentor-invitat
 
 export const JUDGE_ASSIGNMENTS_KEY = "judge-assignments" as const;
 export const MENTOR_ASSIGNMENTS_KEY = "mentor-assignments" as const;
+export const EVENT_STAFF_JUDGES_KEY = "event-staff-judges" as const;
+export const EVENT_STAFF_MENTORS_KEY = "event-staff-mentors" as const;
 export const TEAM_ASSIGNMENTS_OVERVIEW_KEY = "team-assignments-overview" as const;
+
+/* ═══════════════════════════════════════════════
+ *  Event staff (event-level judges & mentors)
+ * ═══════════════════════════════════════════════ */
+
+export function useEventStaffJudges(eventId: string) {
+  return useQuery({
+    queryKey: [EVENT_STAFF_JUDGES_KEY, eventId],
+    queryFn: () => assignmentApi.listEventJudges(eventId),
+    enabled: !!eventId,
+  });
+}
+
+export function useAssignEventJudge(eventId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: AssignEventStaffRequest) => assignmentApi.assignEventJudge(eventId, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [EVENT_STAFF_JUDGES_KEY, eventId] }),
+  });
+}
+
+export function useRemoveEventJudge(eventId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (assignmentId: string) => assignmentApi.removeEventJudge(eventId, assignmentId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [EVENT_STAFF_JUDGES_KEY, eventId] }),
+  });
+}
+
+export function useEventStaffMentors(eventId: string) {
+  return useQuery({
+    queryKey: [EVENT_STAFF_MENTORS_KEY, eventId],
+    queryFn: () => assignmentApi.listEventMentors(eventId),
+    enabled: !!eventId,
+  });
+}
+
+export function useAssignEventMentor(eventId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: AssignEventStaffRequest) => assignmentApi.assignEventMentor(eventId, body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [EVENT_STAFF_MENTORS_KEY, eventId] });
+      qc.invalidateQueries({ queryKey: [AVAILABLE_MENTORS_KEY] });
+    },
+  });
+}
+
+export function useRemoveEventMentor(eventId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (assignmentId: string) => assignmentApi.removeEventMentor(eventId, assignmentId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [EVENT_STAFF_MENTORS_KEY, eventId] });
+      qc.invalidateQueries({ queryKey: [AVAILABLE_MENTORS_KEY] });
+    },
+  });
+}
 
 /* ═══════════════════════════════════════════════
  *  Judge assignments (scoped to event + round + track)

@@ -19,4 +19,8 @@ public class SystemConfigResponse {
     private String defaultRules;
     private Integer minTeams;
     private Integer maxTeams;
+    private Integer semesterMin;
+    private Integer semesterMax;
+    private String currentSeason;
+    private Integer currentYear;
 }

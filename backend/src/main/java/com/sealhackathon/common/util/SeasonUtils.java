@@ -1,5 +1,6 @@
 package com.sealhackathon.common.util;
 
+import java.time.LocalDate;
 import java.util.Locale;
 import java.util.Map;
 
@@ -10,10 +11,24 @@ public final class SeasonUtils {
             "autumn", "Fall",
             "spring", "Spring",
             "summer", "Summer",
-            "fall", "Fall",
-            "winter", "Winter");
+            "fall", "Fall");
 
     private SeasonUtils() {
+    }
+
+    public static String deriveCurrentSeason(LocalDate date) {
+        int month = date.getMonthValue();
+        if (month <= 4) {
+            return "Spring";
+        }
+        if (month <= 8) {
+            return "Summer";
+        }
+        return "Fall";
+    }
+
+    public static int deriveCurrentYear(LocalDate date) {
+        return date.getYear();
     }
 
     public static String normalize(String season) {

@@ -70,6 +70,10 @@ public class RoundService {
                 .build();
 
         round = roundRepository.save(round);
+        if (request.getRoundWeight() == null) {
+            rebalanceRoundWeights(eventId);
+            round = roundRepository.findById(round.getId()).orElse(round);
+        }
         return toResponse(round);
     }
 
@@ -221,13 +225,21 @@ public class RoundService {
             }
             return requestedWeight;
         }
-        long existingCount = roundRepository.findByHackathonEventIdOrderByRoundNumberAsc(eventId).size();
-        if (existingCount == 0) {
-            return 100;
+        return 100;
+    }
+
+    private void rebalanceRoundWeights(UUID eventId) {
+        List<Round> rounds = roundRepository.findByHackathonEventIdOrderByRoundNumberAsc(eventId);
+        int count = rounds.size();
+        if (count == 0) {
+            return;
         }
-        throw new BusinessException(
-                "Round weight is required when the event has multiple rounds",
-                HttpStatus.BAD_REQUEST) {};
+        int base = 100 / count;
+        int remainder = 100 % count;
+        for (int i = 0; i < count; i++) {
+            rounds.get(i).setRoundWeight(base + (i < remainder ? 1 : 0));
+        }
+        roundRepository.saveAll(rounds);
     }
 
     public void validateRoundWeightsForPublish(UUID eventId) {

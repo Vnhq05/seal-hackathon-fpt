@@ -5,6 +5,7 @@ import com.sealhackathon.common.enums.AccountStatus;
 import com.sealhackathon.common.enums.StudentStanding;
 import com.sealhackathon.common.enums.UserType;
 import com.sealhackathon.common.repository.SystemConfigRepository;
+import com.sealhackathon.common.util.UniversityUtils;
 import com.sealhackathon.event.domain.ScoringTemplate;
 import com.sealhackathon.event.domain.ScoringTemplateCriterion;
 import com.sealhackathon.event.domain.HackathonEvent;
@@ -225,6 +226,7 @@ public class DataSeeder implements CommandLineRunner {
             String idNum = email.replaceAll("[^0-9]", "");
             builder.studentId(studentIdPrefix + idNum);
             builder.semester(semester);
+            builder.universityName(UniversityUtils.FPT_UNIVERSITY_NAME);
         }
 
         userRepository.save(builder.build());

@@ -78,8 +78,8 @@ export function AdminActivityFeed() {
       </div>
 
       <div style={{ borderTop: "1px solid rgba(223,226,236,0.8)", marginTop: 16, paddingTop: 12 }}>
-        <Link href="/admin/export" className="text-[13px] font-semibold text-royal">
-          View audit export
+        <Link href="/admin/audit-logs" className="text-[13px] font-semibold text-royal">
+          View all audit logs
         </Link>
       </div>
     </div>

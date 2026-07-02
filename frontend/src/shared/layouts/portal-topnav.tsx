@@ -46,7 +46,7 @@ export function PortalTopNav({
   resolveBreadcrumbs,
 }: PortalTopNavProps) {
   const pathname = usePathname();
-  const { user } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
   const [search, setSearch] = useState("");
 
   const crumbs =

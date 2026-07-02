@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -9,6 +10,7 @@ import {
   useDeleteEvent,
 } from "@/features/admin/hooks/use-admin-hackathons";
 import type { EventResponse, EventStatus } from "@/lib/api";
+import { useStaffPortalBase } from "@/shared/hooks/use-staff-portal-base";
 
 const SEASONS = ["Spring", "Summer", "Fall", "Winter"] as const;
 
@@ -63,11 +65,17 @@ function StatusBadge({ status }: { status: EventStatus }) {
   );
 }
 
+const MENU_MIN_WIDTH = 160;
+
 function ActionMenu({ event, onError }: { event: EventResponse; onError: (msg: string) => void }) {
   const [open, setOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({});
+  const containerRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const portalBase = useStaffPortalBase();
 
   const errorHandler = { onError: (err: Error) => onError(err.message) };
   const { mutate: cancel, isPending: cancelling } = useCancelEvent();
@@ -75,16 +83,47 @@ function ActionMenu({ event, onError }: { event: EventResponse; onError: (msg: s
 
   const busy = cancelling || deleting;
 
+  const updateMenuPosition = () => {
+    const button = buttonRef.current;
+    if (!button) return;
+    const rect = button.getBoundingClientRect();
+    setMenuStyle({
+      position: "fixed",
+      top: rect.bottom + 4,
+      left: Math.max(8, rect.right - MENU_MIN_WIDTH),
+      zIndex: 9999,
+      minWidth: MENU_MIN_WIDTH,
+      backgroundColor: "#ffffff",
+      border: "1px solid rgba(198,198,205,0.5)",
+      borderRadius: 8,
+      padding: 4,
+      boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
+    });
+  };
+
   useEffect(() => {
+    if (!open) return;
+    updateMenuPosition();
+    const onReposition = () => updateMenuPosition();
+    window.addEventListener("scroll", onReposition, true);
+    window.addEventListener("resize", onReposition);
+    return () => {
+      window.removeEventListener("scroll", onReposition, true);
+      window.removeEventListener("resize", onReposition);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-        setConfirmDelete(false);
-      }
+      const target = e.target as Node;
+      if (containerRef.current?.contains(target) || menuRef.current?.contains(target)) return;
+      setOpen(false);
+      setConfirmDelete(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, []);
+  }, [open]);
 
   type Action = { label: string; onClick: () => void; color?: string; disabled?: boolean };
   const actions: Action[] = [];
@@ -92,21 +131,14 @@ function ActionMenu({ event, onError }: { event: EventResponse; onError: (msg: s
   if (event.status !== "COMPLETED" && event.status !== "CANCELLED") {
     actions.push({
       label: "Edit",
-      onClick: () => { setOpen(false); router.push(`/admin/hackathons/${event.id}`); },
+      onClick: () => { setOpen(false); router.push(`${portalBase}/hackathons/${event.id}`); },
     });
   }
 
   if (event.status !== "COMPLETED" && event.status !== "CANCELLED") {
     actions.push({
       label: "Enrollments",
-      onClick: () => { setOpen(false); router.push(`/admin/hackathons/${event.id}/enrollments`); },
-    });
-    actions.push({
-      label: "Email Domains",
-      onClick: () => {
-        setOpen(false);
-        router.push(`/admin/hackathons/${event.id}#allowed-email-domains`);
-      },
+      onClick: () => { setOpen(false); router.push(`${portalBase}/hackathons/${event.id}?tab=enrollments`); },
     });
   }
 
@@ -136,45 +168,49 @@ function ActionMenu({ event, onError }: { event: EventResponse; onError: (msg: s
     });
   }
 
+  const menu = open ? (
+    <div ref={menuRef} style={menuStyle} role="menu">
+      {actions.map((a) => (
+        <button
+          key={a.label}
+          type="button"
+          role="menuitem"
+          onClick={a.onClick}
+          disabled={a.disabled}
+          style={{
+            display: "block", width: "100%", textAlign: "left",
+            padding: "8px 12px", fontSize: 13, fontWeight: 500,
+            color: a.color ?? "#0e1528",
+            background: "none", border: "none", borderRadius: 4,
+            cursor: a.disabled ? "not-allowed" : "pointer",
+            opacity: a.disabled ? 0.5 : 1,
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#f8f9fc")}
+          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+        >
+          {a.label}
+        </button>
+      ))}
+    </div>
+  ) : null;
+
   return (
-    <div ref={ref} style={{ position: "relative", display: "inline-block" }}>
+    <div ref={containerRef} style={{ position: "relative", display: "inline-block" }}>
       <button
-        onClick={() => { setOpen(!open); setConfirmDelete(false); }}
+        ref={buttonRef}
+        type="button"
+        onClick={() => { setOpen((prev) => !prev); setConfirmDelete(false); }}
         style={{
           background: "none", border: "none", cursor: "pointer",
           fontSize: 18, color: "#8891a5", padding: "4px 8px", lineHeight: 1,
         }}
         aria-label="Actions"
+        aria-expanded={open}
+        aria-haspopup="menu"
       >
         &#8942;
       </button>
-      {open && (
-        <div style={{
-          position: "absolute", right: 0, top: "100%", zIndex: 50,
-          minWidth: 160, backgroundColor: "#ffffff", border: "1px solid rgba(198,198,205,0.5)",
-          borderRadius: 8, padding: 4, boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
-        }}>
-          {actions.map((a) => (
-            <button
-              key={a.label}
-              onClick={a.onClick}
-              disabled={a.disabled}
-              style={{
-                display: "block", width: "100%", textAlign: "left",
-                padding: "8px 12px", fontSize: 13, fontWeight: 500,
-                color: a.color ?? "#0e1528",
-                background: "none", border: "none", borderRadius: 4,
-                cursor: a.disabled ? "not-allowed" : "pointer",
-                opacity: a.disabled ? 0.5 : 1,
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#f8f9fc")}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
-            >
-              {a.label}
-            </button>
-          ))}
-        </div>
-      )}
+      {typeof document !== "undefined" && menu ? createPortal(menu, document.body) : null}
     </div>
   );
 }
@@ -216,6 +252,7 @@ function HackathonRow({ h, onError }: { h: EventResponse; onError: (msg: string)
 }
 
 export function HackathonManagementPage() {
+  const portalBase = useStaffPortalBase();
   const currentYear = new Date().getFullYear();
   const [season, setSeason] = useState<string>("");
   const [year, setYear] = useState<number | undefined>(undefined);
@@ -254,7 +291,7 @@ export function HackathonManagementPage() {
           </p>
         </div>
         <Link
-          href="/admin/hackathons/new"
+          href={`${portalBase}/hackathons/new`}
           className="flex items-center justify-center border-2 border-navy bg-seal-yellow px-6 py-2.5 text-sm text-navy font-mono font-bold cursor-pointer"
         >
           Create Event

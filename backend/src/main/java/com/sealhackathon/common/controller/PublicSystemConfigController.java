@@ -22,12 +22,19 @@ public class PublicSystemConfigController {
     private final SystemConfigService configService;
 
     @GetMapping
-    @Operation(summary = "Get team size configuration (min/max members)")
+    @Operation(summary = "Get read-only system configuration (team rules, season/year)")
     public ResponseEntity<ApiResponse<SystemConfigResponse>> getTeamConfig() {
         SystemConfigResponse config = configService.getConfig();
         return ResponseEntity.ok(ApiResponse.success(SystemConfigResponse.builder()
                 .minTeamMembers(config.getMinTeamMembers())
                 .maxTeamMembers(config.getMaxTeamMembers())
+                .defaultRules(config.getDefaultRules())
+                .minTeams(config.getMinTeams())
+                .maxTeams(config.getMaxTeams())
+                .semesterMin(config.getSemesterMin())
+                .semesterMax(config.getSemesterMax())
+                .currentSeason(config.getCurrentSeason())
+                .currentYear(config.getCurrentYear())
                 .build()));
     }
 }

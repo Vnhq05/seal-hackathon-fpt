@@ -39,11 +39,11 @@ export interface CreateScoringTemplateRequest {
 
 export const scoringTemplateApi = {
   list(): Promise<ScoringTemplateResponse[]> {
-    return api.get<ScoringTemplateResponse[]>("/admin/scoring-templates");
+    return api.get<ScoringTemplateResponse[]>("/scoring-templates");
   },
 
   getById(templateId: string): Promise<ScoringTemplateResponse> {
-    return api.get<ScoringTemplateResponse>(`/admin/scoring-templates/${templateId}`);
+    return api.get<ScoringTemplateResponse>(`/scoring-templates/${templateId}`);
   },
 
   create(body: CreateScoringTemplateRequest): Promise<ScoringTemplateResponse> {

@@ -7,12 +7,14 @@ import com.sealhackathon.event.domain.enums.RoundType;
 import com.sealhackathon.event.repository.RoundRepository;
 import com.sealhackathon.ranking.domain.PublishedResult;
 import com.sealhackathon.ranking.domain.Ranking;
+import com.sealhackathon.ranking.dto.FinalRankResult;
 import com.sealhackathon.ranking.dto.response.AdvancementResponse;
 import com.sealhackathon.ranking.dto.response.PublishedResultResponse;
 import com.sealhackathon.ranking.dto.response.RankingResponse;
 import com.sealhackathon.ranking.event.ResultsPublishedEvent;
 import com.sealhackathon.ranking.repository.PublishedResultRepository;
 import com.sealhackathon.ranking.repository.RankingRepository;
+import com.sealhackathon.team.domain.enums.CompetitionOutcome;
 import com.sealhackathon.team.dto.snapshot.TeamSnapshot;
 import com.sealhackathon.team.service.TeamPublicService;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +24,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -150,6 +154,47 @@ public class RankingService {
     @Transactional(readOnly = true)
     public boolean isPublished(UUID roundId) {
         return publishedResultRepository.existsByRoundId(roundId);
+    }
+
+    @Transactional(readOnly = true)
+    public FinalRankResult getFinalRankForTeam(UUID teamId, UUID eventId) {
+        List<Round> rounds = roundRepository.findByHackathonEventIdOrderByRoundNumberAsc(eventId);
+        if (rounds.isEmpty()) {
+            return new FinalRankResult(null, CompetitionOutcome.UNRANKED);
+        }
+
+        List<Optional<Ranking>> rankingsPerRound = new ArrayList<>();
+        for (Round round : rounds) {
+            int version = rankingRepository.findMaxVersionByRoundId(round.getId());
+            if (version == 0) {
+                rankingsPerRound.add(Optional.empty());
+                continue;
+            }
+            rankingsPerRound.add(
+                    rankingRepository.findByTeamIdAndRoundIdAndVersion(teamId, round.getId(), version));
+        }
+
+        boolean anyRanking = rankingsPerRound.stream().anyMatch(Optional::isPresent);
+        if (!anyRanking) {
+            return new FinalRankResult(null, CompetitionOutcome.UNRANKED);
+        }
+
+        int lastIndex = rounds.size() - 1;
+        Optional<Ranking> lastRoundRanking = rankingsPerRound.get(lastIndex);
+        if (lastRoundRanking.isPresent()) {
+            int rank = lastRoundRanking.get().getRank();
+            CompetitionOutcome outcome = rank == 1 ? CompetitionOutcome.CHAMPION : CompetitionOutcome.FINALIST;
+            return new FinalRankResult(rank, outcome);
+        }
+
+        Integer finalRank = null;
+        for (int i = lastIndex - 1; i >= 0; i--) {
+            if (rankingsPerRound.get(i).isPresent()) {
+                finalRank = rankingsPerRound.get(i).get().getRank();
+                break;
+            }
+        }
+        return new FinalRankResult(finalRank, CompetitionOutcome.ELIMINATED);
     }
 
     private RankingResponse toResponse(Ranking ranking) {

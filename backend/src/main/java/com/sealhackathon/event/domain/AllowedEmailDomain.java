@@ -6,7 +6,6 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -27,8 +26,8 @@ import java.util.UUID;
 @Builder
 public class AllowedEmailDomain extends BaseEntity {
 
-    @NotNull
-    @Column(name = "event_id", nullable = false)
+    /** Null for platform-wide domains managed in system configuration. */
+    @Column(name = "event_id")
     private UUID eventId;
 
     @NotBlank

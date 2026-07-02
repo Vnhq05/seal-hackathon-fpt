@@ -11,6 +11,7 @@ import {
   type UpdateProfileFormValues,
 } from "@/features/profile/schemas/update-profile.schema";
 import type { UserProfile } from "@/lib/api/user.api";
+import { resolveUniversityName } from "@/lib/university";
 
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
@@ -211,7 +212,7 @@ export function ProfileInfoForm({ profile }: ProfileInfoFormProps) {
             <input
               type="text"
               readOnly
-              value={profile.universityName ?? "—"}
+              value={resolveUniversityName(profile.userType, profile.universityName) ?? "—"}
               style={readOnlyInputStyle}
               tabIndex={-1}
             />

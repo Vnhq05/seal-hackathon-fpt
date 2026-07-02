@@ -1,10 +1,19 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { useDebounce } from "@/features/teams/hooks/use-debounce";
 import { useTeamFilterStore } from "@/features/teams/store/team-filter.store";
 
 export function TeamFilters() {
-  const { search, openOnly, setSearch, setOpenOnly } =
-    useTeamFilterStore();
+  const openOnly = useTeamFilterStore((s) => s.openOnly);
+  const setOpenOnly = useTeamFilterStore((s) => s.setOpenOnly);
+  const setSearch = useTeamFilterStore((s) => s.setSearch);
+  const [searchInput, setSearchInput] = useState("");
+  const debouncedSearch = useDebounce(searchInput, 300);
+
+  useEffect(() => {
+    setSearch(debouncedSearch);
+  }, [debouncedSearch, setSearch]);
 
   return (
     <div
@@ -40,8 +49,8 @@ export function TeamFilters() {
         <input
           type="text"
           placeholder="Search teams by name or description..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
           className="w-full"
           style={{
             backgroundColor: "#eef0f6",

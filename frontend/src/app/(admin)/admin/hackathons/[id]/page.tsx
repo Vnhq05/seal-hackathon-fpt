@@ -1,9 +1,13 @@
 "use client";
 
 import { use } from "react";
-import { HackathonFormPage } from "@/features/admin/components/hackathon-form-page";
+import { EventEditDashboard } from "@/features/admin/components/event-edit/event-edit-dashboard";
 
-export default function EditHackathonPage({ params }: { params: Promise<{ id: string }> }) {
+export default function EditHackathonPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id } = use(params);
-  return <HackathonFormPage hackathonId={id} />;
+  return <EventEditDashboard eventId={id} />;
 }

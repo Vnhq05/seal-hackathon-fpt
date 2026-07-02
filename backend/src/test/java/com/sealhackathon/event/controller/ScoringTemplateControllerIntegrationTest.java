@@ -80,4 +80,29 @@ class ScoringTemplateControllerIntegrationTest extends BaseIntegrationTest {
                         .header("Authorization", "Bearer " + tokenFor(coordinator)))
                 .andExpect(status().isForbidden());
     }
+
+    @Test
+    void listReadEndpoint_shouldReturnTemplates_forCoordinator() throws Exception {
+        User admin = createAdmin();
+        User coordinator = createCoordinator();
+
+        mockMvc.perform(post("/api/admin/scoring-templates")
+                        .header("Authorization", "Bearer " + tokenFor(admin))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"Coordinator Read Template",
+                                 "criteria":[
+                                   {"name":"Impact","weight":60,"sortOrder":0},
+                                   {"name":"Delivery","weight":40,"sortOrder":1}
+                                 ]}
+                                """))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/scoring-templates")
+                        .header("Authorization", "Bearer " + tokenFor(coordinator)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(1)))
+                .andExpect(jsonPath("$.data[0].name", is("Coordinator Read Template")))
+                .andExpect(jsonPath("$.data[0].criteria", hasSize(2)));
+    }
 }

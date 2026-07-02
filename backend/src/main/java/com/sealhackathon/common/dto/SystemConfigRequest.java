@@ -32,4 +32,10 @@ public class SystemConfigRequest {
 
     @Min(value = 0, message = "Maximum teams must be at least 0")
     private Integer maxTeams;
+
+    @Min(value = 1, message = "Minimum semester must be at least 1")
+    private Integer semesterMin;
+
+    @Min(value = 1, message = "Maximum semester must be at least 1")
+    private Integer semesterMax;
 }

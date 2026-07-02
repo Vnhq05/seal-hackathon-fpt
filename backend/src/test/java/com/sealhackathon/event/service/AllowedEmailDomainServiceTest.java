@@ -77,7 +77,7 @@ class AllowedEmailDomainServiceTest {
                         .build());
 
         when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
-        when(domainRepository.findByEventIdOrderByDomainAsc(eventId)).thenReturn(domains);
+        when(domainRepository.findByEventIdIsNullOrderByDomainAsc()).thenReturn(domains);
 
         assertThatCode(() -> allowedEmailDomainService.validateExternalStudentForEvent(
                 eventId,
@@ -101,7 +101,7 @@ class AllowedEmailDomainServiceTest {
                         .build());
 
         when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
-        when(domainRepository.findByEventIdOrderByDomainAsc(eventId)).thenReturn(domains);
+        when(domainRepository.findByEventIdIsNullOrderByDomainAsc()).thenReturn(domains);
 
         assertThatThrownBy(() -> allowedEmailDomainService.validateExternalStudentForEvent(
                 eventId,

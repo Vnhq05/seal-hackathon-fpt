@@ -40,7 +40,7 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-export function AdminEventsTable() {
+export function AdminEventsTable({ viewAllHref = "/admin/hackathons" }: { viewAllHref?: string }) {
   const { data: eventsPage, isLoading } = useActiveEvents();
   const events = (eventsPage?.content ?? []).filter(
     (e) => e.status !== "CANCELLED" && e.status !== "COMPLETED"
@@ -52,7 +52,7 @@ export function AdminEventsTable() {
     >
       <div className="flex items-center justify-between" style={{ padding: "20px 24px" }}>
         <h3 style={{ fontSize: 18, fontWeight: 700, color: "#0e1528" }}>Active & Upcoming Events</h3>
-        <Link href="/admin/hackathons" className="text-[13px] font-semibold text-royal">
+        <Link href={viewAllHref} className="text-[13px] font-semibold text-royal">
           View all
         </Link>
       </div>

@@ -1,63 +1,58 @@
 "use client";
 
 import { useState } from "react";
-import { useLeaveRequestMutations } from "@/features/teams/hooks/use-leave-requests";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { enrollmentWaitingListKey } from "@/features/events/hooks/use-enrollment";
+import { JOINABLE_TEAMS_KEY } from "@/features/teams/hooks/use-joinable-teams";
+import { teamApi } from "@/lib/api";
 
-interface LeaveRequestDialogProps {
+interface LeaveTeamDialogProps {
   eventId: string;
   teamId: string;
   teamName: string;
   onClose: () => void;
 }
 
-export function LeaveRequestDialog({ eventId, teamId, teamName, onClose }: LeaveRequestDialogProps) {
-  const [reason, setReason] = useState("");
+export function LeaveTeamDialog({ eventId, teamId, teamName, onClose }: LeaveTeamDialogProps) {
   const [error, setError] = useState<string | null>(null);
-  const { create } = useLeaveRequestMutations(eventId, teamId);
+  const qc = useQueryClient();
 
-  const handleSubmit = async () => {
-    setError(null);
-    try {
-      await create.mutateAsync(reason.trim() || undefined);
+  const { mutate: leave, isPending } = useMutation({
+    mutationFn: () => teamApi.leaveTeam(eventId, teamId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["my-teams-all-events"] });
+      qc.invalidateQueries({ queryKey: enrollmentWaitingListKey(eventId) });
+      qc.invalidateQueries({ queryKey: [JOINABLE_TEAMS_KEY, eventId] });
       onClose();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to submit leave request");
-    }
-  };
+    },
+    onError: (err) => {
+      setError(err instanceof Error ? err.message : "Failed to leave team");
+    },
+  });
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-md border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-6 shadow-lg">
-        <h3 className="text-lg font-semibold text-seal-text">Leave team request</h3>
+      <div className="w-full max-w-sm border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-6 shadow-lg">
+        <h3 className="font-semibold text-seal-text">Leave team?</h3>
         <p className="mt-2 text-sm text-seal-text-muted">
-          Send a request to leave <strong className="text-seal-text">{teamName}</strong> to the organizers.
-          A coordinator will review and approve it.
+          Are you sure you want to leave <strong className="text-seal-text">{teamName}</strong>?
+          You will return to the waiting list and can join another team.
         </p>
-        <div className="mt-4">
-          <label className="text-xs font-medium text-seal-text-secondary">Reason (optional)</label>
-          <textarea
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            rows={3}
-            className="mt-1.5 w-full border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] px-3 py-2 text-sm text-seal-text outline-none focus:border-royal/40"
-            placeholder="Explain why you want to leave the team..."
-          />
-        </div>
         {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
         <div className="mt-4 flex justify-end gap-2">
           <button
             onClick={onClose}
-            disabled={create.isPending}
-            className="border-2 border-navy bg-white px-4 py-2 text-sm font-medium text-seal-text-secondary hover:bg-seal-surface-sunken disabled:opacity-50"
+            disabled={isPending}
+            className="border-2 border-navy bg-white px-4 py-2 text-sm"
           >
             Cancel
           </button>
           <button
-            onClick={handleSubmit}
-            disabled={create.isPending}
-            className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+            onClick={() => leave()}
+            disabled={isPending}
+            className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
           >
-            {create.isPending ? "Submitting..." : "Submit request"}
+            {isPending ? "Leaving..." : "Leave team"}
           </button>
         </div>
       </div>

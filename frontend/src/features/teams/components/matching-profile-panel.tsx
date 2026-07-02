@@ -1,15 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import {
-  HACKATHON_SKILL_ROLE_LABELS,
-  type HackathonSkillRole,
-} from "@/lib/api/types";
 import type { EnrollmentResponse } from "@/lib/api/enrollment.api";
 import { useMyEnrollment } from "@/features/events/hooks/use-enrollment";
 import { useUpdateMatchingProfile } from "@/features/teams/hooks/use-update-matching-profile";
-
-const ALL_ROLES = Object.keys(HACKATHON_SKILL_ROLE_LABELS) as HackathonSkillRole[];
 
 interface MatchingProfilePanelProps {
   eventId: string;
@@ -25,9 +19,8 @@ function MatchingProfileForm({
   const { mutate: save, isPending, error } = useUpdateMatchingProfile(eventId);
   const isApproved = enrollment.status === "APPROVED";
   const [isLookingForTeam, setIsLookingForTeam] = useState(enrollment.isLookingForTeam);
-  const [preferredRole, setPreferredRole] = useState<HackathonSkillRole | "">(
-    enrollment.preferredRole ?? "",
-  );
+  const [isProfilePublic, setIsProfilePublic] = useState(enrollment.isProfilePublic ?? false);
+  const [preferredRole, setPreferredRole] = useState(enrollment.preferredRole ?? "");
   const [saved, setSaved] = useState(false);
 
   const handleSave = () => {
@@ -35,7 +28,8 @@ function MatchingProfileForm({
     save(
       {
         isLookingForTeam,
-        preferredRole: preferredRole || null,
+        isProfilePublic,
+        preferredRole: preferredRole.trim() || null,
       },
       { onSuccess: () => setSaved(true) },
     );
@@ -65,21 +59,31 @@ function MatchingProfileForm({
         I am looking for a team
       </label>
 
+      <label className="mt-3 flex cursor-pointer items-center gap-2 text-sm text-seal-text">
+        <input
+          type="checkbox"
+          checked={isProfilePublic}
+          disabled={!isApproved || !isLookingForTeam}
+          onChange={(e) => setIsProfilePublic(e.target.checked)}
+          className="rounded border-seal-border disabled:opacity-50"
+        />
+        Publish Profile
+      </label>
+
       <div className="mt-3">
         <label className="text-xs font-medium text-seal-text-secondary">Preferred role</label>
-        <select
+        <input
+          type="text"
           value={preferredRole}
           disabled={!isApproved}
-          onChange={(e) => setPreferredRole(e.target.value as HackathonSkillRole | "")}
+          maxLength={100}
+          placeholder="e.g. Frontend developer"
+          onChange={(e) => setPreferredRole(e.target.value)}
           className="mt-1.5 w-full border-2 border-navy bg-white px-3 py-2 text-sm text-seal-text shadow-[2px_2px_0_0_#0c1228] outline-none focus:border-royal/40 disabled:opacity-50"
-        >
-          <option value="">— Not specified —</option>
-          {ALL_ROLES.map((role) => (
-            <option key={role} value={role}>
-              {HACKATHON_SKILL_ROLE_LABELS[role]}
-            </option>
-          ))}
-        </select>
+        />
+        <p className="mt-1 text-xs text-seal-text-muted">
+          Maximum 100 characters.
+        </p>
       </div>
 
       {error && (
@@ -124,7 +128,7 @@ export function MatchingProfilePanel({ eventId }: MatchingProfilePanelProps) {
 
   return (
     <MatchingProfileForm
-      key={`${enrollment.id}-${enrollment.isLookingForTeam}-${enrollment.preferredRole ?? ""}`}
+      key={`${enrollment.id}-${enrollment.isLookingForTeam}-${enrollment.isProfilePublic}-${enrollment.preferredRole ?? ""}`}
       eventId={eventId}
       enrollment={enrollment}
     />

@@ -226,9 +226,24 @@ public class TeamService {
     }
     @Transactional
     public void leaveTeam(UUID currentUserId, UUID teamId) {
-        throw new BusinessException(
-                "Direct leave is not supported. Submit a leave request to the organizer.",
-                HttpStatus.GONE) {};
+        Team team = getTeam(teamId);
+        formatRuleEngine.assertCanModifyTeamMembers(team.getEventId());
+
+        if (currentUserId.equals(team.getLeaderId())) {
+            throw new BusinessException(
+                    "Team leader cannot leave directly. Transfer leadership first.",
+                    HttpStatus.BAD_REQUEST) {};
+        }
+
+        TeamMember member = teamMemberRepository.findByTeamIdAndUserId(teamId, currentUserId)
+                .orElseThrow(() -> new BusinessException(
+                        "You are not a member of this team", HttpStatus.BAD_REQUEST) {});
+
+        teamMemberRepository.delete(member);
+        eventPublisher.publishEvent(new MemberLeftEvent(teamId, currentUserId));
+
+        updateTeamStatus(team);
+        syncRecruitingStatus(teamId);
     }
 
     // ── Transfer leadership — BR-20 ──

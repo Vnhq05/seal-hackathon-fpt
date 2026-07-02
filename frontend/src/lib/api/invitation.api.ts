@@ -15,7 +15,8 @@ export interface InvitationResponse {
 }
 
 export interface SendInvitationRequest {
-  inviteeEmail: string;
+  inviteeEmail?: string;
+  inviteeUserId?: string;
 }
 
 // ═══ API calls ═══

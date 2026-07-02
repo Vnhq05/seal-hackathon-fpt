@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useSystemConfig, useUpdateSystemConfig } from "@/features/admin/hooks/use-admin-system";
+import { AllowedEmailDomainsPanel } from "@/features/events/components/allowed-email-domains-panel";
 import type { SystemConfigResponse } from "@/lib/api/system-config.api";
 
 const inputStyle: React.CSSProperties = {
@@ -15,6 +16,8 @@ interface SystemConfigForm {
   defaultRules: string;
   minTeams: string;
   maxTeams: string;
+  semesterMin: string;
+  semesterMax: string;
 }
 
 function formFromConfig(data: SystemConfigResponse): SystemConfigForm {
@@ -24,6 +27,8 @@ function formFromConfig(data: SystemConfigResponse): SystemConfigForm {
     defaultRules: data.defaultRules ?? "",
     minTeams: data.minTeams != null ? String(data.minTeams) : "",
     maxTeams: data.maxTeams != null ? String(data.maxTeams) : "",
+    semesterMin: data.semesterMin != null ? String(data.semesterMin) : "",
+    semesterMax: data.semesterMax != null ? String(data.semesterMax) : "",
   };
 }
 
@@ -41,6 +46,12 @@ function SystemConfigForm({ data }: { data: SystemConfigResponse }) {
   };
 
   const parseOptionalTeamLimit = (value: string): number | null => {
+    if (value.trim() === "") return null;
+    const parsed = parseInt(value, 10);
+    return Number.isNaN(parsed) ? null : parsed;
+  };
+
+  const parseOptionalSemester = (value: string): number | null => {
     if (value.trim() === "") return null;
     const parsed = parseInt(value, 10);
     return Number.isNaN(parsed) ? null : parsed;
@@ -80,6 +91,30 @@ function SystemConfigForm({ data }: { data: SystemConfigResponse }) {
       return;
     }
 
+    const semesterMin = parseOptionalSemester(form.semesterMin);
+    const semesterMax = parseOptionalSemester(form.semesterMax);
+
+    if (form.semesterMin.trim() !== "" && semesterMin === null) {
+      setError("Semester min must be a valid number");
+      return;
+    }
+    if (form.semesterMax.trim() !== "" && semesterMax === null) {
+      setError("Semester max must be a valid number");
+      return;
+    }
+    if (semesterMin != null && (semesterMin < 1 || semesterMin > 10)) {
+      setError("Semester min must be between 1 and 10");
+      return;
+    }
+    if (semesterMax != null && (semesterMax < 1 || semesterMax > 10)) {
+      setError("Semester max must be between 1 and 10");
+      return;
+    }
+    if (semesterMin != null && semesterMax != null && semesterMin > semesterMax) {
+      setError("Semester min cannot exceed semester max");
+      return;
+    }
+
     update(
       {
         minTeamMembers: form.minTeamMembers,
@@ -87,6 +122,8 @@ function SystemConfigForm({ data }: { data: SystemConfigResponse }) {
         defaultRules: form.defaultRules,
         minTeams,
         maxTeams,
+        semesterMin,
+        semesterMax,
       },
       {
         onSuccess: () => {
@@ -175,6 +212,36 @@ function SystemConfigForm({ data }: { data: SystemConfigResponse }) {
         </div>
       </div>
 
+      <div>
+        <p style={{ fontSize: 13, fontWeight: 600, color: "#8891a5", marginBottom: 12 }}>Semester Eligibility</p>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="flex flex-col">
+            <label style={labelStyle}>Semester Min (eligibility)</label>
+            <input
+              type="number"
+              value={form.semesterMin}
+              onChange={(e) => handleChange("semesterMin", e.target.value)}
+              style={inputStyle}
+              min={1}
+              max={10}
+              placeholder="Optional"
+            />
+          </div>
+          <div className="flex flex-col">
+            <label style={labelStyle}>Semester Max (eligibility)</label>
+            <input
+              type="number"
+              value={form.semesterMax}
+              onChange={(e) => handleChange("semesterMax", e.target.value)}
+              style={inputStyle}
+              min={1}
+              max={10}
+              placeholder="Optional"
+            />
+          </div>
+        </div>
+      </div>
+
       <div className="flex flex-col">
         <label style={labelStyle}>Default Rules</label>
         <textarea
@@ -228,11 +295,15 @@ export function SystemConfigPage() {
           System Configuration
         </h1>
         <p style={{ fontSize: 14, color: "#8891a5", lineHeight: "21px", marginTop: 4 }}>
-          Platform-wide settings for team sizes, event team limits, and default rules.
+          Platform-wide settings for team sizes, event team limits, semester eligibility, default rules, and allowed email domains.
         </p>
       </div>
 
       <SystemConfigForm key={data.id} data={data} />
+
+      <div id="allowed-email-domains" style={{ marginTop: 40, maxWidth: 720 }}>
+        <AllowedEmailDomainsPanel />
+      </div>
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useStaffDashboard } from "@/features/coordinator/hooks/use-staff-dashboard";
+import { AdminEventsTable } from "@/features/admin/components/admin-events-table";
 import { StaffPendingApprovals } from "@/features/coordinator/components/staff-pending-approvals";
 import { StaffQuickActions } from "@/features/coordinator/components/staff-quick-actions";
 
@@ -36,7 +37,7 @@ export function CoordinatorDashboardPage() {
 
       {isLoading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, i) => (
+          {Array.from({ length: 2 }).map((_, i) => (
             <SkeletonBlock key={i} />
           ))}
         </div>
@@ -46,29 +47,23 @@ export function CoordinatorDashboardPage() {
             <StatCard
               label="Pending Approvals"
               value={summary.pendingApprovals}
-              href="/coordinator/user-approval"
+              href="/coordinator#pending-approvals"
             />
             <StatCard label="Active Hackathons" value={summary.activeHackathons} />
-            <StatCard
-              label="Participants"
-              value={summary.totalParticipants}
-              href="/coordinator/participants"
-            />
           </div>
 
           {summary.pendingApprovals > 0 && (
             <div className="mb-6 border-2 border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 shadow-[2px_2px_0_0_#0c1228]">
-              <span className="font-semibold">{summary.pendingApprovals} user(s)</span> awaiting approval.{" "}
-              <Link href="/coordinator/user-approval" className="font-medium text-royal underline-offset-2 hover:underline">
-                Review now
-              </Link>
+              <span className="font-semibold">{summary.pendingApprovals} user(s)</span> awaiting approval.
             </div>
           )}
 
-          <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+          <div className="mb-6 grid gap-6 lg:grid-cols-[1fr_320px]">
             <StaffPendingApprovals />
             <StaffQuickActions />
           </div>
+
+          <AdminEventsTable viewAllHref="/coordinator/hackathons" />
         </>
       ) : null}
     </div>

@@ -70,14 +70,16 @@ public class InvitationService {
             throw new BusinessException("Team is already full", HttpStatus.BAD_REQUEST) {};
         }
 
+        String inviteeEmail = resolveInviteeEmail(request);
+
         if (invitationRepository.existsByTeamIdAndInviteeEmailAndStatus(
-                teamId, request.getInviteeEmail(), InvitationStatus.PENDING)) {
-            throw new DuplicateResourceException("Invitation", "email", request.getInviteeEmail());
+                teamId, inviteeEmail, InvitationStatus.PENDING)) {
+            throw new DuplicateResourceException("Invitation", "email", inviteeEmail);
         }
 
         // Check invitee exists
-        UserSnapshot invitee = userPublicService.findByEmail(request.getInviteeEmail())
-                .orElseThrow(() -> new ResourceNotFoundException("User", "email", request.getInviteeEmail()));
+        UserSnapshot invitee = userPublicService.findByEmail(inviteeEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "email", inviteeEmail));
 
         // Invitee must be on the waiting list (approved enrollment, no team)
         enrollmentService.requireOnWaitingList(invitee.getId(), team.getEventId());
@@ -90,7 +92,7 @@ public class InvitationService {
         Invitation invitation = Invitation.builder()
                 .team(team)
                 .inviterId(leaderId)
-                .inviteeEmail(request.getInviteeEmail())
+                .inviteeEmail(inviteeEmail)
                 .status(InvitationStatus.PENDING)
                 .expiresAt(LocalDateTime.now().plusDays(invitationExpiryDays))
                 .build();
@@ -98,9 +100,23 @@ public class InvitationService {
         invitation = invitationRepository.save(invitation);
 
         eventPublisher.publishEvent(new InvitationSentEvent(
-                invitation.getId(), teamId, request.getInviteeEmail()));
+                invitation.getId(), teamId, inviteeEmail));
 
         return toResponse(invitation);
+    }
+
+    private String resolveInviteeEmail(SendInvitationRequest request) {
+        if (request.getInviteeUserId() != null) {
+            return userPublicService.findById(request.getInviteeUserId())
+                    .map(UserSnapshot::getEmail)
+                    .map(String::toLowerCase)
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "User", "id", request.getInviteeUserId()));
+        }
+        if (request.getInviteeEmail() == null || request.getInviteeEmail().isBlank()) {
+            throw new BusinessException("Invitee email or user id is required", HttpStatus.BAD_REQUEST) {};
+        }
+        return request.getInviteeEmail().trim().toLowerCase();
     }
 
     // ── BR-21: Accept invitation ──

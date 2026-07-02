@@ -55,12 +55,13 @@ function criteriaFromTemplate(template: ScoringTemplateResponse): CriterionForm[
   }));
 }
 
-function TemplateRow({ t, onDelete, onEdit, expanded, onToggle }: {
+function TemplateRow({ t, onDelete, onEdit, expanded, onToggle, readOnly = false }: {
   t: ScoringTemplateResponse;
   onDelete: (id: string) => void;
   onEdit: (template: ScoringTemplateResponse) => void;
   expanded: boolean;
   onToggle: () => void;
+  readOnly?: boolean;
 }) {
   return (
     <>
@@ -71,20 +72,24 @@ function TemplateRow({ t, onDelete, onEdit, expanded, onToggle }: {
           {t.criteria.reduce((sum: number, c: ScoringTemplateCriterionResponse) => sum + c.weight, 0)}%
         </td>
         <td style={bodyCell}>
-          <div className="flex gap-3" onClick={(e) => e.stopPropagation()}>
-            <button
-              onClick={() => onEdit(t)}
-              style={{ fontSize: 12, fontWeight: 600, color: "#1e40af", background: "none", border: "none", cursor: "pointer" }}
-            >
-              Edit
-            </button>
-            <button
-              onClick={() => onDelete(t.id)}
-              style={{ fontSize: 12, fontWeight: 600, color: "#991b1b", background: "none", border: "none", cursor: "pointer" }}
-            >
-              Delete
-            </button>
-          </div>
+          {readOnly ? (
+            <span style={{ fontSize: 12, color: "#8891a5" }}>View details</span>
+          ) : (
+            <div className="flex gap-3" onClick={(e) => e.stopPropagation()}>
+              <button
+                onClick={() => onEdit(t)}
+                style={{ fontSize: 12, fontWeight: 600, color: "#1e40af", background: "none", border: "none", cursor: "pointer" }}
+              >
+                Edit
+              </button>
+              <button
+                onClick={() => onDelete(t.id)}
+                style={{ fontSize: 12, fontWeight: 600, color: "#991b1b", background: "none", border: "none", cursor: "pointer" }}
+              >
+                Delete
+              </button>
+            </div>
+          )}
         </td>
       </tr>
       {expanded && (
@@ -332,7 +337,7 @@ function TemplateForm({
   );
 }
 
-export function CriteriaTemplatePage() {
+export function CriteriaTemplatePage({ readOnly = false }: { readOnly?: boolean }) {
   const { data: templates = [], isLoading, isError, error, refetch } = useCriteriaTemplates();
   const { mutate: remove } = useDeleteCriteriaTemplate();
   const [formMode, setFormMode] = useState<"closed" | "create" | "edit">("closed");
@@ -349,13 +354,15 @@ export function CriteriaTemplatePage() {
       <div className="flex items-center justify-between" style={{ marginBottom: 24 }}>
         <div>
           <h1 style={{ fontSize: 32, fontWeight: 700, color: "#0e1528", letterSpacing: "-0.64px", lineHeight: "38.4px" }}>
-            Scoring Criteria Templates
+            {readOnly ? "Scoring Criteria (Reference)" : "Scoring Criteria Templates"}
           </h1>
           <p style={{ fontSize: 14, color: "#8891a5", lineHeight: "21px", marginTop: 4 }}>
-            Create and manage scoring criteria templates. Weights must sum to 100%.
+            {readOnly
+              ? "Read-only view of scoring criteria templates configured by the administrator."
+              : "Create and manage scoring criteria templates. Weights must sum to 100%."}
           </p>
         </div>
-        {formMode === "closed" && (
+        {!readOnly && formMode === "closed" && (
           <button
             onClick={() => setFormMode("create")}
             className="flex items-center justify-center border-2 border-navy bg-seal-yellow px-6 py-2.5 text-sm text-navy font-mono font-bold cursor-pointer"
@@ -365,8 +372,8 @@ export function CriteriaTemplatePage() {
         )}
       </div>
 
-      {formMode === "create" && <TemplateForm onClose={closeForm} />}
-      {formMode === "edit" && editingTemplate && (
+      {!readOnly && formMode === "create" && <TemplateForm onClose={closeForm} />}
+      {!readOnly && formMode === "edit" && editingTemplate && (
         <TemplateForm template={editingTemplate} onClose={closeForm} />
       )}
 
@@ -397,7 +404,7 @@ export function CriteriaTemplatePage() {
               <th style={headerCell}>Template Name</th>
               <th style={{ ...headerCell, width: 120 }}>Criteria Count</th>
               <th style={{ ...headerCell, width: 120 }}>Total Weight</th>
-              <th style={{ ...headerCell, width: 140 }}>Actions</th>
+              <th style={{ ...headerCell, width: 140 }}>{readOnly ? "Details" : "Actions"}</th>
             </tr>
           </thead>
           <tbody>
@@ -422,13 +429,16 @@ export function CriteriaTemplatePage() {
                     }}
                     expanded={expandedId === t.id}
                     onToggle={() => setExpandedId(expandedId === t.id ? null : t.id)}
+                    readOnly={readOnly}
                   />
                 ))
             }
             {!isLoading && !isError && templates.length === 0 && (
               <tr>
                 <td colSpan={4} style={{ ...bodyCell, textAlign: "center", color: "#8891a5", padding: "48px 16px" }}>
-                  No templates yet. Create one to get started.
+                  {readOnly
+                    ? "No scoring templates configured by admin yet."
+                    : "No templates yet. Create one to get started."}
                 </td>
               </tr>
             )}

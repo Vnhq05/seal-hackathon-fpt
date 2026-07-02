@@ -1,6 +1,7 @@
 package com.sealhackathon.user.controller;
 
 import com.sealhackathon.common.enums.AccountStatus;
+import com.sealhackathon.common.enums.UserType;
 import com.sealhackathon.common.response.ApiResponse;
 import com.sealhackathon.user.dto.request.ApprovalRequest;
 import com.sealhackathon.user.dto.request.RejectAccountRequest;
@@ -74,6 +75,16 @@ public class CoordinatorUserController {
                 .build();
         UserProfileResponse result = userService.approveOrReject(request);
         return ResponseEntity.ok(ApiResponse.success("Account rejected", result));
+    }
+
+    @GetMapping("/lecturers")
+    @Operation(summary = "List active lecturers for event staff assignment")
+    public ResponseEntity<ApiResponse<Page<UserListResponse>>> listLecturers(
+            @RequestParam(required = false) String search,
+            @PageableDefault(size = 200, sort = "fullName", direction = Sort.Direction.ASC) Pageable pageable) {
+        Page<UserListResponse> page = userService.listUsers(
+                AccountStatus.ACTIVE, UserType.LECTURER, search, pageable);
+        return ResponseEntity.ok(ApiResponse.success(page));
     }
 
     @GetMapping

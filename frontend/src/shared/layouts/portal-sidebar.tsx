@@ -72,7 +72,7 @@ export function PortalSidebar({
   const pathname = usePathname();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { user } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
 
   const handleLogout = async () => {
     await performLogout(router, queryClient);

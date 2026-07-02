@@ -46,4 +46,8 @@ export const coordinatorUserApi = {
   rejectUser(userId: string, body: RejectAccountRequest): Promise<UserProfile> {
     return api.patch<UserProfile>(`/coordinator/users/${userId}/reject`, body);
   },
+
+  listLecturers(params?: Pick<CoordinatorUserListParams, "search" | "page" | "size">): Promise<Page<CoordinatorUserListItem>> {
+    return api.get<Page<CoordinatorUserListItem>>("/coordinator/users/lecturers", { params });
+  },
 };

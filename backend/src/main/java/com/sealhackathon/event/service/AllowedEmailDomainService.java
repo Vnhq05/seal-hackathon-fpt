@@ -27,30 +27,24 @@ public class AllowedEmailDomainService {
     private final AllowedEmailDomainRepository domainRepository;
     private final HackathonEventRepository eventRepository;
 
-    @Transactional(readOnly = true)
-    public List<AllowedEmailDomainResponse> listByEvent(UUID eventId) {
-        ensureEventExists(eventId);
-        return domainRepository.findByEventIdOrderByDomainAsc(eventId).stream()
+    @Transactional
+    public List<AllowedEmailDomainResponse> listPlatformDomains() {
+        return ensurePlatformDomainsPersisted().stream()
                 .map(this::toResponse)
                 .toList();
     }
 
     @Transactional
-    public AllowedEmailDomainResponse addDomain(UUID eventId, AddAllowedEmailDomainRequest request) {
-        HackathonEvent event = ensureEventExists(eventId);
-        String normalizedDomain = EmailDomainValidator.normalizeRuleDomain(request.getDomain());
-        if (normalizedDomain.isEmpty()) {
-            throw new BusinessException("Domain is required", HttpStatus.BAD_REQUEST) {};
-        }
+    public AllowedEmailDomainResponse addPlatformDomain(AddAllowedEmailDomainRequest request) {
+        String normalizedDomain = normalizeDomain(request.getDomain());
 
-        boolean duplicate = domainRepository.findByEventIdOrderByDomainAsc(eventId).stream()
+        boolean duplicate = effectivePlatformDomains().stream()
                 .anyMatch(d -> d.getDomain().equalsIgnoreCase(normalizedDomain));
         if (duplicate) {
             throw new DuplicateResourceException("AllowedEmailDomain", "domain", normalizedDomain);
         }
 
         AllowedEmailDomain domain = AllowedEmailDomain.builder()
-                .eventId(event.getId())
                 .domain(normalizedDomain)
                 .universityLabel(request.getUniversityLabel())
                 .build();
@@ -58,38 +52,47 @@ public class AllowedEmailDomainService {
     }
 
     @Transactional
-    public void removeDomain(UUID eventId, UUID domainId) {
-        ensureEventExists(eventId);
+    public void removePlatformDomain(UUID domainId) {
         AllowedEmailDomain domain = domainRepository.findById(domainId)
                 .orElseThrow(() -> new ResourceNotFoundException("AllowedEmailDomain", "id", domainId));
-        if (!domain.getEventId().equals(eventId)) {
-            throw new BusinessException("Domain does not belong to this event", HttpStatus.BAD_REQUEST) {};
+        if (domain.getEventId() != null) {
+            throw new BusinessException("Only platform-wide domains can be removed here", HttpStatus.BAD_REQUEST) {};
         }
         domainRepository.delete(domain);
     }
 
+    @Transactional(readOnly = true)
+    public List<AllowedEmailDomainResponse> listByEvent(UUID eventId) {
+        ensureEventExists(eventId);
+        return listPlatformDomains();
+    }
+
     @Transactional
     public void seedDomains(UUID eventId, List<AllowedEmailDomain> domains) {
+        List<AllowedEmailDomain> source = effectivePlatformDomains();
+        if (source.isEmpty()) {
+            source = domains;
+        }
+
         domainRepository.findByEventIdOrderByDomainAsc(eventId).forEach(domainRepository::delete);
-        for (AllowedEmailDomain domain : domains) {
-            domain.setEventId(eventId);
-            domainRepository.save(domain);
+        for (AllowedEmailDomain domain : source) {
+            AllowedEmailDomain copy = AllowedEmailDomain.builder()
+                    .eventId(eventId)
+                    .domain(domain.getDomain())
+                    .universityLabel(domain.getUniversityLabel())
+                    .build();
+            domainRepository.save(copy);
         }
     }
 
     @Transactional(readOnly = true)
     public List<AllowedEmailDomainResponse> listDefaultRegistrationDomains() {
-        return SealSpring2026Template.buildDefaultEmailDomains().stream()
-                .map(d -> AllowedEmailDomainResponse.builder()
-                        .domain(d.getDomain())
-                        .universityLabel(d.getUniversityLabel())
-                        .build())
-                .toList();
+        return listPlatformDomains();
     }
 
     @Transactional(readOnly = true)
     public void validateExternalRegistration(String email, String universityName) {
-        validateEmailAndUniversity(SealSpring2026Template.buildDefaultEmailDomains(), email, universityName);
+        validateEmailAndUniversity(effectivePlatformDomains(), email, universityName);
     }
 
     @Transactional(readOnly = true)
@@ -100,7 +103,7 @@ public class AllowedEmailDomainService {
     @Transactional(readOnly = true)
     public void validateExternalStudentForEvent(UUID eventId, String email, String universityName) {
         HackathonEvent event = ensureEventExists(eventId);
-        List<AllowedEmailDomain> domains = domainRepository.findByEventIdOrderByDomainAsc(eventId);
+        List<AllowedEmailDomain> domains = effectivePlatformDomains();
         if (domains.isEmpty()) {
             if (event.getCompetitionFormat() == CompetitionFormat.SEAL_RAG_2026) {
                 throw new BusinessException(
@@ -114,6 +117,37 @@ public class AllowedEmailDomainService {
         } else {
             validateEmailOnly(domains, email);
         }
+    }
+
+    private List<AllowedEmailDomain> effectivePlatformDomains() {
+        List<AllowedEmailDomain> platformDomains = domainRepository.findByEventIdIsNullOrderByDomainAsc();
+        if (!platformDomains.isEmpty()) {
+            return platformDomains;
+        }
+        return SealSpring2026Template.buildDefaultEmailDomains();
+    }
+
+    private List<AllowedEmailDomain> ensurePlatformDomainsPersisted() {
+        List<AllowedEmailDomain> platformDomains = domainRepository.findByEventIdIsNullOrderByDomainAsc();
+        if (!platformDomains.isEmpty()) {
+            return platformDomains;
+        }
+
+        List<AllowedEmailDomain> seeded = SealSpring2026Template.buildDefaultEmailDomains().stream()
+                .map(template -> AllowedEmailDomain.builder()
+                        .domain(template.getDomain())
+                        .universityLabel(template.getUniversityLabel())
+                        .build())
+                .toList();
+        return domainRepository.saveAll(seeded);
+    }
+
+    private String normalizeDomain(String domain) {
+        String normalizedDomain = EmailDomainValidator.normalizeRuleDomain(domain);
+        if (normalizedDomain.isEmpty()) {
+            throw new BusinessException("Domain is required", HttpStatus.BAD_REQUEST) {};
+        }
+        return normalizedDomain;
     }
 
     private void validateEmailOnly(List<AllowedEmailDomain> domains, String email) {

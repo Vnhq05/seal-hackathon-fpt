@@ -36,9 +36,55 @@ export interface AssignMentorRequest {
   mentorUserId: string;
 }
 
+export interface EventStaffResponse {
+  id: string;
+  userId: string;
+  fullName: string | null;
+  email: string | null;
+  assignedAt: string;
+}
+
+export interface AssignEventStaffRequest {
+  userId: string;
+}
+
 // ═══ API calls ═══
 
 export const assignmentApi = {
+  // ── Event staff (event-level roster) ──
+
+  listEventJudges(eventId: string): Promise<EventStaffResponse[]> {
+    return api
+      .get<EventJudgeApiResponse[]>(`/events/${eventId}/staff/judges`)
+      .then((items) => mapStaffJudges(items));
+  },
+
+  assignEventJudge(eventId: string, body: AssignEventStaffRequest): Promise<EventStaffResponse> {
+    return api
+      .post<EventJudgeApiResponse>(`/events/${eventId}/staff/judges`, body)
+      .then((item) => mapStaffJudge(item));
+  },
+
+  removeEventJudge(eventId: string, assignmentId: string): Promise<void> {
+    return api.delete<void>(`/events/${eventId}/staff/judges/${assignmentId}`);
+  },
+
+  listEventMentors(eventId: string): Promise<EventStaffResponse[]> {
+    return api
+      .get<EventMentorApiResponse[]>(`/events/${eventId}/staff/mentors`)
+      .then((items) => mapStaffMentors(items));
+  },
+
+  assignEventMentor(eventId: string, body: AssignEventStaffRequest): Promise<EventStaffResponse> {
+    return api
+      .post<EventMentorApiResponse>(`/events/${eventId}/staff/mentors`, body)
+      .then((item) => mapStaffMentor(item));
+  },
+
+  removeEventMentor(eventId: string, assignmentId: string): Promise<void> {
+    return api.delete<void>(`/events/${eventId}/staff/mentors/${assignmentId}`);
+  },
+
   // ── Judges (per round + track) ──
 
   assignJudge(eventId: string, roundId: string, body: AssignJudgeRequest): Promise<JudgeAssignmentResponse> {
@@ -86,6 +132,50 @@ export const assignmentApi = {
     return api.delete<void>(`/assignments/${assignmentId}`);
   },
 };
+
+interface EventJudgeApiResponse {
+  id: string;
+  judgeUserId: string;
+  judgeFullName: string | null;
+  judgeEmail: string | null;
+  assignedAt: string;
+}
+
+interface EventMentorApiResponse {
+  id: string;
+  mentorUserId: string;
+  mentorFullName: string | null;
+  mentorEmail: string | null;
+  assignedAt: string;
+}
+
+function mapStaffJudge(item: EventJudgeApiResponse): EventStaffResponse {
+  return {
+    id: item.id,
+    userId: item.judgeUserId,
+    fullName: item.judgeFullName,
+    email: item.judgeEmail,
+    assignedAt: item.assignedAt,
+  };
+}
+
+function mapStaffMentor(item: EventMentorApiResponse): EventStaffResponse {
+  return {
+    id: item.id,
+    userId: item.mentorUserId,
+    fullName: item.mentorFullName,
+    email: item.mentorEmail,
+    assignedAt: item.assignedAt,
+  };
+}
+
+function mapStaffJudges(items: EventJudgeApiResponse[]): EventStaffResponse[] {
+  return items.map(mapStaffJudge);
+}
+
+function mapStaffMentors(items: EventMentorApiResponse[]): EventStaffResponse[] {
+  return items.map(mapStaffMentor);
+}
 
 export interface EventJudgeOption {
   id: string;

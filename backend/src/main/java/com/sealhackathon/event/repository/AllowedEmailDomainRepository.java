@@ -12,6 +12,8 @@ public interface AllowedEmailDomainRepository extends JpaRepository<AllowedEmail
 
     List<AllowedEmailDomain> findByEventIdOrderByDomainAsc(UUID eventId);
 
+    List<AllowedEmailDomain> findByEventIdIsNullOrderByDomainAsc();
+
     boolean existsByEventId(UUID eventId);
 
     void deleteByEventIdAndId(UUID eventId, UUID id);

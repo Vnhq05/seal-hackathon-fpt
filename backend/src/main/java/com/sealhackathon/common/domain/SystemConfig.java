@@ -45,4 +45,14 @@ public class SystemConfig extends BaseEntity {
     @Min(0)
     @Column(name = "max_teams")
     private Integer maxTeams;
+
+    /** Minimum semester for student eligibility (platform-wide). */
+    @Min(1)
+    @Column(name = "semester_min")
+    private Integer semesterMin;
+
+    /** Maximum semester for student eligibility (platform-wide). */
+    @Min(1)
+    @Column(name = "semester_max")
+    private Integer semesterMax;
 }

@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Getter
@@ -19,4 +20,5 @@ public class EventJudgeResponse {
     private UUID judgeUserId;
     private String judgeFullName;
     private String judgeEmail;
+    private LocalDateTime assignedAt;
 }

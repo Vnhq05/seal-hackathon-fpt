@@ -38,7 +38,10 @@ export function useUpdateEvent() {
   return useMutation({
     mutationFn: ({ eventId, ...body }: UpdateEventRequest & { eventId: string }) =>
       eventApi.update(eventId, body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: [ADMIN_EVENTS_KEY] }),
+    onSuccess: (_data, { eventId }) => {
+      qc.invalidateQueries({ queryKey: [ADMIN_EVENTS_KEY] });
+      qc.invalidateQueries({ queryKey: [ADMIN_EVENT_KEY, eventId] });
+    },
   });
 }
 

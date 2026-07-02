@@ -910,20 +910,23 @@ export function LiveScoreArenaPage({ eventId }: LiveScoreArenaPageProps) {
   const [rowAnimations, setRowAnimations] = useState<Map<string, RowAnimation>>(new Map());
   const prevRankingsRef = useRef<Map<string, number>>(new Map());
 
+  const { connected, rankingEvents, finalResults } = useLiveScoreWebSocket(eventId);
+
   const { data: board, isLoading, error } = useLiveScoreBoard(
     eventId,
     roundTypeSelection === "PRELIMINARY" ? selectedTrackId : undefined,
     undefined,
     roundTypeSelection ?? undefined,
+    { wsConnected: connected },
   );
   const { data: fullBoard } = useLiveScoreBoard(
     eventId,
     undefined,
     undefined,
     roundTypeSelection ?? undefined,
+    { wsConnected: connected },
   );
   const roundType = roundTypeSelection ?? board?.roundType ?? undefined;
-  const { connected, rankingEvents, finalResults } = useLiveScoreWebSocket(eventId);
 
   const allRankings = fullBoard?.rankings ?? board?.rankings ?? [];
   const revealVisible = showReveal || Boolean(finalResults && board?.resultsPublished);

@@ -2,7 +2,6 @@ package com.sealhackathon.team.domain;
 
 import com.sealhackathon.common.entity.BaseEntity;
 import com.sealhackathon.team.domain.enums.EnrollmentStatus;
-import com.sealhackathon.team.domain.enums.HackathonSkillRole;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -57,7 +56,10 @@ public class EventEnrollment extends BaseEntity {
     @Builder.Default
     private boolean isLookingForTeam = false;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "preferred_role", length = 30)
-    private HackathonSkillRole preferredRole;
+    @Column(name = "preferred_role", length = 100)
+    private String preferredRole;
+
+    @Column(name = "is_profile_public", nullable = false)
+    @Builder.Default
+    private boolean isProfilePublic = false;
 }

@@ -10,7 +10,6 @@ const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? "12345678";
 
 const PAGES = [
   { path: "/admin/assignments/mentors", heading: "Mentor Assignment" },
-  { path: "/admin/assignments/judges", heading: "Judge Assignment" },
   { path: "/admin/assignments", heading: "Judge assignments" },
 ];
 

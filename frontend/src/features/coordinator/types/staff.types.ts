@@ -41,39 +41,10 @@ export interface RecentApproval {
 }
 
 /* ---------- User Approval ---------- */
-export type ApprovalStatus = "pending" | "approved" | "rejected";
-
-export interface PendingUser {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  registeredDate: string;
-  status: ApprovalStatus;
-}
-
 export interface ApproveRejectPayload {
   userId: string;
   action: "approve" | "reject";
   reason?: string;
-}
-
-/* ---------- Participant Management ---------- */
-export type ParticipantStatus = "active" | "inactive" | "disqualified";
-
-export interface Participant {
-  id: string;
-  name: string;
-  email: string;
-  teamName: string | null;
-  hackathonName: string | null;
-  status: ParticipantStatus;
-  joinedDate: string;
-}
-
-export interface ParticipantListParams extends PaginationParams {
-  status?: ParticipantStatus;
-  hackathonId?: string;
 }
 
 /* ---------- Team Management ---------- */

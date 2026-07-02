@@ -16,7 +16,7 @@ test.describe("public routes", () => {
   });
 
   test("protected coordinator route redirects to login", async ({ page }) => {
-    await page.goto("/coordinator/participants");
+    await page.goto("/coordinator/assignments");
     await expect(page).toHaveURL(/\/login/);
   });
 });

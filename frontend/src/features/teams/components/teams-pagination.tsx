@@ -7,7 +7,8 @@ interface TeamsPaginationProps {
 }
 
 export function TeamsPagination({ totalPages }: TeamsPaginationProps) {
-  const { page, setPage } = useTeamFilterStore();
+  const page = useTeamFilterStore((s) => s.page);
+  const setPage = useTeamFilterStore((s) => s.setPage);
 
   if (totalPages <= 1) return null;
 

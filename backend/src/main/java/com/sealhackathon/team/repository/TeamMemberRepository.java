@@ -37,4 +37,7 @@ public interface TeamMemberRepository extends JpaRepository<TeamMember, UUID> {
             + "WHERE t.eventId = :eventId AND t.status = :status")
     List<TeamMember> findByEventIdAndTeamStatus(
             @Param("eventId") UUID eventId, @Param("status") TeamStatus status);
+
+    @Query("SELECT tm FROM TeamMember tm JOIN FETCH tm.team t WHERE tm.userId = :userId ORDER BY t.createdAt DESC")
+    List<TeamMember> findByUserId(@Param("userId") UUID userId);
 }

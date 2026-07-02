@@ -1,6 +1,7 @@
 package com.sealhackathon.user.service;
 
 import com.sealhackathon.event.repository.EventJudgeAssignmentRepository;
+import com.sealhackathon.event.repository.EventMentorAssignmentRepository;
 import com.sealhackathon.event.repository.JudgeAssignmentRepository;
 import com.sealhackathon.event.repository.MentorAssignmentRepository;
 import com.sealhackathon.judging.repository.JudgeScoreRepository;
@@ -23,6 +24,7 @@ import java.util.UUID;
 public class UserReferenceService {
 
     private final MentorAssignmentRepository mentorAssignmentRepository;
+    private final EventMentorAssignmentRepository eventMentorAssignmentRepository;
     private final EventJudgeAssignmentRepository eventJudgeAssignmentRepository;
     private final JudgeAssignmentRepository judgeAssignmentRepository;
     private final JudgeScoreRepository judgeScoreRepository;
@@ -41,7 +43,12 @@ public class UserReferenceService {
 
         long mentorAssignments = mentorAssignmentRepository.countByMentorUserId(userId);
         if (mentorAssignments > 0) {
-            refs.add(mentorAssignments + " event mentor assignment(s)");
+            refs.add(mentorAssignments + " track mentor assignment(s)");
+        }
+
+        long eventMentorAssignments = eventMentorAssignmentRepository.countByMentorUserId(userId);
+        if (eventMentorAssignments > 0) {
+            refs.add(eventMentorAssignments + " event mentor assignment(s)");
         }
 
         long eventJudgeAssignments = eventJudgeAssignmentRepository.countByJudgeUserId(userId);

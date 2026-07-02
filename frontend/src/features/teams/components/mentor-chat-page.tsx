@@ -5,7 +5,7 @@ import { useAuthStore } from "@/features/auth/store/auth.store";
 import { useMyTeamsAllEvents } from "@/features/teams/hooks/use-my-teams-all-events";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { mentorInvitationApi, mentorChatApi } from "@/lib/api";
-import type { MentorInvitationResponse, ChatMessageResponse } from "@/lib/api";
+import type { MentorInvitationResponse, ChatMessageResponse, MentorRoomResponse } from "@/lib/api";
 import { useMentorChatWebSocket } from "@/features/teams/hooks/use-mentor-chat-websocket";
 import { useAvailableMentors } from "@/features/teams/hooks/use-mentor-invitations";
 
@@ -80,7 +80,7 @@ function StatusBadge({ status }: { status: MentorInvitationResponse["status"] })
 // ═══ Main Page ═══
 
 export function MentorChatPage() {
-  const { user } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
   if (!user) return null;
 
   const isStudent = user.userType === "FPT_STUDENT" || user.userType === "EXTERNAL_STUDENT";
@@ -91,6 +91,7 @@ export function MentorChatPage() {
 // ═══ Student View ═══
 
 function StudentView() {
+  const user = useAuthStore((s) => s.user);
   const { data: allTeams, isLoading } = useMyTeamsAllEvents();
   const activeTeams = (allTeams ?? []).filter((mt) => mt.event.status !== "COMPLETED" && mt.team);
   const [selectedIdx, setSelectedIdx] = useState(0);
@@ -144,7 +145,7 @@ function StudentView() {
               teamId={selected.team.id}
               teamName={selected.team.name}
               trackId={selected.team.trackId}
-              isLeader={selected.team.leaderId === useAuthStore.getState().user?.id}
+              isLeader={selected.team.leaderId === user?.id}
             />
           ) : (
             <EmptyPanel message="Select a team." />
@@ -158,22 +159,34 @@ function StudentView() {
 function StudentTeamPanel({ eventId, teamId, teamName, trackId, isLeader }: {
   eventId: string; teamId: string; teamName: string; trackId: string | null; isLeader: boolean;
 }) {
+  const qc = useQueryClient();
+  const ws = useMentorChatWebSocket(teamId);
+
+  useEffect(() => {
+    return ws.subscribe(() => {
+      qc.invalidateQueries({ queryKey: ["mentor-room", eventId, teamId] });
+      qc.invalidateQueries({ queryKey: ["mentor-invitations", eventId, teamId] });
+    });
+  }, [ws, eventId, teamId, qc]);
+
   const { data: room } = useQuery({
     queryKey: ["mentor-room", eventId, teamId],
     queryFn: () => mentorInvitationApi.getRoomByTeam(eventId, teamId),
-    refetchInterval: 4000,
+    staleTime: 30_000,
+    refetchInterval: ws.connected ? false : 30_000,
   });
 
   const { data: invitations = [] } = useQuery({
     queryKey: ["mentor-invitations", eventId, teamId],
     queryFn: () => mentorInvitationApi.getByTeam(eventId, teamId),
-    refetchInterval: 4000,
+    staleTime: 30_000,
+    refetchInterval: ws.connected ? false : 30_000,
   });
 
   if (room) {
     return (
       <div className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] flex flex-col h-[calc(100vh-220px)]">
-        <ChatRoom eventId={eventId} teamId={teamId} peerName="Mentor" pill={teamName} />
+        <ChatRoom eventId={eventId} teamId={teamId} peerName="Mentor" pill={teamName} ws={ws} />
       </div>
     );
   }
@@ -306,21 +319,33 @@ function SentInvitations({ invitations }: { invitations: MentorInvitationRespons
 // ═══ Lecturer/Mentor View ═══
 
 function LecturerMentorView() {
+  const [selectedRoomIdx, setSelectedRoomIdx] = useState(0);
+  const qc = useQueryClient();
+  const cachedRooms = qc.getQueryData<MentorRoomResponse[]>(["mentor-rooms-all"]) ?? [];
+  const ws = useMentorChatWebSocket(cachedRooms[selectedRoomIdx]?.teamId);
+
+  useEffect(() => {
+    return ws.subscribe(() => {
+      qc.invalidateQueries({ queryKey: ["mentor-pending-all"] });
+      qc.invalidateQueries({ queryKey: ["mentor-rooms-all"] });
+    });
+  }, [ws, qc]);
+
   const { data: pending = [] } = useQuery({
     queryKey: ["mentor-pending-all"],
     queryFn: () => mentorInvitationApi.getAllPendingForMentor(),
-    refetchInterval: 5000,
+    staleTime: 30_000,
+    refetchInterval: ws.connected ? false : 30_000,
   });
 
   const { data: rooms = [] } = useQuery({
     queryKey: ["mentor-rooms-all"],
     queryFn: () => mentorInvitationApi.getAllMentorActiveRooms(),
-    refetchInterval: 5000,
+    staleTime: 30_000,
+    refetchInterval: ws.connected ? false : 30_000,
   });
 
-  const [selectedRoomIdx, setSelectedRoomIdx] = useState(0);
   const selectedRoom = rooms[selectedRoomIdx] ?? null;
-  const qc = useQueryClient();
 
   const { mutate: respond } = useMutation({
     mutationFn: ({ id, eventId, decision }: { id: string; eventId: string; decision: "ACCEPTED" | "DENIED" }) =>
@@ -403,6 +428,7 @@ function LecturerMentorView() {
               teamId={selectedRoom.teamId}
               peerName={selectedRoom.teamName ?? `Team ${selectedRoom.teamId}`}
               pill="Mentor"
+              ws={ws}
             />
           ) : (
             <EmptyPanel message="Select a team to start chatting." />
@@ -415,14 +441,16 @@ function LecturerMentorView() {
 
 // ═══ Chat Room ═══
 
-function ChatRoom({ eventId, teamId, peerName, pill }: {
+function ChatRoom({ eventId, teamId, peerName, pill, ws: wsProp }: {
   eventId: string; teamId: string; peerName: string; pill?: string;
+  ws?: ReturnType<typeof useMentorChatWebSocket>;
 }) {
-  const { user } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
   const [text, setText] = useState("");
   const [liveMessages, setLiveMessages] = useState<ChatMessageResponse[]>([]);
   const endRef = useRef<HTMLDivElement>(null);
-  const { connected, subscribe, sendMessage: sendWs } = useMentorChatWebSocket(teamId);
+  const internalWs = useMentorChatWebSocket(wsProp ? undefined : teamId);
+  const { connected, subscribe, sendMessage: sendWs } = wsProp ?? internalWs;
 
   const { data: history = [] } = useQuery({
     queryKey: ["mentor-messages", eventId, teamId],

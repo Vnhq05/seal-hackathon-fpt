@@ -78,7 +78,7 @@ class TeamMatchingDtoJsonTest {
                 UpdateMatchingProfileRequest.class);
 
         assertThat(request.isLookingForTeam()).isTrue();
-        assertThat(request.getPreferredRole()).isEqualTo(HackathonSkillRole.FRONTEND);
+        assertThat(request.getPreferredRole()).isEqualTo("FRONTEND");
     }
 
     @Test
@@ -99,12 +99,51 @@ class TeamMatchingDtoJsonTest {
                 .status(EnrollmentStatus.APPROVED)
                 .enrolledAt(LocalDateTime.parse("2026-06-01T08:00:00"))
                 .isLookingForTeam(true)
-                .preferredRole(HackathonSkillRole.FRONTEND)
+                .preferredRole("Frontend developer")
                 .build();
 
         String json = objectMapper.writeValueAsString(response);
 
         assertThat(json).contains("\"isLookingForTeam\":true");
         assertThat(json).doesNotContain("\"lookingForTeam\":");
+    }
+
+    @Test
+    void deserializeUpdateMatchingProfileRequest_withIsProfilePublicKey() throws Exception {
+        UpdateMatchingProfileRequest request = objectMapper.readValue(
+                "{\"isLookingForTeam\":true,\"isProfilePublic\":true}",
+                UpdateMatchingProfileRequest.class);
+
+        assertThat(request.isLookingForTeam()).isTrue();
+        assertThat(request.isProfilePublic()).isTrue();
+    }
+
+    @Test
+    void deserializeUpdateMatchingProfileRequest_withProfilePublicAlias() throws Exception {
+        UpdateMatchingProfileRequest request = objectMapper.readValue(
+                "{\"lookingForTeam\":true,\"profilePublic\":true}",
+                UpdateMatchingProfileRequest.class);
+
+        assertThat(request.isProfilePublic()).isTrue();
+    }
+
+    @Test
+    void serializeEnrollmentResponse_usesIsProfilePublicKey() throws Exception {
+        EnrollmentResponse response = EnrollmentResponse.builder()
+                .id(UUID.randomUUID())
+                .userId(UUID.randomUUID())
+                .eventId(UUID.randomUUID())
+                .status(EnrollmentStatus.APPROVED)
+                .enrolledAt(LocalDateTime.parse("2026-06-01T08:00:00"))
+                .isLookingForTeam(true)
+                .isProfilePublic(true)
+                .preferredRole("Backend developer")
+                .semester(5)
+                .build();
+
+        String json = objectMapper.writeValueAsString(response);
+
+        assertThat(json).contains("\"isProfilePublic\":true");
+        assertThat(json).doesNotContain("\"profilePublic\":");
     }
 }

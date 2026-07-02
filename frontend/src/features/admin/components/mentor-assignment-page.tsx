@@ -44,7 +44,7 @@ function MentorRow({ m, eventId, trackId }: { m: MentorAssignmentResponse; event
   );
 }
 
-export function MentorAssignmentPage({ defaultEventId }: { defaultEventId?: string } = {}) {
+export function MentorAssignmentPage({ defaultEventId, embedded }: { defaultEventId?: string; embedded?: boolean } = {}) {
   const [eventId, setEventId] = useState(defaultEventId ?? "");
   const [trackId, setTrackId] = useState("");
   const [mentorUserId, setMentorUserId] = useState("");
@@ -91,15 +91,17 @@ export function MentorAssignmentPage({ defaultEventId }: { defaultEventId?: stri
   };
 
   return (
-    <div style={{ padding: 24 }}>
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 32, fontWeight: 700, color: "#0e1528", letterSpacing: "-0.64px", lineHeight: "38.4px" }}>
-          Mentor Assignment
-        </h1>
-        <p style={{ fontSize: 14, color: "#8891a5", lineHeight: "21px", marginTop: 4 }}>
-          Assign mentors to tracks within events.
-        </p>
-      </div>
+    <div style={embedded ? undefined : { padding: 24 }}>
+      {!embedded && (
+        <div style={{ marginBottom: 24 }}>
+          <h1 style={{ fontSize: 32, fontWeight: 700, color: "#0e1528", letterSpacing: "-0.64px", lineHeight: "38.4px" }}>
+            Mentor Assignment
+          </h1>
+          <p style={{ fontSize: 14, color: "#8891a5", lineHeight: "21px", marginTop: 4 }}>
+            Assign mentors to tracks within events.
+          </p>
+        </div>
+      )}
 
       <div className="flex items-end gap-3 p-5 mb-6 border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]">
         <div className="flex flex-col">

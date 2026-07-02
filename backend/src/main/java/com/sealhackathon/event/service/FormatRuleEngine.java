@@ -9,6 +9,7 @@ import com.sealhackathon.event.repository.HackathonEventRepository;
 import com.sealhackathon.event.repository.TrackRepository;
 import com.sealhackathon.team.repository.TeamRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
@@ -35,8 +36,9 @@ public class FormatRuleEngine {
     private final HackathonEventRepository eventRepository;
     private final TrackRepository trackRepository;
     private final TeamRepository teamRepository;
+    @Autowired
     @Lazy
-    private final EventService eventService;
+    private EventService eventService;
 
     public int getSealMaxTracks() {
         return sealMaxTracks;

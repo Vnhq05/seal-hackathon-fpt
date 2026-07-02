@@ -7,12 +7,14 @@ import { useRenameTeam } from "@/features/teams/hooks/use-rename-team";
 import { useTeamSubmissions } from "@/features/teams/hooks/use-team-submissions";
 import { InlineSubmissionForm } from "@/features/teams/components/inline-submission-form";
 import { InvitePendingSection } from "@/features/teams/components/invite-pending-section";
+import { FindingMembersSection } from "@/features/teams/components/finding-members-section";
 import { JoinRequestsSection } from "@/features/teams/components/join-requests-section";
-import { LeaveRequestDialog } from "@/features/teams/components/leave-request-dialog";
+import { LeaveTeamDialog } from "@/features/teams/components/leave-request-dialog";
 import { TeamRecruitmentSettings } from "@/features/teams/components/team-recruitment-settings";
 import { TransferLeaderDialog } from "@/features/teams/components/transfer-leader-dialog";
 import { useEventParticipationGate } from "@/features/events/hooks/use-event-participation-gate";
 import { enrollmentWaitingListKey } from "@/features/events/hooks/use-enrollment";
+import { matchingCandidatesKey } from "@/features/teams/hooks/use-matching-candidates";
 import { JOINABLE_TEAMS_KEY } from "@/features/teams/hooks/use-joinable-teams";
 import { resolveEventTeamSize } from "@/features/events/utils/participation-gate.utils";
 import { isRoundOpen, roundLockMessage } from "@/features/submissions/utils/round.utils";
@@ -91,6 +93,7 @@ export function TeamDetailPanel({ event, team }: TeamDetailPanelProps) {
       qc.invalidateQueries({ queryKey: ["my-teams-all-events"] });
       qc.invalidateQueries({ queryKey: ["pending-invites", team.id] });
       qc.invalidateQueries({ queryKey: enrollmentWaitingListKey(event.id) });
+      qc.invalidateQueries({ queryKey: matchingCandidatesKey(event.id, team.id) });
     },
   });
 
@@ -318,6 +321,7 @@ export function TeamDetailPanel({ event, team }: TeamDetailPanelProps) {
                 {invitePending ? "Sending..." : "Invite"}
               </button>
             </div>
+            <FindingMembersSection eventId={event.id} teamId={team.id} />
           </div>
         )}
 
@@ -341,9 +345,10 @@ export function TeamDetailPanel({ event, team }: TeamDetailPanelProps) {
           <div className="mt-4 border-t border-seal-border-light pt-4">
             <button
               onClick={() => setShowLeaveDialog(true)}
-              className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
+              disabled={!canModifyMembers}
+              className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
             >
-              Request to leave team
+              Leave team
             </button>
           </div>
         )}
@@ -439,7 +444,7 @@ export function TeamDetailPanel({ event, team }: TeamDetailPanelProps) {
       )}
 
       {showLeaveDialog && (
-        <LeaveRequestDialog
+        <LeaveTeamDialog
           eventId={event.id}
           teamId={team.id}
           teamName={team.name}

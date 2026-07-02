@@ -8,7 +8,6 @@ import { useEventParticipationGate } from "@/features/events/hooks/use-event-par
 import { resolveEventTeamSize } from "@/features/events/utils/participation-gate.utils";
 import { useSystemTeamConfig } from "@/features/teams/hooks/use-system-team-config";
 import type { EventResponse } from "@/lib/api";
-import { HACKATHON_SKILL_ROLE_LABELS } from "@/lib/api/types";
 import { JOINABLE_TEAMS_KEY } from "@/features/teams/hooks/use-joinable-teams";
 
 interface CreateTeamPanelProps {
@@ -130,7 +129,7 @@ export function CreateTeamPanel({ event, onCreated }: CreateTeamPanelProps) {
                       )}
                       {e.preferredRole && (
                         <span className="rounded-md bg-seal-cyan/10 px-2 py-0.5 text-[10px] font-medium text-seal-cyan">
-                          {HACKATHON_SKILL_ROLE_LABELS[e.preferredRole]}
+                          {e.preferredRole}
                         </span>
                       )}
                     </div>

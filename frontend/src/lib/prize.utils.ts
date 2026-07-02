@@ -1,5 +1,6 @@
-import type { PrizeRank } from "@/lib/api/event.api";
-import type { WizardPrize } from "@/features/admin/store/event-wizard.store";
+import type { PrizeRank, PrizeRequest } from "@/lib/api/event.api";
+
+type PrizeOrderingInput = Pick<PrizeRequest, "rank" | "value" | "trackIndex">;
 
 export const PRIZE_RANK_LABELS: Record<PrizeRank, string> = {
   FIRST: "First Prize",
@@ -31,8 +32,8 @@ export function formatPrizeAmount(value: string): string {
   return `${new Intl.NumberFormat("en-US").format(amount)} ₫`;
 }
 
-export function validatePrizeOrdering(prizes: WizardPrize[]): string | null {
-  const groups = new Map<string, WizardPrize[]>();
+export function validatePrizeOrdering(prizes: PrizeOrderingInput[]): string | null {
+  const groups = new Map<string, PrizeOrderingInput[]>();
   for (const p of prizes) {
     const key = p.trackIndex != null ? `track-${p.trackIndex}` : "shared";
     if (!groups.has(key)) groups.set(key, []);

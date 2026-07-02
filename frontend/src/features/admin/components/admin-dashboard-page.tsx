@@ -6,7 +6,6 @@ import { AdminSystemBanner } from "@/features/admin/components/admin-system-bann
 import { AdminStatsGrid } from "@/features/admin/components/admin-stats-grid";
 import { AdminRegistrationChart } from "@/features/admin/components/admin-registration-chart";
 import { AdminQuickActions } from "@/features/admin/components/admin-quick-actions";
-import { AdminActivityFeed } from "@/features/admin/components/admin-activity-feed";
 import { AdminEventsTable } from "@/features/admin/components/admin-events-table";
 
 function ExportIcon() {
@@ -48,7 +47,6 @@ export function AdminDashboardPage() {
         <AdminRegistrationChart />
         <div style={{ width: 320, flexShrink: 0 }}>
           <AdminQuickActions />
-          <AdminActivityFeed />
         </div>
       </div>
 

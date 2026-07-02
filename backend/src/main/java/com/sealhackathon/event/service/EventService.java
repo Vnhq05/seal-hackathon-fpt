@@ -32,8 +32,10 @@ import com.sealhackathon.event.repository.ScoringTemplateRepository;
 import com.sealhackathon.user.dto.snapshot.UserSnapshot;
 import com.sealhackathon.user.service.UserPublicService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -76,7 +78,9 @@ public class EventService {
     private final AllowedEmailDomainService allowedEmailDomainService;
     private final ScoringTemplateRepository scoringTemplateRepository;
     private final UserPublicService userPublicService;
-    private final FormatRuleEngine formatRuleEngine;
+    @Autowired
+    @Lazy
+    private FormatRuleEngine formatRuleEngine;
 
     @Transactional
     public EventResponse createEvent(CreateEventRequest request) {
@@ -93,10 +97,12 @@ public class EventService {
                 ? request.getCompetitionFormat()
                 : CompetitionFormat.GENERIC;
 
+        LocalDate today = LocalDate.now();
+
         HackathonEvent event = HackathonEvent.builder()
                 .name(request.getName())
-                .season(SeasonUtils.normalize(request.getSeason()))
-                .year(request.getYear())
+                .season(SeasonUtils.deriveCurrentSeason(today))
+                .year(SeasonUtils.deriveCurrentYear(today))
                 .startDate(request.getStartDate())
                 .endDate(request.getEndDate())
                 .registrationDeadline(request.getRegistrationDeadline())

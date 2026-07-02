@@ -195,7 +195,7 @@ public class EventDemoSeeder {
         seedEnrollment(student3.getId(), eventId, now);
         seedEnrollment(student4.getId(), eventId, now);
         seedEnrollment(student5.getId(), eventId, now);
-        seedEnrollment(student6.getId(), eventId, now, true, HackathonSkillRole.FRONTEND);
+        seedEnrollment(student6.getId(), eventId, now, true, "Frontend developer");
 
         Team alpha = seedTeam(eventId, "Team Alpha", student1.getId(), softwareTrackId, now,
                 List.of(student1.getId(), student2.getId(), student3.getId()), TeamStatus.CONFIRMED, null);
@@ -249,7 +249,7 @@ public class EventDemoSeeder {
             UUID eventId,
             LocalDateTime now,
             boolean isLookingForTeam,
-            HackathonSkillRole preferredRole) {
+            String preferredRole) {
         if (enrollmentRepository.existsByUserIdAndEventId(userId, eventId)) {
             enrollmentRepository.findByUserIdAndEventId(userId, eventId).ifPresent(existing -> {
                 existing.setLookingForTeam(isLookingForTeam);

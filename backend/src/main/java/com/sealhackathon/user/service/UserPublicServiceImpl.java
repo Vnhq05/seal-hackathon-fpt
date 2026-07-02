@@ -4,6 +4,7 @@ import com.sealhackathon.common.enums.AccountStatus;
 import com.sealhackathon.common.enums.StudentStanding;
 import com.sealhackathon.common.enums.UserType;
 import com.sealhackathon.common.exception.ResourceNotFoundException;
+import com.sealhackathon.common.util.UniversityUtils;
 import com.sealhackathon.user.domain.User;
 import com.sealhackathon.user.dto.snapshot.LockState;
 import com.sealhackathon.user.dto.snapshot.UserSnapshot;
@@ -108,7 +109,7 @@ public class UserPublicServiceImpl implements UserPublicService {
                 .fullName(fullName)
                 .phone(phone)
                 .studentId(studentId)
-                .universityName(universityName)
+                .universityName(UniversityUtils.resolveUniversityName(userType, universityName))
                 .userType(userType)
                 .status(AccountStatus.PENDING)
                 .semester(semester)
@@ -188,7 +189,8 @@ public class UserPublicServiceImpl implements UserPublicService {
                 .fullName(user.getFullName())
                 .phone(user.getPhone())
                 .studentId(user.getStudentId())
-                .universityName(user.getUniversityName())
+                .universityName(UniversityUtils.resolveUniversityName(
+                        user.getUserType(), user.getUniversityName()))
                 .userType(user.getUserType())
                 .status(user.getStatus())
                 .semester(user.getSemester())

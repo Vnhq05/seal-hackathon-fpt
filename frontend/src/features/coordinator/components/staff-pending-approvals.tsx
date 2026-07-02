@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRecentApprovals } from "@/features/coordinator/hooks/use-staff-dashboard";
 import { useApproveRejectUser } from "@/features/coordinator/hooks/use-approve-reject-user";
 
@@ -24,16 +23,11 @@ export function StaffPendingApprovals() {
 
   return (
     <div
+      id="pending-approvals"
       className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] flex-1 p-6"
     >
       <div className="flex items-center justify-between" style={{ marginBottom: 16 }}>
         <h3 style={{ fontSize: 16, fontWeight: 700, color: "#0e1528" }}>Pending Approvals</h3>
-        <Link
-          href="/coordinator/user-approval"
-          className="text-[13px] font-semibold text-royal"
-        >
-          View all
-        </Link>
       </div>
 
       <div className="flex flex-col">

@@ -94,38 +94,6 @@ function extractEventId(apiCalls) {
   return null;
 }
 
-async function verifyCoordinatorTracks(page, failedRequests, apiCalls) {
-  await login(page, COORDINATOR_EMAIL, COORDINATOR_PASSWORD);
-  await page.goto(`${BASE}/coordinator/tracks`, { waitUntil: "networkidle", timeout: 60000 });
-  await page.waitForTimeout(2000);
-
-  const h1 = await page.locator("h1").first().textContent().catch(() => "");
-  const headingOk = h1?.includes("Track & Finals Management");
-  console.log(`PAGE /coordinator/tracks: ${headingOk ? "PASS" : "FAIL"} — h1="${h1?.trim()}"`);
-  if (!headingOk) failedRequests.push("PAGE /coordinator/tracks — heading mismatch");
-
-  const eventSelect = page.locator("select").first();
-  if (await eventSelect.isVisible().catch(() => false)) {
-    const options = await eventSelect.locator("option").all();
-    for (const opt of options) {
-      const value = await opt.getAttribute("value");
-      if (value) {
-        await eventSelect.selectOption(value);
-        await page.waitForTimeout(2500);
-        console.log(`INTERACTION coordinator tracks: selected event ${value}`);
-        break;
-      }
-    }
-  }
-
-  checkEndpoints(
-    apiCalls,
-    failedRequests,
-    "COORDINATOR_TRACKS",
-    COORDINATOR_APIS.filter((ep) => ep.name.includes("finalists")),
-  );
-}
-
 async function verifyCoordinatorLivescore(page, failedRequests, apiCalls, eventId) {
   await login(page, COORDINATOR_EMAIL, COORDINATOR_PASSWORD);
   if (!eventId) {
@@ -166,7 +134,7 @@ async function verifyCoordinatorLivescore(page, failedRequests, apiCalls, eventI
     apiCalls,
     failedRequests,
     "COORDINATOR",
-    COORDINATOR_APIS.filter((ep) => ep.name.includes("leaderboard")),
+    COORDINATOR_APIS.filter((ep) => ep.name.includes("leaderboard") || ep.name.includes("finalists")),
   );
 }
 
@@ -207,13 +175,6 @@ async function main() {
     consoleErrors.push(...studentErrors);
     failedRequests.push(...studentFailed);
     apiCalls.push(...studentApis);
-    await page.close();
-  }
-
-  {
-    const page = await browser.newPage();
-    trackPage(page, consoleErrors, failedRequests, apiCalls);
-    await verifyCoordinatorTracks(page, failedRequests, apiCalls);
     await page.close();
   }
 
