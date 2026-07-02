@@ -4,8 +4,6 @@ import type { EventStatus, StudentStanding } from "@/lib/api/types";
 export interface ParticipationGateInput {
   registrationDeadline: string;
   status: EventStatus;
-  semesterMin?: number | null;
-  semesterMax?: number | null;
 }
 
 export interface UserEligibilityInput {
@@ -44,15 +42,20 @@ export function deriveParticipationGate(
   return { isRegistrationOpen, canModifyMembers, registrationClosedReason };
 }
 
+export interface SemesterEligibilityRange {
+  semesterMin?: number | null;
+  semesterMax?: number | null;
+}
+
 export function deriveEnrollmentEligibility(
-  event: Pick<EventResponse, "semesterMin" | "semesterMax">,
+  semesterRange: SemesterEligibilityRange,
   user: UserEligibilityInput,
 ): { eligible: boolean; reason: string | null } {
   if (user.studentStanding === "GRADUATED") {
     return { eligible: false, reason: "Graduated students are not eligible to participate" };
   }
 
-  const { semesterMin, semesterMax } = event;
+  const { semesterMin, semesterMax } = semesterRange;
   if (semesterMin == null || semesterMax == null) {
     return { eligible: true, reason: null };
   }

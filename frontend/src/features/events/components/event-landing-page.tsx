@@ -22,6 +22,7 @@ import type { PrizeRank } from "@/lib/api/event.api";
 import type { RoundResponse } from "@/lib/api/round.api";
 import { formatAdvancementLabel } from "@/lib/api/round.utils";
 import { useEventParticipationGate } from "@/features/events/hooks/use-event-participation-gate";
+import { useSystemTeamConfig } from "@/features/teams/hooks/use-system-team-config";
 import { useProfile } from "@/features/profile/hooks/use-profile";
 import { useAuthStore } from "@/features/auth/store/auth.store";
 import { ParticipationBlockBanner } from "@/features/events/components/participation-block-banner";
@@ -102,6 +103,7 @@ function HeroSection({ event }: { event: EventResponse }) {
   const status = getStatusMeta(event.status);
   const { isAuthenticated } = useAuthStore();
   const { data: profile } = useProfile({ enabled: isAuthenticated });
+  const { data: systemConfig } = useSystemTeamConfig();
   const userEligibility = isAuthenticated && profile
     ? {
         studentStanding:
@@ -116,7 +118,7 @@ function HeroSection({ event }: { event: EventResponse }) {
     useEventParticipationGate(event, userEligibility);
   const showRegisterCta = event.status === "OPEN" && canEnroll;
   const blockReason = enrollmentBlockReason ?? registrationClosedReason;
-  const semester = formatSemesterRange(event);
+  const semester = formatSemesterRange(systemConfig?.semesterMin, systemConfig?.semesterMax);
   const prizePool = calcTotalPrizePool(event.prizes);
 
   return (

@@ -74,13 +74,16 @@ export function formatTeamSize(event: EventResponse): string {
   return "Flexible team size";
 }
 
-export function formatSemesterRange(event: EventResponse): string | null {
-  if (event.semesterMin == null && event.semesterMax == null) return null;
-  if (event.semesterMin != null && event.semesterMax != null) {
-    return `Semester ${event.semesterMin}–${event.semesterMax}`;
+export function formatSemesterRange(
+  semesterMin?: number | null,
+  semesterMax?: number | null,
+): string | null {
+  if (semesterMin == null && semesterMax == null) return null;
+  if (semesterMin != null && semesterMax != null) {
+    return `Semester ${semesterMin}–${semesterMax}`;
   }
-  if (event.semesterMin != null) return `Semester ${event.semesterMin}+`;
-  return `Up to semester ${event.semesterMax}`;
+  if (semesterMin != null) return `Semester ${semesterMin}+`;
+  return `Up to semester ${semesterMax}`;
 }
 
 export function formatFormatLabel(format: string): string {

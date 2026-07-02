@@ -11,6 +11,7 @@ import {
 import { useExternalEnrollment } from "@/features/events/hooks/use-external-enrollment";
 import { usePublicAllowedEmailDomains } from "@/features/events/hooks/use-allowed-email-domains";
 import { useEventParticipationGate } from "@/features/events/hooks/use-event-participation-gate";
+import { useSystemTeamConfig } from "@/features/teams/hooks/use-system-team-config";
 import { ParticipationBlockBanner } from "@/features/events/components/participation-block-banner";
 import { uniqueUniversityLabels } from "@/lib/email-domain";
 import { Button } from "@/shared/ui/button";
@@ -48,12 +49,13 @@ export function ExternalRegistrationForm({ event }: ExternalRegistrationFormProp
   const [submitted, setSubmitted] = useState(false);
 
   const { isRegistrationOpen, registrationClosedReason } = useEventParticipationGate(event);
+  const { data: systemConfig } = useSystemTeamConfig();
 
   const { data: allowedDomains = [], isLoading: domainsLoading } = usePublicAllowedEmailDomains(eventId);
 
   const semesterRange =
-    event.semesterMin != null && event.semesterMax != null
-      ? { min: event.semesterMin, max: event.semesterMax }
+    systemConfig?.semesterMin != null && systemConfig?.semesterMax != null
+      ? { min: systemConfig.semesterMin, max: systemConfig.semesterMax }
       : null;
 
   const externalRegistrationSchema = useMemo(

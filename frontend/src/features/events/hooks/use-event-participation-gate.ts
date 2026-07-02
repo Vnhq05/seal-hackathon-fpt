@@ -5,13 +5,27 @@ import type { EventResponse } from "@/lib/api/event.api";
 import {
   deriveEnrollmentEligibility,
   deriveParticipationGate,
+  type SemesterEligibilityRange,
   type UserEligibilityInput,
 } from "@/features/events/utils/participation-gate.utils";
+import { useSystemTeamConfig } from "@/features/teams/hooks/use-system-team-config";
 
 export function useEventParticipationGate(
   event: EventResponse | null | undefined,
   user?: UserEligibilityInput | null,
+  semesterRangeOverride?: SemesterEligibilityRange | null,
 ) {
+  const { data: systemConfig } = useSystemTeamConfig();
+
+  const semesterRange = useMemo<SemesterEligibilityRange>(
+    () =>
+      semesterRangeOverride ?? {
+        semesterMin: systemConfig?.semesterMin,
+        semesterMax: systemConfig?.semesterMax,
+      },
+    [semesterRangeOverride, systemConfig?.semesterMin, systemConfig?.semesterMax],
+  );
+
   return useMemo(() => {
     if (!event) {
       return {
@@ -25,7 +39,7 @@ export function useEventParticipationGate(
 
     const gate = deriveParticipationGate(event);
     const enrollment = user
-      ? deriveEnrollmentEligibility(event, user)
+      ? deriveEnrollmentEligibility(semesterRange, user)
       : { eligible: true, reason: null as string | null };
 
     return {
@@ -33,5 +47,5 @@ export function useEventParticipationGate(
       canEnroll: gate.isRegistrationOpen && enrollment.eligible,
       enrollmentBlockReason: enrollment.reason,
     };
-  }, [event, user]);
+  }, [event, user, semesterRange]);
 }
