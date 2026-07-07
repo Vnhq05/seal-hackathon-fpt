@@ -86,6 +86,8 @@ class JudgingControllerIntegrationTest extends BaseIntegrationTest {
 
         judgeAssignmentRepository.save(JudgeAssignment.builder()
                 .round(round).judgeUserId(judge.getId())
+                .scope(com.sealhackathon.event.domain.enums.AssignmentScope.ROUND)
+                .active(true)
                 .assignedAt(LocalDateTime.now()).build());
 
         Team team = teamRepository.save(Team.builder()

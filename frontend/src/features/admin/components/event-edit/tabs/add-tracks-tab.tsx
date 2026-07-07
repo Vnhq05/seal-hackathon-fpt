@@ -8,6 +8,11 @@ import {
   useDeleteTrack,
 } from "@/features/admin/hooks/use-admin-tracks";
 import {
+  useCompetitionGroups,
+  useCreateCompetitionGroup,
+  useDeleteCompetitionGroup,
+} from "@/features/admin/hooks/use-admin-assignments";
+import {
   bannerErrorStyle,
   errorStyle,
   inputStyle,
@@ -17,6 +22,120 @@ import {
 
 const TRACK_MIN = 16;
 const TRACK_MAX = 40;
+
+function TrackCompetitionGroups({
+  eventId,
+  trackId,
+  editable,
+}: {
+  eventId: string;
+  trackId: string;
+  editable: boolean;
+}) {
+  const { data: groups = [], isLoading } = useCompetitionGroups(eventId, trackId);
+  const { mutate: createGroup, isPending: creating } = useCreateCompetitionGroup(eventId, trackId);
+  const { mutate: deleteGroup, isPending: deleting } = useDeleteCompetitionGroup(eventId, trackId);
+  const [groupName, setGroupName] = useState("");
+  const [groupError, setGroupError] = useState<string | null>(null);
+
+  const handleAddGroup = () => {
+    if (!groupName.trim()) return;
+    setGroupError(null);
+    createGroup(groupName.trim(), {
+      onSuccess: () => setGroupName(""),
+      onError: (err) =>
+        setGroupError(err instanceof Error ? err.message : "Failed to add group"),
+    });
+  };
+
+  return (
+    <div
+      style={{
+        marginTop: 8,
+        padding: "10px 12px",
+        backgroundColor: "#fff",
+        borderRadius: 6,
+        border: "1px solid rgba(223,226,236,0.8)",
+      }}
+    >
+      <p style={{ fontSize: 12, fontWeight: 700, color: "#4a5468", marginBottom: 8 }}>
+        Competition Groups
+      </p>
+
+      {editable && (
+        <div className="flex gap-2" style={{ marginBottom: 8 }}>
+          <input
+            value={groupName}
+            onChange={(e) => setGroupName(e.target.value)}
+            style={{ ...inputStyle, flex: 1, fontSize: 13, padding: "8px 10px" }}
+            placeholder="Group name (e.g. Group A1)"
+          />
+          <button
+            type="button"
+            onClick={handleAddGroup}
+            disabled={creating}
+            style={{
+              backgroundColor: "#38bdf8",
+              color: "#fff",
+              padding: "8px 12px",
+              borderRadius: 6,
+              border: "none",
+              cursor: "pointer",
+              fontSize: 13,
+              fontWeight: 600,
+              whiteSpace: "nowrap",
+            }}
+          >
+            {creating ? "Adding..." : "Add group"}
+          </button>
+        </div>
+      )}
+      {groupError && <p style={{ ...errorStyle, marginBottom: 8 }}>{groupError}</p>}
+
+      {isLoading ? (
+        <div
+          className="animate-pulse rounded"
+          style={{ height: 24, backgroundColor: "rgba(223,226,236,0.8)" }}
+        />
+      ) : groups.length === 0 ? (
+        <p style={{ fontSize: 12, color: "#8891a5" }}>No groups yet.</p>
+      ) : (
+        <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+          {groups.map((g) => (
+            <li
+              key={g.id}
+              className="flex items-center justify-between"
+              style={{
+                padding: "6px 0",
+                borderBottom: "1px solid rgba(223,226,236,0.4)",
+                fontSize: 13,
+              }}
+            >
+              <span>{g.name}</span>
+              {editable && (
+                <button
+                  type="button"
+                  onClick={() => deleteGroup(g.id)}
+                  disabled={deleting}
+                  style={{
+                    color: "#991b1b",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    fontSize: 12,
+                    fontWeight: 600,
+                  }}
+                >
+                  Remove
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 export function AddTracksTab({ event }: { event: EventResponse }) {
   const eventId = event.id;
@@ -31,6 +150,16 @@ export function AddTracksTab({ event }: { event: EventResponse }) {
   const [trackMaxTeams, setTrackMaxTeams] = useState(20);
   const [trackError, setTrackError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [expandedTrackIds, setExpandedTrackIds] = useState<Set<string>>(new Set());
+
+  const toggleTrackGroups = (trackId: string) => {
+    setExpandedTrackIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(trackId)) next.delete(trackId);
+      else next.add(trackId);
+      return next;
+    });
+  };
 
   const handleAddTrack = () => {
     if (!trackName.trim()) return;
@@ -134,7 +263,6 @@ export function AddTracksTab({ event }: { event: EventResponse }) {
           tracks.map((t) => (
             <div
               key={t.id}
-              className="flex items-center justify-between"
               style={{
                 padding: "10px 12px",
                 backgroundColor: "#f8f9fc",
@@ -142,35 +270,56 @@ export function AddTracksTab({ event }: { event: EventResponse }) {
                 marginBottom: 4,
               }}
             >
-              <div>
-                <span style={{ fontSize: 14, fontWeight: 600 }}>
-                  {t.name} (max {t.maxTeams} teams)
-                </span>
-                {t.description && (
-                  <p style={{ fontSize: 12, color: "#8891a5", marginTop: 2 }}>{t.description}</p>
-                )}
-                {t.assignedTeamCount != null && (
-                  <p style={{ fontSize: 12, color: "#8891a5", marginTop: 2 }}>
-                    {t.assignedTeamCount} teams assigned
-                  </p>
-                )}
+              <div className="flex items-center justify-between">
+                <div>
+                  <span style={{ fontSize: 14, fontWeight: 600 }}>
+                    {t.name} (max {t.maxTeams} teams)
+                  </span>
+                  {t.description && (
+                    <p style={{ fontSize: 12, color: "#8891a5", marginTop: 2 }}>{t.description}</p>
+                  )}
+                  {t.assignedTeamCount != null && (
+                    <p style={{ fontSize: 12, color: "#8891a5", marginTop: 2 }}>
+                      {t.assignedTeamCount} teams assigned
+                    </p>
+                  )}
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => toggleTrackGroups(t.id)}
+                    style={{
+                      color: "#0e1528",
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      fontSize: 13,
+                      fontWeight: 600,
+                    }}
+                  >
+                    {expandedTrackIds.has(t.id) ? "Hide groups" : "Groups"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveTrack(t.id)}
+                    disabled={!editable || deleting}
+                    style={{
+                      color: "#991b1b",
+                      background: "none",
+                      border: "none",
+                      cursor: editable ? "pointer" : "not-allowed",
+                      fontSize: 13,
+                      fontWeight: 600,
+                      opacity: editable ? 1 : 0.5,
+                    }}
+                  >
+                    Remove
+                  </button>
+                </div>
               </div>
-              <button
-                type="button"
-                onClick={() => handleRemoveTrack(t.id)}
-                disabled={!editable || deleting}
-                style={{
-                  color: "#991b1b",
-                  background: "none",
-                  border: "none",
-                  cursor: editable ? "pointer" : "not-allowed",
-                  fontSize: 13,
-                  fontWeight: 600,
-                  opacity: editable ? 1 : 0.5,
-                }}
-              >
-                Remove
-              </button>
+              {expandedTrackIds.has(t.id) && (
+                <TrackCompetitionGroups eventId={eventId} trackId={t.id} editable={editable} />
+              )}
             </div>
           ))
         )}

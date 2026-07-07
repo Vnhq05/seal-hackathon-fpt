@@ -61,11 +61,13 @@ export type { CriteriaResponse, CriteriaRequest } from "./criteria.api";
 
 export { assignmentApi } from "./assignment.api";
 export type {
+  AssignmentScope,
   JudgeAssignmentResponse,
   MentorAssignmentResponse,
   AssignJudgeRequest,
   AssignMentorRequest,
   AssignEventStaffRequest,
+  CompetitionGroupResponse,
   EventStaffResponse,
   EventAssignmentsOverviewResponse,
   TeamAssignmentOverview,
@@ -74,7 +76,7 @@ export type {
 } from "./assignment.api";
 
 export { teamApi } from "./team.api";
-export type { TeamResponse, TeamMemberResponse, CreateTeamRequest, JoinTeamRequest, AssignMentorTeamRequest, SelfDrawTrackRequest, SelectTrackRequest, UpdateTeamRecruitmentRequest } from "./team.api";
+export type { TeamResponse, TeamMemberResponse, CreateTeamRequest, JoinTeamRequest, AssignMentorTeamRequest, SelfDrawTrackRequest, SelectTrackRequest, UpdateTeamRecruitmentRequest, UpdateTeamGroupRequest, UpdateTeamGroupResponse } from "./team.api";
 
 export { invitationApi } from "./invitation.api";
 export type { InvitationResponse, SendInvitationRequest } from "./invitation.api";
@@ -193,3 +195,10 @@ export type {
   ParticipantFeedbackSummaryResponse,
   SubmitParticipantFeedbackRequest,
 } from "./participant-feedback.api";
+
+export { progressApi } from "./progress.api";
+export type {
+  TeamProgressResponse,
+  ProgressRiskLevel,
+  ProgressRiskReason,
+} from "./progress.api";

@@ -32,4 +32,5 @@ public class RoundResponse {
     private AdvancementRule advancementRule;
     private List<CriteriaResponse> criteria;
     private int judgeCount;
+    private Integer minJudgesPerRound;
 }

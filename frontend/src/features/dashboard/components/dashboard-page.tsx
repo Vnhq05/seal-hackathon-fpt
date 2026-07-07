@@ -23,6 +23,7 @@ import { notificationApi, roundApi } from "@/lib/api";
 import type { NotificationResponse, TeamResponse, EventResponse } from "@/lib/api";
 import { useProfile } from "@/features/profile/hooks/use-profile";
 import { useEventParticipationGate } from "@/features/events/hooks/use-event-participation-gate";
+import { useMyTeamProgress } from "@/features/dashboard/hooks/use-my-team-progress";
 
 function ArrowRightIcon() {
   return (
@@ -76,6 +77,14 @@ function SkeletonBlock({ height }: { height: number }) {
       className="animate-pulse rounded-lg bg-seal-surface-elevated"
       style={{ height }}
     />
+  );
+}
+
+function ProgressAlertBanner() {
+  return (
+    <div className="border-2 border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 shadow-[2px_2px_0_0_#0c1228]">
+      Team đang chậm tiến độ — mentor đã được thông báo.
+    </div>
   );
 }
 
@@ -566,6 +575,9 @@ export function DashboardPage() {
     ) ??
     hackathons?.find((e) => e.competitionFormat === "SEAL_RAG_2026" && e.status === "ACTIVE");
 
+  const progressEventId = activeEvent?.id ?? sealScheduleEvent?.id;
+  const { data: myTeamProgress } = useMyTeamProgress(progressEventId);
+
   if (summaryLoading && teamLoading) {
     return (
       <div className="flex flex-col gap-6">
@@ -581,6 +593,7 @@ export function DashboardPage() {
   return (
     <div className="flex flex-col gap-6">
       <WelcomeBanner userName={firstName} />
+      {myTeamProgress && myTeamProgress.riskLevel !== "OK" && <ProgressAlertBanner />}
       <StatsRow summary={summary} team={team} />
 
       {hackathonsLoading ? (

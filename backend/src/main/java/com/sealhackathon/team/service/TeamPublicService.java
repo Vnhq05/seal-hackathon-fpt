@@ -23,4 +23,6 @@ public interface TeamPublicService {
     List<TeamSnapshot> getTeamsByMentor(UUID mentorId, UUID eventId);
 
     long countTeams();
+
+    List<UUID> getTeamMemberUserIds(UUID teamId, boolean leaderOnly);
 }

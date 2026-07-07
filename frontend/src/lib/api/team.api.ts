@@ -20,6 +20,7 @@ export interface TeamResponse {
   leaderId: string;
   status: TeamStatus;
   trackId: string | null;
+  groupId?: string | null;
   memberCount: number;
   minTeamMembers: number;
   maxTeamMembers: number;
@@ -57,6 +58,17 @@ export interface SelfDrawTrackRequest {
 
 export interface SelectTrackRequest {
   trackId: string;
+}
+
+export interface UpdateTeamGroupRequest {
+  groupId?: string | null;
+}
+
+export interface UpdateTeamGroupResponse {
+  teamId: string;
+  groupId: string | null;
+  groupName: string | null;
+  warning?: string | null;
 }
 
 // ═══ API calls ═══
@@ -100,6 +112,14 @@ export const teamApi = {
 
   selectTrack(eventId: string, teamId: string, body: SelectTrackRequest): Promise<TeamResponse> {
     return api.put<TeamResponse>(`/events/${eventId}/teams/${teamId}/track`, body);
+  },
+
+  updateGroup(
+    eventId: string,
+    teamId: string,
+    body: UpdateTeamGroupRequest,
+  ): Promise<UpdateTeamGroupResponse> {
+    return api.patch<UpdateTeamGroupResponse>(`/events/${eventId}/teams/${teamId}/group`, body);
   },
 
   selfDrawTrack(eventId: string, teamId: string, body: SelfDrawTrackRequest): Promise<TrackAssignmentResponse> {

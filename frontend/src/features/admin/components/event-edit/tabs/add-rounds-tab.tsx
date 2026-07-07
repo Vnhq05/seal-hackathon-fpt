@@ -377,6 +377,7 @@ export function AddRoundsTab({ event }: { event: EventResponse }) {
   const [roundEnd, setRoundEnd] = useState("");
   const [submissionDeadline, setSubmissionDeadline] = useState("");
   const [roundCutoff, setRoundCutoff] = useState(1);
+  const [minJudgesPerRound, setMinJudgesPerRound] = useState(2);
   const [addRoundErrors, setAddRoundErrors] = useState<string[]>([]);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -413,6 +414,7 @@ export function AddRoundsTab({ event }: { event: EventResponse }) {
         submissionDeadline: resolvedSubmissionDeadline,
         scoringDeadline: resolvedEnd,
         advancementCutoff: roundCutoff,
+        minJudgesPerRound,
       },
       {
         onSuccess: () => {
@@ -421,6 +423,7 @@ export function AddRoundsTab({ event }: { event: EventResponse }) {
           setRoundEnd("");
           setSubmissionDeadline("");
           setRoundCutoff(1);
+          setMinJudgesPerRound(2);
           setAddRoundErrors([]);
         },
         onError: (err) => setActionError(err instanceof Error ? err.message : "Failed to add round"),
@@ -511,6 +514,23 @@ export function AddRoundsTab({ event }: { event: EventResponse }) {
             />
           </div>
 
+          <div className="flex flex-col">
+            <label style={labelStyle}>Min judges per scope</label>
+            <input
+              type="number"
+              value={minJudgesPerRound}
+              onChange={(e) => setMinJudgesPerRound(parseInt(e.target.value, 10) || 2)}
+              disabled={!editable}
+              style={inputStyle}
+              min={1}
+              max={20}
+              placeholder="e.g. 2"
+            />
+            <p style={{ fontSize: 12, color: "#8891a5", marginTop: 4 }}>
+              Minimum active judges required per track/group before scoring can start.
+            </p>
+          </div>
+
           <button
             type="button"
             onClick={handleAddRound}
@@ -551,7 +571,7 @@ export function AddRoundsTab({ event }: { event: EventResponse }) {
                       Round {r.roundNumber}: {r.name}
                     </span>
                     <span style={{ fontSize: 12, color: "#8891a5", marginLeft: 12 }}>
-                      Top {r.advancementCutoff} advance
+                      Top {r.advancementCutoff} advance · Min {r.minJudgesPerRound ?? 2} judges/scope
                     </span>
                   </div>
                   <button

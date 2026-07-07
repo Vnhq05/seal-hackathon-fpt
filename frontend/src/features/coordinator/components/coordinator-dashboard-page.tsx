@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useStaffDashboard } from "@/features/coordinator/hooks/use-staff-dashboard";
 import { AdminEventsTable } from "@/features/admin/components/admin-events-table";
+import { AtRiskTeamsPanel } from "@/features/coordinator/components/at-risk-teams-panel";
 import { StaffPendingApprovals } from "@/features/coordinator/components/staff-pending-approvals";
 import { StaffQuickActions } from "@/features/coordinator/components/staff-quick-actions";
 
@@ -57,6 +58,8 @@ export function CoordinatorDashboardPage() {
               <span className="font-semibold">{summary.pendingApprovals} user(s)</span> awaiting approval.
             </div>
           )}
+
+          <AtRiskTeamsPanel />
 
           <div className="mb-6 grid gap-6 lg:grid-cols-[1fr_320px]">
             <StaffPendingApprovals />

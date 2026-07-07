@@ -1,6 +1,7 @@
 package com.sealhackathon.event.repository;
 
 import com.sealhackathon.event.domain.JudgeAssignment;
+import com.sealhackathon.event.domain.enums.AssignmentScope;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -12,13 +13,17 @@ public interface JudgeAssignmentRepository extends JpaRepository<JudgeAssignment
 
     List<JudgeAssignment> findByRoundId(UUID roundId);
 
+    List<JudgeAssignment> findByRoundIdAndActiveTrue(UUID roundId);
+
     List<JudgeAssignment> findByRoundIdAndTrackId(UUID roundId, UUID trackId);
 
-    List<JudgeAssignment> findByRoundIdAndTrackIdIsNull(UUID roundId);
+    List<JudgeAssignment> findByRoundIdAndTrackIdAndActiveTrue(UUID roundId, UUID trackId);
 
-    boolean existsByRoundIdAndJudgeUserIdAndTrackId(UUID roundId, UUID judgeUserId, UUID trackId);
+    List<JudgeAssignment> findByRoundIdAndScopeAndActiveTrue(UUID roundId, AssignmentScope scope);
 
-    boolean existsByRoundIdAndJudgeUserIdAndTrackIdIsNull(UUID roundId, UUID judgeUserId);
+    List<JudgeAssignment> findByRoundIdAndJudgeUserIdAndActiveTrue(UUID roundId, UUID judgeUserId);
+
+    List<JudgeAssignment> findByJudgeUserIdAndActiveTrue(UUID judgeUserId);
 
     List<JudgeAssignment> findByJudgeUserId(UUID judgeUserId);
 

@@ -7,6 +7,7 @@ import com.sealhackathon.event.domain.Round;
 import com.sealhackathon.event.domain.Track;
 import com.sealhackathon.event.domain.enums.RoundType;
 import com.sealhackathon.event.dto.response.EventJudgeResponse;
+import com.sealhackathon.event.repository.CompetitionGroupRepository;
 import com.sealhackathon.event.repository.HackathonEventRepository;
 import com.sealhackathon.event.repository.RoundRepository;
 import com.sealhackathon.event.repository.TrackRepository;
@@ -49,6 +50,7 @@ public class AssignmentOverviewService {
     private final HackathonEventRepository eventRepository;
     private final RoundRepository roundRepository;
     private final TrackRepository trackRepository;
+    private final CompetitionGroupRepository competitionGroupRepository;
     private final TeamRepository teamRepository;
     private final MentorTeamRepository mentorTeamRepository;
     private final SubmissionRepository submissionRepository;
@@ -93,16 +95,18 @@ public class AssignmentOverviewService {
 
         Map<UUID, String> trackNames = trackRepository.findByHackathonEventId(eventId).stream()
                 .collect(Collectors.toMap(Track::getId, Track::getName));
-
-        Map<UUID, List<TeamJudgeAssignment>> assignmentsByTeam = assignmentRepository
-                .findByRoundId(roundId).stream()
-                .collect(Collectors.groupingBy(TeamJudgeAssignment::getTeamId));
+        Map<UUID, String> groupNames = competitionGroupRepository.findAll().stream()
+                .filter(g -> trackNames.containsKey(g.getTrackId()))
+                .collect(Collectors.toMap(
+                        com.sealhackathon.event.domain.CompetitionGroup::getId,
+                        com.sealhackathon.event.domain.CompetitionGroup::getName,
+                        (a, b) -> a));
 
         Map<UUID, Submission> submissionsByTeam = submissionRepository.findByRoundId(roundId).stream()
                 .collect(Collectors.toMap(Submission::getTeamId, s -> s, (a, b) -> a));
 
         List<TeamAssignmentOverviewResponse> teamRows = teams.stream()
-                .map(team -> buildTeamRow(team, trackNames, assignmentsByTeam, submissionsByTeam))
+                .map(team -> buildTeamRow(team, round, trackNames, groupNames, submissionsByTeam))
                 .toList();
 
         return EventAssignmentsOverviewResponse.builder()
@@ -178,7 +182,8 @@ public class AssignmentOverviewService {
         Team team = teamRepository.findById(teamId)
                 .orElseThrow(() -> new ResourceNotFoundException("Team", "id", teamId));
 
-        if (!judgeAssignmentService.isJudgeAssignedToRoundScope(roundId, judgeUserId, team.getTrackId())) {
+        if (!judgeAssignmentService.isJudgeAssignedToSubmissionScope(
+                roundId, judgeUserId, team.getTrackId(), team.getGroupId())) {
             throw new BusinessException(
                     "Judge is not assigned to this round and track",
                     HttpStatus.BAD_REQUEST) {};
@@ -195,15 +200,21 @@ public class AssignmentOverviewService {
             UUID eventId, Round round, UUID roundId, UUID trackId, List<Team> teams) {
         List<UUID> judgeUserIds;
         if (round.getRoundType() == RoundType.FINAL) {
-            judgeUserIds = judgeAssignmentService.getEligibleJudgeUserIds(roundId, null);
+            judgeUserIds = teams.stream()
+                    .flatMap(t -> judgeAssignmentService.getEligibleJudgeUserIds(
+                            roundId, t.getTrackId(), t.getGroupId()).stream())
+                    .distinct()
+                    .toList();
         } else if (trackId != null) {
-            judgeUserIds = judgeAssignmentService.getEligibleJudgeUserIds(roundId, trackId);
+            judgeUserIds = teamRepository.findByEventIdAndTrackId(eventId, trackId).stream()
+                    .flatMap(t -> judgeAssignmentService.getEligibleJudgeUserIds(
+                            roundId, t.getTrackId(), t.getGroupId()).stream())
+                    .distinct()
+                    .toList();
         } else {
             judgeUserIds = teams.stream()
-                    .map(Team::getTrackId)
-                    .filter(java.util.Objects::nonNull)
-                    .distinct()
-                    .flatMap(tid -> judgeAssignmentService.getEligibleJudgeUserIds(roundId, tid).stream())
+                    .flatMap(t -> judgeAssignmentService.getEligibleJudgeUserIds(
+                            roundId, t.getTrackId(), t.getGroupId()).stream())
                     .distinct()
                     .toList();
         }
@@ -222,10 +233,10 @@ public class AssignmentOverviewService {
 
     private TeamAssignmentOverviewResponse buildTeamRow(
             Team team,
+            Round round,
             Map<UUID, String> trackNames,
-            Map<UUID, List<TeamJudgeAssignment>> assignmentsByTeam,
+            Map<UUID, String> groupNames,
             Map<UUID, Submission> submissionsByTeam) {
-        List<TeamJudgeAssignment> assignments = assignmentsByTeam.getOrDefault(team.getId(), List.of());
         Submission submission = submissionsByTeam.get(team.getId());
 
         UUID mentorUserId = null;
@@ -238,8 +249,17 @@ public class AssignmentOverviewService {
                     .orElse(null);
         }
 
-        List<TeamJudgeAssignmentResponse> judgeResponses = assignments.stream()
-                .map(teamJudgeAssignmentService::toResponse)
+        List<UUID> poolJudgeIds = judgeAssignmentService.getEligibleJudgeUserIds(
+                round.getId(), team.getTrackId(), team.getGroupId());
+        List<TeamJudgeAssignmentResponse> judgeResponses = poolJudgeIds.stream()
+                .map(judgeUserId -> TeamJudgeAssignmentResponse.builder()
+                        .teamId(team.getId())
+                        .roundId(round.getId())
+                        .judgeUserId(judgeUserId)
+                        .judgeFullName(userPublicService.findById(judgeUserId)
+                                .map(UserSnapshot::getFullName)
+                                .orElse(null))
+                        .build())
                 .toList();
 
         return TeamAssignmentOverviewResponse.builder()
@@ -247,6 +267,8 @@ public class AssignmentOverviewService {
                 .teamName(team.getName())
                 .trackId(team.getTrackId())
                 .trackName(team.getTrackId() != null ? trackNames.get(team.getTrackId()) : null)
+                .groupId(team.getGroupId())
+                .groupName(team.getGroupId() != null ? groupNames.get(team.getGroupId()) : null)
                 .memberCount(teamMemberRepository.countByTeamId(team.getId()))
                 .mentorUserId(mentorUserId)
                 .mentorFullName(mentorFullName)

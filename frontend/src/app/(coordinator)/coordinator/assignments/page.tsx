@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { JudgeAssignmentsPage } from "@/features/admin/components/judge-assignments-page";
 
 export const metadata: Metadata = {
@@ -8,7 +9,9 @@ export const metadata: Metadata = {
 export default function CoordinatorAssignmentsPage() {
   return (
     <div style={{ padding: 32, maxWidth: 1440 }}>
-      <JudgeAssignmentsPage />
+      <Suspense fallback={<div className="text-sm text-seal-text-muted">Loading assignments...</div>}>
+        <JudgeAssignmentsPage />
+      </Suspense>
     </div>
   );
 }

@@ -19,10 +19,13 @@ const BREADCRUMB_MAP: Record<string, { label: string; href: string }[]> = {
     { label: "Criteria", href: "/admin/criteria" },
     { label: "Event Criteria", href: "/admin/criteria/event" },
   ],
-  "/admin/assignments": [{ label: "Assignments", href: "/admin/assignments" }],
+  "/admin/assignments": [
+    { label: "Assignments", href: "/admin/assignments" },
+    { label: "Judge assignments", href: "/admin/assignments" },
+  ],
   "/admin/assignments/mentors": [
     { label: "Assignments", href: "/admin/assignments" },
-    { label: "Mentors", href: "/admin/assignments/mentors" },
+    { label: "Mentor assignments", href: "/admin/assignments/mentors" },
   ],
   "/admin/users": [{ label: "Users", href: "/admin/users" }],
   "/admin/system": [{ label: "System Config", href: "/admin/system" }],

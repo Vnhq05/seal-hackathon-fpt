@@ -1,5 +1,5 @@
-import { TeamJudgeAssignmentPage } from "@/features/admin/components/team-judge-assignment-page";
+import { redirect } from "next/navigation";
 
 export default function TeamJudgesRoute() {
-  return <TeamJudgeAssignmentPage />;
+  redirect("/admin/assignments");
 }

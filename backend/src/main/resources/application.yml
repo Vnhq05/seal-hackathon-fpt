@@ -9,6 +9,9 @@ spring:
     username: ${DB_USERNAME:sa}
     password: ${DB_PASSWORD}
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+    hikari:
+      # Required for computed columns + filtered indexes on judge_assignments (SQL Server)
+      connection-init-sql: SET QUOTED_IDENTIFIER ON
 
   jpa:
     hibernate:
@@ -65,6 +68,10 @@ app:
       fpt-student-id-pattern: "^SE[0-9]{6}$"
     feedback:
       max-rating: 5
+  progress:
+    alert-lead-time-hours: 6
+    stalled-hours: 24
+    cooldown-hours: 12
 
 server:
   servlet:

@@ -30,4 +30,9 @@ public interface RoundRepository extends JpaRepository<Round, UUID> {
     boolean existsOverlappingRoundForNew(@Param("eventId") UUID eventId,
                                          @Param("startDate") LocalDateTime startDate,
                                          @Param("endDate") LocalDateTime endDate);
+
+    @Query("SELECT r FROM Round r JOIN FETCH r.hackathonEvent e " +
+            "WHERE r.scoringDeadline > :now " +
+            "AND e.status = com.sealhackathon.event.domain.enums.EventStatus.ACTIVE")
+    List<Round> findActiveForProgressScan(@Param("now") LocalDateTime now);
 }

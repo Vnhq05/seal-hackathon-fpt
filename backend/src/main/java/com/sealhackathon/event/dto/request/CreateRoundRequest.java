@@ -49,4 +49,7 @@ public class CreateRoundRequest {
     private RoundType roundType;
 
     private AdvancementRule advancementRule;
+
+    @Min(value = 1, message = "Minimum judges per round must be at least 1")
+    private Integer minJudgesPerRound;
 }

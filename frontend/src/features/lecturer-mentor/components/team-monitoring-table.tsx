@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import type { MentorTeam, MentorTeamRound } from "@/features/lecturer-mentor/types/mentor.types";
+import type { ProgressRiskReason } from "@/lib/api/progress.api";
+import { progressReasonLabel } from "@/features/progress/lib/progress.utils";
 
 const headerCellStyle: React.CSSProperties = {
   fontSize: 12,
@@ -53,6 +55,28 @@ function ArrowIcon({ color }: { color: string }) {
     <svg width="9" height="9" viewBox="0 0 9 9" fill="none" aria-hidden="true">
       <path d="M1 4.5h7M5.5 1.5L8 4.5 5.5 7.5" stroke={color} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
+  );
+}
+
+function RiskBadge({ riskLevel, reasons }: { riskLevel?: MentorTeam["riskLevel"]; reasons?: ProgressRiskReason[] }) {
+  if (!riskLevel || riskLevel === "OK") return null;
+  const isCritical = riskLevel === "CRITICAL";
+  const title = reasons?.length ? reasons.map(progressReasonLabel).join(", ") : "Needs support";
+  return (
+    <span
+      title={title}
+      className="inline-flex items-center rounded-full"
+      style={{
+        fontSize: 11,
+        fontWeight: 700,
+        padding: "2px 8px",
+        marginLeft: 8,
+        color: isCritical ? "#be123c" : "#b45309",
+        backgroundColor: isCritical ? "rgba(225,29,72,0.1)" : "rgba(245,158,11,0.15)",
+      }}
+    >
+      Needs support
+    </span>
   );
 }
 
@@ -146,6 +170,7 @@ export function TeamMonitoringTable({ teams, isLoading }: TeamMonitoringTablePro
                       <div>
                         <p style={{ fontSize: 14, fontWeight: 700, color: "#0e1528", lineHeight: "21px", textDecoration: isElim ? "line-through" : "none" }}>
                           {team.name}
+                          <RiskBadge riskLevel={team.riskLevel} reasons={team.reasons} />
                         </p>
                         <p style={{ fontSize: 13, color: "#8891a5", fontFamily: "serif", lineHeight: "19.5px" }}>
                           ID: {team.displayId}

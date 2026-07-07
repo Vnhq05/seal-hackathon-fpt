@@ -24,6 +24,7 @@ public class TeamResponse {
     private UUID leaderId;
     private TeamStatus status;
     private UUID trackId;
+    private UUID groupId;
     private int memberCount;
     private int minTeamMembers;
     private int maxTeamMembers;

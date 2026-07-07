@@ -18,6 +18,7 @@ function FeedbackIcon() {
 
 const ACTIONS = [
   { label: "Approve Users", href: "/coordinator#pending-approvals", icon: <ApproveIcon /> },
+  { label: "Judge assignments", href: "/coordinator/assignments", icon: <ApproveIcon /> },
   { label: "Feedback", href: "/coordinator/feedback", icon: <FeedbackIcon /> },
 ] as const;
 

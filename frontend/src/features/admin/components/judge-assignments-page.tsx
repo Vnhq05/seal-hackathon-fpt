@@ -1,29 +1,36 @@
 "use client";
 
 import { Fragment, useMemo, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "@/features/auth/store/auth.store";
+import { StaffAssignmentNav } from "@/shared/components/staff-assignment-nav";
+import { useStaffPortalBase } from "@/shared/hooks/use-staff-portal-base";
 import {
-  assignmentApi,
   eventApi,
   roundApi,
   trackApi,
   type EventResponse,
   type EventStatus,
-  type TeamAssignmentOverview,
-  type EventJudgeOption,
   type RoundType,
   type RoundResponse,
   type TrackResponse,
 } from "@/lib/api";
 import {
-  TEAM_ASSIGNMENTS_OVERVIEW_KEY,
+  useActivateJudge,
   useAssignJudge,
+  useCompetitionGroups,
+  useDeactivateJudge,
   useEventStaffJudges,
   useJudgeAssignments,
+  useJudgeWorkloadPreview,
   useRemoveJudge,
+  useReplaceJudge,
   useTeamAssignmentsOverview,
+  useUpdateTeamGroup,
 } from "@/features/admin/hooks/use-admin-assignments";
+import type { AssignmentScope, JudgeAssignmentResponse } from "@/lib/api/assignment.api";
 
 const SEASONS = ["Spring", "Summer", "Fall", "Winter"] as const;
 
@@ -67,194 +74,58 @@ function EventStatusBadge({ status }: { status: EventStatus }) {
   );
 }
 
-function toJudgeOptions(
-  judges: Awaited<ReturnType<typeof assignmentApi.listJudges>>,
-): EventJudgeOption[] {
-  return judges.map((j) => ({
-    id: j.id,
-    judgeUserId: j.judgeUserId,
-    judgeFullName: j.judgeFullName,
-    judgeEmail: j.judgeEmail,
-  }));
-}
+const MIN_JUDGES_PER_SCOPE = 2;
 
-function resolveJudgePoolTrackId(
-  roundType: RoundType | undefined,
-  panelTrackId: string,
-  teamTrackId?: string | null,
-): { poolTrackId: string | undefined; requiresTrackId: boolean } {
-  const isPreliminary = roundType === "PRELIMINARY";
-  if (!isPreliminary) {
-    return { poolTrackId: undefined, requiresTrackId: false };
-  }
-  const trackId = teamTrackId ?? (panelTrackId || undefined);
-  return { poolTrackId: trackId, requiresTrackId: true };
-}
-
-function AssignJudgesModal({
+function TeamGroupCell({
   eventId,
-  roundId,
-  roundType,
-  selectedTrackId,
-  team,
-  onClose,
+  teamId,
+  trackId,
+  groupId,
 }: {
   eventId: string;
-  roundId: string;
-  roundType: RoundType | undefined;
-  selectedTrackId: string;
-  team: TeamAssignmentOverview;
-  onClose: () => void;
+  teamId: string;
+  trackId: string | null;
+  groupId?: string | null;
 }) {
-  const qc = useQueryClient();
-  const isPreliminary = roundType === "PRELIMINARY";
-  const { poolTrackId, requiresTrackId } = resolveJudgePoolTrackId(
-    roundType,
-    selectedTrackId,
-    team.trackId,
-  );
-  const initial = team.judges.map((j) => j.judgeUserId);
-  const [j1, setJ1] = useState(initial[0] ?? "");
-  const [j2, setJ2] = useState(initial[1] ?? "");
-  const [j3, setJ3] = useState(initial[2] ?? "");
-  const [error, setError] = useState<string | null>(null);
+  const { data: groups = [] } = useCompetitionGroups(eventId, trackId ?? "");
+  const { mutate: updateGroup, isPending } = useUpdateTeamGroup(eventId);
+  const [warning, setWarning] = useState<string | null>(null);
 
-  const { data: poolJudges, isLoading: judgesLoading } = useJudgeAssignments(
-    eventId,
-    roundId,
-    poolTrackId,
-    { requiresTrackId },
-  );
+  if (!trackId) {
+    return <span className="text-sm text-seal-text-muted">—</span>;
+  }
 
-  const eligibleJudges = useMemo(
-    () => (poolJudges ? toJudgeOptions(poolJudges) : []),
-    [poolJudges],
-  );
-
-  const { mutate, isPending } = useMutation({
-    mutationFn: () =>
-      assignmentApi.assignTeamJudges({
-        eventId,
-        roundId,
-        teamId: team.teamId,
-        judgeUserIds: [j1, j2, j3],
-      }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: [TEAM_ASSIGNMENTS_OVERVIEW_KEY] });
-      onClose();
-    },
-    onError: (err: Error) => setError(err.message),
-  });
-
-  const selected = new Set([j1, j2, j3].filter(Boolean));
-  const cannotAssign = isPreliminary && !poolTrackId;
-  const noEligibleJudges =
-    !cannotAssign && !judgesLoading && eligibleJudges.length === 0;
-
-  const renderSelect = (value: string, onChange: (v: string) => void, label: string) => (
-    <div>
-      <label className="mb-1 block text-xs font-medium text-seal-text-secondary">{label}</label>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        disabled={judgesLoading || cannotAssign}
-        className="w-full border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] px-3 py-2 text-sm outline-none focus:border-royal/40 disabled:opacity-50"
-      >
-        <option value="">Select judge...</option>
-        {eligibleJudges.map((j) => {
-          const isMentor = team.mentorUserId === j.judgeUserId;
-          const taken = selected.has(j.judgeUserId) && j.judgeUserId !== value;
-          return (
-            <option key={j.judgeUserId} value={j.judgeUserId} disabled={taken || isMentor}>
-              {j.judgeFullName ?? j.judgeEmail ?? j.judgeUserId}
-              {isMentor ? " — MENTOR CONFLICT (cannot assign)" : ""}
-            </option>
-          );
-        })}
-      </select>
-      {value && team.mentorUserId === value && (
-        <p className="mt-1 text-xs font-medium text-red-600">
-          Warning: This judge is the mentor of team {team.teamName}
-        </p>
-      )}
-    </div>
-  );
-
-  const handleSubmit = () => {
-    setError(null);
-    if (cannotAssign) {
-      setError("Team has no track — cannot assign preliminary judges");
-      return;
-    }
-    if (!j1 || !j2 || !j3) {
-      setError("Please select all 3 judges");
-      return;
-    }
-    if (new Set([j1, j2, j3]).size !== 3) {
-      setError("All 3 judges must be different");
-      return;
-    }
-    if ([j1, j2, j3].some((id) => id === team.mentorUserId)) {
-      setError("Cannot assign the team's mentor as a judge");
-      return;
-    }
-    mutate();
-  };
+  if (groups.length === 0) {
+    return <span className="text-sm text-seal-text-muted">{groupId ? "—" : "No groups"}</span>;
+  }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-      <div
-        className="relative z-10 w-full max-w-md border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-6 shadow-xl"
-        onClick={(e) => e.stopPropagation()}
+    <div>
+      <select
+        value={groupId ?? ""}
+        onChange={(e) => {
+          const next = e.target.value || null;
+          setWarning(null);
+          updateGroup(
+            { teamId, groupId: next },
+            {
+              onSuccess: (res) => {
+                if (res.warning) setWarning(res.warning);
+              },
+            },
+          );
+        }}
+        disabled={isPending}
+        className="border border-seal-border bg-white px-2 py-1 text-sm"
       >
-        <h2 className="text-lg font-bold text-seal-text">Assign judges</h2>
-        <p className="mt-1 text-sm text-seal-text-muted">
-          {team.teamName} — select exactly 3 judges
-        </p>
-        {team.mentorFullName && (
-          <p className="mt-2 text-xs text-seal-text-secondary">
-            Mentor: {team.mentorFullName}
-          </p>
-        )}
-        {cannotAssign && (
-          <p className="mt-2 text-xs font-medium text-red-600">
-            Team has no track assigned. Please assign a track before assigning judges.
-          </p>
-        )}
-        {noEligibleJudges && (
-          <p className="mt-2 text-xs font-medium text-amber-700">
-            No judges in the pool for this round yet. Close this dialog and add judges in the Judge
-            pool section above.
-          </p>
-        )}
-
-        <div className="mt-4 flex flex-col gap-3">
-          {renderSelect(j1, setJ1, "Judge 1")}
-          {renderSelect(j2, setJ2, "Judge 2")}
-          {renderSelect(j3, setJ3, "Judge 3")}
-        </div>
-
-        {error && <p className="mt-3 text-xs text-red-600">{error}</p>}
-
-        <div className="mt-5 flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="border-2 border-navy bg-white px-4 py-2 text-sm font-medium text-seal-text"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={isPending || judgesLoading || cannotAssign || noEligibleJudges}
-            className="border-2 border-navy bg-seal-yellow px-4 py-2 text-navy font-mono font-bold shadow-[4px_4px_0_0_#0c1228] disabled:opacity-50"
-          >
-            {isPending ? "Saving..." : "Save assignment"}
-          </button>
-        </div>
-      </div>
+        <option value="">No group</option>
+        {groups.map((g) => (
+          <option key={g.id} value={g.id}>{g.name}</option>
+        ))}
+      </select>
+      {warning && (
+        <p className="mt-1 text-xs font-medium text-amber-700">{warning}</p>
+      )}
     </div>
   );
 }
@@ -262,34 +133,103 @@ function AssignJudgesModal({
 function JudgePoolRow({
   eventId,
   roundId,
-  poolTrackId,
-  judgeId,
-  judgeFullName,
-  judgeEmail,
+  assignment,
+  eventJudgeOptions,
 }: {
   eventId: string;
   roundId: string;
-  poolTrackId: string | undefined;
-  judgeId: string;
-  judgeFullName: string | null;
-  judgeEmail: string | null;
+  assignment: JudgeAssignmentResponse;
+  eventJudgeOptions: { userId: string; fullName: string | null; email: string | null }[];
 }) {
-  const { mutate: remove } = useRemoveJudge(eventId, roundId, poolTrackId);
+  const { mutate: remove } = useRemoveJudge(eventId, roundId);
+  const { mutate: deactivate } = useDeactivateJudge(eventId, roundId);
+  const { mutate: activate } = useActivateJudge(eventId, roundId);
+  const { mutate: replace } = useReplaceJudge(eventId, roundId);
+  const [showReplace, setShowReplace] = useState(false);
+  const [newJudgeId, setNewJudgeId] = useState("");
+  const [reason, setReason] = useState("");
+
+  const handleDeactivate = () => {
+    const r = window.prompt("Reason for deactivation (required):");
+    if (!r?.trim()) return;
+    deactivate({ assignmentId: assignment.id, reason: r.trim() });
+  };
+
+  const handleReplace = () => {
+    if (!newJudgeId || !reason.trim()) return;
+    replace(
+      { assignmentId: assignment.id, newJudgeUserId: newJudgeId, reason: reason.trim() },
+      { onSuccess: () => setShowReplace(false) },
+    );
+  };
 
   return (
-    <tr className="border-t border-seal-border">
+    <tr className={`border-t border-seal-border ${!assignment.active ? "opacity-60" : ""}`}>
       <td className="px-4 py-3 text-sm font-medium text-seal-text">
-        {judgeFullName ?? "Unknown"}
+        {assignment.judgeFullName ?? "Unknown"}
+        {assignment.conflictRisk && (
+          <span className="ml-2 rounded-md bg-red-50 px-1.5 py-0.5 text-[10px] font-medium text-red-700">
+            COI
+          </span>
+        )}
       </td>
-      <td className="px-4 py-3 text-sm text-seal-text-secondary">{judgeEmail ?? "—"}</td>
+      <td className="px-4 py-3 text-sm text-seal-text-secondary">{assignment.judgeEmail ?? "—"}</td>
+      <td className="px-4 py-3 text-xs text-seal-text-secondary">{assignment.scope}</td>
+      <td className="px-4 py-3 text-xs text-seal-text-secondary">{assignment.groupName ?? "—"}</td>
+      <td className="px-4 py-3 text-xs">
+        <span className={assignment.active ? "text-emerald-700" : "text-amber-700"}>
+          {assignment.active ? "Active" : "Inactive"}
+        </span>
+      </td>
+      <td className="px-4 py-3 text-xs text-seal-text-secondary">
+        {assignment.expectedSubmissionCount ?? "—"}
+      </td>
+      <td className="px-4 py-3 text-xs text-seal-text-muted">
+        {new Date(assignment.assignedAt).toLocaleString()}
+      </td>
       <td className="px-4 py-3">
-        <button
-          type="button"
-          onClick={() => remove(judgeId)}
-          className="text-xs font-semibold text-red-700 hover:underline"
-        >
-          Remove
-        </button>
+        <div className="flex flex-wrap gap-2">
+          {assignment.active ? (
+            <>
+              <button type="button" onClick={handleDeactivate} className="text-xs text-amber-700 hover:underline">
+                Deactivate
+              </button>
+              <button type="button" onClick={() => setShowReplace((v) => !v)} className="text-xs text-seal-text hover:underline">
+                Replace
+              </button>
+            </>
+          ) : (
+            <button type="button" onClick={() => activate(assignment.id)} className="text-xs text-emerald-700 hover:underline">
+              Activate
+            </button>
+          )}
+          <button type="button" onClick={() => remove(assignment.id)} className="text-xs text-red-700 hover:underline">
+            Remove
+          </button>
+        </div>
+        {showReplace && (
+          <div className="mt-2 flex flex-col gap-1">
+            <select
+              value={newJudgeId}
+              onChange={(e) => setNewJudgeId(e.target.value)}
+              className="border px-2 py-1 text-xs"
+            >
+              <option value="">New judge...</option>
+              {eventJudgeOptions.map((j) => (
+                <option key={j.userId} value={j.userId}>{j.fullName ?? j.email}</option>
+              ))}
+            </select>
+            <input
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="Reason"
+              className="border px-2 py-1 text-xs"
+            />
+            <button type="button" onClick={handleReplace} className="text-xs font-semibold text-seal-text">
+              Confirm replace
+            </button>
+          </div>
+        )}
       </td>
     </tr>
   );
@@ -300,28 +240,46 @@ function JudgePoolSection({
   roundId,
   roundType,
   selectedTrackId,
+  minJudgesRequired,
+  portalBase,
 }: {
   eventId: string;
   roundId: string;
   roundType: RoundType | undefined;
   selectedTrackId: string;
+  minJudgesRequired: number;
+  portalBase: string;
 }) {
-  const { poolTrackId, requiresTrackId } = resolveJudgePoolTrackId(roundType, selectedTrackId);
+  const isFinal = roundType === "FINAL";
   const isPreliminary = roundType === "PRELIMINARY";
+  const [scope, setScope] = useState<AssignmentScope>(isFinal ? "ROUND" : "TRACK");
+  const [selectedGroupId, setSelectedGroupId] = useState("");
   const [judgeUserId, setJudgeUserId] = useState("");
   const [assignError, setAssignError] = useState<string | null>(null);
+  const [assignWarning, setAssignWarning] = useState<string | null>(null);
 
-  const { data: poolJudges = [], isLoading: poolLoading } = useJudgeAssignments(
+  const trackIdForScope = scope === "ROUND" ? undefined : selectedTrackId || undefined;
+  const { data: groups = [] } = useCompetitionGroups(eventId, selectedTrackId);
+  const { data: poolJudges = [], isLoading: poolLoading } = useJudgeAssignments(eventId, roundId, {
+    trackId: trackIdForScope,
+    groupId: scope === "GROUP" ? selectedGroupId || undefined : undefined,
+    requiresTrackId: isPreliminary && scope !== "ROUND",
+  });
+  const { data: workload } = useJudgeWorkloadPreview(
     eventId,
     roundId,
-    poolTrackId,
-    { requiresTrackId },
+    scope,
+    trackIdForScope,
+    scope === "GROUP" ? selectedGroupId || undefined : undefined,
   );
   const { data: eventJudges = [] } = useEventStaffJudges(eventId);
   const { mutate: assign, isPending } = useAssignJudge(eventId, roundId);
 
+  const activeJudgeCount = poolJudges.filter((j) => j.active).length;
+  const incompleteFromApi = poolJudges[0]?.incompleteScopes ?? [];
+
   const pooledUserIds = useMemo(
-    () => new Set(poolJudges.map((j) => j.judgeUserId)),
+    () => new Set(poolJudges.filter((j) => j.active).map((j) => j.judgeUserId)),
     [poolJudges],
   );
   const availableJudges = useMemo(
@@ -329,13 +287,26 @@ function JudgePoolSection({
     [eventJudges, pooledUserIds],
   );
 
+  const canAssign =
+    !!judgeUserId &&
+    (scope === "ROUND" || (!!selectedTrackId && (scope !== "GROUP" || !!selectedGroupId)));
+
   const handleAdd = () => {
-    if (!judgeUserId) return;
+    if (!canAssign) return;
     setAssignError(null);
+    setAssignWarning(null);
     assign(
-      { judgeUserId, ...(isPreliminary ? { trackId: selectedTrackId } : {}) },
       {
-        onSuccess: () => setJudgeUserId(""),
+        judgeUserId,
+        scope,
+        ...(scope !== "ROUND" ? { trackId: selectedTrackId } : {}),
+        ...(scope === "GROUP" ? { groupId: selectedGroupId } : {}),
+      },
+      {
+        onSuccess: (data) => {
+          setJudgeUserId("");
+          if (data.warning) setAssignWarning(data.warning);
+        },
         onError: (err: Error) => setAssignError(err.message),
       },
     );
@@ -343,57 +314,116 @@ function JudgePoolSection({
 
   return (
     <div className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-4">
-      <h3 className="text-sm font-bold text-seal-text">Judge pool</h3>
+      <div className="flex flex-wrap items-center gap-2">
+        <h3 className="text-sm font-bold text-seal-text">Judge pool</h3>
+        {activeJudgeCount < minJudgesRequired && (
+          <span className="rounded-md bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">
+            Chưa đủ giám khảo (tối thiểu {minJudgesRequired})
+          </span>
+        )}
+        {incompleteFromApi.map((s) => (
+          <span key={`${s.scope}-${s.trackId}-${s.groupId}`} className="rounded-md bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">
+            INCOMPLETE: {s.trackName ?? s.scope} {s.groupName ? `/ ${s.groupName}` : ""}
+          </span>
+        ))}
+      </div>
       <p className="mt-1 text-xs text-seal-text-muted">
-        Judges added here are available when assigning teams in this round.
+        Assign judges by scope — they automatically score all teams in that scope.
       </p>
 
       <div className="mt-4 flex flex-wrap items-end gap-3">
         <div>
-          <label className="mb-1 block text-xs font-medium text-seal-text-secondary">
-            Add to pool
-          </label>
+          <label className="mb-1 block text-xs font-medium text-seal-text-secondary">Scope</label>
+          <select
+            value={scope}
+            onChange={(e) => {
+              setScope(e.target.value as AssignmentScope);
+              setSelectedGroupId("");
+            }}
+            disabled={isFinal}
+            className="border-2 border-navy bg-white px-3 py-2 text-sm"
+          >
+            <option value="ROUND">Whole round</option>
+            {!isFinal && <option value="TRACK">Track</option>}
+            {!isFinal && <option value="GROUP">Group</option>}
+          </select>
+        </div>
+        {scope === "GROUP" && (
+          <div>
+            <label className="mb-1 block text-xs font-medium text-seal-text-secondary">Group</label>
+            <select
+              value={selectedGroupId}
+              onChange={(e) => setSelectedGroupId(e.target.value)}
+              disabled={!selectedTrackId}
+              className="border-2 border-navy bg-white px-3 py-2 text-sm"
+            >
+              <option value="">Select group...</option>
+              {groups.map((g) => (
+                <option key={g.id} value={g.id}>{g.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
+        <div>
+          <label className="mb-1 block text-xs font-medium text-seal-text-secondary">Add judge</label>
           <select
             value={judgeUserId}
             onChange={(e) => setJudgeUserId(e.target.value)}
-            className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] px-3 py-2 text-sm"
+            className="border-2 border-navy bg-white px-3 py-2 text-sm"
+            disabled={eventJudges.length === 0}
           >
             <option value="">Select judge...</option>
             {availableJudges.map((j) => (
-              <option key={j.userId} value={j.userId}>
-                {j.fullName ?? j.email}
-              </option>
+              <option key={j.userId} value={j.userId}>{j.fullName ?? j.email}</option>
             ))}
           </select>
           {eventJudges.length === 0 && (
-            <p className="mt-1 text-xs font-medium text-amber-700">
-              No judges on the event roster. Add judges in the event&apos;s Add Lecture tab first.
+            <p className="mt-1 text-xs text-amber-700">
+              Chưa có judge trong roster. Thêm tại{" "}
+              <Link
+                href={`${portalBase}/hackathons/${eventId}?tab=lecture`}
+                className="font-semibold underline"
+              >
+                Event → Add Lecture
+              </Link>
+              .
             </p>
           )}
         </div>
+        {workload && (
+          <p className="text-xs text-seal-text-secondary">
+            Preview: {workload.teamCount} teams, {workload.submissionCount} submissions
+          </p>
+        )}
         {assignError && <p className="text-xs text-red-600">{assignError}</p>}
+        {assignWarning && <p className="text-xs text-amber-700">{assignWarning}</p>}
         <button
           type="button"
           onClick={handleAdd}
-          disabled={isPending || !judgeUserId}
+          disabled={isPending || !canAssign}
           className="border-2 border-navy bg-seal-yellow px-4 py-2 text-navy font-mono font-bold shadow-[4px_4px_0_0_#0c1228] disabled:opacity-50"
         >
           {isPending ? "Adding..." : "Add"}
         </button>
       </div>
 
-      <div className="mt-4 overflow-hidden border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]">
+      <div className="mt-4 overflow-x-auto border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]">
         {poolLoading ? (
           <div className="flex justify-center p-8">
             <div className="h-6 w-6 animate-spin rounded-full border-2 border-seal-cyan border-t-transparent" />
           </div>
         ) : (
-          <table className="w-full text-left">
+          <table className="w-full min-w-[800px] text-left">
             <thead className="bg-seal-surface-elevated text-xs font-semibold uppercase tracking-wider text-seal-text-muted">
               <tr>
                 <th className="px-4 py-3">Judge</th>
                 <th className="px-4 py-3">Email</th>
-                <th className="px-4 py-3 w-24" />
+                <th className="px-4 py-3">Scope</th>
+                <th className="px-4 py-3">Group</th>
+                <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3">Submissions</th>
+                <th className="px-4 py-3">Assigned</th>
+                <th className="px-4 py-3 w-40" />
               </tr>
             </thead>
             <tbody>
@@ -402,16 +432,14 @@ function JudgePoolSection({
                   key={j.id}
                   eventId={eventId}
                   roundId={roundId}
-                  poolTrackId={poolTrackId}
-                  judgeId={j.id}
-                  judgeFullName={j.judgeFullName}
-                  judgeEmail={j.judgeEmail}
+                  assignment={j}
+                  eventJudgeOptions={eventJudges}
                 />
               ))}
               {poolJudges.length === 0 && (
                 <tr>
-                  <td colSpan={3} className="px-4 py-8 text-center text-sm text-seal-text-muted">
-                    No judges in the pool for this round yet.
+                  <td colSpan={8} className="px-4 py-8 text-center text-sm text-seal-text-muted">
+                    No judges in the pool for this scope yet.
                   </td>
                 </tr>
               )}
@@ -433,7 +461,7 @@ function EventAssignmentPanel({
   onRoundChange,
   overview,
   overviewLoading,
-  onAssignTeam,
+  portalBase,
 }: {
   eventId: string;
   tracks: TrackResponse[];
@@ -444,12 +472,12 @@ function EventAssignmentPanel({
   onRoundChange: (roundId: string) => void;
   overview: ReturnType<typeof useTeamAssignmentsOverview>["data"];
   overviewLoading: boolean;
-  onAssignTeam: (team: TeamAssignmentOverview) => void;
+  portalBase: string;
 }) {
   const selectedRound = rounds.find((r) => r.id === selectedRoundId);
   const roundType = selectedRound?.roundType ?? undefined;
   const isPreliminary = roundType === "PRELIMINARY";
-  const showPool = !!selectedRoundId && (!isPreliminary || !!selectedTrackId);
+  const showPool = !!selectedRoundId;
   const needsTrackForPool = !!selectedRoundId && isPreliminary && !selectedTrackId;
 
   return (
@@ -495,6 +523,8 @@ function EventAssignmentPanel({
           roundId={selectedRoundId}
           roundType={roundType}
           selectedTrackId={selectedTrackId}
+          minJudgesRequired={selectedRound?.minJudgesPerRound ?? MIN_JUDGES_PER_SCOPE}
+          portalBase={portalBase}
         />
       )}
 
@@ -510,10 +540,10 @@ function EventAssignmentPanel({
                 <tr>
                   <th className="px-4 py-3">Team</th>
                   <th className="px-4 py-3">Track</th>
+                  <th className="px-4 py-3">Group</th>
                   <th className="px-4 py-3">Submission</th>
-                  <th className="px-4 py-3">Judge</th>
+                  <th className="px-4 py-3">Judges (pool)</th>
                   <th className="px-4 py-3">COI</th>
-                  <th className="px-4 py-3 w-32" />
                 </tr>
               </thead>
               <tbody>
@@ -526,6 +556,14 @@ function EventAssignmentPanel({
                       <td className="px-4 py-3 text-sm font-medium text-seal-text">{team.teamName}</td>
                       <td className="px-4 py-3 text-sm text-seal-text-secondary">{team.trackName ?? "—"}</td>
                       <td className="px-4 py-3">
+                        <TeamGroupCell
+                          eventId={eventId}
+                          teamId={team.teamId}
+                          trackId={team.trackId}
+                          groupId={team.groupId}
+                        />
+                      </td>
+                      <td className="px-4 py-3">
                         <span className={`rounded-md px-2 py-0.5 text-xs font-medium ${
                           team.submissionStatus
                             ? "bg-emerald-50 text-emerald-700"
@@ -535,11 +573,15 @@ function EventAssignmentPanel({
                         </span>
                       </td>
                       <td className="px-4 py-3 text-sm text-seal-text-secondary">
-                        {team.judgeCount}/3
-                        {team.judges.length > 0 && (
-                          <div className="mt-1 text-xs text-seal-text-muted">
-                            {team.judges.map((j) => j.judgeFullName).join(", ")}
-                          </div>
+                        {team.judgeCount === 0 ? (
+                          <span className="text-seal-text-muted">No judges in pool</span>
+                        ) : (
+                          <>
+                            <span className="font-medium">{team.judgeCount}</span>
+                            <div className="mt-1 text-xs text-seal-text-muted">
+                              {team.judges.map((j) => j.judgeFullName ?? j.judgeUserId).join(", ")}
+                            </div>
+                          </>
                         )}
                       </td>
                       <td className="px-4 py-3">
@@ -550,15 +592,6 @@ function EventAssignmentPanel({
                         ) : (
                           <span className="text-sm text-seal-text-muted">—</span>
                         )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <button
-                          type="button"
-                          onClick={() => onAssignTeam(team)}
-                          className="border-2 border-navy bg-seal-yellow px-3 py-1.5 text-navy font-mono font-bold shadow-[4px_4px_0_0_#0c1228]"
-                        >
-                          Assign
-                        </button>
                       </td>
                     </tr>
                   );
@@ -609,24 +642,24 @@ function EventsTableSkeleton() {
 
 export function JudgeAssignmentsPage() {
   const userEmail = useAuthStore((s) => s.user?.email);
+  const portalBase = useStaffPortalBase();
+  const searchParams = useSearchParams();
+  const urlEventId = searchParams.get("eventId");
   const [season, setSeason] = useState(getCurrentSeason());
   const [year, setYear] = useState(new Date().getFullYear());
-  const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
+  const [manualExpandedEventId, setManualExpandedEventId] = useState<string | null | false>(false);
   const [selectedTrackId, setSelectedTrackId] = useState("");
   const [selectedRoundId, setSelectedRoundId] = useState("");
-  const [modalTeam, setModalTeam] = useState<TeamAssignmentOverview | null>(null);
 
   const resetAssignment = () => {
-    setExpandedEventId(null);
+    setManualExpandedEventId(null);
     setSelectedTrackId("");
     setSelectedRoundId("");
-    setModalTeam(null);
   };
 
   const resetTrackRound = () => {
     setSelectedTrackId("");
     setSelectedRoundId("");
-    setModalTeam(null);
   };
 
   const handleToggleAssignment = (eventId: string) => {
@@ -634,7 +667,7 @@ export function JudgeAssignmentsPage() {
       resetAssignment();
       return;
     }
-    setExpandedEventId(eventId);
+    setManualExpandedEventId(eventId);
     resetTrackRound();
   };
 
@@ -653,6 +686,10 @@ export function JudgeAssignmentsPage() {
     queryFn: () => eventApi.list({ season, year, size: 100 }),
   });
   const events = eventsPage?.content ?? [];
+  const urlDefaultExpandedEventId =
+    urlEventId && events.some((event) => event.id === urlEventId) ? urlEventId : null;
+  const expandedEventId =
+    manualExpandedEventId === false ? urlDefaultExpandedEventId : manualExpandedEventId;
 
   const { data: rounds = [] } = useQuery({
     queryKey: ["assignment-rounds", expandedEventId, userEmail],
@@ -676,14 +713,14 @@ export function JudgeAssignmentsPage() {
     },
   );
 
-  const selectedRound = rounds.find((r) => r.id === selectedRoundId);
-
   return (
     <div className="flex flex-col gap-6">
+      <StaffAssignmentNav />
+
       <div>
         <h1 className="text-[28px] font-bold tracking-tight text-seal-text">Judge assignments</h1>
         <p className="mt-1 text-sm text-seal-text-secondary">
-          Each team needs exactly 3 judges per round. Judges cannot be the team mentor.
+          Assign judges to a round or track — they automatically score all teams in that scope.
         </p>
       </div>
 
@@ -757,7 +794,7 @@ export function JudgeAssignmentsPage() {
                           onRoundChange={setSelectedRoundId}
                           overview={overview}
                           overviewLoading={overviewLoading}
-                          onAssignTeam={setModalTeam}
+                          portalBase={portalBase}
                         />
                       </td>
                     </tr>
@@ -767,17 +804,6 @@ export function JudgeAssignmentsPage() {
             </tbody>
           </table>
         </div>
-      )}
-
-      {modalTeam && expandedEventId && selectedRoundId && (
-        <AssignJudgesModal
-          eventId={expandedEventId}
-          roundId={selectedRoundId}
-          roundType={selectedRound?.roundType ?? undefined}
-          selectedTrackId={selectedTrackId}
-          team={modalTeam}
-          onClose={() => setModalTeam(null)}
-        />
       )}
     </div>
   );

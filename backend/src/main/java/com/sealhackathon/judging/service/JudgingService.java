@@ -10,11 +10,14 @@ import com.sealhackathon.event.dto.snapshot.CriteriaSnapshot;
 import com.sealhackathon.event.repository.HackathonEventRepository;
 import com.sealhackathon.event.repository.RoundRepository;
 import com.sealhackathon.event.repository.TrackRepository;
+import com.sealhackathon.event.domain.JudgeAssignment;
+import com.sealhackathon.event.domain.enums.AssignmentScope;
+import com.sealhackathon.event.repository.JudgeAssignmentRepository;
 import com.sealhackathon.event.service.EventPublicService;
+import com.sealhackathon.event.service.JudgeAssignmentService;
 import com.sealhackathon.judging.domain.JudgeComment;
 import com.sealhackathon.judging.domain.JudgeScore;
 import com.sealhackathon.judging.domain.JudgeScoreDetail;
-import com.sealhackathon.judging.domain.TeamJudgeAssignment;
 import com.sealhackathon.judging.domain.enums.ScoreStatus;
 import com.sealhackathon.judging.dto.request.ScoreDetailDto;
 import com.sealhackathon.judging.dto.request.ScoreSubmissionRequest;
@@ -28,7 +31,6 @@ import com.sealhackathon.judging.event.ScoreDeletedEvent;
 import com.sealhackathon.judging.event.ScoreUpdatedEvent;
 import com.sealhackathon.judging.event.ScoringCompletedEvent;
 import com.sealhackathon.judging.repository.JudgeScoreRepository;
-import com.sealhackathon.judging.repository.TeamJudgeAssignmentRepository;
 import com.sealhackathon.submission.domain.Submission;
 import com.sealhackathon.submission.repository.SubmissionRepository;
 import com.sealhackathon.submission.service.SubmissionPublicService;
@@ -46,6 +48,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -61,7 +64,8 @@ public class JudgingService {
     private static final int DEFAULT_MAX_SCORE = 5;
 
     private final JudgeScoreRepository judgeScoreRepository;
-    private final TeamJudgeAssignmentRepository teamJudgeAssignmentRepository;
+    private final JudgeAssignmentRepository judgeAssignmentRepository;
+    private final JudgeAssignmentService judgeAssignmentService;
     private final SubmissionRepository submissionRepository;
     private final TeamRepository teamRepository;
     private final RoundRepository roundRepository;
@@ -84,7 +88,7 @@ public class JudgingService {
         conflictDetectionService.checkConflict(judgeId, submissionId);
         assertScoringWindowOpen(roundId);
 
-        if (!isJudgeAssignedToTeam(judgeId, submissionId, roundId)) {
+        if (!isJudgeAssignedToSubmissionScope(judgeId, submissionId, roundId)) {
             throw new BusinessException("You are not assigned to score this team for this round",
                     HttpStatus.FORBIDDEN) {};
         }
@@ -188,12 +192,37 @@ public class JudgingService {
 
     @Transactional(readOnly = true)
     public List<JudgeScoringAssignmentResponse> getMyScoringAssignments(UUID judgeId) {
-        List<TeamJudgeAssignment> assignments = teamJudgeAssignmentRepository.findByJudgeUserId(judgeId);
-        return assignments.stream()
-                .filter(a -> roundRepository.existsById(a.getRoundId())
-                        && teamRepository.existsById(a.getTeamId()))
-                .map(a -> buildScoringAssignment(judgeId, a))
-                .toList();
+        List<JudgeAssignment> poolAssignments = judgeAssignmentRepository.findByJudgeUserId(judgeId);
+        Set<String> seen = new HashSet<>();
+        List<JudgeScoringAssignmentResponse> result = new ArrayList<>();
+
+        for (JudgeAssignment assignment : poolAssignments) {
+            if (!assignment.isActive()) {
+                continue;
+            }
+            Round round = assignment.getRound();
+            UUID roundId = round.getId();
+            if (!roundRepository.existsById(roundId)) {
+                continue;
+            }
+
+            UUID eventId = round.getHackathonEvent().getId();
+            List<Team> teams = switch (assignment.getScope()) {
+                case ROUND -> teamRepository.findByEventId(eventId);
+                case TRACK -> teamRepository.findByEventIdAndTrackId(eventId, assignment.getTrackId());
+                case GROUP -> teamRepository.findByEventIdAndGroupId(eventId, assignment.getGroupId());
+            };
+
+            for (Team team : teams) {
+                String key = team.getId() + ":" + roundId;
+                if (!seen.add(key) || !teamRepository.existsById(team.getId())) {
+                    continue;
+                }
+                result.add(buildScoringAssignmentForTeam(judgeId, team.getId(), roundId));
+            }
+        }
+
+        return result;
     }
 
     @Transactional(readOnly = true)
@@ -207,7 +236,7 @@ public class JudgingService {
     public List<JudgeScoreResponse> getScoresBySubmission(
             UUID submissionId, UUID roundId, UUID requesterId, UserType requesterRole) {
         if (requesterRole == UserType.LECTURER
-                && !isJudgeAssignedToTeam(requesterId, submissionId, roundId)) {
+                && !isJudgeAssignedToSubmissionScope(requesterId, submissionId, roundId)) {
             throw new BusinessException(
                     "You are not assigned to score this team for this round",
                     HttpStatus.FORBIDDEN) {};
@@ -239,16 +268,17 @@ public class JudgingService {
         return toResponse(score);
     }
 
-    private JudgeScoringAssignmentResponse buildScoringAssignment(UUID judgeId, TeamJudgeAssignment a) {
-        Team team = teamRepository.findById(a.getTeamId()).orElse(null);
-        Round round = roundRepository.findById(a.getRoundId()).orElse(null);
+    private JudgeScoringAssignmentResponse buildScoringAssignmentForTeam(
+            UUID judgeId, UUID teamId, UUID roundId) {
+        Team team = teamRepository.findById(teamId).orElse(null);
+        Round round = roundRepository.findById(roundId).orElse(null);
         HackathonEvent event = team != null
                 ? eventRepository.findById(team.getEventId()).orElse(null) : null;
         Track track = team != null && team.getTrackId() != null
                 ? trackRepository.findById(team.getTrackId()).orElse(null) : null;
 
         Submission submission = submissionRepository
-                .findByTeamIdAndRoundId(a.getTeamId(), a.getRoundId()).orElse(null);
+                .findByTeamIdAndRoundId(teamId, roundId).orElse(null);
 
         Optional<JudgeScore> myScore = submission != null
                 ? judgeScoreRepository.findByJudgeUserIdAndSubmissionId(judgeId, submission.getId())
@@ -263,7 +293,7 @@ public class JudgingService {
             };
         }
 
-        boolean mentorConflict = teamPublicService.isMentorOfTeam(judgeId, a.getTeamId());
+        boolean mentorConflict = teamPublicService.isMentorOfTeam(judgeId, teamId);
         boolean hasOpenReview = submission != null
                 && scoreReviewService.hasOpenReview(submission.getId());
         UUID openReviewId = hasOpenReview && submission != null
@@ -271,9 +301,9 @@ public class JudgingService {
                 : null;
 
         return JudgeScoringAssignmentResponse.builder()
-                .teamId(a.getTeamId())
+                .teamId(teamId)
                 .teamName(team != null ? team.getName() : "Unknown")
-                .roundId(a.getRoundId())
+                .roundId(roundId)
                 .roundName(round != null ? round.getName() : "Unknown")
                 .eventId(event != null ? event.getId() : null)
                 .eventName(event != null ? event.getName() : null)
@@ -289,13 +319,12 @@ public class JudgingService {
                 .build();
     }
 
-    private boolean isJudgeAssignedToTeam(UUID judgeId, UUID submissionId, UUID roundId) {
-        UUID teamId = submissionPublicService.getSubmission(submissionId)
-                .map(s -> s.getTeamId())
-                .orElseThrow(() -> new ResourceNotFoundException("Submission", "id", submissionId));
-
-        return teamJudgeAssignmentRepository.existsByTeamIdAndRoundIdAndJudgeUserId(
-                teamId, roundId, judgeId);
+    private boolean isJudgeAssignedToSubmissionScope(UUID judgeId, UUID submissionId, UUID roundId) {
+        UUID teamId = resolveTeamId(submissionId);
+        Team team = teamRepository.findById(teamId)
+                .orElseThrow(() -> new ResourceNotFoundException("Team", "id", teamId));
+        return judgeAssignmentService.isJudgeAssignedToSubmissionScope(
+                roundId, judgeId, team.getTrackId(), team.getGroupId());
     }
 
     private void assertScoreReadAccess(JudgeScore score, UUID requesterId, UserType requesterRole) {
@@ -520,8 +549,11 @@ public class JudgingService {
         Submission submission = submissionRepository.findById(submissionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Submission", "id", submissionId));
 
-        long totalAssignedJudges = teamJudgeAssignmentRepository.countByTeamIdAndRoundId(
-                submission.getTeamId(), submission.getRoundId());
+        Team team = teamRepository.findById(submission.getTeamId())
+                .orElseThrow(() -> new ResourceNotFoundException("Team", "id", submission.getTeamId()));
+        long totalAssignedJudges = judgeAssignmentService
+                .getEligibleJudgeUserIds(submission.getRoundId(), team.getTrackId(), team.getGroupId())
+                .size();
         int completedJudges = judgeScoreRepository.countBySubmissionIdAndStatus(
                 submissionId, ScoreStatus.COMPLETED);
 

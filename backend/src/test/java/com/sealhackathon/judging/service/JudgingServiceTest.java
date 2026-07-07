@@ -1,21 +1,24 @@
 package com.sealhackathon.judging.service;
 
 import com.sealhackathon.common.exception.BusinessException;
+import com.sealhackathon.event.domain.HackathonEvent;
+import com.sealhackathon.event.domain.JudgeAssignment;
 import com.sealhackathon.event.domain.Round;
+import com.sealhackathon.event.domain.enums.AssignmentScope;
 import com.sealhackathon.event.dto.snapshot.CriteriaSnapshot;
 import com.sealhackathon.event.repository.HackathonEventRepository;
+import com.sealhackathon.event.repository.JudgeAssignmentRepository;
 import com.sealhackathon.event.repository.RoundRepository;
 import com.sealhackathon.event.repository.TrackRepository;
 import com.sealhackathon.event.service.EventPublicService;
+import com.sealhackathon.event.service.JudgeAssignmentService;
 import com.sealhackathon.judging.domain.JudgeScore;
-import com.sealhackathon.judging.domain.TeamJudgeAssignment;
 import com.sealhackathon.judging.domain.enums.ScoreStatus;
 import com.sealhackathon.judging.dto.request.ScoreDetailDto;
 import com.sealhackathon.judging.dto.request.ScoreSubmissionRequest;
 import com.sealhackathon.judging.dto.response.JudgeScoringAssignmentResponse;
 import com.sealhackathon.judging.dto.response.JudgeScoreResponse;
 import com.sealhackathon.judging.repository.JudgeScoreRepository;
-import com.sealhackathon.judging.repository.TeamJudgeAssignmentRepository;
 import com.sealhackathon.submission.domain.Submission;
 import com.sealhackathon.submission.dto.snapshot.SubmissionSnapshot;
 import com.sealhackathon.submission.repository.SubmissionRepository;
@@ -48,7 +51,8 @@ import static org.mockito.Mockito.when;
 class JudgingServiceTest {
 
     @Mock private JudgeScoreRepository judgeScoreRepository;
-    @Mock private TeamJudgeAssignmentRepository teamJudgeAssignmentRepository;
+    @Mock private JudgeAssignmentRepository judgeAssignmentRepository;
+    @Mock private JudgeAssignmentService judgeAssignmentService;
     @Mock private SubmissionRepository submissionRepository;
     @Mock private TeamRepository teamRepository;
     @Mock private RoundRepository roundRepository;
@@ -68,6 +72,8 @@ class JudgingServiceTest {
     private static final UUID ROUND_ID = UUID.randomUUID();
     private static final UUID SUBMISSION_ID = UUID.randomUUID();
     private static final UUID TEAM_ID = UUID.randomUUID();
+    private static final UUID TRACK_ID = UUID.randomUUID();
+    private static final UUID EVENT_ID = UUID.randomUUID();
     private static final UUID CRITERIA_1 = UUID.randomUUID();
     private static final UUID CRITERIA_2 = UUID.randomUUID();
 
@@ -151,8 +157,11 @@ class JudgingServiceTest {
                 .thenReturn(LocalDateTime.now().plusDays(1));
         when(submissionPublicService.getSubmission(SUBMISSION_ID))
                 .thenReturn(Optional.of(SubmissionSnapshot.builder().id(SUBMISSION_ID).teamId(TEAM_ID).build()));
-        when(teamJudgeAssignmentRepository.existsByTeamIdAndRoundIdAndJudgeUserId(TEAM_ID, ROUND_ID, JUDGE_ID))
-                .thenReturn(false);
+        Team team = Team.builder().eventId(EVENT_ID).trackId(TRACK_ID).build();
+        team.setId(TEAM_ID);
+        when(teamRepository.findById(TEAM_ID)).thenReturn(Optional.of(team));
+        when(judgeAssignmentService.isJudgeAssignedToSubmissionScope(
+                ROUND_ID, JUDGE_ID, TRACK_ID, null)).thenReturn(false);
 
         ScoreSubmissionRequest request = buildRequest(7, 8, null, null);
 
@@ -180,36 +189,46 @@ class JudgingServiceTest {
     }
 
     @Test
-    void getMyScoringAssignments_shouldExcludeOrphanRoundOrTeam() {
-        UUID orphanRoundId = UUID.randomUUID();
+    void getMyScoringAssignments_shouldExpandFromPoolScope() {
         UUID validRoundId = UUID.randomUUID();
-        UUID orphanTeamId = UUID.randomUUID();
+        UUID trackId = UUID.randomUUID();
         UUID validTeamId = UUID.randomUUID();
+        UUID orphanTeamId = UUID.randomUUID();
 
-        TeamJudgeAssignment orphanTeam = TeamJudgeAssignment.builder()
-                .teamId(orphanTeamId).roundId(validRoundId).judgeUserId(JUDGE_ID).build();
-        TeamJudgeAssignment orphanRound = TeamJudgeAssignment.builder()
-                .teamId(validTeamId).roundId(orphanRoundId).judgeUserId(JUDGE_ID).build();
-        TeamJudgeAssignment valid = TeamJudgeAssignment.builder()
-                .teamId(validTeamId).roundId(validRoundId).judgeUserId(JUDGE_ID).build();
-
-        when(teamJudgeAssignmentRepository.findByJudgeUserId(JUDGE_ID))
-                .thenReturn(List.of(orphanTeam, orphanRound, valid));
-        when(roundRepository.existsById(validRoundId)).thenReturn(true);
-        when(roundRepository.existsById(orphanRoundId)).thenReturn(false);
-        when(teamRepository.existsById(validTeamId)).thenReturn(true);
-        when(teamRepository.existsById(orphanTeamId)).thenReturn(false);
-
-        Team team = Team.builder().eventId(UUID.randomUUID()).name("Team Alpha").build();
-        team.setId(validTeamId);
+        HackathonEvent event = HackathonEvent.builder().name("SEAL").build();
+        event.setId(EVENT_ID);
         Round round = Round.builder()
-                .name("Round One")
+                .name("Preliminary")
                 .scoringDeadline(LocalDateTime.now().plusDays(1))
+                .hackathonEvent(event)
                 .build();
         round.setId(validRoundId);
 
-        when(teamRepository.findById(validTeamId)).thenReturn(Optional.of(team));
+        JudgeAssignment poolAssignment = JudgeAssignment.builder()
+                .round(round)
+                .judgeUserId(JUDGE_ID)
+                .scope(AssignmentScope.TRACK)
+                .trackId(trackId)
+                .active(true)
+                .assignedAt(LocalDateTime.now())
+                .build();
+
+        Team validTeam = Team.builder().eventId(EVENT_ID).name("Team Alpha").trackId(trackId).build();
+        validTeam.setId(validTeamId);
+        Team orphanTeam = Team.builder().eventId(EVENT_ID).name("Orphan").trackId(trackId).build();
+        orphanTeam.setId(orphanTeamId);
+
+        when(judgeAssignmentRepository.findByJudgeUserId(JUDGE_ID))
+                .thenReturn(List.of(poolAssignment));
+        when(roundRepository.existsById(validRoundId)).thenReturn(true);
+        when(teamRepository.findByEventIdAndTrackId(EVENT_ID, trackId))
+                .thenReturn(List.of(validTeam, orphanTeam));
+        when(teamRepository.existsById(validTeamId)).thenReturn(true);
+        when(teamRepository.existsById(orphanTeamId)).thenReturn(false);
+
+        when(teamRepository.findById(validTeamId)).thenReturn(Optional.of(validTeam));
         when(roundRepository.findById(validRoundId)).thenReturn(Optional.of(round));
+        when(eventRepository.findById(EVENT_ID)).thenReturn(Optional.of(event));
         when(submissionRepository.findByTeamIdAndRoundId(validTeamId, validRoundId))
                 .thenReturn(Optional.empty());
         when(teamPublicService.isMentorOfTeam(JUDGE_ID, validTeamId)).thenReturn(false);
@@ -253,14 +272,19 @@ class JudgingServiceTest {
         submission.setId(SUBMISSION_ID);
         lenient().when(submissionRepository.findById(SUBMISSION_ID))
                 .thenReturn(Optional.of(submission));
-        when(teamJudgeAssignmentRepository.existsByTeamIdAndRoundIdAndJudgeUserId(TEAM_ID, ROUND_ID, JUDGE_ID))
-                .thenReturn(true);
+        Team team = Team.builder().eventId(EVENT_ID).trackId(TRACK_ID).build();
+        team.setId(TEAM_ID);
+        when(teamRepository.findById(TEAM_ID)).thenReturn(Optional.of(team));
+        when(judgeAssignmentService.isJudgeAssignedToSubmissionScope(
+                ROUND_ID, JUDGE_ID, TRACK_ID, null)).thenReturn(true);
         when(eventPublicService.getCriteriaByRound(ROUND_ID)).thenReturn(List.of(
                 CriteriaSnapshot.builder().id(CRITERIA_1).name("Technical").weight(50)
                         .minScore(0).maxScore(10).build(),
                 CriteriaSnapshot.builder().id(CRITERIA_2).name("Innovation").weight(50)
                         .minScore(0).maxScore(10).build()
         ));
+        lenient().when(judgeAssignmentService.getEligibleJudgeUserIds(eq(ROUND_ID), eq(TRACK_ID), eq(null)))
+                .thenReturn(List.of(JUDGE_ID));
     }
 
     private ScoreSubmissionRequest buildRequest(int score1, int score2,

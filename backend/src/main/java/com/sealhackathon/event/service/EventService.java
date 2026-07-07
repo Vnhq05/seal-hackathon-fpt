@@ -78,6 +78,7 @@ public class EventService {
     private final AllowedEmailDomainService allowedEmailDomainService;
     private final ScoringTemplateRepository scoringTemplateRepository;
     private final UserPublicService userPublicService;
+    private final JudgeAssignmentService judgeAssignmentService;
     @Autowired
     @Lazy
     private FormatRuleEngine formatRuleEngine;
@@ -350,6 +351,9 @@ public class EventService {
 
         EventStatus target = request.getStatus();
         validateStatusTransition(event, target);
+        if (target == EventStatus.SCORING) {
+            judgeAssignmentService.assertEventReadyForScoring(eventId);
+        }
 
         String oldStatus = event.getStatus().name();
         event.setStatus(target);

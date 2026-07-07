@@ -8,8 +8,10 @@ import com.sealhackathon.team.dto.request.CreateTeamRequest;
 import com.sealhackathon.team.dto.request.RenameTeamRequest;
 import com.sealhackathon.team.dto.request.SelectTrackRequest;
 import com.sealhackathon.team.dto.request.SelfDrawTrackRequest;
+import com.sealhackathon.team.dto.request.UpdateTeamGroupRequest;
 import com.sealhackathon.team.dto.request.UpdateTeamRecruitmentRequest;
 import com.sealhackathon.team.dto.response.TrackAssignmentResponse;
+import com.sealhackathon.team.dto.response.UpdateTeamGroupResponse;
 import com.sealhackathon.event.service.TrackDrawSessionService;
 import com.sealhackathon.team.dto.response.TeamResponse;
 import com.sealhackathon.team.service.MentorTeamService;
@@ -17,6 +19,7 @@ import com.sealhackathon.team.service.TeamService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -28,6 +31,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -151,6 +155,19 @@ public class TeamController {
         UUID leaderId = authPublicService.getCurrentUserId();
         TeamResponse response = teamService.selectTrack(leaderId, teamId, request);
         return ResponseEntity.ok(ApiResponse.success("Track selected", response));
+    }
+
+    @PatchMapping("/{teamId}/group")
+    @PreAuthorize("hasAnyRole('SYSTEM_ADMIN', 'EVENT_COORDINATOR')")
+    @Operation(summary = "Assign team to a competition group within its track")
+    public ResponseEntity<ApiResponse<UpdateTeamGroupResponse>> updateTeamGroup(
+            @PathVariable UUID eventId,
+            @PathVariable UUID teamId,
+            @Valid @RequestBody UpdateTeamGroupRequest request,
+            HttpServletRequest httpRequest) {
+        UpdateTeamGroupResponse response = teamService.updateTeamGroup(
+                eventId, teamId, request, httpRequest.getRemoteAddr());
+        return ResponseEntity.ok(ApiResponse.success("Team group updated", response));
     }
 
     @PostMapping("/{teamId}/track/draw")

@@ -76,6 +76,19 @@ public class TeamPublicServiceImpl implements TeamPublicService {
         return teamRepository.count();
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<UUID> getTeamMemberUserIds(UUID teamId, boolean leaderOnly) {
+        if (leaderOnly) {
+            return teamRepository.findById(teamId)
+                    .map(team -> List.of(team.getLeaderId()))
+                    .orElse(List.of());
+        }
+        return teamMemberRepository.findByTeamId(teamId).stream()
+                .map(member -> member.getUserId())
+                .toList();
+    }
+
     private TeamSnapshot toSnapshot(Team team) {
         int memberCount = teamMemberRepository.countByTeamId(team.getId());
         return TeamSnapshot.builder()

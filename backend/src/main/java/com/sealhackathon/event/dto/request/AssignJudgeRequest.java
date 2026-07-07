@@ -1,5 +1,6 @@
 package com.sealhackathon.event.dto.request;
 
+import com.sealhackathon.event.domain.enums.AssignmentScope;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -17,6 +18,12 @@ public class AssignJudgeRequest {
     @NotNull(message = "Judge user ID is required")
     private UUID judgeUserId;
 
-    /** Required for PRELIMINARY rounds; must be null for FINAL rounds. */
+    /** Explicit scope; inferred from trackId when omitted for backward compatibility. */
+    private AssignmentScope scope;
+
+    /** Required for TRACK and GROUP scopes. */
     private UUID trackId;
+
+    /** Required for GROUP scope. */
+    private UUID groupId;
 }

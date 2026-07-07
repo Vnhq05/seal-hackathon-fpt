@@ -108,7 +108,8 @@ public class TeamJudgeAssignmentService {
         Team team = teamRepository.findById(teamId)
                 .orElseThrow(() -> new ResourceNotFoundException("Team", "id", teamId));
 
-        if (!judgeAssignmentService.isJudgeAssignedToRoundScope(roundId, judgeUserId, team.getTrackId())) {
+        if (!judgeAssignmentService.isJudgeAssignedToSubmissionScope(
+                roundId, judgeUserId, team.getTrackId(), team.getGroupId())) {
             throw new BusinessException(
                     "Judge is not assigned to this round and track",
                     HttpStatus.BAD_REQUEST) {};

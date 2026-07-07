@@ -5,15 +5,52 @@ export type { TeamJudgeAssignmentResponse };
 
 // ═══ Types ═══
 
+export type AssignmentScope = "ROUND" | "TRACK" | "GROUP";
+
 export interface JudgeAssignmentResponse {
   id: string;
   roundId: string;
+  scope: AssignmentScope;
   trackId: string | null;
   trackName: string | null;
+  groupId: string | null;
+  groupName: string | null;
   judgeUserId: string;
   judgeFullName: string | null;
   judgeEmail: string | null;
+  active: boolean;
   assignedAt: string;
+  deactivatedAt?: string | null;
+  deactivationReason?: string | null;
+  expectedTeamCount?: number;
+  expectedSubmissionCount?: number;
+  conflictRisk?: boolean;
+  warning?: string | null;
+  incompleteScopes?: IncompleteAssignmentScope[];
+}
+
+export interface IncompleteAssignmentScope {
+  scope: AssignmentScope;
+  trackId: string | null;
+  trackName: string | null;
+  groupId: string | null;
+  groupName: string | null;
+  judgeCount: number;
+  minJudgesRequired: number;
+}
+
+export interface JudgeWorkloadPreview {
+  scope: AssignmentScope;
+  trackId: string | null;
+  groupId: string | null;
+  teamCount: number;
+  submissionCount: number;
+}
+
+export interface CompetitionGroupResponse {
+  id: string;
+  trackId: string;
+  name: string;
 }
 
 export interface MentorAssignmentResponse {
@@ -29,7 +66,9 @@ export interface MentorAssignmentResponse {
 
 export interface AssignJudgeRequest {
   judgeUserId: string;
+  scope?: AssignmentScope;
   trackId?: string;
+  groupId?: string;
 }
 
 export interface AssignMentorRequest {
@@ -91,10 +130,76 @@ export const assignmentApi = {
     return api.post<JudgeAssignmentResponse>(`/events/${eventId}/rounds/${roundId}/judges`, body);
   },
 
-  listJudges(eventId: string, roundId: string, trackId?: string): Promise<JudgeAssignmentResponse[]> {
+  listJudges(
+    eventId: string,
+    roundId: string,
+    params?: { trackId?: string; groupId?: string },
+  ): Promise<JudgeAssignmentResponse[]> {
     return api.get<JudgeAssignmentResponse[]>(`/events/${eventId}/rounds/${roundId}/judges`, {
-      params: trackId ? { trackId } : undefined,
+      params,
     });
+  },
+
+  previewWorkload(
+    eventId: string,
+    roundId: string,
+    params: { scope: AssignmentScope; trackId?: string; groupId?: string },
+  ): Promise<JudgeWorkloadPreview> {
+    return api.get<JudgeWorkloadPreview>(
+      `/events/${eventId}/rounds/${roundId}/judges/preview-workload`,
+      { params },
+    );
+  },
+
+  deactivateJudge(
+    eventId: string,
+    roundId: string,
+    assignmentId: string,
+    reason: string,
+  ): Promise<JudgeAssignmentResponse> {
+    return api.patch<JudgeAssignmentResponse>(
+      `/events/${eventId}/rounds/${roundId}/judges/${assignmentId}/deactivate`,
+      { reason },
+    );
+  },
+
+  activateJudge(
+    eventId: string,
+    roundId: string,
+    assignmentId: string,
+  ): Promise<JudgeAssignmentResponse> {
+    return api.patch<JudgeAssignmentResponse>(
+      `/events/${eventId}/rounds/${roundId}/judges/${assignmentId}/activate`,
+      {},
+    );
+  },
+
+  replaceJudge(
+    eventId: string,
+    roundId: string,
+    assignmentId: string,
+    body: { newJudgeUserId: string; reason: string },
+  ): Promise<JudgeAssignmentResponse> {
+    return api.post<JudgeAssignmentResponse>(
+      `/events/${eventId}/rounds/${roundId}/judges/${assignmentId}/replace`,
+      body,
+    );
+  },
+
+  listCompetitionGroups(eventId: string, trackId: string): Promise<CompetitionGroupResponse[]> {
+    return api.get<CompetitionGroupResponse[]>(`/events/${eventId}/tracks/${trackId}/groups`);
+  },
+
+  createCompetitionGroup(
+    eventId: string,
+    trackId: string,
+    name: string,
+  ): Promise<CompetitionGroupResponse> {
+    return api.post<CompetitionGroupResponse>(`/events/${eventId}/tracks/${trackId}/groups`, { name });
+  },
+
+  deleteCompetitionGroup(eventId: string, trackId: string, groupId: string): Promise<void> {
+    return api.delete<void>(`/events/${eventId}/tracks/${trackId}/groups/${groupId}`);
   },
 
   removeJudge(eventId: string, roundId: string, assignmentId: string): Promise<void> {
@@ -189,6 +294,8 @@ export interface TeamAssignmentOverview {
   teamName: string;
   trackId: string | null;
   trackName: string | null;
+  groupId?: string | null;
+  groupName?: string | null;
   memberCount: number;
   mentorUserId: string | null;
   mentorFullName: string | null;

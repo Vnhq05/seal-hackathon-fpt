@@ -42,8 +42,13 @@ public class EventPublishService {
                 }
                 for (UUID judgeUserId : judgeUserIds) {
                     judgeAssignmentService.assignJudge(
+                            eventId,
                             round.getId(),
-                            AssignJudgeRequest.builder().judgeUserId(judgeUserId).build());
+                            AssignJudgeRequest.builder()
+                                    .judgeUserId(judgeUserId)
+                                    .scope(com.sealhackathon.event.domain.enums.AssignmentScope.ROUND)
+                                    .build(),
+                            ipAddress);
                 }
             }
         }

@@ -1,3 +1,5 @@
+import type { ProgressRiskLevel, ProgressRiskReason } from "@/lib/api/progress.api";
+
 export interface MentorSummary {
   trackName: string;
   hackathonName: string;
@@ -31,6 +33,8 @@ export interface MentorTeam {
   lastSubmission: string | null;
   rank: number | null;
   isDisqualified: boolean;
+  riskLevel?: ProgressRiskLevel;
+  reasons?: ProgressRiskReason[];
 }
 
 export type MentorTeamFilter = "all" | "submitted" | "not_submitted" | "eliminated";
@@ -45,6 +49,7 @@ export interface MentorTeamsParams {
 
 export interface MentorTeamsResponse {
   data: MentorTeam[];
+  eventId: string | null;
   trackName: string;
   hackathonName: string;
   submittedCount: number;

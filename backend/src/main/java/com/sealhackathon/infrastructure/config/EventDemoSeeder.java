@@ -6,6 +6,7 @@ import com.sealhackathon.event.domain.HackathonEvent;
 import com.sealhackathon.event.domain.JudgeAssignment;
 import com.sealhackathon.event.domain.MentorAssignment;
 import com.sealhackathon.event.domain.Round;
+import com.sealhackathon.event.domain.enums.AssignmentScope;
 import com.sealhackathon.event.domain.ScoringTemplate;
 import com.sealhackathon.event.domain.ScoringTemplateCriterion;
 import com.sealhackathon.event.domain.Track;
@@ -154,6 +155,8 @@ public class EventDemoSeeder {
             roundOne.getJudgeAssignments().add(JudgeAssignment.builder()
                     .round(roundOne)
                     .judgeUserId(judgeId)
+                    .scope(AssignmentScope.ROUND)
+                    .active(true)
                     .assignedAt(now)
                     .build());
         }

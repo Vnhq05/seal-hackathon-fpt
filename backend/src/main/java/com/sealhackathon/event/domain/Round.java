@@ -85,6 +85,12 @@ public class Round extends BaseEntity {
     @Column(name = "scoring_deadline", nullable = false)
     private LocalDateTime scoringDeadline;
 
+    @NotNull
+    @Min(1)
+    @Column(name = "min_judges_per_round", nullable = false)
+    @Builder.Default
+    private Integer minJudgesPerRound = 2;
+
     // ── BR-12: top N teams advance ──
     @NotNull
     @Min(1)

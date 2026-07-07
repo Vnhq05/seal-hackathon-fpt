@@ -23,6 +23,7 @@ export function useMentorTeams(params?: MentorTeamsParams) {
       if (rooms.length === 0) {
         return {
           data: [],
+          eventId: null,
           trackName: "All tracks",
           hackathonName: "",
           submittedCount: 0,
@@ -101,6 +102,7 @@ export function useMentorTeams(params?: MentorTeamsParams) {
 
       return {
         data: filteredTeams,
+        eventId: primaryEventId,
         trackName: params?.trackId
           ? trackNames.get(params.trackId) ?? "Assigned track"
           : "All tracks",

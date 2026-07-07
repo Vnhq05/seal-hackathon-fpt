@@ -24,6 +24,7 @@ export interface RoundResponse {
   advancementRule?: AdvancementRule | null;
   criteria: CriteriaResponse[];
   judgeCount: number;
+  minJudgesPerRound?: number;
 }
 
 export interface CreateRoundRequest {
@@ -38,6 +39,7 @@ export interface CreateRoundRequest {
   roundWeight?: number;
   roundType?: RoundType;
   advancementRule?: AdvancementRule;
+  minJudgesPerRound?: number;
 }
 
 // ═══ API calls ═══

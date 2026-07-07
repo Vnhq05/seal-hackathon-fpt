@@ -34,6 +34,10 @@ public interface TeamRepository extends JpaRepository<Team, UUID> {
 
     List<Team> findByEventIdAndTrackId(UUID eventId, UUID trackId);
 
+    List<Team> findByGroupId(UUID groupId);
+
+    List<Team> findByEventIdAndGroupId(UUID eventId, UUID groupId);
+
     Optional<Team> findByEventIdAndLeaderId(UUID eventId, UUID leaderId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

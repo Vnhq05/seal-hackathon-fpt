@@ -144,6 +144,13 @@ function ActionMenu({ event, onError }: { event: EventResponse; onError: (msg: s
 
   if (event.status !== "COMPLETED" && event.status !== "CANCELLED") {
     actions.push({
+      label: "Judge assignments",
+      onClick: () => { setOpen(false); router.push(`${portalBase}/assignments?eventId=${event.id}`); },
+    });
+  }
+
+  if (event.status !== "COMPLETED" && event.status !== "CANCELLED") {
+    actions.push({
       label: "Cancel",
       onClick: () => { setOpen(false); cancel(event.id, errorHandler); },
       color: "#b45309",

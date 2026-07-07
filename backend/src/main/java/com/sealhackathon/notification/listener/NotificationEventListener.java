@@ -3,10 +3,13 @@ package com.sealhackathon.notification.listener;
 import com.sealhackathon.event.event.JudgeAssignedEvent;
 import com.sealhackathon.event.event.MentorAssignedEvent;
 import com.sealhackathon.event.event.ScoringWindowReopenedEvent;
+import com.sealhackathon.event.repository.HackathonEventRepository;
 import com.sealhackathon.notification.domain.Notification;
 import com.sealhackathon.notification.domain.enums.NotificationType;
 import com.sealhackathon.notification.service.EmailService;
 import com.sealhackathon.notification.service.NotificationService;
+import com.sealhackathon.progress.domain.enums.ProgressRiskReason;
+import com.sealhackathon.progress.event.TeamProgressAlertEvent;
 import com.sealhackathon.ranking.event.DisputeFiledEvent;
 import com.sealhackathon.ranking.event.ResultsPublishedEvent;
 import com.sealhackathon.submission.event.SubmissionCreatedEvent;
@@ -20,6 +23,8 @@ import com.sealhackathon.team.event.MemberKickedEvent;
 import com.sealhackathon.team.event.TeamConfirmedEvent;
 import com.sealhackathon.team.event.TeamCreatedEvent;
 import com.sealhackathon.team.event.MentorTeamAssignedEvent;
+import com.sealhackathon.team.repository.MentorTeamRepository;
+import com.sealhackathon.team.service.TeamPublicService;
 import com.sealhackathon.user.event.AccountApprovedEvent;
 import com.sealhackathon.user.event.AccountRejectedEvent;
 import com.sealhackathon.user.event.InternalAccountCreatedEvent;
@@ -29,8 +34,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionalEventListener;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Component
@@ -40,6 +48,9 @@ public class NotificationEventListener {
     private final NotificationService notificationService;
     private final EmailService emailService;
     private final UserPublicService userPublicService;
+    private final MentorTeamRepository mentorTeamRepository;
+    private final TeamPublicService teamPublicService;
+    private final HackathonEventRepository hackathonEventRepository;
 
     // ── User Module Events ──
 
@@ -180,11 +191,32 @@ public class NotificationEventListener {
 
     @TransactionalEventListener
     public void onSubmissionCreated(SubmissionCreatedEvent event) {
+        List<UUID> recipients = new ArrayList<>();
+        teamPublicService.getTeamMemberUserIds(event.teamId(), true)
+                .forEach(recipients::add);
+        mentorTeamRepository.findByTeamId(event.teamId())
+                .ifPresent(mt -> recipients.add(mt.getMentorUserId()));
+
         notify(NotificationType.SUBMISSION_CREATED,
                 "Submission Received",
                 "Your team's submission (version " + event.versionNumber() + ") has been received.",
                 event.submissionId(), "Submission",
-                List.of());
+                recipients.stream().distinct().toList());
+    }
+
+    @TransactionalEventListener
+    public void onTeamProgressAlert(TeamProgressAlertEvent event) {
+        List<UUID> recipients = new ArrayList<>();
+        mentorTeamRepository.findByTeamId(event.teamId())
+                .ifPresent(mt -> recipients.add(mt.getMentorUserId()));
+        recipients.addAll(teamPublicService.getTeamMemberUserIds(event.teamId(), true));
+        resolveCoordinatorId(event.eventId()).ifPresent(recipients::add);
+
+        notify(NotificationType.TEAM_PROGRESS_ALERT,
+                "Cảnh báo tiến độ đội",
+                buildProgressAlertMessage(event.reasons()),
+                event.teamId(), "Team",
+                recipients.stream().distinct().toList());
     }
 
     // ── Event Module Events ──
@@ -238,6 +270,28 @@ public class NotificationEventListener {
     }
 
     // ═══ Helper ═══
+
+    private Optional<UUID> resolveCoordinatorId(UUID eventId) {
+        return hackathonEventRepository.findById(eventId)
+                .flatMap(event -> userPublicService.findByEmail(event.getCreatedBy()))
+                .map(user -> user.getId());
+    }
+
+    private String buildProgressAlertMessage(List<ProgressRiskReason> reasons) {
+        return reasons.stream()
+                .map(this::describeProgressReason)
+                .collect(Collectors.joining(" "));
+    }
+
+    private String describeProgressReason(ProgressRiskReason reason) {
+        return switch (reason) {
+            case NOT_STARTED -> "Đội chưa bắt đầu nộp bài trước deadline.";
+            case SLIDE_ONLY_PAST_GATE -> "Đã qua slide deadline nhưng chưa nộp source/demo.";
+            case SINGLE_VERSION_LAST_MINUTE -> "Chỉ nộp một lần sát giờ, chưa chỉnh sửa lại.";
+            case STALLED -> "Không có bản cập nhật mới trong thời gian dài.";
+            case MISSING_ATTACHMENT -> "Bài nộp thiếu file đính kèm.";
+        };
+    }
 
     private void notify(NotificationType type, String title, String message,
                          UUID referenceId, String referenceType,

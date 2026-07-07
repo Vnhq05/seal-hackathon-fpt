@@ -22,6 +22,8 @@ public class TeamAssignmentOverviewResponse {
     private String teamName;
     private UUID trackId;
     private String trackName;
+    private UUID groupId;
+    private String groupName;
     private int memberCount;
     private UUID mentorUserId;
     private String mentorFullName;

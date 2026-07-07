@@ -67,6 +67,8 @@ public class RoundService {
                 .advancementRule(request.getAdvancementRule() != null
                         ? request.getAdvancementRule()
                         : AdvancementRule.GLOBAL_TOP_N)
+                .minJudgesPerRound(request.getMinJudgesPerRound() != null
+                        ? request.getMinJudgesPerRound() : 2)
                 .build();
 
         round = roundRepository.save(round);
@@ -114,6 +116,9 @@ public class RoundService {
         }
         if (request.getAdvancementRule() != null) {
             round.setAdvancementRule(request.getAdvancementRule());
+        }
+        if (request.getMinJudgesPerRound() != null) {
+            round.setMinJudgesPerRound(request.getMinJudgesPerRound());
         }
 
         round = roundRepository.save(round);
@@ -320,6 +325,7 @@ public class RoundService {
                 .advancementRule(round.getAdvancementRule())
                 .criteria(criteriaList)
                 .judgeCount(round.getJudgeAssignments().size())
+                .minJudgesPerRound(round.getMinJudgesPerRound())
                 .build();
     }
 

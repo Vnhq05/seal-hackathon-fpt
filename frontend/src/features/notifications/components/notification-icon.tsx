@@ -70,23 +70,34 @@ function DefaultIcon({ color }: IconProps) {
   );
 }
 
-const ICON_MAP: Record<NotificationType, React.ComponentType<IconProps>> = {
+const ICON_MAP: Partial<Record<NotificationType, React.ComponentType<IconProps>>> = {
   ACCOUNT_APPROVED: AccountIcon,
   ACCOUNT_REJECTED: AccountIcon,
   INTERNAL_ACCOUNT_CREATED: AccountIcon,
   TEAM_REGISTERED: TeamIcon,
   TEAM_CONFIRMED: TeamIcon,
   INVITATION_RECEIVED: TeamIcon,
+  INVITATION_ACCEPTED: TeamIcon,
   MENTOR_TEAM_ASSIGNED: AssignmentIcon,
   SUBMISSION_CREATED: SubmissionIcon,
   JUDGE_ASSIGNED: AssignmentIcon,
+  JUDGE_ASSIGNMENT_CHANGED: AssignmentIcon,
+  JUDGE_ASSIGNMENT_REMOVED: AssignmentIcon,
   MENTOR_ASSIGNED: AssignmentIcon,
   SCORING_REOPENED: ResultsIcon,
   RESULTS_PUBLISHED: ResultsIcon,
   DISPUTE_FILED: DisputeIcon,
+  JOIN_REQUEST_RECEIVED: TeamIcon,
+  JOIN_REQUEST_ACCEPTED: TeamIcon,
+  JOIN_REQUEST_REJECTED: TeamIcon,
+  LEAVE_REQUEST_CREATED: TeamIcon,
+  LEAVE_REQUEST_APPROVED: TeamIcon,
+  LEAVE_REQUEST_REJECTED: TeamIcon,
+  MEMBER_KICKED: TeamIcon,
+  TEAM_PROGRESS_ALERT: SubmissionIcon,
 };
 
-const UNREAD_COLORS: Record<NotificationType, { bg: string; color: string }> = {
+const UNREAD_COLORS: Partial<Record<NotificationType, { bg: string; color: string }>> = {
   ACCOUNT_APPROVED: { bg: "#dcfce7", color: "#0ea5e9" },
   ACCOUNT_REJECTED: { bg: "#fcdeb5", color: "#dc2626" },
   INTERNAL_ACCOUNT_CREATED: { bg: "#dbeafe", color: "#0ea5e9" },
@@ -100,6 +111,17 @@ const UNREAD_COLORS: Record<NotificationType, { bg: string; color: string }> = {
   SCORING_REOPENED: { bg: "#fcdeb5", color: "#0ea5e9" },
   RESULTS_PUBLISHED: { bg: "#dcfce7", color: "#0ea5e9" },
   DISPUTE_FILED: { bg: "#fcdeb5", color: "#dc2626" },
+  JUDGE_ASSIGNMENT_CHANGED: { bg: "#dbeafe", color: "#0ea5e9" },
+  JUDGE_ASSIGNMENT_REMOVED: { bg: "#fcdeb5", color: "#dc2626" },
+  JOIN_REQUEST_RECEIVED: { bg: "#fcdeb5", color: "#0ea5e9" },
+  JOIN_REQUEST_ACCEPTED: { bg: "#dcfce7", color: "#0ea5e9" },
+  JOIN_REQUEST_REJECTED: { bg: "#fcdeb5", color: "#dc2626" },
+  LEAVE_REQUEST_CREATED: { bg: "#fcdeb5", color: "#0ea5e9" },
+  LEAVE_REQUEST_APPROVED: { bg: "#dcfce7", color: "#0ea5e9" },
+  LEAVE_REQUEST_REJECTED: { bg: "#fcdeb5", color: "#dc2626" },
+  INVITATION_ACCEPTED: { bg: "#dcfce7", color: "#0ea5e9" },
+  MEMBER_KICKED: { bg: "#fcdeb5", color: "#dc2626" },
+  TEAM_PROGRESS_ALERT: { bg: "#fcdeb5", color: "#b45309" },
 };
 
 const READ_BG: { bg: string; color: string } = { bg: "rgba(223,226,236,0.8)", color: "#8891a5" };

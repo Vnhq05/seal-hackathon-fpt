@@ -4,7 +4,9 @@ import {
   type AssignEventStaffRequest,
   type AssignJudgeRequest,
   type AssignMentorRequest,
+  type AssignmentScope,
 } from "@/lib/api";
+import { teamApi } from "@/lib/api/team.api";
 import { AVAILABLE_MENTORS_KEY } from "@/features/teams/hooks/use-mentor-invitations";
 
 export const JUDGE_ASSIGNMENTS_KEY = "judge-assignments" as const;
@@ -79,14 +81,77 @@ export function useRemoveEventMentor(eventId: string) {
 export function useJudgeAssignments(
   eventId: string,
   roundId: string,
-  trackId?: string,
-  options?: { requiresTrackId?: boolean },
+  params?: { trackId?: string; groupId?: string; requiresTrackId?: boolean },
 ) {
-  const requiresTrackId = options?.requiresTrackId ?? false;
+  const requiresTrackId = params?.requiresTrackId ?? false;
+  const trackId = params?.trackId;
   return useQuery({
-    queryKey: [JUDGE_ASSIGNMENTS_KEY, eventId, roundId, trackId],
-    queryFn: () => assignmentApi.listJudges(eventId, roundId, trackId),
+    queryKey: [JUDGE_ASSIGNMENTS_KEY, eventId, roundId, trackId, params?.groupId],
+    queryFn: () =>
+      assignmentApi.listJudges(eventId, roundId, {
+        trackId,
+        groupId: params?.groupId,
+      }),
     enabled: !!eventId && !!roundId && (!requiresTrackId || !!trackId),
+  });
+}
+
+export function useJudgeWorkloadPreview(
+  eventId: string,
+  roundId: string,
+  scope: AssignmentScope | "",
+  trackId?: string,
+  groupId?: string,
+) {
+  return useQuery({
+    queryKey: ["judge-workload-preview", eventId, roundId, scope, trackId, groupId],
+    queryFn: () =>
+      assignmentApi.previewWorkload(eventId, roundId, {
+        scope: scope as AssignmentScope,
+        trackId,
+        groupId,
+      }),
+    enabled: !!eventId && !!roundId && !!scope,
+  });
+}
+
+export function useCompetitionGroups(eventId: string, trackId: string) {
+  return useQuery({
+    queryKey: ["competition-groups", eventId, trackId],
+    queryFn: () => assignmentApi.listCompetitionGroups(eventId, trackId),
+    enabled: !!eventId && !!trackId,
+  });
+}
+
+export function useCreateCompetitionGroup(eventId: string, trackId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (name: string) => assignmentApi.createCompetitionGroup(eventId, trackId, name),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["competition-groups", eventId, trackId] });
+    },
+  });
+}
+
+export function useDeleteCompetitionGroup(eventId: string, trackId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (groupId: string) =>
+      assignmentApi.deleteCompetitionGroup(eventId, trackId, groupId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["competition-groups", eventId, trackId] });
+    },
+  });
+}
+
+export function useUpdateTeamGroup(eventId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ teamId, groupId }: { teamId: string; groupId: string | null }) =>
+      teamApi.updateGroup(eventId, teamId, { groupId }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [TEAM_ASSIGNMENTS_OVERVIEW_KEY] });
+    },
   });
 }
 
@@ -97,23 +162,61 @@ export function useAssignJudge(eventId: string, roundId: string) {
     mutationFn: (body: AssignJudgeRequest) =>
       assignmentApi.assignJudge(eventId, roundId, body),
     onSuccess: (_data, variables) => {
-      qc.invalidateQueries({
-        queryKey: [JUDGE_ASSIGNMENTS_KEY, eventId, roundId, variables.trackId],
-      });
+      qc.invalidateQueries({ queryKey: [JUDGE_ASSIGNMENTS_KEY, eventId, roundId] });
       qc.invalidateQueries({ queryKey: [TEAM_ASSIGNMENTS_OVERVIEW_KEY] });
     },
   });
 }
 
 /** Remove a judge assignment. */
-export function useRemoveJudge(eventId: string, roundId: string, trackId?: string) {
+export function useRemoveJudge(eventId: string, roundId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (assignmentId: string) =>
       assignmentApi.removeJudge(eventId, roundId, assignmentId),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: [JUDGE_ASSIGNMENTS_KEY, eventId, roundId, trackId] });
+      qc.invalidateQueries({ queryKey: [JUDGE_ASSIGNMENTS_KEY, eventId, roundId] });
       qc.invalidateQueries({ queryKey: [TEAM_ASSIGNMENTS_OVERVIEW_KEY] });
+    },
+  });
+}
+
+export function useDeactivateJudge(eventId: string, roundId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ assignmentId, reason }: { assignmentId: string; reason: string }) =>
+      assignmentApi.deactivateJudge(eventId, roundId, assignmentId, reason),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [JUDGE_ASSIGNMENTS_KEY, eventId, roundId] });
+    },
+  });
+}
+
+export function useActivateJudge(eventId: string, roundId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (assignmentId: string) =>
+      assignmentApi.activateJudge(eventId, roundId, assignmentId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [JUDGE_ASSIGNMENTS_KEY, eventId, roundId] });
+    },
+  });
+}
+
+export function useReplaceJudge(eventId: string, roundId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      assignmentId,
+      newJudgeUserId,
+      reason,
+    }: {
+      assignmentId: string;
+      newJudgeUserId: string;
+      reason: string;
+    }) => assignmentApi.replaceJudge(eventId, roundId, assignmentId, { newJudgeUserId, reason }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [JUDGE_ASSIGNMENTS_KEY, eventId, roundId] });
     },
   });
 }

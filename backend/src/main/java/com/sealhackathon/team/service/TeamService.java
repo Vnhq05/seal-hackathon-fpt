@@ -1,16 +1,22 @@
 package com.sealhackathon.team.service;
 
+import com.sealhackathon.audit.service.AuditService;
+import com.sealhackathon.auth.service.AuthPublicService;
 import com.sealhackathon.common.enums.UserType;
 import com.sealhackathon.common.exception.BusinessException;
 import com.sealhackathon.common.exception.DuplicateResourceException;
 import com.sealhackathon.common.exception.ResourceNotFoundException;
 import com.sealhackathon.common.service.SystemConfigService;
 import com.sealhackathon.event.domain.HackathonEvent;
+import com.sealhackathon.event.domain.CompetitionGroup;
 import com.sealhackathon.event.domain.Track;
+import com.sealhackathon.event.dto.response.IncompleteAssignmentScopeResponse;
+import com.sealhackathon.event.repository.CompetitionGroupRepository;
 import com.sealhackathon.event.repository.HackathonEventRepository;
 import com.sealhackathon.event.repository.TrackRepository;
-import com.sealhackathon.event.service.FormatRuleEngine;
 import com.sealhackathon.event.service.EventPublicService;
+import com.sealhackathon.event.service.FormatRuleEngine;
+import com.sealhackathon.event.service.JudgeAssignmentService;
 import com.sealhackathon.team.domain.Team;
 import com.sealhackathon.team.domain.TeamMember;
 import com.sealhackathon.team.domain.enums.HackathonSkillRole;
@@ -18,9 +24,11 @@ import com.sealhackathon.team.domain.enums.TeamMemberRole;
 import com.sealhackathon.team.domain.enums.TeamStatus;
 import com.sealhackathon.team.dto.request.CreateTeamRequest;
 import com.sealhackathon.team.dto.request.SelectTrackRequest;
+import com.sealhackathon.team.dto.request.UpdateTeamGroupRequest;
 import com.sealhackathon.team.dto.request.UpdateTeamRecruitmentRequest;
 import com.sealhackathon.team.dto.response.TeamMemberResponse;
 import com.sealhackathon.team.dto.response.TeamResponse;
+import com.sealhackathon.team.dto.response.UpdateTeamGroupResponse;
 import com.sealhackathon.team.event.MemberJoinedEvent;
 import com.sealhackathon.team.event.MemberKickedEvent;
 import com.sealhackathon.team.event.MemberLeftEvent;
@@ -63,6 +71,10 @@ public class TeamService {
     private final SystemConfigService systemConfigService;
     private final TrackRepository trackRepository;
     private final FormatRuleEngine formatRuleEngine;
+    private final CompetitionGroupRepository competitionGroupRepository;
+    private final JudgeAssignmentService judgeAssignmentService;
+    private final AuditService auditService;
+    private final AuthPublicService authPublicService;
 
     @Value("${app.hackathon.team.max-skill-roles:5}")
     private int maxSkillRoles;
@@ -193,6 +205,56 @@ public class TeamService {
         team.setTrackId(request.getTrackId());
         teamRepository.save(team);
         return toResponse(team, leaderId, null);
+    }
+
+    @Transactional
+    public UpdateTeamGroupResponse updateTeamGroup(
+            UUID eventId, UUID teamId, UpdateTeamGroupRequest request, String ipAddress) {
+        Team team = getTeam(teamId);
+        if (!team.getEventId().equals(eventId)) {
+            throw new BusinessException("Team does not belong to this event", HttpStatus.BAD_REQUEST) {};
+        }
+        if (team.getTrackId() == null) {
+            throw new BusinessException("Team must have a track before assigning a group", HttpStatus.BAD_REQUEST) {};
+        }
+
+        UUID oldGroupId = team.getGroupId();
+        UUID newGroupId = request.getGroupId();
+        String newGroupName = null;
+
+        if (newGroupId != null) {
+            CompetitionGroup group = competitionGroupRepository.findByIdAndTrackId(newGroupId, team.getTrackId())
+                    .orElseThrow(() -> new BusinessException(
+                            "Group does not belong to the team's track", HttpStatus.BAD_REQUEST) {});
+            newGroupName = group.getName();
+        }
+
+        team.setGroupId(newGroupId);
+        teamRepository.save(team);
+
+        auditService.log(
+                authPublicService.getCurrentUserId(),
+                "TEAM_GROUP_CHANGED",
+                teamId,
+                "Team",
+                "{\"groupId\":" + (oldGroupId != null ? "\"" + oldGroupId + "\"" : "null") + "}",
+                "{\"groupId\":" + (newGroupId != null ? "\"" + newGroupId + "\"" : "null") + "}",
+                ipAddress);
+
+        List<IncompleteAssignmentScopeResponse> incomplete = newGroupId != null
+                ? judgeAssignmentService.computeIncompleteScopesForGroupInEvent(eventId, newGroupId)
+                : List.of();
+        String warning = incomplete.isEmpty() ? null
+                : "Group \"" + (newGroupName != null ? newGroupName : newGroupId)
+                        + "\" has fewer than the minimum required judges.";
+
+        return UpdateTeamGroupResponse.builder()
+                .teamId(teamId)
+                .groupId(newGroupId)
+                .groupName(newGroupName)
+                .warning(warning)
+                .incompleteScopes(incomplete)
+                .build();
     }
 
     public void notifyTeamCountChanged(UUID eventId) {
@@ -427,6 +489,7 @@ public class TeamService {
                 .leaderId(team.getLeaderId())
                 .status(team.getStatus())
                 .trackId(team.getTrackId())
+                .groupId(team.getGroupId())
                 .memberCount(memberCount)
                 .minTeamMembers(minTeamMembers)
                 .maxTeamMembers(maxTeamMembers)

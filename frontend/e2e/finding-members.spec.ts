@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 
 const TEAM_LEADER = {
   email: "student4@fpt.edu.vn",
@@ -10,7 +10,7 @@ const NO_TEAM_STUDENT = {
   password: "12345678",
 };
 
-async function login(page: import("@playwright/test").Page, email: string, password: string) {
+async function login(page: Page, email: string, password: string) {
   await page.goto("/login");
   await page.fill("#email", email);
   await page.fill("#password", password);

@@ -81,6 +81,9 @@ public class Team extends BaseEntity {
     @Column(name = "track_id")
     private UUID trackId;
 
+    @Column(name = "group_id")
+    private UUID groupId;
+
     @Column(name = "track_assigned_at")
     private java.time.LocalDateTime trackAssignedAt;
 

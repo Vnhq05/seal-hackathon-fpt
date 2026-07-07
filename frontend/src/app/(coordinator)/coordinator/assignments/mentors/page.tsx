@@ -6,5 +6,9 @@ export const metadata: Metadata = {
 };
 
 export default function CoordinatorMentorAssignmentPage() {
-  return <MentorAssignmentPage />;
+  return (
+    <div style={{ padding: 32, maxWidth: 1440 }}>
+      <MentorAssignmentPage />
+    </div>
+  );
 }

@@ -1,3 +1,4 @@
+import type { TeamProgressResponse } from "@/lib/api/progress.api";
 import type { RoundResponse } from "@/lib/api/round.api";
 import type { SubmissionResponse, TeamResponse } from "@/lib/api";
 import { resolveFileUrl } from "@/lib/files";
@@ -94,6 +95,7 @@ export function mapTeamToMentorTeam(
   team: TeamResponse,
   rounds: RoundResponse[],
   submissionsByRound: Map<string, SubmissionResponse | null>,
+  progressByTeamId?: Map<string, TeamProgressResponse>,
 ): MentorTeam {
   const eliminated = team.status === "DISBANDED";
   const roundStatuses: MentorTeamRound[] = rounds.map((round) => ({
@@ -110,6 +112,8 @@ export function mapTeamToMentorTeam(
         new Date(a.latestVersion?.submittedAt ?? a.createdAt).getTime(),
     )[0];
 
+  const progress = progressByTeamId?.get(team.id);
+
   return {
     id: team.id,
     eventId: team.eventId,
@@ -124,6 +128,8 @@ export function mapTeamToMentorTeam(
       : null,
     rank: null,
     isDisqualified: eliminated,
+    riskLevel: progress?.riskLevel,
+    reasons: progress?.reasons,
   };
 }
 
