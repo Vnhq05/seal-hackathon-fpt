@@ -91,6 +91,7 @@ public class DataSeeder implements CommandLineRunner {
         seedDefaultRules();
         seedScoringTemplates();
         seedUser("admin@seal.com", "System Admin", UserType.SYSTEM_ADMIN, null);
+        seedUser("admin2@seal.com", "Platform Admin", UserType.SYSTEM_ADMIN, null);
         seedUser("coordinator@seal.com", "Event Coordinator", UserType.EVENT_COORDINATOR, null);
 
         seedUser("lecturer1@fpt.edu.vn", "Nguyen Van A", UserType.LECTURER, null);
@@ -98,6 +99,7 @@ public class DataSeeder implements CommandLineRunner {
         seedUser("lecturer3@fpt.edu.vn", "Le Van C", UserType.LECTURER, null);
         seedUser("lecturer4@fpt.edu.vn", "Pham Thi D", UserType.LECTURER, null);
         seedUser("lecturer5@fpt.edu.vn", "Hoang Van E", UserType.LECTURER, null);
+        seedUser("mentor.lbtest@fpt.edu.vn", "LB Test Mentor", UserType.LECTURER, null);
 
         seedUser("student1@fpt.edu.vn", "Sinh Vien 1", UserType.FPT_STUDENT, 5);
         seedUser("student2@fpt.edu.vn", "Sinh Vien 2", UserType.FPT_STUDENT, 6);

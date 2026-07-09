@@ -109,6 +109,8 @@ export function useMentorTrack() {
                 : null,
             ]),
           ),
+          undefined,
+          event.name,
         );
         const submission = submissionsByTeam.get(team.id) ?? null;
 

@@ -96,6 +96,7 @@ export function mapTeamToMentorTeam(
   rounds: RoundResponse[],
   submissionsByRound: Map<string, SubmissionResponse | null>,
   progressByTeamId?: Map<string, TeamProgressResponse>,
+  eventName = "",
 ): MentorTeam {
   const eliminated = team.status === "DISBANDED";
   const roundStatuses: MentorTeamRound[] = rounds.map((round) => ({
@@ -117,6 +118,7 @@ export function mapTeamToMentorTeam(
   return {
     id: team.id,
     eventId: team.eventId,
+    eventName,
     name: team.name,
     initial: team.name.charAt(0).toUpperCase() || "?",
     initialBgColor: hashColor(team.id),

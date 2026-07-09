@@ -24,6 +24,7 @@ export interface MentorTeamRound {
 export interface MentorTeam {
   id: string;
   eventId: string;
+  eventName: string;
   name: string;
   initial: string;
   initialBgColor: string;

@@ -7,6 +7,7 @@ import { AdminStatsGrid } from "@/features/admin/components/admin-stats-grid";
 import { AdminRegistrationChart } from "@/features/admin/components/admin-registration-chart";
 import { AdminQuickActions } from "@/features/admin/components/admin-quick-actions";
 import { AdminEventsTable } from "@/features/admin/components/admin-events-table";
+import { TeamsNeedingSupportPanel } from "@/features/progress/components/teams-needing-support-panel";
 
 function ExportIcon() {
   return (
@@ -42,6 +43,8 @@ export function AdminDashboardPage() {
       </div>
 
       <AdminStatsGrid data={data} loading={isLoading} />
+
+      <TeamsNeedingSupportPanel scope="staff" />
 
       <div className="flex gap-6" style={{ marginBottom: 24 }}>
         <AdminRegistrationChart />

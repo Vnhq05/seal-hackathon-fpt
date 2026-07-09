@@ -24,6 +24,10 @@ import type { NotificationResponse, TeamResponse, EventResponse } from "@/lib/ap
 import { useProfile } from "@/features/profile/hooks/use-profile";
 import { useEventParticipationGate } from "@/features/events/hooks/use-event-participation-gate";
 import { useMyTeamProgress } from "@/features/dashboard/hooks/use-my-team-progress";
+import { progressReasonLabel, formatRealtimeDeadlineDetail } from "@/features/progress/lib/progress.utils";
+import { useRealtimeCountdown } from "@/features/progress/hooks/use-realtime-countdown";
+import { StudentParticipationCountdownCard } from "@/features/progress/components/student-participation-countdown-card";
+import type { TeamProgressResponse } from "@/lib/api/progress.api";
 
 function ArrowRightIcon() {
   return (
@@ -80,10 +84,82 @@ function SkeletonBlock({ height }: { height: number }) {
   );
 }
 
-function ProgressAlertBanner() {
+function ProgressAlertBanner({
+  progress,
+  eventName,
+  submissionDeadline,
+}: {
+  progress: TeamProgressResponse;
+  eventName?: string | null;
+  submissionDeadline?: string | null;
+}) {
+  const reasons = progress.reasons.map(progressReasonLabel).join(" · ");
+  const msLeft = useRealtimeCountdown(submissionDeadline);
+  const deadlineText = formatRealtimeDeadlineDetail(msLeft);
+
   return (
     <div className="border-2 border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 shadow-[2px_2px_0_0_#0c1228]">
-      Team đang chậm tiến độ — mentor đã được thông báo.
+      {eventName && (
+        <p className="font-mono text-[10px] font-bold uppercase tracking-wide text-amber-900/70">
+          {eventName}
+        </p>
+      )}
+      <p className="font-semibold">
+        {progress.riskLevel === "CRITICAL" ? "Critical alert" : "Progress alert"} — {progress.teamName}
+      </p>
+      <p className="mt-1">
+        {reasons} · {deadlineText}
+      </p>
+      <Link
+        href="/student/submissions"
+        className="mt-2 inline-flex items-center gap-1 font-mono text-xs font-bold text-navy underline"
+      >
+        Submit now
+        <ArrowRightIcon />
+      </Link>
+    </div>
+  );
+}
+
+function ProgressUpdateItem({
+  progress,
+  submissionDeadline,
+  showBorder,
+}: {
+  progress: TeamProgressResponse;
+  submissionDeadline?: string | null;
+  showBorder?: boolean;
+}) {
+  const isCritical = progress.riskLevel === "CRITICAL";
+  const msLeft = useRealtimeCountdown(submissionDeadline);
+
+  return (
+    <div
+      className={`flex items-start gap-4 py-4 ${showBorder ? "border-t border-seal-border-light" : ""}`}
+    >
+      <div className="flex flex-col items-start pt-2" style={{ width: 8, flexShrink: 0 }}>
+        <span
+          className={`block h-2 w-2 rounded-full ${isCritical ? "bg-rose-500" : "bg-amber-500"}`}
+        />
+      </div>
+      <div>
+        <p className="text-sm text-seal-text">
+          <span className="font-bold">
+            {isCritical ? "Submission deadline approaching" : "Submission needs attention"}:
+          </span>
+          <span>
+            {" "}
+            {progress.teamName} — {progress.reasons.map(progressReasonLabel).join(" · ")}.{" "}
+            {formatRealtimeDeadlineDetail(msLeft)}
+          </span>
+        </p>
+        <Link
+          href="/student/submissions"
+          className="mt-1 inline-block text-xs font-semibold text-royal hover:underline"
+        >
+          View submission →
+        </Link>
+      </div>
     </div>
   );
 }
@@ -379,7 +455,18 @@ function formatRelativeTime(isoDate: string): string {
   return new Date(isoDate).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-function RecentUpdates({ notifications }: { notifications: NotificationResponse[] }) {
+function RecentUpdates({
+  notifications,
+  teamProgress,
+  submissionDeadline,
+}: {
+  notifications: NotificationResponse[];
+  teamProgress?: TeamProgressResponse | null;
+  submissionDeadline?: string | null;
+}) {
+  const showProgress = teamProgress != null && teamProgress.riskLevel !== "OK";
+  const hasUpdates = showProgress || notifications.length > 0;
+
   return (
     <div className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-6">
       <div className="mb-4 flex items-center justify-between">
@@ -393,14 +480,24 @@ function RecentUpdates({ notifications }: { notifications: NotificationResponse[
           See all
         </Link>
       </div>
-      {notifications.length === 0 ? (
+      {!hasUpdates ? (
         <p className="py-4 text-sm text-seal-text-muted">
           No recent updates.
         </p>
       ) : (
         <div>
+          {showProgress && teamProgress && (
+            <ProgressUpdateItem
+              progress={teamProgress}
+              submissionDeadline={submissionDeadline}
+            />
+          )}
           {notifications.slice(0, 3).map((n, i) => (
-            <UpdateItem key={n.id} notification={n} showBorder={i > 0} />
+            <UpdateItem
+              key={n.id}
+              notification={n}
+              showBorder={showProgress || i > 0}
+            />
           ))}
         </div>
       )}
@@ -553,14 +650,19 @@ export function DashboardPage() {
   const { user } = useAuthStore();
   const { data: summary, isLoading: summaryLoading } = useDashboardSummary();
   const { data: hackathons, isLoading: hackathonsLoading } = useDashboardHackathons();
+  const { data: activeEnrollment } = useMyActiveEnrollment();
+
+  const participatingEventId =
+    activeEnrollment?.status === "APPROVED" ? activeEnrollment.eventId : undefined;
   const activeEvent = hackathons?.find((e) => e.status === "ACTIVE" || e.status === "OPEN");
-  const { data: team, isLoading: teamLoading } = useDashboardTeam(activeEvent?.id);
+  const dashboardEventId = participatingEventId ?? activeEvent?.id;
+
+  const { data: team, isLoading: teamLoading } = useDashboardTeam(dashboardEventId);
   const { data: notifData } = useQuery({
     queryKey: ["notifications"],
     queryFn: () => notificationApi.getAll({ size: 3 }),
   });
 
-  const { data: activeEnrollment } = useMyActiveEnrollment();
   const { data: profile } = useProfile();
 
   const notifications = notifData?.content ?? [];
@@ -575,8 +677,8 @@ export function DashboardPage() {
     ) ??
     hackathons?.find((e) => e.competitionFormat === "SEAL_RAG_2026" && e.status === "ACTIVE");
 
-  const progressEventId = activeEvent?.id ?? sealScheduleEvent?.id;
-  const { data: myTeamProgress } = useMyTeamProgress(progressEventId);
+  const { data: myTeamProgressData } = useMyTeamProgress(dashboardEventId);
+  const myTeamProgress = myTeamProgressData?.progress ?? null;
 
   if (summaryLoading && teamLoading) {
     return (
@@ -593,7 +695,14 @@ export function DashboardPage() {
   return (
     <div className="flex flex-col gap-6">
       <WelcomeBanner userName={firstName} />
-      {myTeamProgress && myTeamProgress.riskLevel !== "OK" && <ProgressAlertBanner />}
+      {myTeamProgress && myTeamProgress.riskLevel !== "OK" && (
+        <ProgressAlertBanner
+          progress={myTeamProgress}
+          eventName={myTeamProgressData?.eventName}
+          submissionDeadline={myTeamProgressData?.submissionDeadline}
+        />
+      )}
+      {dashboardEventId && <StudentParticipationCountdownCard eventId={dashboardEventId} />}
       <StatsRow summary={summary} team={team} />
 
       {hackathonsLoading ? (
@@ -609,7 +718,11 @@ export function DashboardPage() {
       {sealScheduleEvent && <ScheduleDashboardCard event={sealScheduleEvent} />}
 
       <div className="grid gap-6" style={{ gridTemplateColumns: "2fr 1fr" }}>
-        <RecentUpdates notifications={notifications} />
+        <RecentUpdates
+          notifications={notifications}
+          teamProgress={myTeamProgress}
+          submissionDeadline={myTeamProgressData?.submissionDeadline}
+        />
         <TeamQuickCard team={team} />
       </div>
     </div>

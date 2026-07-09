@@ -7,6 +7,7 @@ import { useJudgeScoringAssignments } from "@/features/judging/hooks/use-judge-s
 import { useJudgeDashboard } from "@/features/judging/hooks/use-judge-dashboard";
 import { JudgeUrgencyBanner } from "@/features/judging/components/judge-urgency-banner";
 import { JudgeQuickStart } from "@/features/judging/components/judge-quick-start";
+import { TeamsNeedingSupportPanel } from "@/features/progress/components/teams-needing-support-panel";
 
 function StatCard({ label, value, href }: { label: string; value: number; href: string }) {
   return (
@@ -86,6 +87,7 @@ export function LecturerDashboardPage() {
         <div className="grid gap-4 sm:grid-cols-2">
           <StatCard label="Active mentor teams" value={mentorRooms.length} href="/lecturer/teams" />
         </div>
+        <TeamsNeedingSupportPanel scope="mentor" />
         <div className="flex flex-wrap gap-3">
           <Link
             href="/lecturer/teams"

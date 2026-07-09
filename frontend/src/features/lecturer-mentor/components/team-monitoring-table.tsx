@@ -172,6 +172,9 @@ export function TeamMonitoringTable({ teams, isLoading }: TeamMonitoringTablePro
                           {team.name}
                           <RiskBadge riskLevel={team.riskLevel} reasons={team.reasons} />
                         </p>
+                        <p style={{ fontSize: 12, fontWeight: 600, color: "#64748b", lineHeight: "18px" }}>
+                          {team.eventName || "Competition"}
+                        </p>
                         <p style={{ fontSize: 13, color: "#8891a5", fontFamily: "serif", lineHeight: "19.5px" }}>
                           ID: {team.displayId}
                         </p>
