@@ -278,6 +278,15 @@ class EventServiceTest {
     }
 
     @Test
+    void resolveStatus_shouldKeepCompleted_evenBeforeEndDate() {
+        HackathonEvent event = buildEvent(UUID.randomUUID(), EventStatus.COMPLETED);
+        event.setStartDate(LocalDate.now().minusDays(10));
+        event.setEndDate(LocalDate.now().plusMonths(2));
+
+        assertThat(eventService.resolveStatus(event)).isEqualTo(EventStatus.COMPLETED);
+    }
+
+    @Test
     void finalizePublish_shouldReturnOpen_duringRegistrationPeriod() {
         UUID eventId = UUID.randomUUID();
         HackathonEvent event = buildEvent(eventId, EventStatus.UPCOMING);

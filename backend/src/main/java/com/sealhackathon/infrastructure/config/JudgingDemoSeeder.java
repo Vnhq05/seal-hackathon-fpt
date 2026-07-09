@@ -9,6 +9,7 @@ import com.sealhackathon.event.domain.ScoringTemplate;
 import com.sealhackathon.event.domain.ScoringTemplateCriterion;
 import com.sealhackathon.event.domain.enums.AssignmentScope;
 import com.sealhackathon.event.domain.enums.EventStatus;
+import com.sealhackathon.event.domain.enums.RoundType;
 import com.sealhackathon.event.repository.CriteriaRepository;
 import com.sealhackathon.event.repository.EventJudgeAssignmentRepository;
 import com.sealhackathon.event.repository.HackathonEventRepository;
@@ -67,6 +68,7 @@ public class JudgingDemoSeeder {
     private final SubmissionRepository submissionRepository;
     private final SubmissionVersionRepository submissionVersionRepository;
     private final TeamJudgeAssignmentRepository teamJudgeAssignmentRepository;
+    private final DemoRoundTypeSync demoRoundTypeSync;
 
     @Transactional
     public void seedIfMissing() {
@@ -81,7 +83,7 @@ public class JudgingDemoSeeder {
         LocalDate today = LocalDate.now();
 
         syncEventForScoringReadiness(event, today);
-        List<Round> rounds = roundRepository.findByHackathonEventIdOrderByRoundNumberAsc(event.getId());
+        List<Round> rounds = ensureFinalRound(event, demoRoundTypeSync.syncAndReload(event.getId()), now);
         if (rounds.isEmpty()) {
             return;
         }
@@ -99,7 +101,10 @@ public class JudgingDemoSeeder {
             criteriaCount = Math.max(criteriaCount, seedRoundCriteria(event, round).size());
         }
 
-        Round submissionRound = rounds.getFirst();
+        Round submissionRound = rounds.stream()
+                .filter(r -> r.getRoundType() == RoundType.PRELIMINARY)
+                .findFirst()
+                .orElse(rounds.getFirst());
         List<Team> teams = teamRepository.findByEventId(event.getId());
         int submissionCount = 0;
         for (Team team : teams) {
@@ -109,10 +114,51 @@ public class JudgingDemoSeeder {
             submissionCount++;
         }
 
-        log.info("Judging demo ready: event '{}', {} round(s), {} submission(s) on '{}'",
+        log.info("Judging demo ready: event '{}', {} round(s), {} preliminary submission(s) on '{}'",
                 DEMO_EVENT_NAME, rounds.size(), submissionCount, submissionRound.getName());
         log.info("Coordinator: set event status ACTIVE → SCORING, then login judge {} / {}",
                 EventDemoSeeder.DEMO_TEST_JUDGE_EMAIL, EventDemoSeeder.DEMO_TEST_JUDGE_PASSWORD_HINT);
+    }
+
+    void seedFinalRoundSubmissions(HackathonEvent event, Round finalRound, LocalDateTime now, List<Team> finalistTeams) {
+        List<UUID> judgeIds = DEMO_JUDGE_EMAILS.stream()
+                .map(email -> userRepository.findByEmail(email).map(User::getId).orElse(null))
+                .filter(id -> id != null)
+                .toList();
+        for (Team team : finalistTeams) {
+            String slug = team.getName().toLowerCase().replace(' ', '-') + "-final";
+            seedSubmission(team, finalRound, now, slug);
+            seedTeamJudgeAssignments(team, finalRound, judgeIds, now);
+        }
+    }
+
+    List<Round> ensureFinalRound(HackathonEvent event, List<Round> rounds, LocalDateTime now) {
+        if (rounds.stream().anyMatch(r -> r.getRoundType() == RoundType.FINAL)) {
+            return rounds;
+        }
+
+        int nextRoundNumber = rounds.stream()
+                .mapToInt(Round::getRoundNumber)
+                .max()
+                .orElse(0) + 1;
+        LocalDateTime start = now.minusDays(1);
+        LocalDateTime scoringEnd = now.plusDays(14);
+
+        Round finalRound = Round.builder()
+                .hackathonEvent(event)
+                .roundNumber(nextRoundNumber)
+                .name("Final Round")
+                .startDate(start)
+                .endDate(scoringEnd)
+                .submissionDeadline(now.plusDays(7))
+                .scoringDeadline(scoringEnd)
+                .advancementCutoff(6)
+                .roundWeight(100)
+                .roundType(RoundType.FINAL)
+                .build();
+        roundRepository.save(finalRound);
+        log.info("Created demo Final Round for '{}'", DEMO_EVENT_NAME);
+        return demoRoundTypeSync.syncAndReload(event.getId());
     }
 
     private Optional<HackathonEvent> findDemoEvent() {

@@ -25,7 +25,7 @@ const STATUS_LABELS: Record<string, string> = {
   CLOSED_REGISTRATION: "Registration Closed",
   ACTIVE: "Active",
   SCORING: "Scoring",
-  COMPLETED: "Closed",
+  COMPLETED: "Completed",
   CANCELLED: "Cancelled",
 };
 

@@ -11,6 +11,7 @@ import com.sealhackathon.event.domain.ScoringTemplate;
 import com.sealhackathon.event.domain.ScoringTemplateCriterion;
 import com.sealhackathon.event.domain.Track;
 import com.sealhackathon.event.domain.enums.EventStatus;
+import com.sealhackathon.event.domain.enums.RoundType;
 import com.sealhackathon.event.repository.HackathonEventRepository;
 import com.sealhackathon.event.repository.ScoringTemplateRepository;
 import com.sealhackathon.team.domain.EventEnrollment;
@@ -151,6 +152,7 @@ public class EventDemoSeeder {
                 .scoringDeadline(now.plusDays(2).plusHours(4))
                 .advancementCutoff(10)
                 .roundWeight(100)
+                .roundType(RoundType.PRELIMINARY)
                 .build();
 
         for (UUID judgeId : judgeIds) {

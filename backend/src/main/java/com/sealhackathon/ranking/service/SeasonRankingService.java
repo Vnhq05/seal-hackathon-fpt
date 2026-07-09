@@ -53,7 +53,9 @@ public class SeasonRankingService {
         return events.stream()
                 .filter(e -> {
                     EventStatus resolved = eventService.resolveStatus(e);
-                    return resolved == EventStatus.ACTIVE || resolved == EventStatus.COMPLETED;
+                    return resolved == EventStatus.ACTIVE
+                            || resolved == EventStatus.SCORING
+                            || resolved == EventStatus.COMPLETED;
                 })
                 .map(entity -> buildBoard(entity, entity.getSeason(), entity.getYear(),
                         trackId, resolvedRoundType, privilegedViewer))
@@ -123,15 +125,21 @@ public class SeasonRankingService {
         if (event.getRounds() == null || event.getRounds().isEmpty()) {
             return null;
         }
+        List<Round> sorted = event.getRounds().stream()
+                .sorted(Comparator.comparingInt(Round::getRoundNumber))
+                .toList();
+
         if (roundTypeFilter != null) {
-            return event.getRounds().stream()
+            return sorted.stream()
                     .filter(r -> r.getRoundType() == roundTypeFilter)
                     .findFirst()
                     .orElse(null);
         }
-        return event.getRounds().stream()
-                .max(Comparator.comparingInt(Round::getRoundNumber))
-                .orElse(null);
+
+        return sorted.stream()
+                .filter(r -> rankingRepository.findMaxVersionByRoundId(r.getId()) > 0)
+                .findFirst()
+                .orElse(sorted.getLast());
     }
 
     private boolean canStudentViewRound(HackathonEvent event, UUID roundId) {

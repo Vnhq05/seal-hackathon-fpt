@@ -63,4 +63,9 @@ public class FinalistSelection extends BaseEntity {
     @Column(name = "needs_penalty_evaluation", nullable = false)
     @Builder.Default
     private boolean needsPenaltyEvaluation = false;
+
+    @NotNull
+    @Column(name = "eligible", nullable = false)
+    @Builder.Default
+    private boolean eligible = true;
 }

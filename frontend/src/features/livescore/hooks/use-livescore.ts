@@ -27,7 +27,6 @@ export function useLiveScoreWebSocket(eventId: string | undefined) {
   const queryClient = useQueryClient();
   const { connected, subscribe } = useStompWebSocket(eventId);
   const [rankingEvents, setRankingEvents] = useState<RankingEvent[]>([]);
-  const [finalResults, setFinalResults] = useState(false);
 
   const clearEvents = useCallback(() => setRankingEvents([]), []);
 
@@ -40,9 +39,6 @@ export function useLiveScoreWebSocket(eventId: string | undefined) {
 
     const unsub2 = subscribe(`/topic/events/${eventId}/ranking-events`, (data) => {
       const event = data as RankingEvent;
-      if (event.type === "FINAL_RESULTS_PUBLISHED") {
-        setFinalResults(true);
-      }
       if (event.type !== "LEADERBOARD_UPDATED") {
         setRankingEvents((prev) => [event, ...prev].slice(0, 20));
       }
@@ -55,7 +51,7 @@ export function useLiveScoreWebSocket(eventId: string | undefined) {
     };
   }, [eventId, connected, subscribe, queryClient]);
 
-  return { connected, rankingEvents, finalResults, clearEvents, setFinalResults };
+  return { connected, rankingEvents, clearEvents };
 }
 
 export function useLockScores(eventId: string) {

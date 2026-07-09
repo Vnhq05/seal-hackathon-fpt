@@ -474,13 +474,16 @@ public class EventService {
     }
 
     /**
-     * Derives the live event status from dates. Only {@link EventStatus#CANCELLED} is
-     * kept as a hard override from persisted state.
-     * Events incorrectly persisted as ACTIVE before startDate will still resolve correctly.
+     * Derives the live event status from dates. {@link EventStatus#CANCELLED},
+     * {@link EventStatus#COMPLETED}, {@link EventStatus#CLOSED_REGISTRATION}, and
+     * {@link EventStatus#SCORING} are kept as hard overrides from persisted state.
      */
     public EventStatus resolveStatus(HackathonEvent event) {
         if (event.getStatus() == EventStatus.CANCELLED) {
             return EventStatus.CANCELLED;
+        }
+        if (event.getStatus() == EventStatus.COMPLETED) {
+            return EventStatus.COMPLETED;
         }
         if (event.getStatus() == EventStatus.CLOSED_REGISTRATION
                 || event.getStatus() == EventStatus.SCORING) {

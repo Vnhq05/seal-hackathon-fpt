@@ -6,6 +6,7 @@ import com.sealhackathon.event.domain.Round;
 import com.sealhackathon.event.domain.ScoringTemplate;
 import com.sealhackathon.event.domain.ScoringTemplateCriterion;
 import com.sealhackathon.event.domain.enums.EventStatus;
+import com.sealhackathon.event.domain.enums.RoundType;
 import com.sealhackathon.event.repository.CriteriaRepository;
 import com.sealhackathon.event.repository.EventJudgeAssignmentRepository;
 import com.sealhackathon.event.repository.HackathonEventRepository;
@@ -55,6 +56,7 @@ class JudgingDemoSeederTest {
     @Mock private SubmissionRepository submissionRepository;
     @Mock private SubmissionVersionRepository submissionVersionRepository;
     @Mock private TeamJudgeAssignmentRepository teamJudgeAssignmentRepository;
+    @Mock private DemoRoundTypeSync demoRoundTypeSync;
 
     @InjectMocks private JudgingDemoSeeder judgingDemoSeeder;
 
@@ -85,6 +87,7 @@ class JudgingDemoSeederTest {
                 .hackathonEvent(event)
                 .roundNumber(1)
                 .name("Round One")
+                .roundType(RoundType.PRELIMINARY)
                 .startDate(LocalDateTime.of(2020, 1, 1, 8, 0))
                 .endDate(LocalDateTime.of(2020, 1, 15, 23, 59))
                 .submissionDeadline(LocalDateTime.of(2020, 1, 14, 23, 59))
@@ -97,6 +100,7 @@ class JudgingDemoSeederTest {
                 .hackathonEvent(event)
                 .roundNumber(2)
                 .name("Final Round")
+                .roundType(RoundType.FINAL)
                 .startDate(LocalDateTime.of(2020, 2, 1, 8, 0))
                 .endDate(LocalDateTime.of(2020, 2, 15, 23, 59))
                 .submissionDeadline(LocalDateTime.of(2020, 2, 14, 23, 59))
@@ -149,7 +153,7 @@ class JudgingDemoSeederTest {
         judge.setId(judgeId);
 
         when(eventRepository.findAll()).thenReturn(List.of(event));
-        when(roundRepository.findByHackathonEventIdOrderByRoundNumberAsc(eventId))
+        when(demoRoundTypeSync.syncAndReload(eventId))
                 .thenReturn(List.of(roundOne, finalRound));
         when(teamRepository.findByEventId(eventId)).thenReturn(List.of(alpha, beta));
         when(userRepository.findByEmail("lecturer1@fpt.edu.vn")).thenReturn(Optional.of(judge));
@@ -187,6 +191,7 @@ class JudgingDemoSeederTest {
         judgingDemoSeeder.seedIfMissing();
 
         verify(eventRepository).save(any(HackathonEvent.class));
+        verify(demoRoundTypeSync, atLeast(1)).syncAndReload(eventId);
         verify(roundRepository, atLeast(2)).save(any(Round.class));
         verify(eventJudgeAssignmentRepository).save(any());
         verify(judgeAssignmentRepository, atLeast(2)).save(any());

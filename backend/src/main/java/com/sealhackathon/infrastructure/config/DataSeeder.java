@@ -64,6 +64,7 @@ public class DataSeeder implements CommandLineRunner {
     private final EventDemoSeeder eventDemoSeeder;
     private final SubmissionDemoSeeder submissionDemoSeeder;
     private final JudgingDemoSeeder judgingDemoSeeder;
+    private final PublishReadyDemoSeeder publishReadyDemoSeeder;
     private final OtherEventStudentSeeder otherEventStudentSeeder;
     private final HackathonEventRepository eventRepository;
     private final TransactionTemplate transactionTemplate;
@@ -117,6 +118,7 @@ public class DataSeeder implements CommandLineRunner {
         submissionDemoSeeder.seed();
         otherEventStudentSeeder.seed();
         judgingDemoSeeder.seedIfMissing();
+        publishReadyDemoSeeder.seedIfReady();
         if (resyncDevAccounts) {
             alignDevEventOwnership();
         }

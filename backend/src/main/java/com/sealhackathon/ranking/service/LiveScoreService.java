@@ -94,8 +94,7 @@ public class LiveScoreService {
                     .filter(r -> r.getRoundType() != null
                             && r.getRoundType().name().equalsIgnoreCase(roundType))
                     .findFirst()
-                    .orElseThrow(() -> new BusinessException(
-                            "No round found for type: " + roundType, HttpStatus.NOT_FOUND));
+                    .orElseGet(() -> resolveRoundByTypeFallback(rounds, roundType));
         } else {
             round = rounds.get(rounds.size() - 1);
         }
@@ -179,6 +178,16 @@ public class LiveScoreService {
     @Transactional
     public void setLeaderboardPublic(UUID eventId, boolean enabled) {
         eventPublicService.setLeaderboardPublic(eventId, enabled);
+    }
+
+    private RoundSnapshot resolveRoundByTypeFallback(List<RoundSnapshot> rounds, String roundType) {
+        if (RoundType.PRELIMINARY.name().equalsIgnoreCase(roundType)) {
+            return rounds.getFirst();
+        }
+        if (RoundType.FINAL.name().equalsIgnoreCase(roundType)) {
+            return rounds.getLast();
+        }
+        throw new BusinessException("No round found for type: " + roundType, HttpStatus.NOT_FOUND);
     }
 
     private LiveScoreEntry toEntry(Ranking ranking, RoundSnapshot round,

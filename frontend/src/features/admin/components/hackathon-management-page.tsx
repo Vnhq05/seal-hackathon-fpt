@@ -50,7 +50,7 @@ const STATUS_LABELS: Record<EventStatus, string> = {
   CLOSED_REGISTRATION: "Registration Closed",
   ACTIVE:    "Active",
   SCORING:   "Scoring",
-  COMPLETED: "Closed",
+  COMPLETED: "Completed",
   CANCELLED: "Cancelled",
 };
 
@@ -127,6 +127,21 @@ function ActionMenu({ event, onError }: { event: EventResponse; onError: (msg: s
 
   type Action = { label: string; onClick: () => void; color?: string; disabled?: boolean };
   const actions: Action[] = [];
+
+  if (event.status === "COMPLETED") {
+    actions.push({
+      label: "View event",
+      onClick: () => { setOpen(false); router.push(`${portalBase}/hackathons/${event.id}`); },
+    });
+    actions.push({
+      label: "View feedback",
+      onClick: () => { setOpen(false); router.push(`${portalBase}/feedback`); },
+    });
+    actions.push({
+      label: "View results",
+      onClick: () => { setOpen(false); router.push(`${portalBase}/livescore/${event.id}`); },
+    });
+  }
 
   if (event.status !== "COMPLETED" && event.status !== "CANCELLED") {
     actions.push({

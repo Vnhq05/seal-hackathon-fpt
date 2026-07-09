@@ -137,191 +137,6 @@ function EventNotification({ event }: { event: RankingEvent }) {
   );
 }
 
-function ConfettiOverlay() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-
-    const colors = ["#f59e0b", "#3b82f6", "#16a34a", "#dc2626", "#8b5cf6", "#ec4899"];
-    const particles: { x: number; y: number; w: number; h: number; color: string; vx: number; vy: number; rot: number; vr: number }[] = [];
-
-    for (let i = 0; i < 150; i++) {
-      particles.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * -canvas.height,
-        w: 6 + Math.random() * 6,
-        h: 4 + Math.random() * 4,
-        color: colors[Math.floor(Math.random() * colors.length)],
-        vx: (Math.random() - 0.5) * 3,
-        vy: 2 + Math.random() * 4,
-        rot: Math.random() * Math.PI * 2,
-        vr: (Math.random() - 0.5) * 0.2,
-      });
-    }
-
-    let animId: number;
-    function animate() {
-      ctx!.clearRect(0, 0, canvas!.width, canvas!.height);
-      let alive = false;
-      for (const p of particles) {
-        p.x += p.vx;
-        p.y += p.vy;
-        p.rot += p.vr;
-        p.vy += 0.05;
-        if (p.y < canvas!.height + 20) alive = true;
-        ctx!.save();
-        ctx!.translate(p.x, p.y);
-        ctx!.rotate(p.rot);
-        ctx!.fillStyle = p.color;
-        ctx!.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
-        ctx!.restore();
-      }
-      if (alive) animId = requestAnimationFrame(animate);
-    }
-    animate();
-
-    return () => cancelAnimationFrame(animId);
-  }, []);
-
-  return (
-    <canvas
-      ref={canvasRef}
-      style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 9999 }}
-    />
-  );
-}
-
-interface RevealSegment {
-  label: string;
-  rankings: LiveScoreEntry[];
-}
-
-function ResultReveal({ segments, maxScore, onDone }: { segments: RevealSegment[]; maxScore: number; onDone: () => void }) {
-  const [segmentIdx, setSegmentIdx] = useState(0);
-  const [phase, setPhase] = useState(0);
-  const [countdown, setCountdown] = useState(3);
-
-  const segment = segments[segmentIdx];
-  const top3 = segment?.rankings.filter((r) => r.rank <= 3).sort((a, b) => b.rank - a.rank) ?? [];
-
-  useEffect(() => {
-    if (phase === 0) {
-      if (countdown > 0) {
-        const t = setTimeout(() => setCountdown(countdown - 1), 1000);
-        return () => clearTimeout(t);
-      }
-      const t = setTimeout(() => setPhase(1), 0);
-      return () => clearTimeout(t);
-    } else if (phase >= 1 && phase <= 3) {
-      const t = setTimeout(() => setPhase(phase + 1), 3000);
-      return () => clearTimeout(t);
-    } else if (phase === 4) {
-      if (segmentIdx < segments.length - 1) {
-        const t = setTimeout(() => {
-          setSegmentIdx(segmentIdx + 1);
-          setPhase(0);
-          setCountdown(3);
-        }, 2000);
-        return () => clearTimeout(t);
-      }
-      const t = setTimeout(onDone, 5000);
-      return () => clearTimeout(t);
-    }
-  }, [phase, countdown, onDone, segmentIdx, segments.length]);
-
-  const placeLabels = ["", "Third Place", "Second Place", "Champion"];
-  const placeColors = ["", "#cd7f32", "#8891a5", "#f59e0b"];
-  const isChampion = phase === 3;
-  const isLastSegment = segmentIdx === segments.length - 1;
-
-  if (phase === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center" style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.85)", zIndex: 9000 }}>
-        {segment && (
-          <span style={{ fontSize: 20, fontWeight: 600, color: "#94a3b8", marginBottom: 24, textTransform: "uppercase", letterSpacing: 2 }}>
-            {segment.label}
-          </span>
-        )}
-        <span style={{ fontSize: 120, fontWeight: 900, color: "#fff", animation: "pulse 1s infinite" }}>
-          {countdown}
-        </span>
-      </div>
-    );
-  }
-
-  const currentIdx = phase - 1;
-  const team = top3[currentIdx];
-
-  return (
-    <div className="flex flex-col items-center justify-center" style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.85)", zIndex: 9000 }}>
-      {isChampion && isLastSegment && <ConfettiOverlay />}
-      {segment && phase === 1 && (
-        <span style={{ fontSize: 16, fontWeight: 600, color: "#64748b", marginBottom: 16, textTransform: "uppercase", letterSpacing: 2 }}>
-          {segment.label}
-        </span>
-      )}
-      {team && (
-        <div className="flex flex-col items-center gap-4" style={{ animation: "scaleIn 0.5s ease-out" }}>
-          <span style={{ fontSize: 18, fontWeight: 600, color: placeColors[phase], textTransform: "uppercase", letterSpacing: 2 }}>
-            {placeLabels[phase]}
-          </span>
-          <div
-            className="flex items-center justify-center rounded-full"
-            style={{
-              width: isChampion ? 100 : 72,
-              height: isChampion ? 100 : 72,
-              backgroundColor: placeColors[phase],
-              boxShadow: isChampion ? `0 0 60px ${placeColors[phase]}, 0 0 120px rgba(245,158,11,0.3)` : undefined,
-            }}
-          >
-            <span style={{ fontSize: isChampion ? 36 : 28, fontWeight: 900, color: "#fff" }}>
-              {team.rank}
-            </span>
-          </div>
-          <span style={{ fontSize: isChampion ? 40 : 28, fontWeight: 800, color: "#fff" }}>
-            {team.teamName}
-          </span>
-          <span style={{ fontSize: 20, fontWeight: 600, color: "#94a3b8" }}>
-            {team.finalScore.toFixed(2)}
-            <span style={{ fontSize: 14, color: "#94a3b8", fontWeight: 400 }}>/{maxScore}</span>
-          </span>
-          {team.trackName && (
-            <span style={{ fontSize: 14, color: "#64748b" }}>{team.trackName}</span>
-          )}
-        </div>
-      )}
-      {phase === 4 && isLastSegment && (
-        <button
-          onClick={onDone}
-          style={{ marginTop: 32, padding: "10px 24px", backgroundColor: "#fff", color: "#0e1528", borderRadius: 8, border: "none", fontSize: 14, fontWeight: 600, cursor: "pointer" }}
-        >
-          Back to Leaderboard
-        </button>
-      )}
-    </div>
-  );
-}
-
-
-function buildRevealSegments(board: LiveScoreBoard, allRankings: LiveScoreEntry[]): RevealSegment[] {
-  if (board.tracks.length <= 1) {
-    return [{ label: board.roundName, rankings: allRankings }];
-  }
-  const segments: RevealSegment[] = board.tracks.map((track) => ({
-    label: track.name,
-    rankings: allRankings.filter((r) => r.trackId === track.id),
-  }));
-  segments.push({ label: "Overall", rankings: allRankings });
-  return segments.filter((s) => s.rankings.length > 0);
-}
-
 function CompetitionProgressOverview({ board }: { board: LiveScoreBoard }) {
   const rankings = board.rankings;
   const total = rankings.length;
@@ -765,12 +580,10 @@ function PublishFlowPanel({
   board,
   eventId,
   fullRankings,
-  onReplayReveal,
 }: {
   board: LiveScoreBoard;
   eventId: string;
   fullRankings: LiveScoreEntry[];
-  onReplayReveal: () => void;
 }) {
   const lockMutation = useLockScores(eventId);
   const publishMutation = usePublishResults(eventId);
@@ -874,26 +687,6 @@ function PublishFlowPanel({
           <StepBlock number={3} title="Assign Awards" status="pending" />
         )
       ) : null}
-
-      {board.resultsPublished && (
-        <button
-          onClick={onReplayReveal}
-          style={{
-            width: "100%",
-            marginTop: 8,
-            padding: "8px 12px",
-            fontSize: 12,
-            fontWeight: 600,
-            backgroundColor: "transparent",
-            color: "#0e1528",
-            border: "1px solid rgba(198,198,205,0.8)",
-            borderRadius: 6,
-            cursor: "pointer",
-          }}
-        >
-          Replay Reveal
-        </button>
-      )}
     </div>
   );
 }
@@ -905,12 +698,11 @@ interface LiveScoreArenaPageProps {
 export function LiveScoreArenaPage({ eventId }: LiveScoreArenaPageProps) {
   const [selectedTrackId, setSelectedTrackId] = useState<string | undefined>(undefined);
   const [roundTypeSelection, setRoundTypeSelection] = useState<RoundType | null>(null);
-  const [showReveal, setShowReveal] = useState(false);
   const [leaderToast, setLeaderToast] = useState<string | null>(null);
   const [rowAnimations, setRowAnimations] = useState<Map<string, RowAnimation>>(new Map());
   const prevRankingsRef = useRef<Map<string, number>>(new Map());
 
-  const { connected, rankingEvents, finalResults } = useLiveScoreWebSocket(eventId);
+  const { connected, rankingEvents } = useLiveScoreWebSocket(eventId);
 
   const { data: board, isLoading, error } = useLiveScoreBoard(
     eventId,
@@ -929,7 +721,6 @@ export function LiveScoreArenaPage({ eventId }: LiveScoreArenaPageProps) {
   const roundType = roundTypeSelection ?? board?.roundType ?? undefined;
 
   const allRankings = fullBoard?.rankings ?? board?.rankings ?? [];
-  const revealVisible = showReveal || Boolean(finalResults && board?.resultsPublished);
 
   useEffect(() => {
     if (rankingEvents.length === 0) return;
@@ -976,7 +767,6 @@ export function LiveScoreArenaPage({ eventId }: LiveScoreArenaPageProps) {
   const dismissLeaderToast = useCallback(() => setLeaderToast(null), []);
 
   const filteredRankings = board?.rankings ?? [];
-  const revealSegments = fullBoard ? buildRevealSegments(fullBoard, allRankings) : [];
 
   if (isLoading) {
     return (
@@ -1010,8 +800,6 @@ export function LiveScoreArenaPage({ eventId }: LiveScoreArenaPageProps) {
     <>
       <style>{`
         @keyframes slideIn { from { opacity:0; transform:translateX(-20px); } to { opacity:1; transform:translateX(0); } }
-        @keyframes scaleIn { from { opacity:0; transform:scale(0.5); } to { opacity:1; transform:scale(1); } }
-        @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
         @keyframes glowUp { 0% { box-shadow:0 0 0 rgba(22,163,74,0); transform:translateY(8px); } 50% { box-shadow:0 0 16px rgba(22,163,74,0.3); transform:translateY(0); } 100% { box-shadow:0 0 0 rgba(22,163,74,0); transform:translateY(0); } }
         @keyframes glowDown { 0% { box-shadow:0 0 0 rgba(220,38,38,0); transform:translateY(-4px); } 50% { box-shadow:0 0 12px rgba(220,38,38,0.2); transform:translateY(0); } 100% { box-shadow:0 0 0 rgba(220,38,38,0); transform:translateY(0); } }
         @keyframes spotlightPulse { 0%,100% { box-shadow:0 8px 32px rgba(245,158,11,0.4); } 50% { box-shadow:0 8px 48px rgba(245,158,11,0.7); } }
@@ -1020,14 +808,6 @@ export function LiveScoreArenaPage({ eventId }: LiveScoreArenaPageProps) {
       `}</style>
 
       {leaderToast && <LeaderToast teamName={leaderToast} onDismiss={dismissLeaderToast} />}
-
-      {revealVisible && board.resultsPublished && revealSegments.length > 0 && (
-        <ResultReveal
-          segments={revealSegments}
-          maxScore={fullBoard?.maxScore ?? board.maxScore}
-          onDone={() => setShowReveal(false)}
-        />
-      )}
 
       <div className="flex flex-col gap-6" style={{ maxWidth: 1440, padding: 24 }}>
         <div className="flex items-start justify-between">
@@ -1199,7 +979,6 @@ export function LiveScoreArenaPage({ eventId }: LiveScoreArenaPageProps) {
                 board={board}
                 eventId={eventId}
                 fullRankings={allRankings}
-                onReplayReveal={() => setShowReveal(true)}
               />
             )}
             <h3 style={{ fontSize: 14, fontWeight: 600, color: "#0e1528", marginBottom: 8 }}>

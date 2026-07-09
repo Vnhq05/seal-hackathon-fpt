@@ -226,6 +226,12 @@ BEGIN
 END
 GO
 
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('finalist_selections') AND name = 'eligible')
+BEGIN
+    ALTER TABLE finalist_selections ADD eligible BIT NOT NULL DEFAULT 1;
+END
+GO
+
 -- Contested slots (tie-break requiring OC penalty evaluation)
 IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'finalist_contested_slots')
 BEGIN
