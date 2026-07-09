@@ -64,7 +64,7 @@ export function PortalTopNav({
         {crumbs.map((crumb, i) => {
           const isLast = i === crumbs.length - 1;
           return (
-            <span key={crumb.href} className="flex items-center gap-2">
+            <span key={`${crumb.href}-${crumb.label}`} className="flex items-center gap-2">
               {i > 0 ? (
                 <span className="text-seal-text-muted">
                   <ChevronRight />

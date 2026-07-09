@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useTrackRegistrationData } from "@/features/events/hooks/use-track-registration-data";
 
 const bgStyle: React.CSSProperties = { backgroundColor: "#eef0f6" };
@@ -64,17 +63,9 @@ export function TrackRegistrationPage({ hackathonId }: TrackRegistrationPageProp
             <div className="mt-6 space-y-3">
               <p className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
                 {isSeal
-                  ? "Your team has not picked a track yet. The leader should join the draw session when it is your turn."
+                  ? "Your team has not been assigned a track yet. Organizers will assign tracks during the event."
                   : "No track assigned yet."}
               </p>
-              {isSeal && data.teamId && (
-                <Link
-                  href="/student/tracks/draw"
-                  className="inline-block rounded bg-navy px-4 py-2 text-sm font-semibold text-white hover:bg-navy/90"
-                >
-                  Go to draw session
-                </Link>
-              )}
             </div>
           )}
         </div>

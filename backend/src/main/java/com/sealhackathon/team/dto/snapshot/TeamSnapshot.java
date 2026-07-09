@@ -19,6 +19,7 @@ public class TeamSnapshot {
     private String name;
     private UUID leaderId;
     private UUID trackId;
+    private UUID groupId;
     private TeamStatus status;
     private int memberCount;
 }

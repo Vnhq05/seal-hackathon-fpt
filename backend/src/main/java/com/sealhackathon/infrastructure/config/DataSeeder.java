@@ -34,6 +34,27 @@ public class DataSeeder implements CommandLineRunner {
 
     private static final String DEV_COORDINATOR_EMAIL = EventDemoSeeder.DEV_COORDINATOR_EMAIL;
     private static final String DEV_ADMIN_EMAIL = "admin@seal.com";
+
+    /** Dev login hints — password for all seeded accounts: {@link #DEMO_TEST_STUDENT_PASSWORD_HINT} */
+    public static final String DEMO_TEST_STUDENT_PASSWORD_HINT = "12345678";
+
+    /** Used by {@link EventDemoSeeder} (Fall Demo teams). */
+    public static final List<String> DEMO_TEST_STUDENT_EMAILS = List.of(
+            "student1@fpt.edu.vn",
+            "student2@fpt.edu.vn",
+            "student3@fpt.edu.vn",
+            "student4@fpt.edu.vn"
+    );
+
+    /** General-purpose students for other events — see {@link OtherEventStudentSeeder}. */
+    public static final String ALT_EVENT_TEST_STUDENT_TARGET_EVENT = "SEAL Summer Hackathon P";
+    public static final List<String> ALT_EVENT_TEST_STUDENT_EMAILS = List.of(
+            "teststudent101@fpt.edu.vn",
+            "teststudent102@fpt.edu.vn",
+            "teststudent103@fpt.edu.vn",
+            "teststudent104@fpt.edu.vn"
+    );
+
     private static final Set<String> DEV_OWNERSHIP_REALIGN_FROM = Set.of("system", DEV_ADMIN_EMAIL);
 
     private final UserRepository userRepository;
@@ -42,6 +63,7 @@ public class DataSeeder implements CommandLineRunner {
     private final SystemConfigRepository systemConfigRepository;
     private final EventDemoSeeder eventDemoSeeder;
     private final JudgingDemoSeeder judgingDemoSeeder;
+    private final OtherEventStudentSeeder otherEventStudentSeeder;
     private final HackathonEventRepository eventRepository;
     private final TransactionTemplate transactionTemplate;
 
@@ -83,7 +105,13 @@ public class DataSeeder implements CommandLineRunner {
         seedUser("student5@fpt.edu.vn", "Sinh Vien 5", UserType.FPT_STUDENT, 5);
         seedUser("student6@fpt.edu.vn", "Sinh Vien 6", UserType.FPT_STUDENT, 7);
 
+        seedUser("teststudent101@fpt.edu.vn", "Test Student 101", UserType.FPT_STUDENT, 5);
+        seedUser("teststudent102@fpt.edu.vn", "Test Student 102", UserType.FPT_STUDENT, 5);
+        seedUser("teststudent103@fpt.edu.vn", "Test Student 103", UserType.FPT_STUDENT, 6);
+        seedUser("teststudent104@fpt.edu.vn", "Test Student 104", UserType.FPT_STUDENT, 6);
+
         eventDemoSeeder.seed();
+        otherEventStudentSeeder.seed();
         judgingDemoSeeder.seedIfMissing();
         if (resyncDevAccounts) {
             alignDevEventOwnership();

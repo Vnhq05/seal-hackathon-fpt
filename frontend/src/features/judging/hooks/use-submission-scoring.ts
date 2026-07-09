@@ -10,13 +10,21 @@ export function useSubmissionScoring(roundId: string, teamId: string) {
   return useQuery<SubmissionForScoring>({
     queryKey: [SUBMISSION_SCORING_KEY, roundId, teamId],
     queryFn: async (): Promise<SubmissionForScoring> => {
-      const [sub, assignments, criteria] = await Promise.all([
-        submissionApi.getByTeam(roundId, teamId).catch(() => null),
+      let sub;
+      try {
+        sub = await submissionApi.getByTeam(roundId, teamId);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Unable to load submission";
+        if (message.toLowerCase().includes("not found")) {
+          throw new Error("Team has not submitted for this round");
+        }
+        throw new Error(message);
+      }
+
+      const [assignments, criteria] = await Promise.all([
         judgingApi.getMyAssignments(),
         criteriaApi.list(roundId),
       ]);
-
-      if (!sub) throw new Error("Team has not submitted for this round");
 
       const assignment = assignments.find(
         (a) => a.teamId === teamId && a.roundId === roundId,
@@ -76,6 +84,8 @@ export function useSubmissionScoring(roundId: string, teamId: string) {
         conflictOfInterest: assignment.conflictOfInterest ?? false,
         conflictReason: assignment.conflictReason ?? null,
         isAssigned: true,
+        scoringAllowed: assignment.scoringAllowed ?? false,
+        scoringDeniedReason: assignment.scoringDeniedReason ?? null,
       };
     },
     enabled: !!roundId && !!teamId,

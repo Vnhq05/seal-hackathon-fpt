@@ -8,6 +8,7 @@ import com.sealhackathon.event.domain.enums.EventStatus;
 import com.sealhackathon.event.repository.CriteriaRepository;
 import com.sealhackathon.event.repository.HackathonEventRepository;
 import com.sealhackathon.event.repository.RoundRepository;
+import com.sealhackathon.judging.domain.ScoreReviewRequest;
 import com.sealhackathon.judging.domain.TeamJudgeAssignment;
 import com.sealhackathon.judging.domain.enums.ScoreReviewStatus;
 import com.sealhackathon.judging.repository.JudgeScoreRepository;
@@ -217,7 +218,7 @@ class ScoreReviewIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
-    void resolveReview_shouldCloseOpenReview_forCoordinator() throws Exception {
+    void rejectReview_shouldCloseOpenReview_forCoordinator() throws Exception {
         submitScore(judge1, 5, "Excellent");
         submitScore(judge2, 5, "Top marks");
         submitScore(judge3, 1, "Poor fit");
@@ -225,6 +226,36 @@ class ScoreReviewIntegrationTest extends BaseIntegrationTest {
         UUID reviewId = scoreReviewRequestRepository.findBySubmissionId(submissionId)
                 .orElseThrow().getId();
         User coordinator = createCoordinator();
+
+        mockMvc.perform(patch("/api/events/" + eventId + "/score-reviews/" + reviewId)
+                        .header("Authorization", "Bearer " + tokenFor(coordinator))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"status":"REJECTED","resolutionNote":"Deviation accepted after review"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("REJECTED"))
+                .andExpect(jsonPath("$.data.resolutionNote").value("Deviation accepted after review"));
+
+        assertThat(scoreReviewRequestRepository.findById(reviewId).orElseThrow().getStatus())
+                .isEqualTo(ScoreReviewStatus.REJECTED);
+    }
+
+    @Test
+    void resolveReview_shouldCloseApprovedReview_forCoordinator() throws Exception {
+        submitScore(judge1, 5, "Excellent");
+        submitScore(judge2, 5, "Top marks");
+        submitScore(judge3, 1, "Poor fit");
+
+        UUID reviewId = scoreReviewRequestRepository.findBySubmissionId(submissionId)
+                .orElseThrow().getId();
+        User coordinator = createCoordinator();
+
+        mockMvc.perform(post("/api/events/" + eventId + "/score-reviews/" + reviewId + "/approve")
+                        .header("Authorization", "Bearer " + tokenFor(coordinator))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk());
 
         mockMvc.perform(patch("/api/events/" + eventId + "/score-reviews/" + reviewId)
                         .header("Authorization", "Bearer " + tokenFor(coordinator))
@@ -257,7 +288,7 @@ class ScoreReviewIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
-    void judgeRequest_shouldCreateOpenReview_whenNoReviewExists() throws Exception {
+    void judgeRequest_shouldReturn400_whenDeviationBelowThreshold() throws Exception {
         submitScore(judge1, 4, "Good work overall");
         submitScore(judge2, 4, "Solid submission");
         submitScore(judge3, 3, "Acceptable quality");
@@ -268,9 +299,44 @@ class ScoreReviewIntegrationTest extends BaseIntegrationTest {
                         .content(String.format("""
                                 {"submissionId":"%s","note":"Please re-examine the scoring spread for this team."}
                                 """, submissionId)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message")
+                        .value("Score deviation is below the threshold required for an adjustment request."));
+
+        assertThat(scoreReviewRequestRepository.findBySubmissionId(submissionId)).isEmpty();
+    }
+
+    @Test
+    void judgeRequest_shouldCreateOpenReview_whenDeviationHigh() throws Exception {
+        submitScore(judge1, 5, "Excellent");
+        submitScore(judge2, 5, "Top marks");
+        submitScore(judge3, 1, "Poor fit");
+
+        mockMvc.perform(post("/api/events/" + eventId + "/score-reviews/judge-request")
+                        .header("Authorization", "Bearer " + tokenFor(judge1))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(String.format("""
+                                {"submissionId":"%s","note":"Please re-examine the scoring spread for this team."}
+                                """, submissionId)))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void judgeRequest_shouldCreateOpenReview_whenNoReviewExistsAndDeviationHigh() throws Exception {
+        submitScore(judge1, 5, "Excellent");
+        submitScore(judge2, 4, "Good");
+        submitScore(judge3, 1, "Poor fit");
+        scoreReviewRequestRepository.deleteAll();
+
+        mockMvc.perform(post("/api/events/" + eventId + "/score-reviews/judge-request")
+                        .header("Authorization", "Bearer " + tokenFor(judge1))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(String.format("""
+                                {"submissionId":"%s","note":"Please re-examine the scoring spread for this team."}
+                                """, submissionId)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.status").value("OPEN"))
-                .andExpect(jsonPath("$.data.resolutionNote")
+                .andExpect(jsonPath("$.data.requestNote")
                         .value("Please re-examine the scoring spread for this team."));
 
         assertThat(scoreReviewRequestRepository.findBySubmissionId(submissionId)).isPresent();
@@ -290,7 +356,7 @@ class ScoreReviewIntegrationTest extends BaseIntegrationTest {
                                 """, submissionId)))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message")
-                        .value("A deviation review is already open for this submission."));
+                        .value("A score adjustment request is already active for this submission."));
     }
 
     @Test
@@ -309,25 +375,18 @@ class ScoreReviewIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
-    void judgeRequest_shouldReopenResolvedReview() throws Exception {
-        submitScore(judge1, 4, "Good work overall");
-        submitScore(judge2, 4, "Solid submission");
-        submitScore(judge3, 3, "Acceptable quality");
+    void judgeRequest_shouldReopenResolvedReview_whenDeviationHigh() throws Exception {
+        submitScore(judge1, 5, "Excellent");
+        submitScore(judge2, 5, "Top marks");
+        submitScore(judge3, 1, "Poor fit");
 
-        UUID reviewId = scoreReviewRequestRepository.save(
-                com.sealhackathon.judging.domain.ScoreReviewRequest.builder()
-                        .eventId(eventId)
-                        .roundId(roundId)
-                        .teamId(teamId)
-                        .submissionId(submissionId)
-                        .deviationValue(java.math.BigDecimal.valueOf(20))
-                        .minJudgeScore(java.math.BigDecimal.valueOf(60))
-                        .maxJudgeScore(java.math.BigDecimal.valueOf(80))
-                        .status(ScoreReviewStatus.RESOLVED)
-                        .resolvedAt(LocalDateTime.now())
-                        .resolutionNote("Previously closed")
-                        .build()
-        ).getId();
+        UUID reviewId = scoreReviewRequestRepository.findBySubmissionId(submissionId)
+                .orElseThrow().getId();
+        ScoreReviewRequest existing = scoreReviewRequestRepository.findById(reviewId).orElseThrow();
+        existing.setStatus(ScoreReviewStatus.RESOLVED);
+        existing.setResolvedAt(LocalDateTime.now());
+        existing.setResolutionNote("Previously closed");
+        scoreReviewRequestRepository.save(existing);
 
         mockMvc.perform(post("/api/events/" + eventId + "/score-reviews/judge-request")
                         .header("Authorization", "Bearer " + tokenFor(judge1))
@@ -337,11 +396,42 @@ class ScoreReviewIntegrationTest extends BaseIntegrationTest {
                                 """, submissionId)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.status").value("OPEN"))
-                .andExpect(jsonPath("$.data.resolutionNote")
+                .andExpect(jsonPath("$.data.requestNote")
                         .value("Requesting another review after discussion."));
 
         assertThat(scoreReviewRequestRepository.findById(reviewId).orElseThrow().getStatus())
                 .isEqualTo(ScoreReviewStatus.OPEN);
+    }
+
+    @Test
+    void approveAdjustment_shouldUnlockScoresAndAllowJudgeToRevise() throws Exception {
+        submitScore(judge1, 5, "Excellent");
+        submitScore(judge2, 5, "Top marks");
+        submitScore(judge3, 1, "Poor fit");
+
+        UUID reviewId = scoreReviewRequestRepository.findBySubmissionId(submissionId)
+                .orElseThrow().getId();
+        User coordinator = createCoordinator();
+
+        mockMvc.perform(post("/api/events/" + eventId + "/score-reviews/" + reviewId + "/approve")
+                        .header("Authorization", "Bearer " + tokenFor(coordinator))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"resolutionNote\":\"Please align scores after discussion\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("APPROVED"));
+
+        assertThat(scoreReviewRequestRepository.findById(reviewId).orElseThrow().getStatus())
+                .isEqualTo(ScoreReviewStatus.APPROVED);
+
+        mockMvc.perform(post("/api/rounds/" + roundId + "/scoring")
+                        .header("Authorization", "Bearer " + tokenFor(judge3))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(String.format("""
+                                {"submissionId":"%s","complete":true,"scores":[
+                                  {"criteriaId":"%s","score":4,"comment":"Revised after calibration"}
+                                ]}
+                                """, submissionId, criteriaId)))
+                .andExpect(status().isCreated());
     }
 
     private void submitScore(User judge, int score, String comment) throws Exception {

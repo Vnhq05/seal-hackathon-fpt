@@ -48,6 +48,9 @@ public class EventDemoSeeder {
     public static final String DEV_COORDINATOR_EMAIL = "coordinator@seal.com";
 
     public static final String DEMO_EVENT_NAME_FALL = "SEAL Fall Hackathon Demo";
+    /** Primary judge account for local scoring smoke tests (password: app.seeder.default-password). */
+    public static final String DEMO_TEST_JUDGE_EMAIL = "lecturer2@fpt.edu.vn";
+    public static final String DEMO_TEST_JUDGE_PASSWORD_HINT = "12345678";
     private static final String DEMO_EVENT_NAME = DEMO_EVENT_NAME_FALL;
     private static final String FALL = "Fall";
     private static final int YEAR = 2026;
@@ -84,6 +87,7 @@ public class EventDemoSeeder {
         User student3 = requireUser("student3@fpt.edu.vn");
 
         LocalDateTime now = LocalDateTime.now();
+        LocalDate today = LocalDate.now();
         List<UUID> judgeIds = List.of(lecturer1.getId(), lecturer2.getId(), lecturer3.getId());
 
         List<UUID> tiebreakerIds = template.getCriteria().stream()
@@ -95,11 +99,12 @@ public class EventDemoSeeder {
                 .name(DEMO_EVENT_NAME)
                 .season(FALL)
                 .year(YEAR)
-                .startDate(LocalDate.of(YEAR, 9, 1))
-                .endDate(LocalDate.of(YEAR, 11, 30))
-                .registrationOpenDate(LocalDate.of(YEAR, 6, 1))
-                .registrationDeadline(LocalDate.of(YEAR, 8, 31))
-                .description("Demo hackathon for Fall " + YEAR + " — judge assignment testing")
+                .startDate(today.minusMonths(1))
+                .endDate(today.plusMonths(2))
+                .registrationOpenDate(today.minusMonths(3))
+                .registrationDeadline(today.minusDays(7))
+                .description("Demo hackathon for Fall " + YEAR
+                        + " — switch event to SCORING to test judge scoring")
                 .location("FPT University Da Nang")
                 .format("OFFLINE")
                 .minTeam(3)
@@ -116,7 +121,7 @@ public class EventDemoSeeder {
                         .filter(name -> !name.isBlank())
                         .reduce((a, b) -> a + ", " + b)
                         .orElse(null))
-                .status(EventStatus.OPEN)
+                .status(EventStatus.ACTIVE)
                 .build();
         event.setCreatedBy(DEV_COORDINATOR_EMAIL);
         event.getTiebreakerCriterionIds().addAll(tiebreakerIds);
@@ -143,10 +148,10 @@ public class EventDemoSeeder {
                 .hackathonEvent(event)
                 .roundNumber(1)
                 .name("Round One")
-                .startDate(LocalDateTime.of(YEAR, 10, 1, 8, 0))
-                .endDate(LocalDateTime.of(YEAR, 10, 15, 23, 59))
-                .submissionDeadline(LocalDateTime.of(YEAR, 10, 14, 23, 59))
-                .scoringDeadline(LocalDateTime.of(YEAR, 10, 15, 23, 59))
+                .startDate(now.minusDays(1))
+                .endDate(now.plusDays(14))
+                .submissionDeadline(now.plusDays(7))
+                .scoringDeadline(now.plusDays(14))
                 .advancementCutoff(10)
                 .roundWeight(100)
                 .build();
@@ -221,7 +226,10 @@ public class EventDemoSeeder {
                 .assignedAt(now)
                 .build());
 
-        log.info("Seeded Fall {} demo event '{}' with {} teams", YEAR, DEMO_EVENT_NAME, 2);
+        log.info("Seeded Fall {} demo event '{}' with {} teams — coordinator: set status to SCORING to open judging",
+                YEAR, DEMO_EVENT_NAME, 2);
+        log.info("Judge test account: {} / {} → /lecturer/scoring",
+                DEMO_TEST_JUDGE_EMAIL, DEMO_TEST_JUDGE_PASSWORD_HINT);
     }
 
     private void normalizeExistingSeasons() {

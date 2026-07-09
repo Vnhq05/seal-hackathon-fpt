@@ -3,8 +3,17 @@
 import type { JudgeScoringAssignment } from "@/lib/api/judging.api";
 
 export type RoundStatus = "open" | "upcoming" | "closed";
-export type SubmissionScoringStatus = "scored" | "unscored";
-export type SubmissionFilterTab = "all" | "scored" | "unscored";
+export type SubmissionScoringStatus =
+  | "NOT_STARTED"
+  | "IN_PROGRESS"
+  | "COMPLETED"
+  | "LOCKED";
+export type SubmissionFilterTab =
+  | "all"
+  | "unscored"
+  | "draft"
+  | "submitted"
+  | "locked";
 
 /* ── Dashboard ── */
 
@@ -75,10 +84,16 @@ export interface RoundSubmission {
   id: string;
   teamId: string;
   teamName: string;
+  trackName: string | null;
+  groupName: string | null;
   score: number | null;
   maxScore: number;
   status: SubmissionScoringStatus;
-  submittedAt: string;
+  submittedAt: string | null;
+  scoringDeadline: string | null;
+  scoringAllowed: boolean;
+  scoringDeniedReason: string | null;
+  conflictOfInterest: boolean;
 }
 
 export interface RoundSubmissionsParams {
@@ -142,6 +157,8 @@ export interface SubmissionForScoring {
   conflictOfInterest: boolean;
   conflictReason: string | null;
   isAssigned: boolean;
+  scoringAllowed: boolean;
+  scoringDeniedReason: string | null;
 }
 
 /* ── Score submission ── */

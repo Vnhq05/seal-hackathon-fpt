@@ -109,7 +109,17 @@ public class FormatRuleEngine {
     }
 
     public boolean canScore(EventStatus status) {
-        return status == EventStatus.ACTIVE || status == EventStatus.SCORING;
+        return status == EventStatus.SCORING;
+    }
+
+    public void assertCanScore(UUID eventId) {
+        HackathonEvent event = getEvent(eventId);
+        EventStatus resolved = eventService.resolveStatus(event);
+        if (!canScore(resolved)) {
+            throw new BusinessException(
+                    "Event is not in SCORING phase. Current status: " + resolved,
+                    HttpStatus.BAD_REQUEST);
+        }
     }
 
     public boolean canViewPublishedResults(EventStatus status) {

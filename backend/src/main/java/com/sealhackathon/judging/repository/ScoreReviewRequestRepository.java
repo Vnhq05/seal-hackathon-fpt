@@ -18,6 +18,12 @@ public interface ScoreReviewRequestRepository extends JpaRepository<ScoreReviewR
 
     boolean existsBySubmissionIdAndStatus(UUID submissionId, ScoreReviewStatus status);
 
+    @Query("SELECT CASE WHEN COUNT(r) > 0 THEN true ELSE false END FROM ScoreReviewRequest r "
+            + "WHERE r.submissionId = :submissionId AND r.status IN :statuses")
+    boolean existsBySubmissionIdAndStatusIn(
+            @Param("submissionId") UUID submissionId,
+            @Param("statuses") List<ScoreReviewStatus> statuses);
+
     @Query("SELECT r FROM ScoreReviewRequest r WHERE r.eventId = :eventId "
             + "AND (:roundId IS NULL OR r.roundId = :roundId) "
             + "AND (:status IS NULL OR r.status = :status) "

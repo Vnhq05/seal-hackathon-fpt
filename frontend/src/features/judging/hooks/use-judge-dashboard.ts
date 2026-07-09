@@ -47,7 +47,7 @@ function buildUnscoredAssignments(
   return assignments
     .filter((a) => a.roundId === nearestOpen.id)
     .filter((a) => a.scoringStatus !== "COMPLETED" && a.scoringStatus !== "LOCKED")
-    .filter((a) => !a.conflictOfInterest && a.submissionId)
+    .filter((a) => !a.conflictOfInterest && a.submissionId && a.scoringAllowed !== false)
     .sort(
       (a, b) =>
         new Date(a.scoringDeadline ?? 0).getTime() - new Date(b.scoringDeadline ?? 0).getTime(),

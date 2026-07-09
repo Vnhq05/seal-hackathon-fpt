@@ -9,10 +9,12 @@ import com.sealhackathon.event.dto.snapshot.RoundSnapshot;
 import com.sealhackathon.event.service.EventPublicService;
 import com.sealhackathon.judging.domain.JudgeScore;
 import com.sealhackathon.judging.domain.ScoreReviewRequest;
+import com.sealhackathon.judging.domain.enums.ScoreAdjustmentType;
 import com.sealhackathon.judging.domain.enums.ScoreReviewStatus;
 import com.sealhackathon.judging.domain.enums.ScoreStatus;
 import com.sealhackathon.judging.dto.request.JudgeScoreReviewRequest;
 import com.sealhackathon.judging.dto.request.ResolveScoreReviewRequest;
+import com.sealhackathon.judging.dto.response.ScoreReviewContextResponse;
 import com.sealhackathon.judging.dto.response.ScoreReviewJudgeScoreResponse;
 import com.sealhackathon.judging.dto.response.ScoreReviewResponse;
 import com.sealhackathon.judging.dto.snapshot.JudgeScoreSnapshot;
@@ -21,6 +23,9 @@ import com.sealhackathon.judging.event.ScoreReviewResolvedEvent;
 import com.sealhackathon.judging.repository.JudgeScoreRepository;
 import com.sealhackathon.judging.repository.ScoreReviewRequestRepository;
 import com.sealhackathon.judging.repository.TeamJudgeAssignmentRepository;
+import com.sealhackathon.notification.domain.enums.NotificationType;
+import com.sealhackathon.notification.service.NotificationService;
+import com.sealhackathon.ranking.repository.PublishedResultRepository;
 import com.sealhackathon.ranking.service.AggregationService;
 import com.sealhackathon.submission.domain.Submission;
 import com.sealhackathon.submission.repository.SubmissionRepository;
@@ -50,6 +55,17 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ScoreReviewService {
 
+    public static final String ACTIVE_REVIEW_CONFLICT_MESSAGE =
+            "A score adjustment request is already active for this submission.";
+    public static final String DEVIATION_TOO_LOW_MESSAGE =
+            "Score deviation is below the threshold required for an adjustment request.";
+
+    private static final List<ScoreReviewStatus> ACTIVE_STATUSES =
+            List.of(ScoreReviewStatus.OPEN, ScoreReviewStatus.APPROVED);
+    private static final List<ScoreReviewStatus> CLOSED_STATUSES =
+            List.of(ScoreReviewStatus.ADJUSTED, ScoreReviewStatus.REJECTED,
+                    ScoreReviewStatus.RESOLVED, ScoreReviewStatus.IGNORED);
+
     @Value("${app.hackathon.judging.deviation-threshold:25}")
     private int deviationThresholdValue;
 
@@ -70,14 +86,16 @@ public class ScoreReviewService {
     private final JudgeScoreRepository judgeScoreRepository;
     private final TeamJudgeAssignmentRepository teamJudgeAssignmentRepository;
     private final TeamRepository teamRepository;
+    private final PublishedResultRepository publishedResultRepository;
     private final EventPublicService eventPublicService;
     private final AggregationService aggregationService;
     private final UserPublicService userPublicService;
+    private final NotificationService notificationService;
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public void evaluateSubmission(UUID submissionId) {
-        if (scoreReviewRequestRepository.findBySubmissionId(submissionId).isPresent()) {
+        if (hasActiveReview(submissionId)) {
             return;
         }
 
@@ -89,26 +107,8 @@ public class ScoreReviewService {
             return;
         }
 
-        DeviationStats deviationStats = stats.get();
-        RoundSnapshot round = eventPublicService.getRound(submission.getRoundId())
-                .orElseThrow(() -> new ResourceNotFoundException("Round", "id", submission.getRoundId()));
-
-        ScoreReviewRequest review = ScoreReviewRequest.builder()
-                .eventId(round.getEventId())
-                .roundId(submission.getRoundId())
-                .teamId(submission.getTeamId())
-                .submissionId(submissionId)
-                .deviationValue(deviationStats.deviation())
-                .minJudgeScore(deviationStats.min())
-                .maxJudgeScore(deviationStats.max())
-                .status(ScoreReviewStatus.OPEN)
-                .build();
-
-        review = scoreReviewRequestRepository.save(review);
-
-        eventPublisher.publishEvent(new ScoreReviewCreatedEvent(
-                review.getId(), review.getEventId(), submissionId,
-                submission.getTeamId(), deviationStats.deviation()));
+        createOrReopenReview(submission, stats.get(), ScoreAdjustmentType.AUTO_DEVIATION,
+                null, null);
     }
 
     @Transactional
@@ -122,6 +122,8 @@ public class ScoreReviewService {
         if (!round.getEventId().equals(eventId)) {
             throw new ResourceNotFoundException("Submission", "id", request.getSubmissionId());
         }
+
+        assertNotPublished(submission.getRoundId());
 
         if (!teamJudgeAssignmentRepository.existsByTeamIdAndRoundIdAndJudgeUserId(
                 submission.getTeamId(), submission.getRoundId(), judgeId)) {
@@ -143,11 +145,8 @@ public class ScoreReviewService {
                     HttpStatus.BAD_REQUEST) {};
         }
 
-        if (scoreReviewRequestRepository.existsBySubmissionIdAndStatus(
-                request.getSubmissionId(), ScoreReviewStatus.OPEN)) {
-            throw new BusinessException(
-                    "A deviation review is already open for this submission.",
-                    HttpStatus.CONFLICT) {};
+        if (hasActiveReview(request.getSubmissionId())) {
+            throw new BusinessException(ACTIVE_REVIEW_CONFLICT_MESSAGE, HttpStatus.CONFLICT) {};
         }
 
         DeviationStats deviationStats = computeDeviationStats(submission)
@@ -155,40 +154,159 @@ public class ScoreReviewService {
                         "Not enough completed judge scores to request a review.",
                         HttpStatus.BAD_REQUEST) {});
 
-        Optional<ScoreReviewRequest> existing = scoreReviewRequestRepository.findBySubmissionId(
-                request.getSubmissionId());
-
-        ScoreReviewRequest review;
-        if (existing.isPresent()) {
-            review = existing.get();
-            review.setStatus(ScoreReviewStatus.OPEN);
-            review.setResolvedAt(null);
-            review.setResolvedBy(null);
-            review.setResolutionNote(request.getNote());
-            review.setDeviationValue(deviationStats.deviation());
-            review.setMinJudgeScore(deviationStats.min());
-            review.setMaxJudgeScore(deviationStats.max());
-            review = scoreReviewRequestRepository.save(review);
-        } else {
-            review = ScoreReviewRequest.builder()
-                    .eventId(eventId)
-                    .roundId(submission.getRoundId())
-                    .teamId(submission.getTeamId())
-                    .submissionId(request.getSubmissionId())
-                    .deviationValue(deviationStats.deviation())
-                    .minJudgeScore(deviationStats.min())
-                    .maxJudgeScore(deviationStats.max())
-                    .status(ScoreReviewStatus.OPEN)
-                    .resolutionNote(request.getNote())
-                    .build();
-            review = scoreReviewRequestRepository.save(review);
+        if (deviationStats.deviation().compareTo(deviationThreshold) < 0) {
+            throw new BusinessException(DEVIATION_TOO_LOW_MESSAGE, HttpStatus.BAD_REQUEST) {};
         }
 
-        eventPublisher.publishEvent(new ScoreReviewCreatedEvent(
-                review.getId(), review.getEventId(), request.getSubmissionId(),
-                submission.getTeamId(), deviationStats.deviation()));
+        ScoreReviewRequest review = createOrReopenReview(
+                submission, deviationStats, ScoreAdjustmentType.JUDGE_REQUESTED,
+                judgeId, request.getNote());
 
         return toDetailResponse(review);
+    }
+
+    @Transactional
+    public ScoreReviewResponse approveAdjustment(UUID eventId, UUID reviewId, UUID approverId,
+                                                 String resolutionNote) {
+        ScoreReviewRequest review = getReviewForEvent(eventId, reviewId);
+        if (review.getStatus() != ScoreReviewStatus.OPEN) {
+            throw new BusinessException("Only open adjustment requests can be approved",
+                    HttpStatus.BAD_REQUEST) {};
+        }
+
+        unlockScoresForSubmission(review.getSubmissionId());
+
+        review.setStatus(ScoreReviewStatus.APPROVED);
+        review.setApprovedAt(LocalDateTime.now());
+        review.setApprovedBy(approverId);
+        if (resolutionNote != null && !resolutionNote.isBlank()) {
+            review.setResolutionNote(resolutionNote.trim());
+        }
+        review = scoreReviewRequestRepository.save(review);
+
+        notifyJudgesAdjustmentApproved(review);
+
+        return toDetailResponse(review);
+    }
+
+    @Transactional
+    public ScoreReviewResponse resolveReview(UUID eventId, UUID reviewId, UUID resolverId,
+                                             ResolveScoreReviewRequest request) {
+        ScoreReviewRequest review = getReviewForEvent(eventId, reviewId);
+        ScoreReviewStatus targetStatus = request.getStatus();
+
+        if (targetStatus == ScoreReviewStatus.REJECTED || targetStatus == ScoreReviewStatus.IGNORED) {
+            if (review.getStatus() != ScoreReviewStatus.OPEN) {
+                throw new BusinessException("Only open requests can be rejected",
+                        HttpStatus.BAD_REQUEST) {};
+            }
+            ScoreReviewStatus finalStatus = targetStatus == ScoreReviewStatus.IGNORED
+                    ? ScoreReviewStatus.IGNORED : ScoreReviewStatus.REJECTED;
+            return closeReview(review, resolverId, finalStatus, request.getResolutionNote());
+        }
+
+        if (targetStatus == ScoreReviewStatus.RESOLVED) {
+            if (review.getStatus() != ScoreReviewStatus.APPROVED) {
+                throw new BusinessException("Only approved requests can be marked resolved",
+                        HttpStatus.BAD_REQUEST) {};
+            }
+            return closeReview(review, resolverId, ScoreReviewStatus.RESOLVED, request.getResolutionNote());
+        }
+
+        throw new BusinessException(
+                "Resolution status must be RESOLVED, REJECTED, or IGNORED",
+                HttpStatus.BAD_REQUEST) {};
+    }
+
+    @Transactional
+    public void afterScoreUpdated(UUID submissionId) {
+        Optional<ScoreReviewRequest> reviewOpt = scoreReviewRequestRepository.findBySubmissionId(submissionId);
+        if (reviewOpt.isEmpty() || reviewOpt.get().getStatus() != ScoreReviewStatus.APPROVED) {
+            return;
+        }
+
+        Submission submission = submissionRepository.findById(submissionId).orElse(null);
+        if (submission == null) {
+            return;
+        }
+
+        Optional<DeviationStats> stats = computeDeviationStats(submission);
+        if (stats.isEmpty()) {
+            return;
+        }
+
+        ScoreReviewRequest review = reviewOpt.get();
+        review.setDeviationValue(stats.get().deviation());
+        review.setMinJudgeScore(stats.get().min());
+        review.setMaxJudgeScore(stats.get().max());
+
+        if (stats.get().deviation().compareTo(deviationThreshold) < 0) {
+            review.setStatus(ScoreReviewStatus.ADJUSTED);
+            review.setResolvedAt(LocalDateTime.now());
+            review.setResolvedBy(null);
+            review.setResolutionNote(
+                    "Scores aligned automatically after adjustment (deviation below threshold).");
+            eventPublisher.publishEvent(new ScoreReviewResolvedEvent(
+                    review.getId(), review.getEventId(), null,
+                    ScoreReviewStatus.ADJUSTED.name(), review.getResolutionNote()));
+        }
+
+        scoreReviewRequestRepository.save(review);
+    }
+
+    @Transactional(readOnly = true)
+    public ScoreReviewContextResponse getSubmissionContext(UUID eventId, UUID submissionId,
+                                                           UUID requesterId, UserType requesterRole) {
+        Submission submission = submissionRepository.findById(submissionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Submission", "id", submissionId));
+
+        RoundSnapshot round = eventPublicService.getRound(submission.getRoundId())
+                .orElseThrow(() -> new ResourceNotFoundException("Round", "id", submission.getRoundId()));
+        if (!round.getEventId().equals(eventId)) {
+            throw new ResourceNotFoundException("Submission", "id", submissionId);
+        }
+
+        if (requesterRole == UserType.LECTURER
+                && !teamJudgeAssignmentRepository.existsByTeamIdAndRoundIdAndJudgeUserId(
+                submission.getTeamId(), submission.getRoundId(), requesterId)) {
+            throw new BusinessException(
+                    "You are not assigned to this team's scoring for this round",
+                    HttpStatus.FORBIDDEN) {};
+        }
+
+        Optional<ScoreReviewRequest> reviewOpt = scoreReviewRequestRepository.findBySubmissionId(submissionId);
+        Optional<DeviationStats> stats = computeDeviationStats(submission);
+        BigDecimal deviation = stats.map(DeviationStats::deviation).orElse(BigDecimal.ZERO);
+        boolean deviationHigh = stats.isPresent()
+                && deviation.compareTo(deviationThreshold) >= 0;
+
+        ScoreReviewRequest review = reviewOpt.orElse(null);
+        ScoreReviewStatus status = review != null ? review.getStatus() : null;
+        boolean active = review != null && ACTIVE_STATUSES.contains(status);
+        boolean approved = review != null && status == ScoreReviewStatus.APPROVED;
+
+        boolean judgeCompleted = requesterRole == UserType.LECTURER
+                && judgeScoreRepository.findByJudgeUserIdAndSubmissionId(requesterId, submissionId)
+                .map(s -> s.getStatus() == ScoreStatus.COMPLETED || s.getStatus() == ScoreStatus.LOCKED)
+                .orElse(false);
+
+        boolean canRequest = requesterRole == UserType.LECTURER
+                && judgeCompleted
+                && deviationHigh
+                && !active
+                && !publishedResultRepository.existsByRoundId(submission.getRoundId());
+
+        return ScoreReviewContextResponse.builder()
+                .reviewId(review != null ? review.getId() : null)
+                .submissionId(submissionId)
+                .status(status)
+                .adjustmentType(review != null ? review.getAdjustmentType() : null)
+                .deviationValue(deviation)
+                .deviationThreshold(deviationThresholdValue)
+                .canRequestAdjustment(canRequest)
+                .canEditForAdjustment(approved && requesterRole == UserType.LECTURER)
+                .requestNote(review != null ? review.getRequestNote() : null)
+                .build();
     }
 
     @Transactional(readOnly = true)
@@ -209,42 +327,131 @@ public class ScoreReviewService {
     @Transactional(readOnly = true)
     public Optional<UUID> findOpenReviewId(UUID submissionId) {
         return scoreReviewRequestRepository.findBySubmissionId(submissionId)
-                .filter(r -> r.getStatus() == ScoreReviewStatus.OPEN)
+                .filter(r -> ACTIVE_STATUSES.contains(r.getStatus()))
                 .map(ScoreReviewRequest::getId);
-    }
-
-    @Transactional
-    public ScoreReviewResponse resolveReview(UUID eventId, UUID reviewId, UUID resolverId,
-                                             ResolveScoreReviewRequest request) {
-        if (request.getStatus() != ScoreReviewStatus.RESOLVED
-                && request.getStatus() != ScoreReviewStatus.IGNORED) {
-            throw new BusinessException(
-                    "Resolution status must be RESOLVED or IGNORED",
-                    HttpStatus.BAD_REQUEST) {};
-        }
-
-        ScoreReviewRequest review = getReviewForEvent(eventId, reviewId);
-        if (review.getStatus() != ScoreReviewStatus.OPEN) {
-            throw new BusinessException("Review request is already closed", HttpStatus.BAD_REQUEST) {};
-        }
-
-        review.setStatus(request.getStatus());
-        review.setResolvedBy(resolverId);
-        review.setResolvedAt(LocalDateTime.now());
-        review.setResolutionNote(request.getResolutionNote());
-        review = scoreReviewRequestRepository.save(review);
-
-        eventPublisher.publishEvent(new ScoreReviewResolvedEvent(
-                review.getId(), eventId, resolverId,
-                request.getStatus().name(), request.getResolutionNote()));
-
-        return toDetailResponse(review);
     }
 
     @Transactional(readOnly = true)
     public boolean hasOpenReview(UUID submissionId) {
         return scoreReviewRequestRepository.existsBySubmissionIdAndStatus(
                 submissionId, ScoreReviewStatus.OPEN);
+    }
+
+    @Transactional(readOnly = true)
+    public boolean hasActiveReview(UUID submissionId) {
+        return scoreReviewRequestRepository.existsBySubmissionIdAndStatusIn(
+                submissionId, ACTIVE_STATUSES);
+    }
+
+    @Transactional(readOnly = true)
+    public boolean isAdjustmentApproved(UUID submissionId) {
+        return scoreReviewRequestRepository.findBySubmissionId(submissionId)
+                .map(r -> r.getStatus() == ScoreReviewStatus.APPROVED)
+                .orElse(false);
+    }
+
+    public int getDeviationThresholdValue() {
+        return deviationThresholdValue;
+    }
+
+    private ScoreReviewRequest createOrReopenReview(
+            Submission submission,
+            DeviationStats deviationStats,
+            ScoreAdjustmentType adjustmentType,
+            UUID requestedBy,
+            String requestNote) {
+        Optional<ScoreReviewRequest> existing = scoreReviewRequestRepository.findBySubmissionId(
+                submission.getId());
+
+        ScoreReviewRequest review;
+        if (existing.isPresent()) {
+            review = existing.get();
+            if (ACTIVE_STATUSES.contains(review.getStatus())) {
+                throw new BusinessException(ACTIVE_REVIEW_CONFLICT_MESSAGE, HttpStatus.CONFLICT) {};
+            }
+            review.setStatus(ScoreReviewStatus.OPEN);
+            review.setResolvedAt(null);
+            review.setResolvedBy(null);
+            review.setApprovedAt(null);
+            review.setApprovedBy(null);
+        } else {
+            RoundSnapshot round = eventPublicService.getRound(submission.getRoundId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Round", "id", submission.getRoundId()));
+            review = ScoreReviewRequest.builder()
+                    .eventId(round.getEventId())
+                    .roundId(submission.getRoundId())
+                    .teamId(submission.getTeamId())
+                    .submissionId(submission.getId())
+                    .build();
+        }
+
+        review.setDeviationValue(deviationStats.deviation());
+        review.setMinJudgeScore(deviationStats.min());
+        review.setMaxJudgeScore(deviationStats.max());
+        review.setAdjustmentType(adjustmentType);
+        review.setRequestedBy(requestedBy);
+        review.setRequestNote(requestNote);
+        review.setResolutionNote(null);
+        review.setStatus(ScoreReviewStatus.OPEN);
+        review = scoreReviewRequestRepository.save(review);
+
+        eventPublisher.publishEvent(new ScoreReviewCreatedEvent(
+                review.getId(), review.getEventId(), submission.getId(),
+                submission.getTeamId(), deviationStats.deviation()));
+
+        return review;
+    }
+
+    private ScoreReviewResponse closeReview(ScoreReviewRequest review, UUID resolverId,
+                                            ScoreReviewStatus status, String resolutionNote) {
+        review.setStatus(status);
+        review.setResolvedBy(resolverId);
+        review.setResolvedAt(LocalDateTime.now());
+        if (resolutionNote != null && !resolutionNote.isBlank()) {
+            review.setResolutionNote(resolutionNote.trim());
+        }
+        review = scoreReviewRequestRepository.save(review);
+
+        eventPublisher.publishEvent(new ScoreReviewResolvedEvent(
+                review.getId(), review.getEventId(), resolverId,
+                status.name(), review.getResolutionNote()));
+
+        return toDetailResponse(review);
+    }
+
+    private void unlockScoresForSubmission(UUID submissionId) {
+        judgeScoreRepository.updateStatusBySubmissionId(
+                submissionId,
+                List.of(ScoreStatus.LOCKED),
+                ScoreStatus.COMPLETED);
+    }
+
+    private void notifyJudgesAdjustmentApproved(ScoreReviewRequest review) {
+        List<UUID> judgeIds = judgeScoreRepository.findBySubmissionId(review.getSubmissionId()).stream()
+                .map(JudgeScore::getJudgeUserId)
+                .distinct()
+                .toList();
+        if (judgeIds.isEmpty()) {
+            return;
+        }
+
+        String teamName = resolveTeamName(review.getTeamId());
+        notificationService.createNotification(
+                NotificationType.SCORE_ADJUSTMENT_APPROVED,
+                "Score adjustment approved",
+                "Coordinator approved a score adjustment for team \"" + teamName
+                        + "\". You may revise your scores for this submission.",
+                review.getId(),
+                "ScoreReviewRequest",
+                judgeIds);
+    }
+
+    private void assertNotPublished(UUID roundId) {
+        if (publishedResultRepository.existsByRoundId(roundId)) {
+            throw new BusinessException(
+                    "Results have been published for this round",
+                    HttpStatus.BAD_REQUEST) {};
+        }
     }
 
     private void assertReviewReadAccess(ScoreReviewRequest review, UUID requesterId,
@@ -325,6 +532,9 @@ public class ScoreReviewService {
     }
 
     private ScoreReviewResponse toSummaryResponse(ScoreReviewRequest review) {
+        UserSnapshot requester = review.getRequestedBy() != null
+                ? userPublicService.findById(review.getRequestedBy()).orElse(null) : null;
+
         return ScoreReviewResponse.builder()
                 .id(review.getId())
                 .eventId(review.getEventId())
@@ -337,6 +547,12 @@ public class ScoreReviewService {
                 .minJudgeScore(review.getMinJudgeScore())
                 .maxJudgeScore(review.getMaxJudgeScore())
                 .status(review.getStatus())
+                .adjustmentType(review.getAdjustmentType())
+                .requestedBy(review.getRequestedBy())
+                .requestedByFullName(requester != null ? requester.getFullName() : null)
+                .requestNote(review.getRequestNote())
+                .approvedAt(review.getApprovedAt())
+                .approvedBy(review.getApprovedBy())
                 .createdAt(review.getCreatedAt())
                 .resolvedAt(review.getResolvedAt())
                 .resolutionNote(review.getResolutionNote())

@@ -151,6 +151,31 @@ public class EventPublicServiceImpl implements EventPublicService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public EventStatus getResolvedEventStatus(UUID eventId) {
+        HackathonEvent event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Event", "id", eventId));
+        return eventService.resolveStatus(event);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public UUID getEventIdByRoundId(UUID roundId) {
+        return roundRepository.findById(roundId)
+                .map(r -> r.getHackathonEvent().getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Round", "id", roundId));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean isRoundScoringOpen(UUID roundId) {
+        Round round = roundRepository.findById(roundId)
+                .orElseThrow(() -> new ResourceNotFoundException("Round", "id", roundId));
+        LocalDateTime now = LocalDateTime.now();
+        return !now.isBefore(round.getStartDate()) && !now.isAfter(round.getScoringDeadline());
+    }
+
+    @Override
     @Transactional
     public void setLeaderboardPublic(UUID eventId, boolean enabled) {
         HackathonEvent event = eventRepository.findById(eventId)

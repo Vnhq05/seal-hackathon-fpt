@@ -4,8 +4,10 @@ import com.sealhackathon.auth.service.AuthPublicService;
 import com.sealhackathon.common.enums.UserType;
 import com.sealhackathon.common.response.ApiResponse;
 import com.sealhackathon.judging.domain.enums.ScoreReviewStatus;
+import com.sealhackathon.judging.dto.request.ApproveScoreAdjustmentRequest;
 import com.sealhackathon.judging.dto.request.JudgeScoreReviewRequest;
 import com.sealhackathon.judging.dto.request.ResolveScoreReviewRequest;
+import com.sealhackathon.judging.dto.response.ScoreReviewContextResponse;
 import com.sealhackathon.judging.dto.response.ScoreReviewResponse;
 import com.sealhackathon.judging.service.ScoreReviewService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -74,9 +76,34 @@ public class ScoreReviewController {
                 .body(ApiResponse.success("Adjustment request submitted", review));
     }
 
+    @GetMapping("/submission/{submissionId}/context")
+    @PreAuthorize("hasAnyRole('SYSTEM_ADMIN', 'EVENT_COORDINATOR', 'LECTURER')")
+    @Operation(summary = "Get score adjustment context for a submission")
+    public ResponseEntity<ApiResponse<ScoreReviewContextResponse>> getSubmissionContext(
+            @PathVariable UUID eventId, @PathVariable UUID submissionId) {
+        UUID requesterId = authPublicService.getCurrentUserId();
+        UserType requesterRole = authPublicService.getCurrentUserRole();
+        ScoreReviewContextResponse context = scoreReviewService.getSubmissionContext(
+                eventId, submissionId, requesterId, requesterRole);
+        return ResponseEntity.ok(ApiResponse.success(context));
+    }
+
+    @PostMapping("/{reviewId}/approve")
+    @PreAuthorize("hasAnyRole('SYSTEM_ADMIN', 'EVENT_COORDINATOR')")
+    @Operation(summary = "Approve score adjustment and unlock judges to revise scores")
+    public ResponseEntity<ApiResponse<ScoreReviewResponse>> approveAdjustment(
+            @PathVariable UUID eventId, @PathVariable UUID reviewId,
+            @Valid @RequestBody(required = false) ApproveScoreAdjustmentRequest request) {
+        UUID approverId = authPublicService.getCurrentUserId();
+        String note = request != null ? request.getResolutionNote() : null;
+        ScoreReviewResponse review = scoreReviewService.approveAdjustment(
+                eventId, reviewId, approverId, note);
+        return ResponseEntity.ok(ApiResponse.success("Adjustment approved", review));
+    }
+
     @PatchMapping("/{reviewId}")
     @PreAuthorize("hasAnyRole('SYSTEM_ADMIN', 'EVENT_COORDINATOR')")
-    @Operation(summary = "Resolve or ignore a score deviation review")
+    @Operation(summary = "Reject or close a score adjustment request")
     public ResponseEntity<ApiResponse<ScoreReviewResponse>> resolveReview(
             @PathVariable UUID eventId, @PathVariable UUID reviewId,
             @Valid @RequestBody ResolveScoreReviewRequest request) {

@@ -9,8 +9,15 @@ import com.sealhackathon.event.dto.snapshot.CriteriaSnapshot;
 import com.sealhackathon.event.repository.HackathonEventRepository;
 import com.sealhackathon.event.repository.JudgeAssignmentRepository;
 import com.sealhackathon.event.repository.RoundRepository;
+import com.sealhackathon.event.repository.CompetitionGroupRepository;
 import com.sealhackathon.event.repository.TrackRepository;
 import com.sealhackathon.event.service.EventPublicService;
+import com.sealhackathon.event.domain.enums.EventStatus;
+import com.sealhackathon.event.domain.enums.RoundType;
+import com.sealhackathon.event.service.FormatRuleEngine;
+import com.sealhackathon.ranking.repository.FinalistSelectionRepository;
+import com.sealhackathon.ranking.repository.PublishedResultRepository;
+import com.sealhackathon.submission.domain.enums.SubmissionStatus;
 import com.sealhackathon.event.service.JudgeAssignmentService;
 import com.sealhackathon.judging.domain.JudgeScore;
 import com.sealhackathon.judging.domain.enums.ScoreStatus;
@@ -33,6 +40,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.LocalDateTime;
@@ -44,10 +53,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class JudgingServiceTest {
 
     @Mock private JudgeScoreRepository judgeScoreRepository;
@@ -58,6 +69,10 @@ class JudgingServiceTest {
     @Mock private RoundRepository roundRepository;
     @Mock private HackathonEventRepository eventRepository;
     @Mock private TrackRepository trackRepository;
+    @Mock private CompetitionGroupRepository competitionGroupRepository;
+    @Mock private FormatRuleEngine formatRuleEngine;
+    @Mock private PublishedResultRepository publishedResultRepository;
+    @Mock private FinalistSelectionRepository finalistSelectionRepository;
     @Mock private ConflictDetectionService conflictDetectionService;
     @Mock private ScoreReviewService scoreReviewService;
     @Mock private EventPublicService eventPublicService;
@@ -141,8 +156,25 @@ class JudgingServiceTest {
 
     @Test
     void submitScore_shouldThrow_whenDeadlinePassed() {
-        when(eventPublicService.getScoringDeadline(ROUND_ID))
-                .thenReturn(LocalDateTime.now().minusDays(1));
+        Round round = Round.builder()
+                .startDate(LocalDateTime.now().minusDays(2))
+                .scoringDeadline(LocalDateTime.now().minusDays(1))
+                .roundType(RoundType.PRELIMINARY)
+                .build();
+        round.setId(ROUND_ID);
+        when(roundRepository.findById(ROUND_ID)).thenReturn(Optional.of(round));
+
+        Submission submission = Submission.builder()
+                .teamId(TEAM_ID)
+                .roundId(ROUND_ID)
+                .status(SubmissionStatus.SUBMITTED)
+                .build();
+        submission.setId(SUBMISSION_ID);
+        when(submissionRepository.findById(SUBMISSION_ID)).thenReturn(Optional.of(submission));
+        Team team = Team.builder().eventId(EVENT_ID).trackId(TRACK_ID).build();
+        team.setId(TEAM_ID);
+        when(teamRepository.findById(TEAM_ID)).thenReturn(Optional.of(team));
+        doNothing().when(formatRuleEngine).assertCanScore(EVENT_ID);
 
         ScoreSubmissionRequest request = buildRequest(7, 8, null, null);
 
@@ -153,8 +185,26 @@ class JudgingServiceTest {
 
     @Test
     void submitScore_shouldThrow_whenNotAssigned() {
-        when(eventPublicService.getScoringDeadline(ROUND_ID))
-                .thenReturn(LocalDateTime.now().plusDays(1));
+        Round round = Round.builder()
+                .startDate(LocalDateTime.now().minusDays(1))
+                .scoringDeadline(LocalDateTime.now().plusDays(1))
+                .roundType(RoundType.PRELIMINARY)
+                .build();
+        round.setId(ROUND_ID);
+        when(roundRepository.findById(ROUND_ID)).thenReturn(Optional.of(round));
+        doNothing().when(formatRuleEngine).assertCanScore(EVENT_ID);
+        when(publishedResultRepository.existsByRoundId(ROUND_ID)).thenReturn(false);
+        when(finalistSelectionRepository.findByEventIdOrderByPreliminaryRankAsc(EVENT_ID))
+                .thenReturn(List.of());
+
+        Submission submission = Submission.builder()
+                .teamId(TEAM_ID)
+                .roundId(ROUND_ID)
+                .status(SubmissionStatus.SUBMITTED)
+                .build();
+        submission.setId(SUBMISSION_ID);
+        when(submissionRepository.findById(SUBMISSION_ID)).thenReturn(Optional.of(submission));
+
         when(submissionPublicService.getSubmission(SUBMISSION_ID))
                 .thenReturn(Optional.of(SubmissionSnapshot.builder().id(SUBMISSION_ID).teamId(TEAM_ID).build()));
         Team team = Team.builder().eventId(EVENT_ID).trackId(TRACK_ID).build();
@@ -199,7 +249,9 @@ class JudgingServiceTest {
         event.setId(EVENT_ID);
         Round round = Round.builder()
                 .name("Preliminary")
+                .startDate(LocalDateTime.now().minusDays(1))
                 .scoringDeadline(LocalDateTime.now().plusDays(1))
+                .roundType(RoundType.PRELIMINARY)
                 .hackathonEvent(event)
                 .build();
         round.setId(validRoundId);
@@ -232,12 +284,78 @@ class JudgingServiceTest {
         when(submissionRepository.findByTeamIdAndRoundId(validTeamId, validRoundId))
                 .thenReturn(Optional.empty());
         when(teamPublicService.isMentorOfTeam(JUDGE_ID, validTeamId)).thenReturn(false);
+        when(conflictDetectionService.resolveConflictReason(eq(JUDGE_ID), any(Team.class)))
+                .thenReturn(null);
+        when(eventPublicService.getResolvedEventStatus(EVENT_ID)).thenReturn(EventStatus.SCORING);
+        when(publishedResultRepository.existsByRoundId(validRoundId)).thenReturn(false);
+        when(finalistSelectionRepository.findByEventIdOrderByPreliminaryRankAsc(EVENT_ID))
+                .thenReturn(List.of());
 
         List<JudgeScoringAssignmentResponse> result = judgingService.getMyScoringAssignments(JUDGE_ID);
 
         assertThat(result).hasSize(1);
         assertThat(result.getFirst().getTeamId()).isEqualTo(validTeamId);
         assertThat(result.getFirst().getRoundId()).isEqualTo(validRoundId);
+    }
+
+    @Test
+    void submitScore_shouldThrow_whenEventNotInScoringPhase() {
+        setupValidContext();
+        org.mockito.Mockito.doThrow(new BusinessException("Event is not in SCORING phase", org.springframework.http.HttpStatus.BAD_REQUEST))
+                .when(formatRuleEngine).assertCanScore(EVENT_ID);
+
+        ScoreSubmissionRequest request = buildRequest(7, 8, null, null);
+
+        assertThatThrownBy(() -> judgingService.submitScore(JUDGE_ID, ROUND_ID, request))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("SCORING");
+    }
+
+    @Test
+    void submitScore_shouldThrow_whenSubmissionNotSubmitted() {
+        setupValidContext();
+        Submission draft = Submission.builder()
+                .teamId(TEAM_ID)
+                .roundId(ROUND_ID)
+                .status(SubmissionStatus.DRAFT)
+                .build();
+        draft.setId(SUBMISSION_ID);
+        when(submissionRepository.findById(SUBMISSION_ID)).thenReturn(Optional.of(draft));
+
+        ScoreSubmissionRequest request = buildRequest(7, 8, null, null);
+
+        assertThatThrownBy(() -> judgingService.submitScore(JUDGE_ID, ROUND_ID, request))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("not submitted");
+    }
+
+    @Test
+    void getScoresBySubmission_shouldReturnOnlyOwnScore_forLecturer() {
+        UUID otherJudgeId = UUID.randomUUID();
+        JudgeScore myScore = JudgeScore.builder()
+                .judgeUserId(JUDGE_ID).submissionId(SUBMISSION_ID).roundId(ROUND_ID)
+                .status(ScoreStatus.COMPLETED).startedAt(LocalDateTime.now())
+                .build();
+        myScore.setId(UUID.randomUUID());
+
+        when(submissionPublicService.getSubmission(SUBMISSION_ID))
+                .thenReturn(Optional.of(SubmissionSnapshot.builder().id(SUBMISSION_ID).teamId(TEAM_ID).build()));
+        Team team = Team.builder().eventId(EVENT_ID).trackId(TRACK_ID).build();
+        team.setId(TEAM_ID);
+        when(teamRepository.findById(TEAM_ID)).thenReturn(Optional.of(team));
+        when(judgeAssignmentService.isJudgeAssignedToSubmissionScope(ROUND_ID, JUDGE_ID, TRACK_ID, null))
+                .thenReturn(true);
+        when(judgeScoreRepository.findByJudgeUserIdAndSubmissionId(JUDGE_ID, SUBMISSION_ID))
+                .thenReturn(Optional.of(myScore));
+        when(userPublicService.findById(JUDGE_ID))
+                .thenReturn(Optional.of(UserSnapshot.builder().fullName("Judge").build()));
+        when(eventPublicService.getCriteriaByRound(ROUND_ID)).thenReturn(List.of());
+
+        List<JudgeScoreResponse> result = judgingService.getScoresBySubmission(
+                SUBMISSION_ID, ROUND_ID, JUDGE_ID, com.sealhackathon.common.enums.UserType.LECTURER);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.getFirst().getJudgeUserId()).isEqualTo(JUDGE_ID);
     }
 
     @Test
@@ -261,22 +379,45 @@ class JudgingServiceTest {
     }
 
     private void setupValidContext() {
+        Round round = Round.builder()
+                .name("Round 1")
+                .startDate(LocalDateTime.now().minusDays(1))
+                .scoringDeadline(LocalDateTime.now().plusDays(1))
+                .roundType(RoundType.PRELIMINARY)
+                .build();
+        round.setId(ROUND_ID);
+
+        when(roundRepository.findById(ROUND_ID)).thenReturn(Optional.of(round));
         when(eventPublicService.getScoringDeadline(ROUND_ID))
                 .thenReturn(LocalDateTime.now().plusDays(1));
+        when(eventPublicService.getResolvedEventStatus(EVENT_ID)).thenReturn(EventStatus.SCORING);
+        doNothing().when(formatRuleEngine).assertCanScore(EVENT_ID);
+        when(publishedResultRepository.existsByRoundId(ROUND_ID)).thenReturn(false);
+        when(finalistSelectionRepository.findByEventIdOrderByPreliminaryRankAsc(EVENT_ID))
+                .thenReturn(List.of());
+
         when(submissionPublicService.getSubmission(SUBMISSION_ID))
-                .thenReturn(Optional.of(SubmissionSnapshot.builder().id(SUBMISSION_ID).teamId(TEAM_ID).build()));
+                .thenReturn(Optional.of(SubmissionSnapshot.builder()
+                        .id(SUBMISSION_ID)
+                        .teamId(TEAM_ID)
+                        .roundId(ROUND_ID)
+                        .status(SubmissionStatus.SUBMITTED)
+                        .submittedAt(LocalDateTime.now())
+                        .build()));
         Submission submission = Submission.builder()
                 .teamId(TEAM_ID)
                 .roundId(ROUND_ID)
+                .status(SubmissionStatus.SUBMITTED)
                 .build();
         submission.setId(SUBMISSION_ID);
-        lenient().when(submissionRepository.findById(SUBMISSION_ID))
+        when(submissionRepository.findById(SUBMISSION_ID))
                 .thenReturn(Optional.of(submission));
         Team team = Team.builder().eventId(EVENT_ID).trackId(TRACK_ID).build();
         team.setId(TEAM_ID);
         when(teamRepository.findById(TEAM_ID)).thenReturn(Optional.of(team));
         when(judgeAssignmentService.isJudgeAssignedToSubmissionScope(
                 ROUND_ID, JUDGE_ID, TRACK_ID, null)).thenReturn(true);
+        lenient().doNothing().when(conflictDetectionService).checkConflict(JUDGE_ID, SUBMISSION_ID);
         when(eventPublicService.getCriteriaByRound(ROUND_ID)).thenReturn(List.of(
                 CriteriaSnapshot.builder().id(CRITERIA_1).name("Technical").weight(50)
                         .minScore(0).maxScore(10).build(),

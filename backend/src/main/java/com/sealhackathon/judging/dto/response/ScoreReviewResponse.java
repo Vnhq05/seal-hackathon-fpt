@@ -1,6 +1,7 @@
 package com.sealhackathon.judging.dto.response;
 
 import com.sealhackathon.event.domain.enums.RoundType;
+import com.sealhackathon.judging.domain.enums.ScoreAdjustmentType;
 import com.sealhackathon.judging.domain.enums.ScoreReviewStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -31,6 +32,12 @@ public class ScoreReviewResponse {
     private BigDecimal minJudgeScore;
     private BigDecimal maxJudgeScore;
     private ScoreReviewStatus status;
+    private ScoreAdjustmentType adjustmentType;
+    private UUID requestedBy;
+    private String requestedByFullName;
+    private String requestNote;
+    private LocalDateTime approvedAt;
+    private UUID approvedBy;
     private LocalDateTime createdAt;
     private LocalDateTime resolvedAt;
     private String resolutionNote;

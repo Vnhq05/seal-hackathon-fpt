@@ -5,6 +5,9 @@ import com.sealhackathon.judging.domain.TeamJudgeAssignment;
 import com.sealhackathon.judging.repository.TeamJudgeAssignmentRepository;
 import com.sealhackathon.submission.dto.snapshot.SubmissionSnapshot;
 import com.sealhackathon.submission.service.SubmissionPublicService;
+import com.sealhackathon.event.repository.MentorAssignmentRepository;
+import com.sealhackathon.team.domain.Team;
+import com.sealhackathon.team.repository.TeamRepository;
 import com.sealhackathon.team.service.TeamPublicService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,6 +34,8 @@ class ConflictDetectionServiceTest {
     @Mock private SubmissionPublicService submissionPublicService;
     @Mock private ApplicationEventPublisher eventPublisher;
     @Mock private TeamJudgeAssignmentRepository teamJudgeAssignmentRepository;
+    @Mock private MentorAssignmentRepository mentorAssignmentRepository;
+    @Mock private TeamRepository teamRepository;
 
     @InjectMocks private ConflictDetectionService conflictDetectionService;
 
@@ -43,11 +48,40 @@ class ConflictDetectionServiceTest {
         when(submissionPublicService.getSubmission(submissionId))
                 .thenReturn(Optional.of(SubmissionSnapshot.builder()
                         .id(submissionId).teamId(teamId).build()));
+        Team team = Team.builder().eventId(UUID.randomUUID()).build();
+        team.setId(teamId);
+        when(teamRepository.findById(teamId)).thenReturn(Optional.of(team));
         when(teamPublicService.isMentorOfTeam(judgeId, teamId)).thenReturn(true);
 
         assertThatThrownBy(() -> conflictDetectionService.checkConflict(judgeId, submissionId))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("Conflict of interest");
+
+        verify(eventPublisher).publishEvent(any(Object.class));
+    }
+
+    @Test
+    void shouldThrow_whenJudgeIsMentorOfTrack() {
+        UUID judgeId = UUID.randomUUID();
+        UUID submissionId = UUID.randomUUID();
+        UUID teamId = UUID.randomUUID();
+        UUID trackId = UUID.randomUUID();
+        UUID eventId = UUID.randomUUID();
+
+        Team team = Team.builder().eventId(eventId).trackId(trackId).build();
+        team.setId(teamId);
+
+        when(submissionPublicService.getSubmission(submissionId))
+                .thenReturn(Optional.of(SubmissionSnapshot.builder()
+                        .id(submissionId).teamId(teamId).build()));
+        when(teamRepository.findById(teamId)).thenReturn(Optional.of(team));
+        when(teamPublicService.isMentorOfTeam(judgeId, teamId)).thenReturn(false);
+        when(mentorAssignmentRepository.existsByHackathonEventIdAndTrackIdAndMentorUserId(
+                eventId, trackId, judgeId)).thenReturn(true);
+
+        assertThatThrownBy(() -> conflictDetectionService.checkConflict(judgeId, submissionId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("track");
 
         verify(eventPublisher).publishEvent(any(Object.class));
     }
@@ -61,6 +95,9 @@ class ConflictDetectionServiceTest {
         when(submissionPublicService.getSubmission(submissionId))
                 .thenReturn(Optional.of(SubmissionSnapshot.builder()
                         .id(submissionId).teamId(teamId).build()));
+        Team team = Team.builder().eventId(UUID.randomUUID()).build();
+        team.setId(teamId);
+        when(teamRepository.findById(teamId)).thenReturn(Optional.of(team));
         when(teamPublicService.isMentorOfTeam(judgeId, teamId)).thenReturn(false);
 
         assertThatNoException().isThrownBy(

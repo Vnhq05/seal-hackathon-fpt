@@ -55,4 +55,12 @@ public interface JudgeScoreRepository extends JpaRepository<JudgeScore, UUID> {
     int updateStatusByRoundId(@Param("roundId") UUID roundId,
                               @Param("currentStatus") ScoreStatus currentStatus,
                               @Param("newStatus") ScoreStatus newStatus);
+
+    @Modifying
+    @Query("UPDATE JudgeScore js SET js.status = :newStatus WHERE js.submissionId = :submissionId "
+            + "AND js.status IN :currentStatuses")
+    int updateStatusBySubmissionId(
+            @Param("submissionId") UUID submissionId,
+            @Param("currentStatuses") List<ScoreStatus> currentStatuses,
+            @Param("newStatus") ScoreStatus newStatus);
 }

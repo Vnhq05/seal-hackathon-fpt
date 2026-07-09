@@ -14,8 +14,10 @@ const cardStyle: React.CSSProperties = {
 
 const tabs: { key: SubmissionFilterTab; label: string }[] = [
   { key: "all", label: "All" },
-  { key: "scored", label: "Scored" },
   { key: "unscored", label: "Unscored" },
+  { key: "draft", label: "Draft" },
+  { key: "submitted", label: "Submitted" },
+  { key: "locked", label: "Locked" },
 ];
 
 function SkeletonBlock({ height }: { height: number }) {
@@ -24,20 +26,36 @@ function SkeletonBlock({ height }: { height: number }) {
   );
 }
 
-function StatusBadge({ status }: { status: "scored" | "unscored" }) {
-  const isScored = status === "scored";
+function statusLabel(status: RoundSubmission["status"]): string {
+  switch (status) {
+    case "NOT_STARTED":
+      return "Unscored";
+    case "IN_PROGRESS":
+      return "Draft";
+    case "COMPLETED":
+      return "Submitted";
+    case "LOCKED":
+      return "Locked";
+    default:
+      return status;
+  }
+}
+
+function StatusBadge({ status }: { status: RoundSubmission["status"] }) {
+  const colors: Record<RoundSubmission["status"], { bg: string; fg: string }> = {
+    NOT_STARTED: { bg: "#fef3c7", fg: "#92400e" },
+    IN_PROGRESS: { bg: "#e0f2fe", fg: "#0369a1" },
+    COMPLETED: { bg: "#ecfdf5", fg: "#047857" },
+    LOCKED: { bg: "#f3f4f6", fg: "#374151" },
+  };
+  const { bg, fg } = colors[status] ?? colors.NOT_STARTED;
+
   return (
     <span
       className="rounded-md"
-      style={{
-        padding: "4px 10px",
-        fontSize: 11,
-        fontWeight: 600,
-        backgroundColor: isScored ? "#ecfdf5" : "#fef3c7",
-        color: isScored ? "#047857" : "#92400e",
-      }}
+      style={{ padding: "4px 10px", fontSize: 11, fontWeight: 600, backgroundColor: bg, color: fg }}
     >
-      {isScored ? "Scored" : "Unscored"}
+      {statusLabel(status)}
     </span>
   );
 }
@@ -50,38 +68,51 @@ function SubmissionRow({
   roundId: string;
 }) {
   const portalBase = usePortalBase();
+  const canScore =
+    submission.scoringAllowed &&
+    !submission.conflictOfInterest &&
+    submission.status === "NOT_STARTED";
+
   return (
     <tr style={{ borderBottom: "1px solid rgba(198,198,205,0.3)" }}>
       <td style={{ padding: "14px 16px", fontSize: 14, fontWeight: 600, color: "#0e1528" }}>
         {submission.teamName}
       </td>
+      <td style={{ padding: "14px 16px", fontSize: 13, color: "#0e1528" }}>
+        {submission.trackName ?? "—"}
+      </td>
+      <td style={{ padding: "14px 16px", fontSize: 13, color: "#0e1528" }}>
+        {submission.groupName ?? "—"}
+      </td>
       <td style={{ padding: "14px 16px", fontSize: 14, color: "#0e1528" }}>
-        {submission.score !== null ? `${submission.score}/${submission.maxScore}` : "--"}
+        {submission.score !== null ? `${submission.score}/${submission.maxScore}` : "—"}
       </td>
       <td style={{ padding: "14px 16px" }}>
         <StatusBadge status={submission.status} />
       </td>
       <td style={{ padding: "14px 16px", fontSize: 13, color: "#2dd4bf" }}>
-        {new Date(submission.submittedAt).toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-        })}
+        {submission.submittedAt
+          ? new Date(submission.submittedAt).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            })
+          : "—"}
       </td>
       <td style={{ padding: "14px 16px" }}>
         <Link
           href={`${portalBase}/scoring/${submission.teamId}/${roundId}`}
           className="inline-block rounded-lg"
           style={{
-            backgroundColor: submission.status === "unscored" ? "#38bdf8" : "#dfe2ec",
-            color: submission.status === "unscored" ? "#dfe2ec" : "#0e1528",
+            backgroundColor: canScore ? "#38bdf8" : "#dfe2ec",
+            color: canScore ? "#dfe2ec" : "#0e1528",
             padding: "6px 16px",
             fontSize: 12,
             fontWeight: 600,
           }}
         >
-          {submission.status === "unscored" ? "Score" : "View"}
+          {canScore ? "Score" : "View"}
         </Link>
       </td>
     </tr>
@@ -114,8 +145,7 @@ export function RoundSubmissionsPage({ roundId }: { roundId: string }) {
         </p>
       </div>
 
-      {/* Filter Tabs */}
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         {tabs.map((t) => (
           <button
             key={t.key}
@@ -136,12 +166,11 @@ export function RoundSubmissionsPage({ roundId }: { roundId: string }) {
         ))}
       </div>
 
-      {/* Table */}
       <div style={cardStyle} className="overflow-hidden">
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ backgroundColor: "#eef0f6", borderBottom: "1px solid rgba(198,198,205,0.5)" }}>
-              {["Team", "Score", "Status", "Time", "Action"].map((h) => (
+              {["Team", "Track", "Group", "Score", "Status", "Submitted", "Action"].map((h) => (
                 <th
                   key={h}
                   style={{
@@ -163,7 +192,7 @@ export function RoundSubmissionsPage({ roundId }: { roundId: string }) {
             {submissions.length === 0 ? (
               <tr>
                 <td
-                  colSpan={5}
+                  colSpan={7}
                   style={{ padding: 32, textAlign: "center", fontSize: 14, color: "#8891a5" }}
                 >
                   No submissions found.

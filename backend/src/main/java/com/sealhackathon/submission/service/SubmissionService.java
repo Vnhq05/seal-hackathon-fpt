@@ -8,6 +8,7 @@ import com.sealhackathon.event.domain.enums.RoundType;
 import com.sealhackathon.event.dto.snapshot.RoundSnapshot;
 import com.sealhackathon.event.service.EventPublicService;
 import com.sealhackathon.event.service.FormatRuleEngine;
+import com.sealhackathon.event.service.JudgeAssignmentService;
 import com.sealhackathon.ranking.service.FinalistSelectionService;
 import com.sealhackathon.judging.repository.TeamJudgeAssignmentRepository;
 import com.sealhackathon.submission.domain.Submission;
@@ -37,9 +38,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -58,6 +57,7 @@ public class SubmissionService {
     private final FinalistSelectionService finalistSelectionService;
     private final FileStorageService fileStorageService;
     private final TeamJudgeAssignmentRepository teamJudgeAssignmentRepository;
+    private final JudgeAssignmentService judgeAssignmentService;
     private final ApplicationEventPublisher eventPublisher;
     private final FormatRuleEngine formatRuleEngine;
 
@@ -218,17 +218,8 @@ public class SubmissionService {
         }
 
         if (requesterRole == UserType.LECTURER) {
-            Set<UUID> allowedTeamIds = new HashSet<>();
-            teamJudgeAssignmentRepository.findByJudgeUserId(requesterId).stream()
-                    .filter(a -> a.getRoundId().equals(roundId))
-                    .map(a -> a.getTeamId())
-                    .forEach(allowedTeamIds::add);
-            teamPublicService.getTeamsByMentor(requesterId, round.getEventId()).stream()
-                    .map(TeamSnapshot::getId)
-                    .forEach(allowedTeamIds::add);
-
             return submissions.stream()
-                    .filter(s -> allowedTeamIds.contains(s.getTeamId()))
+                    .filter(s -> canLecturerViewSubmission(requesterId, roundId, s.getTeamId()))
                     .map(this::toResponse)
                     .toList();
         }
@@ -280,10 +271,7 @@ public class SubmissionService {
         }
 
         if (requesterRole == UserType.LECTURER) {
-            boolean assigned = teamJudgeAssignmentRepository
-                    .existsByTeamIdAndRoundIdAndJudgeUserId(
-                            submission.getTeamId(), roundId, requesterId);
-            if (!assigned) {
+            if (!canLecturerViewSubmission(requesterId, roundId, submission.getTeamId())) {
                 throw new BusinessException(
                         "You are not assigned to score this team for this round",
                         HttpStatus.FORBIDDEN) {};
@@ -292,6 +280,20 @@ public class SubmissionService {
         }
 
         throw new BusinessException("Access denied", HttpStatus.FORBIDDEN) {};
+    }
+
+    private boolean canLecturerViewSubmission(UUID requesterId, UUID roundId, UUID teamId) {
+        if (teamJudgeAssignmentRepository.existsByTeamIdAndRoundIdAndJudgeUserId(
+                teamId, roundId, requesterId)) {
+            return true;
+        }
+        if (teamPublicService.isMentorOfTeam(requesterId, teamId)) {
+            return true;
+        }
+        return teamPublicService.getTeam(teamId)
+                .map(team -> judgeAssignmentService.isJudgeAssignedToSubmissionScope(
+                        roundId, requesterId, team.getTrackId(), team.getGroupId()))
+                .orElse(false);
     }
 
     // ═══ Helpers ═══
