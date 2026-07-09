@@ -129,7 +129,7 @@ export interface SubmissionForScoring {
   githubUrl: string | null;
   demoUrl: string | null;
   slideUrl: string | null;
-  pdfUrl: string | null;
+  pdfFileUrl: string | null;
   pdfFileName: string | null;
   links: SubmissionLink[];
   criteria: ScoringCriterion[];

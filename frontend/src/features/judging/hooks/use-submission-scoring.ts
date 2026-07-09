@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { criteriaApi, submissionApi } from "@/lib/api";
 import { judgingApi } from "@/lib/api/judging.api";
-import { resolveFileUrl } from "@/lib/files";
 import type { SubmissionForScoring } from "@/features/judging/types/judge.types";
 
 export const SUBMISSION_SCORING_KEY = "judge-submission-scoring" as const;
@@ -50,7 +49,7 @@ export function useSubmissionScoring(roundId: string, teamId: string) {
         githubUrl: version?.sourceCodeUrl ?? version?.githubUrl ?? null,
         demoUrl: version?.demoUrl ?? null,
         slideUrl: version?.slideUrl ?? null,
-        pdfUrl: resolveFileUrl(version?.attachments?.[0]?.fileUrl ?? null),
+        pdfFileUrl: version?.attachments?.[0]?.fileUrl ?? null,
         pdfFileName: version?.attachments?.[0]?.fileName ?? null,
         links: [],
         criteria: criteria.map((c) => ({

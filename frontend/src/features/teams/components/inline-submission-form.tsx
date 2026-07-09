@@ -5,6 +5,7 @@ import { useState, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { submissionApi } from "@/lib/api";
 import type { EventResponse, RoundResponse, SubmissionResponse } from "@/lib/api";
+import { openSubmissionAttachment } from "@/lib/files";
 import { isRoundOpen, roundLockMessage, validatePdfFile } from "@/features/submissions/utils/round.utils";
 import { validateSourceCodeUrl } from "@/features/submissions/utils/source-code-url.utils";
 import {
@@ -84,11 +85,26 @@ export function InlineSubmissionForm({ event, round, teamId, existing, onClose }
   );
   const [demo, setDemo] = useState(existing?.latestVersion?.demoUrl ?? "");
   const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [viewingPdf, setViewingPdf] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   const roundOpen = isRoundOpen(round);
   const locked = !roundOpen || (isSealPrelim && !sealGateOpen);
+  const currentPdf = existing?.latestVersion?.attachments?.[0] ?? null;
+
+  const handleViewPdf = async () => {
+    if (!currentPdf) return;
+    setError(null);
+    setViewingPdf(true);
+    try {
+      await openSubmissionAttachment(currentPdf.fileUrl);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not open PDF");
+    } finally {
+      setViewingPdf(false);
+    }
+  };
 
   const { mutate: submit, isPending } = useMutation({
     mutationFn: (data: { sourceCodeUrl: string; demo: string; pdf: File | null }) =>
@@ -201,14 +217,33 @@ export function InlineSubmissionForm({ event, round, teamId, existing, onClose }
             <label className="text-xs font-medium text-seal-text-secondary">
               PDF {existing ? "(optional on update)" : "*"}
             </label>
+            {currentPdf && !pdfFile && (
+              <div className="mt-1.5 flex items-center justify-between gap-3 rounded-lg border border-seal-border bg-seal-surface-elevated px-3 py-2">
+                <div className="min-w-0 text-xs text-seal-text-secondary">
+                  <span className="font-medium text-seal-text">Current PDF (v{existing?.currentVersion}):</span>{" "}
+                  <span className="truncate">{currentPdf.fileName}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void handleViewPdf();
+                  }}
+                  disabled={viewingPdf}
+                  className="shrink-0 text-xs font-semibold text-royal underline disabled:opacity-50"
+                >
+                  {viewingPdf ? "Opening..." : "View PDF"}
+                </button>
+              </div>
+            )}
             <div
               onClick={() => fileRef.current?.click()}
               className="mt-1.5 flex cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-seal-border bg-seal-surface-sunken p-6 text-sm text-seal-text-muted transition-colors hover:border-seal-cyan/30"
             >
               {pdfFile ? (
-                <span className="text-seal-text">{pdfFile.name}</span>
+                <span className="text-seal-text">New file: {pdfFile.name}</span>
               ) : existing ? (
-                <span>Current: v{existing.currentVersion} — click to upload new PDF</span>
+                <span>{currentPdf ? "Click to replace PDF (optional)" : "Click to upload PDF"}</span>
               ) : (
                 <span>Click to select PDF (max 5MB)</span>
               )}

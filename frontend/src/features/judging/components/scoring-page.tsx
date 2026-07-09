@@ -21,6 +21,7 @@ import {
 } from "@/features/judging/schemas/scoring.schema";
 import { SEAL_SCORE_BUTTON_LABELS } from "@/features/judging/constants/scoring-scale";
 import { usePortalBase } from "@/shared/hooks/use-portal-base";
+import { SubmissionPdfViewer } from "@/features/submissions/components/submission-pdf-viewer";
 import type { SubmissionForScoring } from "@/features/judging/types/judge.types";
 
 function hasScore(score: number | null | undefined): score is number {
@@ -374,16 +375,12 @@ function ScoringPageContent({
         )}
       </div>
 
-      {submission.pdfUrl && (
+      {submission.pdfFileUrl && (
         <div className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-4">
           <div className="mb-2 text-xs font-medium text-seal-text-muted">
             PDF: {submission.pdfFileName ?? "Submission"}
           </div>
-          <iframe
-            src={submission.pdfUrl}
-            title="Submission PDF"
-            className="h-[480px] w-full rounded border border-seal-border"
-          />
+          <SubmissionPdfViewer fileUrl={submission.pdfFileUrl} fileName={submission.pdfFileName} />
         </div>
       )}
 

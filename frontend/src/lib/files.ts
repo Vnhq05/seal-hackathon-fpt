@@ -28,3 +28,15 @@ export async function downloadSubmissionAttachment(
   const blob = await submissionApi.downloadAttachment(fileUrl);
   triggerBlobDownload(blob, fileName);
 }
+
+/** Open a submission PDF in a new tab via authenticated API (direct URLs return 401). */
+export async function openSubmissionAttachment(fileUrl: string): Promise<void> {
+  const blob = await submissionApi.downloadAttachment(fileUrl);
+  const url = URL.createObjectURL(blob);
+  const opened = window.open(url, "_blank", "noopener,noreferrer");
+  if (!opened) {
+    URL.revokeObjectURL(url);
+    throw new Error("Could not open PDF. Please allow popups for this site.");
+  }
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}

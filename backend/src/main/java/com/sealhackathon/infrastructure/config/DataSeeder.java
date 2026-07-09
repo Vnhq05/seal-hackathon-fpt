@@ -41,6 +41,7 @@ public class DataSeeder implements CommandLineRunner {
     private final ScoringTemplateRepository scoringTemplateRepository;
     private final SystemConfigRepository systemConfigRepository;
     private final EventDemoSeeder eventDemoSeeder;
+    private final SubmissionDemoSeeder submissionDemoSeeder;
     private final JudgingDemoSeeder judgingDemoSeeder;
     private final HackathonEventRepository eventRepository;
     private final TransactionTemplate transactionTemplate;
@@ -84,6 +85,7 @@ public class DataSeeder implements CommandLineRunner {
         seedUser("student6@fpt.edu.vn", "Sinh Vien 6", UserType.FPT_STUDENT, 7);
 
         eventDemoSeeder.seed();
+        submissionDemoSeeder.seed();
         judgingDemoSeeder.seedIfMissing();
         if (resyncDevAccounts) {
             alignDevEventOwnership();
