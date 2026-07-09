@@ -247,7 +247,7 @@ function InvitePanel({ eventId, teamId, teamName, trackId, isLeader }: {
       </p>
       {!trackId && (
         <p className="text-xs text-amber-600 mb-4">
-          Your team has no track yet. Complete the track draw before inviting a mentor.
+          Your team has no track yet. Select or wait for a track assignment before inviting a mentor.
         </p>
       )}
       <div className="flex flex-col gap-3">

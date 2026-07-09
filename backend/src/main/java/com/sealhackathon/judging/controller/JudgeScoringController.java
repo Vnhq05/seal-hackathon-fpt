@@ -2,6 +2,7 @@ package com.sealhackathon.judging.controller;
 
 import com.sealhackathon.auth.service.AuthPublicService;
 import com.sealhackathon.common.response.ApiResponse;
+import com.sealhackathon.judging.dto.response.JudgeRoundSubmissionResponse;
 import com.sealhackathon.judging.dto.response.JudgeScoreResponse;
 import com.sealhackathon.judging.dto.response.JudgeScoringAssignmentResponse;
 import com.sealhackathon.judging.service.JudgingService;
@@ -12,7 +13,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -34,6 +37,16 @@ public class JudgeScoringController {
     public ResponseEntity<ApiResponse<List<JudgeScoringAssignmentResponse>>> getMyAssignments() {
         UUID judgeId = authPublicService.getCurrentUserId();
         return ResponseEntity.ok(ApiResponse.success(judgingService.getMyScoringAssignments(judgeId)));
+    }
+
+    @GetMapping("/rounds/{roundId}/submissions")
+    @Operation(summary = "List submissions in assignment scope for a round (judge view)")
+    public ResponseEntity<ApiResponse<List<JudgeRoundSubmissionResponse>>> getRoundSubmissions(
+            @PathVariable UUID roundId,
+            @RequestParam(required = false, defaultValue = "all") String filter) {
+        UUID judgeId = authPublicService.getCurrentUserId();
+        return ResponseEntity.ok(ApiResponse.success(
+                judgingService.getRoundSubmissionsForJudge(judgeId, roundId, filter)));
     }
 
     @GetMapping("/my-scores")

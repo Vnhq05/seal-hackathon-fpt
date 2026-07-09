@@ -33,7 +33,6 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -48,6 +47,9 @@ public class EventDemoSeeder {
     public static final String DEV_COORDINATOR_EMAIL = "coordinator@seal.com";
 
     public static final String DEMO_EVENT_NAME_FALL = "SEAL Fall Hackathon Demo";
+    /** Primary judge account for local scoring smoke tests (password: app.seeder.default-password). */
+    public static final String DEMO_TEST_JUDGE_EMAIL = "lecturer2@fpt.edu.vn";
+    public static final String DEMO_TEST_JUDGE_PASSWORD_HINT = "12345678";
     private static final String DEMO_EVENT_NAME = DEMO_EVENT_NAME_FALL;
     private static final String FALL = "Fall";
     private static final int YEAR = 2026;
@@ -116,7 +118,7 @@ public class EventDemoSeeder {
                         .filter(name -> !name.isBlank())
                         .reduce((a, b) -> a + ", " + b)
                         .orElse(null))
-                .status(EventStatus.OPEN)
+                .status(EventStatus.ACTIVE)
                 .build();
         event.setCreatedBy(DEV_COORDINATOR_EMAIL);
         event.getTiebreakerCriterionIds().addAll(tiebreakerIds);
@@ -221,7 +223,10 @@ public class EventDemoSeeder {
                 .assignedAt(now)
                 .build());
 
-        log.info("Seeded Fall {} demo event '{}' with {} teams", YEAR, DEMO_EVENT_NAME, 2);
+        log.info("Seeded Fall {} demo event '{}' with {} teams — coordinator: set status to SCORING to open judging",
+                YEAR, DEMO_EVENT_NAME, 2);
+        log.info("Judge test account: {} / {} → /lecturer/scoring",
+                DEMO_TEST_JUDGE_EMAIL, DEMO_TEST_JUDGE_PASSWORD_HINT);
     }
 
     private void normalizeExistingSeasons() {

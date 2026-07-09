@@ -10,6 +10,11 @@ import { useSubmitScores } from "@/features/judging/hooks/use-submit-scores";
 import { useSaveScoringDraft } from "@/features/judging/hooks/use-save-scoring-draft";
 import { useScoreHistory } from "@/features/judging/hooks/use-score-history";
 import { useRequestAdjustment } from "@/features/judging/hooks/use-request-adjustment";
+import { useScoreReviewContext } from "@/features/judging/hooks/use-score-review-context";
+import {
+  SCORE_REVIEW_ADJUSTMENT_CONFLICT_MESSAGE,
+  SCORE_REVIEW_DEVIATION_TOO_LOW_MESSAGE,
+} from "@/lib/api/score-review.api";
 import { ScoreHistoryCard } from "@/features/judging/components/score-history-card";
 import {
   createScoringFormSchema,
@@ -23,6 +28,7 @@ import { SEAL_SCORE_BUTTON_LABELS } from "@/features/judging/constants/scoring-s
 import { usePortalBase } from "@/shared/hooks/use-portal-base";
 import { SubmissionPdfViewer } from "@/features/submissions/components/submission-pdf-viewer";
 import type { SubmissionForScoring } from "@/features/judging/types/judge.types";
+import type { ScoreReviewContextResponse } from "@/lib/api/score-review.api";
 
 function hasScore(score: number | null | undefined): score is number {
   return score != null;
@@ -31,6 +37,12 @@ function hasScore(score: number | null | undefined): score is number {
 function conflictMessage(reason: string | null): string {
   if (reason === "MENTOR_OF_TEAM") {
     return "You are a mentor for this team and cannot score this submission.";
+  }
+  if (reason === "MENTOR_OF_TRACK") {
+    return "You are a mentor for this team's track and cannot score this submission.";
+  }
+  if (reason === "COORDINATOR_MARKED_CONFLICT") {
+    return "Scoring has been blocked by the coordinator due to a conflict of interest.";
   }
   return reason ?? "Conflict of interest — cannot score.";
 }
@@ -45,12 +57,21 @@ export function ScoringPage({ teamId, roundId }: { teamId: string; roundId: stri
   const router = useRouter();
   const portalBase = usePortalBase();
   const { data: submission, isLoading, error } = useSubmissionScoring(roundId, teamId);
+  const { data: adjustmentContext } = useScoreReviewContext(
+    submission?.eventId ?? null,
+    submission?.id ?? null,
+  );
+  const canEditForAdjustment = adjustmentContext?.canEditForAdjustment ?? false;
   const submitMutation = useSubmitScores();
   const draftMutation = useSaveScoringDraft();
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
 
-  const readOnly = submission?.isLocked ?? false;
-  const completed = submission?.isCompleted ?? false;
+  const readOnly =
+    ((submission?.isLocked && !canEditForAdjustment) ||
+    submission?.conflictOfInterest ||
+    submission?.scoringAllowed === false) ??
+    false;
+  const completed = (submission?.isCompleted ?? false) && !canEditForAdjustment;
 
   const defaultScores = useMemo(() => {
     if (!submission) return [];
@@ -219,6 +240,18 @@ export function ScoringPage({ teamId, roundId }: { teamId: string; roundId: stri
     );
   }
 
+  if (!submission.scoringAllowed && submission.scoringDeniedReason) {
+    return (
+      <div className="mx-auto max-w-lg p-8 text-center">
+        <p className="text-lg font-semibold text-red-700">Scoring unavailable</p>
+        <p className="mt-2 text-sm text-seal-text-secondary">{submission.scoringDeniedReason}</p>
+        <Link href={`${portalBase}/scoring`} className="mt-4 inline-block text-sm font-semibold text-royal hover:underline">
+          ← Back to list
+        </Link>
+      </div>
+    );
+  }
+
   return (
     <ScoringPageContent
       submission={submission}
@@ -236,11 +269,10 @@ export function ScoringPage({ teamId, roundId }: { teamId: string; roundId: stri
       isSubmitting={submitMutation.isPending}
       isSaving={draftMutation.isPending}
       lastSavedAt={lastSavedAt}
+      adjustmentContext={adjustmentContext ?? null}
     />
   );
 }
-
-import { SCORE_REVIEW_ADJUSTMENT_CONFLICT_MESSAGE } from "@/lib/api/score-review.api";
 
 function ScoringPageContent({
   submission,
@@ -258,6 +290,7 @@ function ScoringPageContent({
   isSubmitting,
   isSaving,
   lastSavedAt,
+  adjustmentContext,
 }: {
   submission: SubmissionForScoring;
   watchedScores: ScoringFormValues["scores"];
@@ -274,8 +307,9 @@ function ScoringPageContent({
   isSubmitting: boolean;
   isSaving: boolean;
   lastSavedAt: Date | null;
+  adjustmentContext: ScoreReviewContextResponse | null;
 }) {
-  const disabled = readOnly || completed;
+  const disabled = readOnly || (completed && !adjustmentContext?.canEditForAdjustment);
   const { data: historyData } = useScoreHistory();
   const roundHistory = (historyData?.data ?? []).filter(
     (e) => e.roundId === submission.roundId,
@@ -311,6 +345,8 @@ function ScoringPageContent({
           const message = error instanceof Error ? error.message : "Request failed.";
           if (message === SCORE_REVIEW_ADJUSTMENT_CONFLICT_MESSAGE) {
             setAdjustmentBanner({ type: "conflict", message });
+          } else if (message === SCORE_REVIEW_DEVIATION_TOO_LOW_MESSAGE) {
+            setAdjustmentBanner({ type: "error", message });
           } else {
             setAdjustmentBanner({ type: "error", message });
           }
@@ -324,7 +360,12 @@ function ScoringPageContent({
       <div>
         <div className="flex items-center gap-2">
           <h1 className="text-2xl font-bold text-seal-text">{submission.teamName}</h1>
-          {completed && (
+          {adjustmentContext?.canEditForAdjustment && (
+            <span className="rounded-md bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-700">
+              Adjustment open
+            </span>
+          )}
+          {completed && !adjustmentContext?.canEditForAdjustment && (
             <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">
               Completed
             </span>
@@ -496,8 +537,30 @@ function ScoringPageContent({
         )}
       </div>
 
-      {completed && (
+      {(completed || adjustmentContext?.status === "OPEN" || adjustmentContext?.status === "APPROVED") && (
         <div className="flex flex-col gap-3 border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-4">
+          {adjustmentContext && adjustmentContext.deviationValue >= adjustmentContext.deviationThreshold && (
+            <p className="text-sm text-amber-800">
+              Score deviation: <strong>{adjustmentContext.deviationValue.toFixed(1)}</strong> pts
+              (threshold {adjustmentContext.deviationThreshold})
+            </p>
+          )}
+
+          {adjustmentContext?.status === "OPEN" && (
+            <p className="text-sm text-amber-800">
+              An adjustment request is pending coordinator review.
+              {adjustmentContext.requestNote && (
+                <span className="mt-1 block text-xs">Note: {adjustmentContext.requestNote}</span>
+              )}
+            </p>
+          )}
+
+          {adjustmentContext?.canEditForAdjustment && (
+            <p className="text-sm text-blue-800">
+              Coordinator approved score adjustment. Update your scores and submit again.
+            </p>
+          )}
+
           {adjustmentBanner && (
             <div
               className={`rounded px-3 py-2 text-sm ${
@@ -512,7 +575,7 @@ function ScoringPageContent({
             </div>
           )}
 
-          {!adjustmentFormOpen ? (
+          {adjustmentContext?.canRequestAdjustment && !adjustmentFormOpen ? (
             <button
               type="button"
               onClick={() => {
@@ -521,9 +584,9 @@ function ScoringPageContent({
               }}
               className="self-start border-2 border-navy bg-white px-4 py-2 text-sm font-semibold text-seal-text hover:bg-seal-surface-sunken"
             >
-              Request Adjustment
+              Request score adjustment
             </button>
-          ) : (
+          ) : adjustmentContext?.canRequestAdjustment && adjustmentFormOpen ? (
             <div className="flex flex-col gap-3">
               <label className="text-sm font-medium text-seal-text">
                 Reason for adjustment request
@@ -561,7 +624,7 @@ function ScoringPageContent({
                 </button>
               </div>
             </div>
-          )}
+          ) : null}
         </div>
       )}
 

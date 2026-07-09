@@ -1,6 +1,7 @@
 package com.sealhackathon.judging.domain;
 
 import com.sealhackathon.common.entity.BaseEntity;
+import com.sealhackathon.judging.domain.enums.ScoreAdjustmentType;
 import com.sealhackathon.judging.domain.enums.ScoreReviewStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -64,6 +65,24 @@ public class ScoreReviewRequest extends BaseEntity {
     @Column(name = "status", nullable = false)
     @Builder.Default
     private ScoreReviewStatus status = ScoreReviewStatus.OPEN;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "adjustment_type")
+    @Builder.Default
+    private ScoreAdjustmentType adjustmentType = ScoreAdjustmentType.AUTO_DEVIATION;
+
+    @Column(name = "requested_by")
+    private UUID requestedBy;
+
+    @Size(max = 2000)
+    @Column(name = "request_note")
+    private String requestNote;
+
+    @Column(name = "approved_at")
+    private LocalDateTime approvedAt;
+
+    @Column(name = "approved_by")
+    private UUID approvedBy;
 
     @Column(name = "resolved_at")
     private LocalDateTime resolvedAt;

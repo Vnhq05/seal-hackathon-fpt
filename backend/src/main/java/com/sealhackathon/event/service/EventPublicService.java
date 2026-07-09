@@ -1,5 +1,6 @@
 package com.sealhackathon.event.service;
 
+import com.sealhackathon.event.domain.enums.EventStatus;
 import com.sealhackathon.event.dto.snapshot.CriteriaSnapshot;
 import com.sealhackathon.event.dto.snapshot.EventSnapshot;
 import com.sealhackathon.event.dto.snapshot.RoundSnapshot;
@@ -37,6 +38,12 @@ public interface EventPublicService {
     boolean isJudgeAssignedToRound(UUID judgeId, UUID roundId);
 
     boolean isEventActive(UUID eventId);
+
+    EventStatus getResolvedEventStatus(UUID eventId);
+
+    UUID getEventIdByRoundId(UUID roundId);
+
+    boolean isRoundScoringOpen(UUID roundId);
 
     void setLeaderboardPublic(UUID eventId, boolean enabled);
 }

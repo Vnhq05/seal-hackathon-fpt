@@ -7,11 +7,11 @@ import com.sealhackathon.event.domain.ScoringTemplate;
 import com.sealhackathon.event.domain.ScoringTemplateCriterion;
 import com.sealhackathon.event.domain.enums.EventStatus;
 import com.sealhackathon.event.repository.CriteriaRepository;
+import com.sealhackathon.event.repository.EventJudgeAssignmentRepository;
 import com.sealhackathon.event.repository.HackathonEventRepository;
+import com.sealhackathon.event.repository.JudgeAssignmentRepository;
 import com.sealhackathon.event.repository.RoundRepository;
 import com.sealhackathon.event.repository.ScoringTemplateRepository;
-import com.sealhackathon.judging.domain.TeamJudgeAssignment;
-import com.sealhackathon.judging.repository.JudgeScoreRepository;
 import com.sealhackathon.judging.repository.TeamJudgeAssignmentRepository;
 import com.sealhackathon.submission.domain.Submission;
 import com.sealhackathon.submission.repository.SubmissionRepository;
@@ -36,6 +36,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -47,23 +48,26 @@ class JudgingDemoSeederTest {
     @Mock private RoundRepository roundRepository;
     @Mock private TeamRepository teamRepository;
     @Mock private UserRepository userRepository;
+    @Mock private JudgeAssignmentRepository judgeAssignmentRepository;
+    @Mock private EventJudgeAssignmentRepository eventJudgeAssignmentRepository;
     @Mock private ScoringTemplateRepository scoringTemplateRepository;
     @Mock private CriteriaRepository criteriaRepository;
     @Mock private SubmissionRepository submissionRepository;
     @Mock private SubmissionVersionRepository submissionVersionRepository;
     @Mock private TeamJudgeAssignmentRepository teamJudgeAssignmentRepository;
-    @Mock private JudgeScoreRepository judgeScoreRepository;
 
     @InjectMocks private JudgingDemoSeeder judgingDemoSeeder;
 
     @Test
-    void seedIfMissing_shouldSeedCriteriaAssignmentsAndScore_forFallDemoEvent() {
+    void seedIfMissing_shouldSeedCriteriaSubmissionsAndJudges_forAllRounds() {
         UUID eventId = UUID.randomUUID();
         UUID templateId = UUID.randomUUID();
-        UUID roundId = UUID.randomUUID();
-        UUID teamId = UUID.randomUUID();
-        UUID judgeId = UUID.randomUUID();
+        UUID roundOneId = UUID.randomUUID();
+        UUID finalRoundId = UUID.randomUUID();
+        UUID alphaId = UUID.randomUUID();
+        UUID betaId = UUID.randomUUID();
         UUID leaderId = UUID.randomUUID();
+        UUID judgeId = UUID.randomUUID();
 
         HackathonEvent event = HackathonEvent.builder()
                 .name(EventDemoSeeder.DEMO_EVENT_NAME_FALL)
@@ -71,31 +75,50 @@ class JudgingDemoSeederTest {
                 .year(2026)
                 .scoringTemplateId(templateId)
                 .status(EventStatus.OPEN)
-                .startDate(LocalDate.of(2026, 9, 1))
-                .endDate(LocalDate.of(2026, 11, 30))
-                .registrationDeadline(LocalDate.of(2026, 8, 31))
+                .startDate(LocalDate.of(2026, 1, 1))
+                .endDate(LocalDate.of(2026, 12, 31))
+                .registrationDeadline(LocalDate.of(2026, 6, 1))
                 .build();
         event.setId(eventId);
 
-        Round round = Round.builder()
+        Round roundOne = Round.builder()
                 .hackathonEvent(event)
                 .roundNumber(1)
                 .name("Round One")
-                .startDate(LocalDateTime.of(2026, 10, 1, 8, 0))
-                .endDate(LocalDateTime.of(2026, 10, 15, 23, 59))
-                .submissionDeadline(LocalDateTime.of(2026, 10, 14, 23, 59))
-                .scoringDeadline(LocalDateTime.of(2026, 10, 15, 23, 59))
+                .startDate(LocalDateTime.of(2020, 1, 1, 8, 0))
+                .endDate(LocalDateTime.of(2020, 1, 15, 23, 59))
+                .submissionDeadline(LocalDateTime.of(2020, 1, 14, 23, 59))
+                .scoringDeadline(LocalDateTime.of(2020, 1, 15, 23, 59))
                 .advancementCutoff(10)
                 .build();
-        round.setId(roundId);
+        roundOne.setId(roundOneId);
 
-        Team team = Team.builder()
+        Round finalRound = Round.builder()
+                .hackathonEvent(event)
+                .roundNumber(2)
+                .name("Final Round")
+                .startDate(LocalDateTime.of(2020, 2, 1, 8, 0))
+                .endDate(LocalDateTime.of(2020, 2, 15, 23, 59))
+                .submissionDeadline(LocalDateTime.of(2020, 2, 14, 23, 59))
+                .scoringDeadline(LocalDateTime.of(2020, 2, 15, 23, 59))
+                .advancementCutoff(6)
+                .build();
+        finalRound.setId(finalRoundId);
+
+        Team alpha = Team.builder()
                 .eventId(eventId)
                 .name("Team Alpha")
                 .leaderId(leaderId)
                 .status(TeamStatus.CONFIRMED)
                 .build();
-        team.setId(teamId);
+        alpha.setId(alphaId);
+        Team beta = Team.builder()
+                .eventId(eventId)
+                .name("Team Beta")
+                .leaderId(leaderId)
+                .status(TeamStatus.FORMING)
+                .build();
+        beta.setId(betaId);
 
         ScoringTemplate template = ScoringTemplate.builder()
                 .name("Standard Hackathon")
@@ -113,7 +136,7 @@ class JudgingDemoSeederTest {
         template.getCriteria().add(tc);
 
         Criteria savedCriteria = Criteria.builder()
-                .round(round)
+                .round(roundOne)
                 .name("Technical")
                 .weight(50)
                 .sortOrder(0)
@@ -122,23 +145,34 @@ class JudgingDemoSeederTest {
                 .build();
         savedCriteria.setId(UUID.randomUUID());
 
-        User lecturer1 = User.builder().email("lecturer1@fpt.edu.vn").build();
-        lecturer1.setId(judgeId);
+        User judge = User.builder().email("lecturer1@fpt.edu.vn").build();
+        judge.setId(judgeId);
 
         when(eventRepository.findAll()).thenReturn(List.of(event));
-        when(roundRepository.findByHackathonEventIdOrderByRoundNumberAsc(eventId)).thenReturn(List.of(round));
-        when(teamRepository.findByEventId(eventId)).thenReturn(List.of(team));
-        when(userRepository.findByEmail("lecturer1@fpt.edu.vn")).thenReturn(Optional.of(lecturer1));
+        when(roundRepository.findByHackathonEventIdOrderByRoundNumberAsc(eventId))
+                .thenReturn(List.of(roundOne, finalRound));
+        when(teamRepository.findByEventId(eventId)).thenReturn(List.of(alpha, beta));
+        when(userRepository.findByEmail("lecturer1@fpt.edu.vn")).thenReturn(Optional.of(judge));
         when(userRepository.findByEmail("lecturer2@fpt.edu.vn")).thenReturn(Optional.empty());
-        when(criteriaRepository.findByRoundIdOrderBySortOrderAsc(roundId))
-                .thenReturn(List.of())
-                .thenReturn(List.of(savedCriteria));
+        when(userRepository.findByEmail("lecturer3@fpt.edu.vn")).thenReturn(Optional.empty());
+        when(eventJudgeAssignmentRepository.existsByHackathonEventIdAndJudgeUserId(eventId, judgeId))
+                .thenReturn(false);
+        when(judgeAssignmentRepository.findByRoundIdAndJudgeUserIdAndActiveTrue(roundOneId, judgeId))
+                .thenReturn(List.of());
+        when(judgeAssignmentRepository.findByRoundIdAndJudgeUserIdAndActiveTrue(finalRoundId, judgeId))
+                .thenReturn(List.of());
+        when(criteriaRepository.findByRoundIdOrderBySortOrderAsc(any()))
+                .thenReturn(List.of());
         when(scoringTemplateRepository.findById(templateId)).thenReturn(Optional.of(template));
         when(criteriaRepository.save(any(Criteria.class))).thenReturn(savedCriteria);
-        when(submissionRepository.findByTeamIdAndRoundId(teamId, roundId)).thenReturn(Optional.empty());
+        when(submissionRepository.findByTeamIdAndRoundId(any(), any())).thenReturn(Optional.empty());
+        when(teamJudgeAssignmentRepository.existsByTeamIdAndRoundIdAndJudgeUserId(any(), any(), any()))
+                .thenReturn(false);
         when(submissionRepository.save(any(Submission.class))).thenAnswer(inv -> {
             Submission s = inv.getArgument(0);
-            s.setId(UUID.randomUUID());
+            if (s.getId() == null) {
+                s.setId(UUID.randomUUID());
+            }
             return s;
         });
         when(submissionVersionRepository.save(any())).thenAnswer(inv -> {
@@ -149,19 +183,19 @@ class JudgingDemoSeederTest {
             }
             return v;
         });
-        when(teamJudgeAssignmentRepository.existsByTeamIdAndRoundIdAndJudgeUserId(teamId, roundId, judgeId))
-                .thenReturn(false);
-        when(judgeScoreRepository.findByJudgeUserIdAndSubmissionId(any(), any())).thenReturn(Optional.empty());
-        when(judgeScoreRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         judgingDemoSeeder.seedIfMissing();
 
-        verify(criteriaRepository).save(any(Criteria.class));
-        verify(teamJudgeAssignmentRepository).save(any(TeamJudgeAssignment.class));
-        verify(judgeScoreRepository).save(any());
+        verify(eventRepository).save(any(HackathonEvent.class));
+        verify(roundRepository, atLeast(2)).save(any(Round.class));
+        verify(eventJudgeAssignmentRepository).save(any());
+        verify(judgeAssignmentRepository, atLeast(2)).save(any());
+        verify(criteriaRepository, atLeast(2)).save(any(Criteria.class));
+        verify(submissionRepository, atLeast(2)).save(any(Submission.class));
+        verify(teamJudgeAssignmentRepository, atLeast(2)).save(any());
 
         ArgumentCaptor<Criteria> criteriaCaptor = ArgumentCaptor.forClass(Criteria.class);
-        verify(criteriaRepository).save(criteriaCaptor.capture());
+        verify(criteriaRepository, atLeast(1)).save(criteriaCaptor.capture());
         assertThat(criteriaCaptor.getValue().getMinScore()).isEqualTo(1);
         assertThat(criteriaCaptor.getValue().getMaxScore()).isEqualTo(5);
     }
@@ -173,6 +207,7 @@ class JudgingDemoSeederTest {
         judgingDemoSeeder.seedIfMissing();
 
         verify(criteriaRepository, never()).save(any());
-        verify(teamJudgeAssignmentRepository, never()).save(any());
+        verify(submissionRepository, never()).save(any());
+        verify(judgeAssignmentRepository, never()).save(any());
     }
 }

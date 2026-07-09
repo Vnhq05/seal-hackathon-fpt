@@ -18,15 +18,12 @@ import {
   type TrackResponse,
 } from "@/lib/api";
 import {
-  useActivateJudge,
   useAssignJudge,
   useCompetitionGroups,
-  useDeactivateJudge,
   useEventStaffJudges,
   useJudgeAssignments,
   useJudgeWorkloadPreview,
   useRemoveJudge,
-  useReplaceJudge,
   useTeamAssignmentsOverview,
   useUpdateTeamGroup,
 } from "@/features/admin/hooks/use-admin-assignments";
@@ -134,37 +131,25 @@ function JudgePoolRow({
   eventId,
   roundId,
   assignment,
-  eventJudgeOptions,
 }: {
   eventId: string;
   roundId: string;
   assignment: JudgeAssignmentResponse;
-  eventJudgeOptions: { userId: string; fullName: string | null; email: string | null }[];
 }) {
-  const { mutate: remove } = useRemoveJudge(eventId, roundId);
-  const { mutate: deactivate } = useDeactivateJudge(eventId, roundId);
-  const { mutate: activate } = useActivateJudge(eventId, roundId);
-  const { mutate: replace } = useReplaceJudge(eventId, roundId);
-  const [showReplace, setShowReplace] = useState(false);
-  const [newJudgeId, setNewJudgeId] = useState("");
-  const [reason, setReason] = useState("");
+  const { mutate: remove, isPending: isRemoving } = useRemoveJudge(eventId, roundId);
+  const [removeError, setRemoveError] = useState<string | null>(null);
 
-  const handleDeactivate = () => {
-    const r = window.prompt("Reason for deactivation (required):");
-    if (!r?.trim()) return;
-    deactivate({ assignmentId: assignment.id, reason: r.trim() });
-  };
-
-  const handleReplace = () => {
-    if (!newJudgeId || !reason.trim()) return;
-    replace(
-      { assignmentId: assignment.id, newJudgeUserId: newJudgeId, reason: reason.trim() },
-      { onSuccess: () => setShowReplace(false) },
-    );
+  const handleRemove = () => {
+    const label = assignment.judgeFullName ?? assignment.judgeEmail ?? "this judge";
+    if (!window.confirm(`Remove ${label} from the judge pool?`)) return;
+    setRemoveError(null);
+    remove(assignment.id, {
+      onError: (err: Error) => setRemoveError(err.message),
+    });
   };
 
   return (
-    <tr className={`border-t border-seal-border ${!assignment.active ? "opacity-60" : ""}`}>
+    <tr className="border-t border-seal-border">
       <td className="px-4 py-3 text-sm font-medium text-seal-text">
         {assignment.judgeFullName ?? "Unknown"}
         {assignment.conflictRisk && (
@@ -188,47 +173,16 @@ function JudgePoolRow({
         {new Date(assignment.assignedAt).toLocaleString()}
       </td>
       <td className="px-4 py-3">
-        <div className="flex flex-wrap gap-2">
-          {assignment.active ? (
-            <>
-              <button type="button" onClick={handleDeactivate} className="text-xs text-amber-700 hover:underline">
-                Deactivate
-              </button>
-              <button type="button" onClick={() => setShowReplace((v) => !v)} className="text-xs text-seal-text hover:underline">
-                Replace
-              </button>
-            </>
-          ) : (
-            <button type="button" onClick={() => activate(assignment.id)} className="text-xs text-emerald-700 hover:underline">
-              Activate
-            </button>
-          )}
-          <button type="button" onClick={() => remove(assignment.id)} className="text-xs text-red-700 hover:underline">
-            Remove
-          </button>
-        </div>
-        {showReplace && (
-          <div className="mt-2 flex flex-col gap-1">
-            <select
-              value={newJudgeId}
-              onChange={(e) => setNewJudgeId(e.target.value)}
-              className="border px-2 py-1 text-xs"
-            >
-              <option value="">New judge...</option>
-              {eventJudgeOptions.map((j) => (
-                <option key={j.userId} value={j.userId}>{j.fullName ?? j.email}</option>
-              ))}
-            </select>
-            <input
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              placeholder="Reason"
-              className="border px-2 py-1 text-xs"
-            />
-            <button type="button" onClick={handleReplace} className="text-xs font-semibold text-seal-text">
-              Confirm replace
-            </button>
-          </div>
+        <button
+          type="button"
+          onClick={handleRemove}
+          disabled={isRemoving}
+          className="text-xs text-red-700 hover:underline disabled:opacity-50"
+        >
+          {isRemoving ? "Removing..." : "Remove"}
+        </button>
+        {removeError && (
+          <p className="mt-1 max-w-[14rem] text-xs text-red-600">{removeError}</p>
         )}
       </td>
     </tr>
@@ -433,7 +387,6 @@ function JudgePoolSection({
                   eventId={eventId}
                   roundId={roundId}
                   assignment={j}
-                  eventJudgeOptions={eventJudges}
                 />
               ))}
               {poolJudges.length === 0 && (

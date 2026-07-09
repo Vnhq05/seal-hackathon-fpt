@@ -215,15 +215,7 @@ export function TeamDetailPanel({ event, team }: TeamDetailPanelProps) {
         )}
         {!needsMoreMembers && !team.trackId && isSeal && (
           <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs text-blue-800">
-            SEAL Hackathon: teams pick their track during the draw session run by organizers.
-            {isLeader && (
-              <>
-                {" "}
-                <Link href="/student/tracks/draw" className="font-semibold underline">
-                  Go to draw page
-                </Link>
-              </>
-            )}
+            SEAL Hackathon: track assignment is managed by organizers. Check back after the draw session.
           </div>
         )}
 
@@ -235,12 +227,7 @@ export function TeamDetailPanel({ event, team }: TeamDetailPanelProps) {
               {selectedTrack.topic && ` — ${selectedTrack.topic}`}
             </span>
           ) : isSeal ? (
-            <Link
-              href="/student/tracks/draw"
-              className="border-2 border-navy bg-seal-yellow px-3 py-1.5 text-navy font-mono text-xs font-bold shadow-[4px_4px_0_0_#0c1228]"
-            >
-              {isLeader ? "Go to track draw" : "View draw status"}
-            </Link>
+            <span className="text-xs text-seal-text-muted">Not selected — organizers assign tracks</span>
           ) : team.canSelectTrack && isLeader ? (
             <button
               onClick={() => setShowTrackPicker((v) => !v)}

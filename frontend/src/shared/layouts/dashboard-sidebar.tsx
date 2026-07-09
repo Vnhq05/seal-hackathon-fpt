@@ -32,16 +32,6 @@ const NAV_ITEMS = [
     ),
   },
   {
-    href: "/student/tracks/draw",
-    label: "Competition track",
-    icon: (
-      <svg width="18" height="18" viewBox="0 0 18 18" {...svgProps}>
-        <rect x="2" y="3" width="14" height="12" rx="1" {...s15} />
-        <path d="M6 7h6M6 11h4" {...s15} strokeLinecap="round" />
-      </svg>
-    ),
-  },
-  {
     href: "/student/submissions",
     label: "Submissions",
     icon: (

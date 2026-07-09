@@ -66,7 +66,10 @@ export const mentorInvitationApi = {
   },
 
   getRoomByTeam(eventId: string, teamId: string): Promise<MentorRoomResponse | null> {
-    return api.get<MentorRoomResponse | null>(`/events/${eventId}/teams/${teamId}/mentor-room`).catch(() => null);
+    return api
+      .get<MentorRoomResponse | null>(`/events/${eventId}/teams/${teamId}/mentor-room`)
+      .then((room) => room ?? null)
+      .catch(() => null);
   },
 
   getMentorActiveRooms(eventId: string): Promise<MentorRoomResponse[]> {
