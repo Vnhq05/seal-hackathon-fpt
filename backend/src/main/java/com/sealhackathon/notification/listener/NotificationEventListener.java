@@ -213,7 +213,7 @@ public class NotificationEventListener {
         resolveCoordinatorId(event.eventId()).ifPresent(recipients::add);
 
         notify(NotificationType.TEAM_PROGRESS_ALERT,
-                "Cảnh báo tiến độ đội",
+                "Team progress alert",
                 buildProgressAlertMessage(event.reasons()),
                 event.teamId(), "Team",
                 recipients.stream().distinct().toList());
@@ -285,11 +285,11 @@ public class NotificationEventListener {
 
     private String describeProgressReason(ProgressRiskReason reason) {
         return switch (reason) {
-            case NOT_STARTED -> "Đội chưa bắt đầu nộp bài trước deadline.";
-            case SLIDE_ONLY_PAST_GATE -> "Đã qua slide deadline nhưng chưa nộp source/demo.";
-            case SINGLE_VERSION_LAST_MINUTE -> "Chỉ nộp một lần sát giờ, chưa chỉnh sửa lại.";
-            case STALLED -> "Không có bản cập nhật mới trong thời gian dài.";
-            case MISSING_ATTACHMENT -> "Bài nộp thiếu file đính kèm.";
+            case NOT_STARTED -> "Team has not started submitting before the deadline.";
+            case SLIDE_ONLY_PAST_GATE -> "Slide deadline passed but source/demo not submitted.";
+            case SINGLE_VERSION_LAST_MINUTE -> "Only one last-minute submission with no follow-up edits.";
+            case STALLED -> "No recent updates for an extended period.";
+            case MISSING_ATTACHMENT -> "Submission is missing required attachments.";
         };
     }
 

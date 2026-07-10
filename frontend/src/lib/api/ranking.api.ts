@@ -51,28 +51,6 @@ export interface PublishedResultResponse {
   advancements: AdvancementResponse[];
 }
 
-export interface DisputeRequest {
-  reason: string;
-}
-
-export interface ResolveDisputeRequest {
-  action: "RESOLVE" | "REJECT";
-  resolution: string;
-}
-
-export interface DisputeResponse {
-  id: string;
-  teamId: string;
-  roundId: string;
-  filedBy: string;
-  reason: string;
-  status: "PENDING" | "UNDER_REVIEW" | "RESOLVED" | "REJECTED";
-  filedAt: string;
-  resolvedAt: string | null;
-  resolvedBy: string | null;
-  resolution: string | null;
-}
-
 // ═══ API calls ═══
 
 export const rankingApi = {
@@ -105,21 +83,5 @@ export const rankingApi = {
 
   getPublishedResults(roundId: string): Promise<PublishedResultResponse> {
     return api.get<PublishedResultResponse>(`/rounds/${roundId}/results`);
-  },
-
-  fileDispute(roundId: string, body: DisputeRequest): Promise<DisputeResponse> {
-    return api.post<DisputeResponse>(`/rounds/${roundId}/disputes`, body);
-  },
-
-  getDisputes(roundId: string): Promise<DisputeResponse[]> {
-    return api.get<DisputeResponse[]>(`/rounds/${roundId}/disputes`);
-  },
-
-  getDisputeById(roundId: string, disputeId: string): Promise<DisputeResponse> {
-    return api.get<DisputeResponse>(`/rounds/${roundId}/disputes/${disputeId}`);
-  },
-
-  resolveDispute(roundId: string, disputeId: string, body: ResolveDisputeRequest): Promise<DisputeResponse> {
-    return api.post<DisputeResponse>(`/rounds/${roundId}/disputes/${disputeId}/resolve`, body);
   },
 };

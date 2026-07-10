@@ -5,6 +5,10 @@ import { PortalTopNav } from "@/shared/layouts/portal-topnav";
 const BREADCRUMB_MAP: Record<string, { label: string; href: string }[]> = {
   "/lecturer": [{ label: "Dashboard", href: "/lecturer" }],
   "/lecturer/rounds": [{ label: "Rounds", href: "/lecturer/rounds" }],
+  "/lecturer/feedback/new": [
+    { label: "Dashboard", href: "/lecturer" },
+    { label: "New Feedback", href: "/lecturer/feedback/new" },
+  ],
   "/lecturer/settings": [{ label: "Settings", href: "/lecturer/settings" }],
   "/lecturer/support": [{ label: "Support", href: "/lecturer/support" }],
 };

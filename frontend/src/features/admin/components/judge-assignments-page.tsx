@@ -272,7 +272,7 @@ function JudgePoolSection({
         <h3 className="text-sm font-bold text-seal-text">Judge pool</h3>
         {activeJudgeCount < minJudgesRequired && (
           <span className="rounded-md bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">
-            Chưa đủ giám khảo (tối thiểu {minJudgesRequired})
+            Not enough judges (minimum {minJudgesRequired})
           </span>
         )}
         {incompleteFromApi.map((s) => (
@@ -333,7 +333,7 @@ function JudgePoolSection({
           </select>
           {eventJudges.length === 0 && (
             <p className="mt-1 text-xs text-amber-700">
-              Chưa có judge trong roster. Thêm tại{" "}
+              No judges in the roster yet. Add them at{" "}
               <Link
                 href={`${portalBase}/hackathons/${eventId}?tab=lecture`}
                 className="font-semibold underline"

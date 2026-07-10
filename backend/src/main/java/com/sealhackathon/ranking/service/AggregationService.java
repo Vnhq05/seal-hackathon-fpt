@@ -192,14 +192,6 @@ public class AggregationService {
         return total.setScale(4, RoundingMode.HALF_UP);
     }
 
-    /** @deprecated Use {@link #computeRoundScore} — kept for tests migrating from old API. */
-    @Deprecated
-    BigDecimal computeFinalScore(List<JudgeScoreSnapshot> scores,
-                                 Map<UUID, Integer> weightMap,
-                                 List<CriteriaSnapshot> criteria) {
-        return computeRoundScore(scores, weightMap, criteria);
-    }
-
     Map<UUID, BigDecimal> computeCriteriaAverages(List<JudgeScoreSnapshot> scores,
                                                    List<CriteriaSnapshot> criteria) {
         return criteria.stream().collect(Collectors.toMap(

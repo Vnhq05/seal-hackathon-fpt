@@ -47,7 +47,9 @@ public class EventDemoSeeder {
 
     public static final String DEV_COORDINATOR_EMAIL = "coordinator@seal.com";
 
-    public static final String DEMO_EVENT_NAME_FALL = "SEAL Fall Hackathon Demo";
+    /** Dev event for submission deadline / lock smoke tests — adjust round deadline before it passes. */
+    public static final String DEMO_EVENT_NAME_FALL = "DEV Submission Lock Test";
+    private static final String DEMO_EVENT_NAME_FALL_LEGACY = "SEAL Fall Hackathon Demo";
     /** Primary judge account for local scoring smoke tests (password: app.seeder.default-password). */
     public static final String DEMO_TEST_JUDGE_EMAIL = "lecturer2@fpt.edu.vn";
     public static final String DEMO_TEST_JUDGE_PASSWORD_HINT = "12345678";
@@ -66,6 +68,7 @@ public class EventDemoSeeder {
     @Transactional
     public void seed() {
         normalizeExistingSeasons();
+        migrateLegacyDemoEventName();
 
         if (hasFallDemoEvent()) {
             log.info("Fall {} demo event already present — skipping seed", YEAR);
@@ -102,7 +105,7 @@ public class EventDemoSeeder {
                 .endDate(now.toLocalDate().plusDays(7))
                 .registrationOpenDate(now.toLocalDate().minusMonths(2))
                 .registrationDeadline(now.toLocalDate().plusDays(1))
-                .description("Demo hackathon for Fall " + YEAR + " — judge assignment testing")
+                .description("Dev event for testing submission deadlines and submit lock — adjust round submission deadline before it passes")
                 .location("FPT University Da Nang")
                 .format("OFFLINE")
                 .minTeam(3)
@@ -240,6 +243,21 @@ public class EventDemoSeeder {
                 log.info("Normalized event '{}' season to {}", event.getName(), normalized);
             }
         });
+    }
+
+    private void migrateLegacyDemoEventName() {
+        eventRepository.findAll().stream()
+                .filter(e -> FALL.equalsIgnoreCase(e.getSeason())
+                        && YEAR == e.getYear()
+                        && DEMO_EVENT_NAME_FALL_LEGACY.equals(e.getName()))
+                .findFirst()
+                .ifPresent(event -> {
+                    event.setName(DEMO_EVENT_NAME_FALL);
+                    event.setDescription(
+                            "Dev event for testing submission deadlines and submit lock — adjust round submission deadline before it passes");
+                    eventRepository.save(event);
+                    log.info("Renamed legacy demo event '{}' → '{}'", DEMO_EVENT_NAME_FALL_LEGACY, DEMO_EVENT_NAME_FALL);
+                });
     }
 
     private boolean hasFallDemoEvent() {

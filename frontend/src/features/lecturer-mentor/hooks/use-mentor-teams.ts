@@ -10,6 +10,7 @@ import {
   findCurrentRound,
   mapTeamToMentorTeam,
 } from "@/features/lecturer-mentor/lib/mentor-team-mappers";
+import { isSubmissionDeadlineOpen } from "@/features/progress/lib/progress.utils";
 
 export const MENTOR_TEAMS_KEY = "mentor-teams" as const;
 
@@ -57,8 +58,16 @@ export function useMentorTeams(params?: MentorTeamsParams) {
       await Promise.all(
         eventIds.map(async (eventId) => {
           const atRisk = await progressApi.getMentorAtRisk(eventId).catch(() => []);
+          const meta = eventMeta.get(eventId);
+          const currentRound = findCurrentRound(meta?.rounds ?? []);
+          const deadline = currentRound?.submissionDeadline;
           for (const entry of atRisk) {
-            progressByTeamId.set(entry.teamId, entry);
+            if (
+              entry.riskLevel !== "OK" &&
+              isSubmissionDeadlineOpen(deadline, entry.hoursUntilDeadline)
+            ) {
+              progressByTeamId.set(entry.teamId, entry);
+            }
           }
         }),
       );

@@ -555,7 +555,7 @@ Result is clamped to `[criteria.min_score, criteria.max_score]`. Fixes score his
 
 ### Dev demo judging (Fall 2026)
 
-On backend startup, [`JudgingDemoSeeder`](../../backend/src/main/java/com/sealhackathon/infrastructure/config/JudgingDemoSeeder.java) idempotently seeds for **SEAL Fall Hackathon Demo** (Team Alpha, Round One):
+On backend startup, [`JudgingDemoSeeder`](../../backend/src/main/java/com/sealhackathon/infrastructure/config/JudgingDemoSeeder.java) idempotently seeds for **DEV Submission Lock Test** (Team Alpha, Round One):
 
 - Round criteria from scoring template (`minScore=1`, `maxScore=5`)
 - Submission + team-judge assignments (`lecturer1`, `lecturer2`)

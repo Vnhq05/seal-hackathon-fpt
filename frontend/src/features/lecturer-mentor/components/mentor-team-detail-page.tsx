@@ -82,6 +82,15 @@ export function MentorTeamDetailPage({ teamId }: Props) {
 
       <MentorTeamDetailHeader team={team} />
 
+      <div className="flex items-center gap-3">
+        <Link
+          href={`/lecturer/feedback/new?teamId=${encodeURIComponent(teamId)}`}
+          className="inline-flex items-center border-2 border-navy bg-white px-4 py-2 text-sm font-semibold text-navy shadow-[3px_3px_0_0_#0c1228] transition-transform hover:translate-x-px hover:translate-y-px hover:shadow-[2px_2px_0_0_#0c1228]"
+        >
+          New Feedback
+        </Link>
+      </div>
+
       <div className="grid grid-cols-3 gap-6">
         <div>
           <MentorTeamMembers

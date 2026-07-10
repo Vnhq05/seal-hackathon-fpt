@@ -4,6 +4,7 @@ import { progressApi } from "@/lib/api/progress.api";
 import { roundApi } from "@/lib/api/round.api";
 import { mentorInvitationApi } from "@/lib/api/mentor-invitation.api";
 import { findCurrentRound } from "@/features/lecturer-mentor/lib/mentor-team-mappers";
+import { isSubmissionDeadlineOpen } from "@/features/progress/lib/progress.utils";
 import type {
   AtRiskTeamEntry,
   EventAtRiskGroup,
@@ -19,10 +20,15 @@ async function buildStaffGroups(): Promise<EventAtRiskGroup[]> {
     const rounds = await roundApi.list(event.id);
     const currentRound = findCurrentRound(rounds);
     if (!currentRound) continue;
+    if (!isSubmissionDeadlineOpen(currentRound.submissionDeadline)) continue;
 
     const progress = await progressApi.getByRound(event.id, currentRound.id);
     const atRisk: AtRiskTeamEntry[] = progress
-      .filter((p) => p.riskLevel !== "OK")
+      .filter(
+        (p) =>
+          p.riskLevel !== "OK" &&
+          isSubmissionDeadlineOpen(currentRound.submissionDeadline, p.hoursUntilDeadline),
+      )
       .map((p) => ({
         ...p,
         submissionDeadline: currentRound.submissionDeadline,
@@ -56,11 +62,17 @@ async function buildMentorGroups(): Promise<EventAtRiskGroup[]> {
 
     const currentRound = findCurrentRound(rounds);
     const deadline = currentRound?.submissionDeadline ?? "";
+    if (deadline && !isSubmissionDeadlineOpen(deadline)) continue;
+
+    const openAtRisk = atRisk.filter((team) =>
+      isSubmissionDeadlineOpen(deadline || null, team.hoursUntilDeadline),
+    );
+    if (openAtRisk.length === 0) continue;
 
     groups.push({
       eventId,
       eventName: event.name,
-      teams: atRisk.map((team) => ({
+      teams: openAtRisk.map((team) => ({
         ...team,
         submissionDeadline: deadline,
       })),

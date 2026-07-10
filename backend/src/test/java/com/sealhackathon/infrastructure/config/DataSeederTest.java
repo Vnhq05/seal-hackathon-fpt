@@ -43,7 +43,13 @@ class DataSeederTest {
     @Mock private ScoringTemplateRepository scoringTemplateRepository;
     @Mock private SystemConfigRepository systemConfigRepository;
     @Mock private EventDemoSeeder eventDemoSeeder;
+    @Mock private SubmissionDemoSeeder submissionDemoSeeder;
+    @Mock private ScoringDemoSeeder scoringDemoSeeder;
+    @Mock private FeedbackDemoSeeder feedbackDemoSeeder;
+    @Mock private ProgressDemoSeeder progressDemoSeeder;
     @Mock private JudgingDemoSeeder judgingDemoSeeder;
+    @Mock private PublishReadyDemoSeeder publishReadyDemoSeeder;
+    @Mock private OtherEventStudentSeeder otherEventStudentSeeder;
     @Mock private HackathonEventRepository eventRepository;
     @Mock private TransactionTemplate transactionTemplate;
 

@@ -41,11 +41,13 @@
 
 | Value | Mô tả rule |
 |-------|------------|
-| `NOT_STARTED` | Chưa có submission hoặc DRAFT (0 version) và còn ≤ `alert-lead-time-hours` tới deadline |
-| `SLIDE_ONLY_PAST_GATE` | SEAL + PRELIMINARY: qua `slideDeadline`, chỉ có slide, chưa có github/demo |
-| `SINGLE_VERSION_LAST_MINUTE` | Đúng 1 version, nộp trong cửa sổ lead-time trước deadline |
+| `NOT_STARTED` | Chưa có submission hoặc DRAFT (0 version), trong cửa sổ ≤ `alert-lead-time-hours` trước deadline, và **chưa quá** `submissionDeadline` |
+| `SLIDE_ONLY_PAST_GATE` | SEAL + PRELIMINARY: qua `slideDeadline`, chỉ có slide, chưa có github/demo (chỉ khi còn trước `submissionDeadline`) |
+| `SINGLE_VERSION_LAST_MINUTE` | Đúng 1 version, nộp trong cửa sổ lead-time trước deadline (chỉ khi còn trước `submissionDeadline`) |
 | `STALLED` | ≥1 version nhưng không cập nhật trong `stalled-hours`, còn ≤48h tới deadline |
-| `MISSING_ATTACHMENT` | `SUBMITTED` nhưng latest version không có attachment |
+| `MISSING_ATTACHMENT` | `SUBMITTED` nhưng latest version không có attachment (chỉ khi còn trước `submissionDeadline`) |
+
+> **Lưu ý:** Sau khi `submissionDeadline` kết thúc, evaluation luôn trả `OK` (không còn alert / banner).
 
 ### ProgressRiskLevel
 
@@ -218,8 +220,8 @@ Khi scheduler phát hiện risk và vượt cooldown, hệ thống tạo notific
 | Field | Giá trị |
 |-------|---------|
 | `type` | `TEAM_PROGRESS_ALERT` |
-| `title` | `Cảnh báo tiến độ đội` |
-| `message` | Câu tiếng Việt ghép từ `reasons` |
+| `title` | `Team progress alert` |
+| `message` | English sentences joined from `reasons` |
 | `referenceId` | `teamId` |
 | `referenceType` | `Team` |
 

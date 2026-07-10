@@ -56,7 +56,7 @@ export function TeamMonitoringHeader({
           <div style={{ width: 8, height: 8, borderRadius: 9999, backgroundColor: "#f59e0b", flexShrink: 0 }} />
           <span style={{ fontSize: 14, fontWeight: 400, color: "#8891a5", lineHeight: "21px" }}>
             {submittedCount} / {totalTeams} teams submitted for {currentRound}
-            {deadline && ` — deadline closes in ${deadline}`}
+            {deadline ? ` — deadline ${deadline}` : ""}
           </span>
         </div>
       </div>

@@ -26,7 +26,9 @@ async function aggregateActiveEventProgress() {
       const roundProgress = await progressApi.getByRound(event.id, currentRound.id);
       activeTeams += roundProgress.length;
       totalSubmissions += roundProgress.filter((p) => p.totalVersions > 0).length;
-      flaggedTeams += roundProgress.filter((p) => p.riskLevel !== "OK").length;
+      flaggedTeams += roundProgress.filter(
+        (p) => p.riskLevel !== "OK" && p.hoursUntilDeadline >= 0,
+      ).length;
     } catch {
       // ignore per-event failures on dashboard aggregate
     }

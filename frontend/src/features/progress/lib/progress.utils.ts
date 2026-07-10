@@ -46,3 +46,17 @@ export function formatRealtimeDeadlineDetail(ms: number | null): string {
   if (ms <= 0) return "deadline passed";
   return `${formatRealtimeDeadline(ms)} until deadline`;
 }
+
+/** Progress alerts only apply while the submission window is still open. */
+export function isSubmissionDeadlineOpen(
+  submissionDeadline?: string | null,
+  hoursUntilDeadline?: number | null,
+): boolean {
+  if (typeof hoursUntilDeadline === "number" && hoursUntilDeadline < 0) {
+    return false;
+  }
+  if (!submissionDeadline) return true;
+  const ms = new Date(submissionDeadline).getTime();
+  if (Number.isNaN(ms)) return true;
+  return ms > Date.now();
+}

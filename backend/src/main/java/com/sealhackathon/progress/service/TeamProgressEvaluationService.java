@@ -38,6 +38,13 @@ public class TeamProgressEvaluationService {
         long hoursUntilDeadline = submissionDeadline != null
                 ? Duration.between(now, submissionDeadline).toHours()
                 : Long.MAX_VALUE;
+        LocalDateTime lastSubmittedAt = latestVersion != null ? latestVersion.getSubmittedAt() : null;
+
+        // Alerts only apply while the submission window is still open.
+        if (submissionDeadline != null && !now.isBefore(submissionDeadline)) {
+            return new EvaluationResult(
+                    ProgressRiskLevel.OK, List.of(), totalVersions, lastSubmittedAt, hoursUntilDeadline);
+        }
 
         List<ProgressRiskReason> reasons = new ArrayList<>();
 
@@ -86,7 +93,6 @@ public class TeamProgressEvaluationService {
         }
 
         ProgressRiskLevel riskLevel = resolveRiskLevel(reasons);
-        LocalDateTime lastSubmittedAt = latestVersion != null ? latestVersion.getSubmittedAt() : null;
 
         return new EvaluationResult(riskLevel, reasons, totalVersions, lastSubmittedAt, hoursUntilDeadline);
     }

@@ -469,7 +469,7 @@ public class JudgeAssignmentService {
                     HttpStatus.BAD_REQUEST) {};
         }
         if (scope.scope() == AssignmentScope.GROUP && scope.trackId() == null) {
-            throw new BusinessException("Phải chọn Track trước khi chọn Group", HttpStatus.BAD_REQUEST) {};
+            throw new BusinessException("Select a track before choosing a group", HttpStatus.BAD_REQUEST) {};
         }
         if (scope.trackId() != null) {
             validateTrackBelongsToEvent(eventId, scope.trackId());
@@ -583,7 +583,7 @@ public class JudgeAssignmentService {
     private void assertNotPublished(UUID roundId) {
         if (publishedResultRepository.existsByRoundId(roundId)) {
             throw new BusinessException(
-                    "Không thể thay đổi phân công sau khi kết quả đã công bố.",
+                    "Cannot change assignments after results have been published.",
                     HttpStatus.CONFLICT) {};
         }
     }

@@ -48,19 +48,3 @@ export function universityMatchesEmail(
         }) === 0,
     );
 }
-
-export function domainsForUniversity(
-  universityName: string,
-  domains: AllowedEmailDomainResponse[],
-): string[] {
-  const normalizedUniversity = universityName.trim();
-  return domains
-    .filter(
-      (d) =>
-        d.universityLabel != null &&
-        normalizedUniversity.localeCompare(d.universityLabel.trim(), "vi", {
-          sensitivity: "accent",
-        }) === 0,
-    )
-    .map((d) => d.domain);
-}

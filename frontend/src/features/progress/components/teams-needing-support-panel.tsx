@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useTeamsNeedingSupport } from "@/features/progress/hooks/use-teams-needing-support";
 import { useRealtimeCountdown } from "@/features/progress/hooks/use-realtime-countdown";
 import {
@@ -14,7 +14,7 @@ import type {
 } from "@/features/progress/types/progress-board.types";
 
 const DEFAULT_EVENTS_VISIBLE = 2;
-const DEFAULT_TEAMS_PER_EVENT = 3;
+const DEFAULT_TEAMS_VISIBLE = 2;
 
 function RiskBadge({ level }: { level: AtRiskTeamEntry["riskLevel"] }) {
   const isCritical = level === "CRITICAL";
@@ -22,8 +22,8 @@ function RiskBadge({ level }: { level: AtRiskTeamEntry["riskLevel"] }) {
     <span
       className="shrink-0 rounded px-2 py-1 text-xs font-bold"
       style={{
-        color: isCritical ? "#be123c" : "#b45309",
-        backgroundColor: isCritical ? "rgba(225,29,72,0.1)" : "rgba(245,158,11,0.2)",
+        color: isCritical ? "#93000a" : "#b45309",
+        backgroundColor: isCritical ? "rgba(186,26,26,0.12)" : "rgba(245,158,11,0.2)",
       }}
     >
       {isCritical ? "Critical" : "At risk"}
@@ -34,11 +34,15 @@ function RiskBadge({ level }: { level: AtRiskTeamEntry["riskLevel"] }) {
 function TeamProgressRow({ team }: { team: AtRiskTeamEntry }) {
   const msLeft = useRealtimeCountdown(team.submissionDeadline);
 
+  if (msLeft !== null && msLeft <= 0) {
+    return null;
+  }
+
   return (
-    <li className="flex items-center justify-between gap-4 border-t border-amber-200 bg-amber-50/70 px-5 py-3">
+    <li className="flex items-center justify-between gap-4 border-t border-[#f5c2bc] bg-[#ffdad6]/70 px-5 py-3">
       <div>
         <p className="font-semibold text-navy">{team.teamName}</p>
-        <p className="text-xs text-amber-900/70">
+        <p className="text-xs text-[#93000a]/70">
           {team.reasons.map(progressReasonLabel).join(" · ")} · {formatRealtimeDeadlineDetail(msLeft)}
         </p>
       </div>
@@ -47,101 +51,110 @@ function TeamProgressRow({ team }: { team: AtRiskTeamEntry }) {
   );
 }
 
-function EventGroupSection({
-  group,
-  teamsLimit,
-}: {
-  group: EventAtRiskGroup;
-  teamsLimit?: number;
-}) {
-  const visibleTeams = teamsLimit ? group.teams.slice(0, teamsLimit) : group.teams;
-  const hiddenCount = teamsLimit ? Math.max(0, group.teams.length - teamsLimit) : 0;
+function EventSupportCard({ group }: { group: EventAtRiskGroup }) {
+  const [expanded, setExpanded] = useState(false);
+  const deadlineMs = useRealtimeCountdown(group.teams[0]?.submissionDeadline);
+  const openTeams =
+    deadlineMs !== null && deadlineMs <= 0
+      ? []
+      : group.teams;
+
+  if (openTeams.length === 0) {
+    return null;
+  }
+
+  const teamCount = openTeams.length;
+  const hasMore = teamCount > DEFAULT_TEAMS_VISIBLE;
+  const visibleTeams = expanded ? openTeams : openTeams.slice(0, DEFAULT_TEAMS_VISIBLE);
+  const hiddenCount = Math.max(0, teamCount - DEFAULT_TEAMS_VISIBLE);
 
   return (
-    <section>
-      <div className="border-t-2 border-amber-300 bg-amber-200/80 px-5 py-2.5">
-        <h3 className="font-mono text-sm font-bold text-navy">{group.eventName}</h3>
+    <div className="border-2 border-[#ba1a1a] bg-[#ffdad6] shadow-[4px_4px_0_0_#0c1228]">
+      <div className="border-b-2 border-[#ba1a1a] bg-[#f5c2bc] px-5 py-2.5">
+        <h2 className="font-mono text-sm font-bold text-[#93000a]">{group.eventName}</h2>
       </div>
+
+      <div className="px-5 py-3">
+        <h3 className="font-mono text-lg font-bold text-[#93000a]">
+          Teams needing support ({teamCount})
+        </h3>
+        <p className="text-sm text-[#93000a]/80">
+          Teams with slow submission progress before the round deadline.
+        </p>
+      </div>
+
       <ul>
         {visibleTeams.map((team) => (
           <TeamProgressRow key={`${group.eventId}-${team.teamId}`} team={team} />
         ))}
       </ul>
-      {hiddenCount > 0 && (
-        <p className="border-t border-amber-200 bg-amber-50/50 px-5 py-2 text-xs text-amber-900/70">
-          +{hiddenCount} more team{hiddenCount === 1 ? "" : "s"} in this competition
-        </p>
+
+      {hasMore && !expanded && (
+        <button
+          type="button"
+          onClick={() => setExpanded(true)}
+          className="w-full border-t-2 border-[#ba1a1a] bg-[#f5c2bc] px-5 py-3 text-center font-mono text-sm font-bold text-[#93000a] transition-colors hover:bg-[#f0b0a8]"
+        >
+          Show more (+{hiddenCount} team{hiddenCount === 1 ? "" : "s"})
+        </button>
       )}
-    </section>
+
+      {hasMore && expanded && (
+        <button
+          type="button"
+          onClick={() => setExpanded(false)}
+          className="w-full border-t-2 border-[#ba1a1a] bg-[#f5c2bc] px-5 py-3 text-center font-mono text-sm font-bold text-[#93000a] transition-colors hover:bg-[#f0b0a8]"
+        >
+          Show less
+        </button>
+      )}
+    </div>
   );
 }
 
 export function TeamsNeedingSupportPanel({ scope }: { scope: TeamsNeedingSupportScope }) {
   const { data: groups = [], isLoading } = useTeamsNeedingSupport(scope);
-  const [expanded, setExpanded] = useState(false);
-
-  const totalTeams = useMemo(
-    () => groups.reduce((sum, group) => sum + group.teams.length, 0),
-    [groups],
-  );
-
-  const visibleGroups = useMemo(() => {
-    if (expanded) return groups;
-    return groups.slice(0, DEFAULT_EVENTS_VISIBLE);
-  }, [expanded, groups]);
-
-  const teamsLimit = expanded ? undefined : DEFAULT_TEAMS_PER_EVENT;
-  const hiddenEvents = expanded ? 0 : Math.max(0, groups.length - DEFAULT_EVENTS_VISIBLE);
-  const hasHiddenContent =
-    !expanded &&
-    (hiddenEvents > 0 ||
-      groups.some((group) => group.teams.length > DEFAULT_TEAMS_PER_EVENT));
+  const [showAllEvents, setShowAllEvents] = useState(false);
 
   if (isLoading) {
     return (
-      <div className="mb-6 border-2 border-amber-300 bg-amber-50 p-5 shadow-[4px_4px_0_0_#0c1228]">
-        <div className="h-24 animate-pulse rounded bg-amber-100/80" />
+      <div className="mb-6 border-2 border-[#ba1a1a] bg-[#ffdad6] p-5 shadow-[4px_4px_0_0_#0c1228]">
+        <div className="h-24 animate-pulse rounded bg-[#f5c2bc]/80" />
       </div>
     );
   }
 
-  if (totalTeams === 0) {
+  if (groups.length === 0) {
     return null;
   }
 
-  return (
-    <div className="mb-6 border-2 border-amber-300 bg-amber-50 shadow-[4px_4px_0_0_#0c1228]">
-      <div className="border-b-2 border-amber-200 px-5 py-3">
-        <h2 className="font-mono text-lg font-bold text-navy">
-          Teams needing support ({totalTeams})
-        </h2>
-        <p className="text-sm text-amber-900/80">
-          Teams with slow submission progress before the round deadline.
-        </p>
-      </div>
+  const hasMoreEvents = groups.length > DEFAULT_EVENTS_VISIBLE;
+  const visibleGroups = showAllEvents ? groups : groups.slice(0, DEFAULT_EVENTS_VISIBLE);
+  const hiddenEvents = Math.max(0, groups.length - DEFAULT_EVENTS_VISIBLE);
 
+  return (
+    <div className="mb-6 space-y-4">
       {visibleGroups.map((group) => (
-        <EventGroupSection key={group.eventId} group={group} teamsLimit={teamsLimit} />
+        <EventSupportCard key={group.eventId} group={group} />
       ))}
 
-      {hasHiddenContent && (
+      {hasMoreEvents && !showAllEvents && (
         <button
           type="button"
-          onClick={() => setExpanded(true)}
-          className="w-full border-t-2 border-amber-300 bg-amber-200/80 px-5 py-3 text-center font-mono text-sm font-bold text-navy transition-colors hover:bg-amber-200"
+          onClick={() => setShowAllEvents(true)}
+          className="w-full border-2 border-[#ba1a1a] bg-[#f5c2bc] px-5 py-3 text-center font-mono text-sm font-bold text-[#93000a] shadow-[4px_4px_0_0_#0c1228] transition-colors hover:bg-[#f0b0a8]"
         >
-          Show more
+          Show more competitions (+{hiddenEvents})
         </button>
       )}
 
-      {expanded && (groups.length > DEFAULT_EVENTS_VISIBLE ||
-        groups.some((g) => g.teams.length > DEFAULT_TEAMS_PER_EVENT)) && (
+      {hasMoreEvents && showAllEvents && (
         <button
           type="button"
-          onClick={() => setExpanded(false)}
-          className="w-full border-t-2 border-amber-300 bg-amber-200/80 px-5 py-3 text-center font-mono text-sm font-bold text-navy transition-colors hover:bg-amber-200"
+          onClick={() => setShowAllEvents(false)}
+          className="w-full border-2 border-[#ba1a1a] bg-[#f5c2bc] px-5 py-3 text-center font-mono text-sm font-bold text-[#93000a] shadow-[4px_4px_0_0_#0c1228] transition-colors hover:bg-[#f0b0a8]"
         >
-          Show less
+          Show fewer competitions
         </button>
       )}
     </div>

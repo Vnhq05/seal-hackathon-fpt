@@ -51,6 +51,20 @@ class TeamProgressEvaluationServiceTest {
     }
 
     @Test
+    void evaluate_ok_whenDeadlineHasPassedEvenIfNotStarted() {
+        Clock clock = fixedAt(DEADLINE.plusHours(1));
+        service = new TeamProgressEvaluationService(properties, clock);
+
+        RoundSnapshot round = preliminaryRound(DEADLINE);
+
+        TeamProgressEvaluationService.EvaluationResult result =
+                service.evaluate(null, null, 0, round, false);
+
+        assertThat(result.riskLevel()).isEqualTo(ProgressRiskLevel.OK);
+        assertThat(result.reasons()).isEmpty();
+    }
+
+    @Test
     void evaluate_slideOnlyPastGate_forSealPreliminary() {
         LocalDateTime slideDeadline = LocalDateTime.of(2026, 7, 10, 10, 0);
         Clock clock = fixedAt(slideDeadline.plusHours(1));

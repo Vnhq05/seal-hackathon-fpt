@@ -20,15 +20,6 @@ export function triggerBlobDownload(blob: Blob, fileName: string): void {
   URL.revokeObjectURL(url);
 }
 
-/** Download a submission PDF attachment via authenticated API. */
-export async function downloadSubmissionAttachment(
-  fileUrl: string,
-  fileName: string,
-): Promise<void> {
-  const blob = await submissionApi.downloadAttachment(fileUrl);
-  triggerBlobDownload(blob, fileName);
-}
-
 /** Open a submission PDF in a new tab via authenticated API (direct URLs return 401). */
 export async function openSubmissionAttachment(fileUrl: string): Promise<void> {
   const blob = await submissionApi.downloadAttachment(fileUrl);

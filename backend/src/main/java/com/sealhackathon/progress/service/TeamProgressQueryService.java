@@ -75,6 +75,7 @@ public class TeamProgressQueryService {
         return buildProgressForRound(currentRound).stream()
                 .filter(p -> mentorTeamIds.contains(p.getTeamId()))
                 .filter(p -> p.getRiskLevel() != ProgressRiskLevel.OK)
+                .filter(p -> p.getHoursUntilDeadline() >= 0)
                 .toList();
     }
 

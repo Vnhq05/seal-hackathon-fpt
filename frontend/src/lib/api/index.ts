@@ -88,7 +88,7 @@ export { judgingApi } from "./judging.api";
 export type { JudgeScoreResponse, ScoreDetailResponse, CommentResponse, ScoreSubmissionRequest, ScoreDetailDto, ScoreStatus, ScoringStatus, JudgeScoringAssignment } from "./judging.api";
 
 export { rankingApi } from "./ranking.api";
-export type { RankingResponse, EventRankingBoard, AdvancementResponse, PublishedAdvancementStatus, PublishedResultResponse, DisputeRequest, ResolveDisputeRequest, DisputeResponse } from "./ranking.api";
+export type { RankingResponse, EventRankingBoard, AdvancementResponse, PublishedAdvancementStatus, PublishedResultResponse } from "./ranking.api";
 
 export { notificationApi } from "./notification.api";
 export type { NotificationResponse, NotificationType } from "./notification.api";
