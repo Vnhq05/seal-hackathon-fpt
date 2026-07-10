@@ -13,23 +13,28 @@ import com.sealhackathon.ranking.repository.RankingRepository;
 import com.sealhackathon.submission.domain.enums.SubmissionStatus;
 import com.sealhackathon.submission.dto.snapshot.SubmissionSnapshot;
 import com.sealhackathon.submission.service.SubmissionPublicService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Function;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -40,8 +45,25 @@ class AggregationServiceTest {
     @Mock private SubmissionPublicService submissionPublicService;
     @Mock private RankingRepository rankingRepository;
     @Mock private ApplicationEventPublisher eventPublisher;
+    @Mock private TieBreakComparatorBuilder tieBreakComparatorBuilder;
 
     @InjectMocks private AggregationService aggregationService;
+
+    @BeforeEach
+    void injectValueFieldsAndStubTieBreak() {
+        ReflectionTestUtils.setField(aggregationService, "judgeTrimThreshold", 5);
+
+        lenient().when(tieBreakComparatorBuilder.resolveCriteriaOrder(any(), any(), any(), any()))
+                .thenAnswer(inv -> inv.getArgument(0));
+        lenient().when(tieBreakComparatorBuilder.buildComparator(any(), any(), any(), any(), any()))
+                .thenAnswer(inv -> {
+                    @SuppressWarnings("unchecked")
+                    Comparator<Object> scoreComparator = inv.getArgument(0);
+                    @SuppressWarnings("unchecked")
+                    Function<Object, LocalDateTime> submittedAtFn = inv.getArgument(4);
+                    return scoreComparator.thenComparing(submittedAtFn);
+                });
+    }
 
     @Test
     void computeWeightedJudgeScore_shouldApplyCriterionWeights() {
