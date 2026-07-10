@@ -15,6 +15,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -46,6 +47,6 @@ class EventPublicServiceImplTest {
 
         LocalDateTime deadline = eventPublicService.getRegistrationDeadline(eventId);
 
-        assertThat(deadline).isEqualTo(deadlineDate.atTime(23, 59, 59));
+        assertThat(deadline).isEqualTo(deadlineDate.atTime(LocalTime.MAX));
     }
 }
