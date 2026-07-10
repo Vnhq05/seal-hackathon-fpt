@@ -1,6 +1,6 @@
 package com.sealhackathon.event.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sealhackathon.BaseIntegrationTest;
 import com.sealhackathon.event.domain.Criteria;
 import com.sealhackathon.event.domain.enums.AdvancementRule;
 import com.sealhackathon.event.domain.enums.CompetitionFormat;
@@ -9,13 +9,8 @@ import com.sealhackathon.event.dto.request.CreateEventRequest;
 import com.sealhackathon.event.repository.HackathonEventRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -27,32 +22,33 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
-@ActiveProfiles("test")
-@AutoConfigureMockMvc
-@Transactional
-class SealEventFormatIntegrationTest {
-
-    @Autowired
-    private MockMvc mockMvc;
-
-    @Autowired
-    private ObjectMapper objectMapper;
+class SealEventFormatIntegrationTest extends BaseIntegrationTest {
 
     @Autowired
     private HackathonEventRepository eventRepository;
 
+    @Override
+    protected void cleanDatabase() {
+        eventRepository.deleteAll();
+        super.cleanDatabase();
+    }
+
     @Test
     @WithMockUser(roles = "SYSTEM_ADMIN")
     void createSealEvent_appliesTemplate() throws Exception {
+        LocalDate regOpen = LocalDate.now().minusDays(1);
+        LocalDate regClose = LocalDate.now().plusDays(28);
+        LocalDate start = regClose.plusDays(1);
+        LocalDate end = start.plusDays(1);
+
         CreateEventRequest request = CreateEventRequest.builder()
                 .name("SEAL Test Spring")
                 .season("SPRING")
-                .year(2026)
-                .startDate(LocalDate.of(2026, 4, 12))
-                .endDate(LocalDate.of(2026, 4, 12))
-                .registrationOpenDate(LocalDate.of(2026, 3, 15))
-                .registrationDeadline(LocalDate.of(2026, 3, 25))
+                .year(LocalDate.now().getYear())
+                .startDate(start)
+                .endDate(end)
+                .registrationOpenDate(regOpen)
+                .registrationDeadline(regClose)
                 .competitionFormat(CompetitionFormat.SEAL_RAG_2026)
                 .build();
 
