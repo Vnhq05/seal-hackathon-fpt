@@ -70,10 +70,10 @@ class EventServiceTest {
         when(authPublicService.getCurrentUserEmail()).thenReturn(ADMIN_EMAIL);
     }
 
-    private static final LocalDate REG_OPEN = LocalDate.of(2026, 6, 1);
-    private static final LocalDate REG_CLOSE = LocalDate.of(2026, 6, 30);
-    private static final LocalDate EVENT_START = LocalDate.of(2026, 7, 1);
-    private static final LocalDate EVENT_END = LocalDate.of(2026, 8, 31);
+    private static final LocalDate REG_OPEN = LocalDate.now().minusDays(1);
+    private static final LocalDate REG_CLOSE = LocalDate.now().plusDays(28);
+    private static final LocalDate EVENT_START = REG_CLOSE.plusDays(1);
+    private static final LocalDate EVENT_END = EVENT_START.plusDays(61);
 
     // ── BR-08: Create event ──
 
@@ -108,9 +108,9 @@ class EventServiceTest {
         CreateEventRequest request = CreateEventRequest.builder()
                 .name("Bad Dates")
                 .season("Summer")
-                .year(2026)
-                .startDate(LocalDate.of(2026, 9, 1))
-                .endDate(LocalDate.of(2026, 7, 1))
+                .year(LocalDate.now().getYear())
+                .startDate(LocalDate.now().plusDays(90))
+                .endDate(LocalDate.now().plusDays(30))
                 .registrationOpenDate(REG_OPEN)
                 .registrationDeadline(REG_CLOSE)
                 .build();
@@ -174,11 +174,11 @@ class EventServiceTest {
         UpdateEventRequest request = UpdateEventRequest.builder()
                 .name("Updated Name")
                 .season("Fall")
-                .year(2026)
-                .startDate(LocalDate.of(2026, 9, 1))
-                .endDate(LocalDate.of(2026, 11, 30))
-                .registrationOpenDate(LocalDate.of(2026, 8, 1))
-                .registrationDeadline(LocalDate.of(2026, 8, 31))
+                .year(LocalDate.now().getYear())
+                .startDate(LocalDate.now().plusDays(60))
+                .endDate(LocalDate.now().plusDays(120))
+                .registrationOpenDate(LocalDate.now().plusDays(10))
+                .registrationDeadline(LocalDate.now().plusDays(50))
                 .build();
 
         EventResponse result = eventService.updateEvent(eventId, request, "127.0.0.1");
