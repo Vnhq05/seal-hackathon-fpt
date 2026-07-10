@@ -35,6 +35,7 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -69,6 +70,7 @@ class TeamServiceTest {
 
     @BeforeEach
     void stubFormatRules() {
+        ReflectionTestUtils.setField(teamService, "maxSkillRoles", 5);
         doNothing().when(formatRuleEngine).assertCanCreateTeam(any());
         doNothing().when(formatRuleEngine).assertCanModifyTeamMembers(any());
     }
