@@ -326,9 +326,13 @@ public class ScoreReviewService {
 
     @Transactional(readOnly = true)
     public Optional<UUID> findOpenReviewId(UUID submissionId) {
+        return findActiveReview(submissionId).map(ScoreReviewRequest::getId);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<ScoreReviewRequest> findActiveReview(UUID submissionId) {
         return scoreReviewRequestRepository.findBySubmissionId(submissionId)
-                .filter(r -> ACTIVE_STATUSES.contains(r.getStatus()))
-                .map(ScoreReviewRequest::getId);
+                .filter(r -> ACTIVE_STATUSES.contains(r.getStatus()));
     }
 
     @Transactional(readOnly = true)
@@ -352,6 +356,17 @@ public class ScoreReviewService {
 
     public int getDeviationThresholdValue() {
         return deviationThresholdValue;
+    }
+
+    /**
+     * Live deviation between finished judge scores when every assigned judge has completed.
+     * Empty when scoring is incomplete or no assignments exist.
+     */
+    @Transactional(readOnly = true)
+    public Optional<BigDecimal> findLiveDeviationValue(UUID submissionId) {
+        return submissionRepository.findById(submissionId)
+                .flatMap(this::computeDeviationStats)
+                .map(DeviationStats::deviation);
     }
 
     private ScoreReviewRequest createOrReopenReview(

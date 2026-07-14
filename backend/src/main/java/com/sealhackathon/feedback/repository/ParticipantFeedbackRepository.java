@@ -18,4 +18,6 @@ public interface ParticipantFeedbackRepository extends JpaRepository<Participant
     boolean existsByUserIdAndEventId(UUID userId, UUID eventId);
 
     long countByEventId(UUID eventId);
+
+    void deleteByEventId(UUID eventId);
 }
