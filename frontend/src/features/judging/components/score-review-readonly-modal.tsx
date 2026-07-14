@@ -1,6 +1,7 @@
 "use client";
 
 import { useScoreReviewDetail } from "@/features/admin/hooks/use-score-reviews";
+import { scoreReviewNoteLabel } from "@/lib/api/score-review.api";
 
 const headerCell: React.CSSProperties = {
   fontSize: 12,
@@ -52,7 +53,24 @@ export function ScoreReviewReadonlyModal({
               <div><span className="text-seal-text-muted">Round:</span> {review.roundType ?? review.roundId}</div>
               <div><span className="text-seal-text-muted">Deviation:</span> {review.deviationValue.toFixed(1)} pts</div>
               <div><span className="text-seal-text-muted">Range:</span> {review.minJudgeScore.toFixed(1)} – {review.maxJudgeScore.toFixed(1)}</div>
+              <div><span className="text-seal-text-muted">Status:</span> {review.status}</div>
             </div>
+
+            {review.resolutionNote?.trim() && (
+              <div className={`rounded border px-3 py-2 text-sm ${
+                review.status === "REJECTED" || review.status === "IGNORED"
+                  ? "border-gray-200 bg-gray-50 text-gray-800"
+                  : "border-seal-border bg-seal-surface-sunken text-seal-text"
+              }`}>
+                <span className="font-medium">{scoreReviewNoteLabel(review.resolvedByRole)}:</span>{" "}
+                {review.resolutionNote.trim()}
+                {review.resolvedByFullName?.trim() ? (
+                  <span className="mt-1 block text-xs text-seal-text-muted">
+                    By {review.resolvedByFullName.trim()}
+                  </span>
+                ) : null}
+              </div>
+            )}
 
             <table className="w-full" style={{ borderCollapse: "collapse" }}>
               <thead>

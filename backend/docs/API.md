@@ -20,6 +20,8 @@ All responses wrapped in `{ "success": boolean, "message": string, "data": T }`
 |---|---|---|
 | GET | `/users/me` | Get my profile |
 | PUT | `/users/me` | Update name, phone |
+| POST | `/users/me/avatar` | Upload/replace profile avatar |
+| DELETE | `/users/me/avatar` | Remove profile avatar |
 | PUT | `/users/me/password` | Change password |
 
 ## Admin Users — `/api/admin/users` (SYSTEM_ADMIN)
@@ -90,7 +92,7 @@ All responses wrapped in `{ "success": boolean, "message": string, "data": T }`
 | PUT | `/events/{eid}/teams/{tid}` | Rename team (leader) | BR-19 |
 | PUT | `/events/{eid}/teams/{tid}/track` | Select track (leader, min members) | BR-NEW-4 |
 | DELETE | `/events/{eid}/teams/{tid}/members/{mid}` | Remove member (leader kick) | BR-20 |
-| POST | `/events/{eid}/teams/{tid}/leave` | **Deprecated (410)** — use leave-request | BR-NEW-2 |
+| POST | `/events/{eid}/teams/{tid}/leave` | Leave team (member, before competition starts) | — |
 | PUT | `/events/{eid}/teams/{tid}/leader/{uid}` | Transfer leadership | BR-20 |
 | POST | `/events/{eid}/teams/{tid}/join-requests` | Submit join request | BR-NEW-1 |
 | GET | `/events/{eid}/teams/{tid}/join-requests` | Pending join requests (leader) | BR-NEW-1 |

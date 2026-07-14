@@ -4,11 +4,14 @@ import { useState } from "react";
 import { useSystemConfig, useUpdateSystemConfig } from "@/features/admin/hooks/use-admin-system";
 import { AllowedEmailDomainsPanel } from "@/features/events/components/allowed-email-domains-panel";
 import type { SystemConfigResponse } from "@/lib/api/system-config.api";
+import { SealButton } from "@/shared/ui/seal-button";
+import { SealCard } from "@/shared/ui/seal-card";
 
-const inputStyle: React.CSSProperties = {
-  border: "1px solid rgba(223,226,236,0.8)", borderRadius: 8, padding: "11px 16px", fontSize: 14, width: "100%", outline: "none",
-};
-const labelStyle: React.CSSProperties = { fontSize: 14, fontWeight: 600, color: "#0e1528", marginBottom: 4 };
+const inputClass =
+  "w-full rounded-lg border border-seal-border/80 bg-white px-4 py-2.5 text-sm text-navy outline-none transition-colors focus:border-navy focus:ring-2 focus:ring-royal/20";
+const labelClass = "mb-1.5 text-sm font-semibold text-navy";
+const sectionTitleClass =
+  "mb-3 text-[11px] font-bold uppercase tracking-[0.08em] text-seal-text-muted";
 
 interface SystemConfigForm {
   minTeamMembers: number;
@@ -139,128 +142,126 @@ function SystemConfigForm({ data }: { data: SystemConfigResponse }) {
   };
 
   return (
-    <div className="flex flex-col gap-6 p-8 max-w-[720px] border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]">
+    <SealCard className="space-y-7 p-5 sm:p-7">
       {error && (
-        <div style={{
-          backgroundColor: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8,
-          padding: "10px 14px", fontSize: 13, color: "#991b1b",
-        }}>
+        <div className="rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-[13px] text-red-800">
           {error}
         </div>
       )}
 
       {success && (
-        <div style={{
-          backgroundColor: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 8,
-          padding: "10px 14px", fontSize: 13, color: "#166534",
-        }}>
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3.5 py-2.5 text-[13px] text-emerald-800">
           {success}
         </div>
       )}
 
-      <div>
-        <p style={{ fontSize: 13, fontWeight: 600, color: "#8891a5", marginBottom: 12 }}>Team Members (per team)</p>
-        <div className="grid grid-cols-2 gap-4">
+      <section>
+        <p className={sectionTitleClass}>Team Members (per team)</p>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="flex flex-col">
-            <label style={labelStyle}>Min Team Members</label>
+            <label className={labelClass}>Min Team Members</label>
             <input
               type="number"
               value={form.minTeamMembers}
               onChange={(e) => handleChange("minTeamMembers", Math.max(1, parseInt(e.target.value) || 1))}
-              style={inputStyle}
+              className={inputClass}
               min={1}
             />
           </div>
           <div className="flex flex-col">
-            <label style={labelStyle}>Max Team Members</label>
+            <label className={labelClass}>Max Team Members</label>
             <input
               type="number"
               value={form.maxTeamMembers}
               onChange={(e) => handleChange("maxTeamMembers", Math.max(1, parseInt(e.target.value) || 1))}
-              style={inputStyle}
+              className={inputClass}
               min={1}
             />
           </div>
         </div>
-      </div>
+      </section>
 
-      <div>
-        <p style={{ fontSize: 13, fontWeight: 600, color: "#8891a5", marginBottom: 12 }}>Event Team Limits</p>
-        <div className="grid grid-cols-2 gap-4">
+      <section>
+        <p className={sectionTitleClass}>Event Team Limits</p>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="flex flex-col">
-            <label style={labelStyle}>Min Teams (for event to run)</label>
+            <label className={labelClass}>Min Teams (for event to run)</label>
             <input
               type="number"
               value={form.minTeams}
               onChange={(e) => handleChange("minTeams", e.target.value)}
-              style={inputStyle}
+              className={inputClass}
               min={0}
               placeholder="Optional"
             />
           </div>
           <div className="flex flex-col">
-            <label style={labelStyle}>Max Teams (close registration)</label>
+            <label className={labelClass}>Max Teams (close registration)</label>
             <input
               type="number"
               value={form.maxTeams}
               onChange={(e) => handleChange("maxTeams", e.target.value)}
-              style={inputStyle}
+              className={inputClass}
               min={0}
               placeholder="Optional"
             />
           </div>
         </div>
-      </div>
+      </section>
 
-      <div>
-        <p style={{ fontSize: 13, fontWeight: 600, color: "#8891a5", marginBottom: 12 }}>Semester Eligibility</p>
-        <div className="grid grid-cols-2 gap-4">
+      <section>
+        <p className={sectionTitleClass}>Semester Eligibility</p>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="flex flex-col">
-            <label style={labelStyle}>Semester Min (eligibility)</label>
+            <label className={labelClass}>Semester Min (eligibility)</label>
             <input
               type="number"
               value={form.semesterMin}
               onChange={(e) => handleChange("semesterMin", e.target.value)}
-              style={inputStyle}
+              className={inputClass}
               min={1}
               max={10}
               placeholder="Optional"
             />
           </div>
           <div className="flex flex-col">
-            <label style={labelStyle}>Semester Max (eligibility)</label>
+            <label className={labelClass}>Semester Max (eligibility)</label>
             <input
               type="number"
               value={form.semesterMax}
               onChange={(e) => handleChange("semesterMax", e.target.value)}
-              style={inputStyle}
+              className={inputClass}
               min={1}
               max={10}
               placeholder="Optional"
             />
           </div>
         </div>
-      </div>
+      </section>
 
-      <div className="flex flex-col">
-        <label style={labelStyle}>Default Rules</label>
+      <section className="flex flex-col">
+        <label className={labelClass}>Default Rules</label>
         <textarea
           value={form.defaultRules}
           onChange={(e) => handleChange("defaultRules", e.target.value)}
           rows={8}
-          style={{ ...inputStyle, resize: "vertical" }}
+          className={`${inputClass} resize-y`}
           placeholder="Enter default rules for all hackathon events..."
         />
-      </div>
+      </section>
 
-      <button
-        onClick={handleSave}
-        disabled={isPending}
-        className="border-2 border-navy bg-seal-yellow px-6 py-2.5 text-sm text-navy font-mono font-bold cursor-pointer"
-      >
-        {isPending ? "Saving..." : "Save Settings"}
-      </button>
-    </div>
+      <div className="flex justify-end border-t-2 border-navy/10 pt-5">
+        <SealButton
+          type="button"
+          className="!w-auto min-w-[140px]"
+          disabled={isPending}
+          isLoading={isPending}
+          onClick={handleSave}
+        >
+          {isPending ? "Saving..." : "Save Settings"}
+        </SealButton>
+      </div>
+    </SealCard>
   );
 }
 
@@ -269,40 +270,42 @@ export function SystemConfigPage() {
 
   if (isLoading) {
     return (
-      <div style={{ padding: 24 }}>
-        <div className="animate-pulse rounded" style={{ height: 24, width: 300, backgroundColor: "rgba(223,226,236,0.8)" }} />
+      <div className="mx-auto w-full max-w-4xl px-2 py-6 sm:px-4">
+        <div className="mb-4 h-8 w-72 animate-pulse rounded bg-seal-border/80" />
+        <div className="h-64 animate-pulse rounded bg-seal-border/80" />
       </div>
     );
   }
 
   if (isError || !data) {
     return (
-      <div style={{ padding: 24 }}>
-        <div style={{
-          backgroundColor: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8,
-          padding: "12px 16px", fontSize: 14, color: "#991b1b", maxWidth: 720,
-        }}>
-          Failed to load system configuration: {loadError instanceof Error ? loadError.message : "Unknown error"}
+      <div className="mx-auto w-full max-w-4xl px-2 py-6 sm:px-4">
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+          Failed to load system configuration:{" "}
+          {loadError instanceof Error ? loadError.message : "Unknown error"}
         </div>
       </div>
     );
   }
 
   return (
-    <div style={{ padding: 24 }}>
-      <div style={{ marginBottom: 32 }}>
-        <h1 style={{ fontSize: 32, fontWeight: 700, color: "#0e1528", letterSpacing: "-0.64px", lineHeight: "38.4px" }}>
+    <div className="mx-auto w-full max-w-4xl px-2 py-2 sm:px-4">
+      <header className="mb-8 border-b-2 border-navy/10 pb-6">
+        <h1 className="text-[28px] font-bold leading-tight tracking-[-0.02em] text-navy sm:text-[32px]">
           System Configuration
         </h1>
-        <p style={{ fontSize: 14, color: "#8891a5", lineHeight: "21px", marginTop: 4 }}>
-          Platform-wide settings for team sizes, event team limits, semester eligibility, default rules, and allowed email domains.
+        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-seal-text-muted">
+          Platform-wide settings for team sizes, event team limits, semester eligibility, default
+          rules, and allowed email domains.
         </p>
-      </div>
+      </header>
 
-      <SystemConfigForm key={data.id} data={data} />
+      <div className="flex flex-col gap-8">
+        <SystemConfigForm key={data.id} data={data} />
 
-      <div id="allowed-email-domains" style={{ marginTop: 40, maxWidth: 720 }}>
-        <AllowedEmailDomainsPanel />
+        <div id="allowed-email-domains">
+          <AllowedEmailDomainsPanel />
+        </div>
       </div>
     </div>
   );

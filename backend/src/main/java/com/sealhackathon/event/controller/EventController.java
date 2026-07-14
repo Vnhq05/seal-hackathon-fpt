@@ -22,6 +22,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -34,6 +35,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Arrays;
 import java.util.List;
@@ -90,6 +92,27 @@ public class EventController {
             HttpServletRequest httpRequest) {
         eventService.deleteEvent(eventId, httpRequest.getRemoteAddr());
         return ResponseEntity.ok(ApiResponse.success("Event deleted successfully", null));
+    }
+
+    @PostMapping(value = "/{eventId}/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAnyRole('SYSTEM_ADMIN', 'EVENT_COORDINATOR')")
+    @Operation(summary = "Upload or replace optional event avatar image (JPEG/PNG/WebP, max 2 MB)")
+    public ResponseEntity<ApiResponse<EventResponse>> uploadAvatar(
+            @PathVariable UUID eventId,
+            @RequestParam("file") MultipartFile file,
+            HttpServletRequest httpRequest) {
+        EventResponse response = eventService.uploadAvatar(eventId, file, httpRequest.getRemoteAddr());
+        return ResponseEntity.ok(ApiResponse.success("Avatar uploaded", response));
+    }
+
+    @DeleteMapping("/{eventId}/avatar")
+    @PreAuthorize("hasAnyRole('SYSTEM_ADMIN', 'EVENT_COORDINATOR')")
+    @Operation(summary = "Remove event avatar")
+    public ResponseEntity<ApiResponse<EventResponse>> deleteAvatar(
+            @PathVariable UUID eventId,
+            HttpServletRequest httpRequest) {
+        EventResponse response = eventService.deleteAvatar(eventId, httpRequest.getRemoteAddr());
+        return ResponseEntity.ok(ApiResponse.success("Avatar removed", response));
     }
 
     @PostMapping("/{eventId}/activate")

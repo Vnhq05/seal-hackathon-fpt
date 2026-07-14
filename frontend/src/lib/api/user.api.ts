@@ -8,6 +8,7 @@ export interface UserProfile {
   email: string;
   fullName: string;
   phone: string | null;
+  avatarUrl?: string | null;
   studentId: string | null;
   universityName: string | null;
   userType: UserType;
@@ -49,6 +50,18 @@ export const userApi = {
 
   updateMyProfile(body: UpdateProfileRequest): Promise<UserProfile> {
     return api.put<UserProfile>("/users/me", body);
+  },
+
+  uploadAvatar(file: File): Promise<UserProfile> {
+    const formData = new FormData();
+    formData.append("file", file);
+    return api.post<UserProfile>("/users/me/avatar", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  },
+
+  deleteAvatar(): Promise<UserProfile> {
+    return api.delete<UserProfile>("/users/me/avatar");
   },
 
   changePassword(body: ChangePasswordRequest): Promise<void> {

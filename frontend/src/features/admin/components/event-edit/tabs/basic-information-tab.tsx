@@ -7,9 +7,14 @@ import {
   basicInformationSchema,
   type BasicInformationFormValues,
 } from "@/features/admin/schemas/hackathon.schema";
-import { useUpdateEvent } from "@/features/admin/hooks/use-admin-hackathons";
+import {
+  useDeleteEventAvatar,
+  useUpdateEvent,
+  useUploadEventAvatar,
+} from "@/features/admin/hooks/use-admin-hackathons";
 import { useSystemTeamConfig } from "@/features/teams/hooks/use-system-team-config";
 import type { EventResponse } from "@/lib/api";
+import { EventAvatarDialog } from "@/features/admin/components/event-edit/event-avatar-dialog";
 import {
   bannerErrorStyle,
   errorStyle,
@@ -31,8 +36,12 @@ const readOnlyStyle: React.CSSProperties = {
 export function BasicInformationTab({ event }: { event: EventResponse }) {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [avatarOpen, setAvatarOpen] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
   const { data: systemConfig } = useSystemTeamConfig();
   const { mutate: update, isPending } = useUpdateEvent();
+  const { mutate: uploadAvatar, isPending: isUploading } = useUploadEventAvatar();
+  const { mutate: removeAvatar, isPending: isRemoving } = useDeleteEventAvatar();
   const editable = isEventEditable(event.status);
 
   const {
@@ -83,13 +92,56 @@ export function BasicInformationTab({ event }: { event: EventResponse }) {
   return (
     <form
       onSubmit={handleSubmit(onSubmit)}
-      className="flex flex-col gap-6 p-8 max-w-[720px] border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]"
+      className="flex w-full flex-col gap-6 border-2 border-navy bg-white p-6 shadow-[4px_4px_0_0_#0c1228] sm:p-8"
     >
       {!editable && (
         <div style={bannerErrorStyle}>
           Event cannot be edited while active or after completion.
         </div>
       )}
+
+      <div className="flex items-center justify-between gap-3">
+        <button
+          type="button"
+          onClick={() => {
+            setAvatarError(null);
+            setAvatarOpen(true);
+          }}
+          className="border-2 border-navy bg-white px-3 py-2 font-mono text-xs font-bold text-navy shadow-[3px_3px_0_0_#0c1228]"
+        >
+          {event.avatarUrl ? "Avatar" : "Add Avatar"}
+        </button>
+        <span className="font-mono text-[10px] text-seal-text-muted">
+          Optional · click to preview or change
+        </span>
+      </div>
+
+      <EventAvatarDialog
+        open={avatarOpen}
+        onClose={() => setAvatarOpen(false)}
+        avatarUrl={event.avatarUrl}
+        editable={editable}
+        isUploading={isUploading}
+        isRemoving={isRemoving}
+        error={avatarError}
+        onUpload={(file) => {
+          setAvatarError(null);
+          uploadAvatar(
+            { eventId: event.id, file },
+            {
+              onError: (err) =>
+                setAvatarError(err instanceof Error ? err.message : "Upload failed"),
+            },
+          );
+        }}
+        onRemove={() => {
+          setAvatarError(null);
+          removeAvatar(event.id, {
+            onError: (err) =>
+              setAvatarError(err instanceof Error ? err.message : "Remove failed"),
+          });
+        }}
+      />
 
       <div>
         <label style={labelStyle}>Description</label>

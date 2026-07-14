@@ -185,12 +185,17 @@ public class AuthService {
         UserSnapshot user = userPublicService.findByEmail(request.getEmail())
                 .orElseThrow(InvalidCredentialsException::new);
 
+        // Admin deactivate sets LOCKED — block before temporary failed-attempt lock
+        if (user.getStatus() == AccountStatus.LOCKED) {
+            throw new AccountLockedException();
+        }
+
         // BR-05: only Active accounts can login
         if (user.getStatus() == AccountStatus.PENDING || user.getStatus() == AccountStatus.REJECTED) {
             throw new AccountNotActivatedException();
         }
 
-        // BR-06: check lock state
+        // BR-06: check temporary lock from failed login attempts
         LockState lockState = userPublicService.getLockState(user.getId());
         if (lockState.isLocked()) {
             throw new AccountLockedException(lockState.getLockedUntil());
@@ -221,6 +226,15 @@ public class AuthService {
 
         UserSnapshot user = userPublicService.findById(refreshToken.getUserId())
                 .orElseThrow(InvalidCredentialsException::new);
+
+        if (user.getStatus() == AccountStatus.LOCKED) {
+            tokenService.revokeRefreshToken(refreshTokenStr);
+            throw new AccountLockedException();
+        }
+        if (user.getStatus() != AccountStatus.ACTIVE) {
+            tokenService.revokeRefreshToken(refreshTokenStr);
+            throw new AccountNotActivatedException();
+        }
 
         // Revoke old, issue new
         tokenService.revokeRefreshToken(refreshTokenStr);
@@ -282,6 +296,10 @@ public class AuthService {
         UserSnapshot user = userPublicService.findById(magicToken.getUserId())
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", magicToken.getUserId()));
 
+        if (user.getStatus() == AccountStatus.LOCKED) {
+            throw new AccountLockedException();
+        }
+
         LockState lockState = userPublicService.getLockState(user.getId());
         if (lockState.isLocked()) {
             throw new AccountLockedException(lockState.getLockedUntil());
@@ -326,6 +344,7 @@ public class AuthService {
                         .id(user.getId())
                         .email(user.getEmail())
                         .fullName(user.getFullName())
+                        .avatarUrl(user.getAvatarUrl())
                         .userType(user.getUserType())
                         .status(user.getStatus())
                         .build())

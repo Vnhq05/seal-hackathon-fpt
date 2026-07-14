@@ -8,6 +8,7 @@ import com.sealhackathon.common.exception.BusinessException;
 import com.sealhackathon.common.exception.DuplicateResourceException;
 import com.sealhackathon.common.exception.InvalidCredentialsException;
 import com.sealhackathon.common.exception.ResourceNotFoundException;
+import com.sealhackathon.common.storage.FileStorageService;
 import com.sealhackathon.user.domain.User;
 import com.sealhackathon.user.dto.request.ApprovalRequest;
 import com.sealhackathon.user.dto.request.ChangePasswordRequest;
@@ -33,6 +34,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -50,6 +52,7 @@ public class UserService {
     private final ApplicationEventPublisher eventPublisher;
     private final UserReferenceService userReferenceService;
     private final AuthPublicService authPublicService;
+    private final FileStorageService fileStorageService;
 
     @Value("${app.protected-emails:admin@seal.com,coordinator@seal.com,lecturer1@fpt.edu.vn,lecturer2@fpt.edu.vn,lecturer3@fpt.edu.vn,lecturer4@fpt.edu.vn,lecturer5@fpt.edu.vn}")
     private String protectedEmailsConfig;
@@ -102,6 +105,35 @@ public class UserService {
             eventPublisher.publishEvent(new ProfileUpdatedEvent(userId, changed));
         }
 
+        return toProfileResponse(user);
+    }
+
+    @Transactional
+    public UserProfileResponse uploadAvatar(UUID userId, MultipartFile file) {
+        User user = getUser(userId);
+        String previousUrl = user.getAvatarUrl();
+        String newUrl = fileStorageService.storeUserAvatar(file, userId);
+        user.setAvatarUrl(newUrl);
+        userRepository.save(user);
+
+        if (previousUrl != null && !previousUrl.equals(newUrl)) {
+            fileStorageService.deleteIfExists(previousUrl);
+        }
+
+        eventPublisher.publishEvent(new ProfileUpdatedEvent(userId, List.of("avatarUrl")));
+        return toProfileResponse(user);
+    }
+
+    @Transactional
+    public UserProfileResponse deleteAvatar(UUID userId) {
+        User user = getUser(userId);
+        String previousUrl = user.getAvatarUrl();
+        if (previousUrl != null) {
+            fileStorageService.deleteIfExists(previousUrl);
+            user.setAvatarUrl(null);
+            userRepository.save(user);
+            eventPublisher.publishEvent(new ProfileUpdatedEvent(userId, List.of("avatarUrl")));
+        }
         return toProfileResponse(user);
     }
 
@@ -333,6 +365,7 @@ public class UserService {
                 .email(user.getEmail())
                 .fullName(user.getFullName())
                 .phone(user.getPhone())
+                .avatarUrl(user.getAvatarUrl())
                 .studentId(user.getStudentId())
                 .universityName(UniversityUtils.resolveUniversityName(
                         user.getUserType(), user.getUniversityName()))

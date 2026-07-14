@@ -8,6 +8,8 @@ import { SuccessBanner } from "@/shared/ui/success-banner";
 import { useUpdateProfile } from "@/features/profile/hooks/use-update-profile";
 import {
   updateProfileSchema,
+  joinFullName,
+  splitFullName,
   type UpdateProfileFormValues,
 } from "@/features/profile/schemas/update-profile.schema";
 import type { UserProfile } from "@/lib/api/user.api";
@@ -65,6 +67,8 @@ export function ProfileInfoForm({ profile }: ProfileInfoFormProps) {
   const { updateProfile, isPending, isSuccess, isError, error, reset: resetStatus } =
     useUpdateProfile();
 
+  const nameParts = splitFullName(profile.fullName);
+
   const {
     register,
     handleSubmit,
@@ -73,14 +77,17 @@ export function ProfileInfoForm({ profile }: ProfileInfoFormProps) {
   } = useForm<UpdateProfileFormValues>({
     resolver: zodResolver(updateProfileSchema),
     defaultValues: {
-      fullName: profile.fullName,
+      firstName: nameParts.firstName,
+      lastName: nameParts.lastName,
       phone: profile.phone ?? "",
     },
   });
 
   useEffect(() => {
+    const parts = splitFullName(profile.fullName);
     resetForm({
-      fullName: profile.fullName,
+      firstName: parts.firstName,
+      lastName: parts.lastName,
       phone: profile.phone ?? "",
     });
   }, [profile, resetForm]);
@@ -88,7 +95,7 @@ export function ProfileInfoForm({ profile }: ProfileInfoFormProps) {
   const onSubmit = (values: UpdateProfileFormValues) => {
     resetStatus();
     updateProfile({
-      fullName: values.fullName,
+      fullName: joinFullName(values.firstName, values.lastName),
       phone: values.phone || undefined,
     });
   };
@@ -131,24 +138,45 @@ export function ProfileInfoForm({ profile }: ProfileInfoFormProps) {
           className="grid grid-cols-2"
           style={{ gap: 16 }}
         >
-          {/* Full Name - editable */}
+          {/* First Name - editable */}
           <div className="flex flex-col" style={{ gap: 4 }}>
-            <label htmlFor="fullName" style={fieldLabelStyle}>
-              Full Name
+            <label htmlFor="firstName" style={fieldLabelStyle}>
+              First Name
             </label>
             <input
-              id="fullName"
+              id="firstName"
               type="text"
-              autoComplete="name"
+              autoComplete="given-name"
               className="focus:outline-none focus:ring-2 focus:ring-indigo-300"
               style={{
                 ...editableInputStyle,
-                borderColor: errors.fullName ? "#ba1a1a" : "rgba(223,226,236,0.8)",
+                borderColor: errors.firstName ? "#ba1a1a" : "rgba(223,226,236,0.8)",
               }}
-              {...register("fullName")}
+              {...register("firstName")}
             />
-            {errors.fullName && (
-              <p style={{ fontSize: "11px", color: "#93000a" }}>{errors.fullName.message}</p>
+            {errors.firstName && (
+              <p style={{ fontSize: "11px", color: "#93000a" }}>{errors.firstName.message}</p>
+            )}
+          </div>
+
+          {/* Last Name - editable */}
+          <div className="flex flex-col" style={{ gap: 4 }}>
+            <label htmlFor="lastName" style={fieldLabelStyle}>
+              Last Name
+            </label>
+            <input
+              id="lastName"
+              type="text"
+              autoComplete="family-name"
+              className="focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              style={{
+                ...editableInputStyle,
+                borderColor: errors.lastName ? "#ba1a1a" : "rgba(223,226,236,0.8)",
+              }}
+              {...register("lastName")}
+            />
+            {errors.lastName && (
+              <p style={{ fontSize: "11px", color: "#93000a" }}>{errors.lastName.message}</p>
             )}
           </div>
 
@@ -289,3 +317,4 @@ export function ProfileInfoForm({ profile }: ProfileInfoFormProps) {
     </section>
   );
 }
+

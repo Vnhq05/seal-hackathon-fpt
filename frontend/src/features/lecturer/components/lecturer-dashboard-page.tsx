@@ -5,8 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { mentorInvitationApi } from "@/lib/api/mentor-invitation.api";
 import { useJudgeScoringAssignments } from "@/features/judging/hooks/use-judge-scoring-assignments";
 import { useJudgeDashboard } from "@/features/judging/hooks/use-judge-dashboard";
-import { JudgeUrgencyBanner } from "@/features/judging/components/judge-urgency-banner";
-import { JudgeQuickStart } from "@/features/judging/components/judge-quick-start";
+import { ScoringSuggestionsPanel } from "@/features/judging/components/scoring-suggestions-panel";
 import { TeamsNeedingSupportPanel } from "@/features/progress/components/teams-needing-support-panel";
 
 function StatCard({ label, value, href }: { label: string; value: number; href: string }) {
@@ -29,11 +28,6 @@ export function LecturerDashboardPage() {
     queryFn: () => mentorInvitationApi.getAllMentorActiveRooms(),
   });
 
-  const pendingScoring = assignments.filter(
-    (a) => a.scoringStatus === "NOT_STARTED" || a.scoringStatus === "IN_PROGRESS",
-  ).length;
-  const completedScoring = assignments.filter((a) => a.scoringStatus === "COMPLETED").length;
-
   if (judgingLoading && mentorLoading) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center">
@@ -43,11 +37,7 @@ export function LecturerDashboardPage() {
   }
 
   return (
-    <>
-      {dashboard?.urgency && (
-        <JudgeUrgencyBanner urgency={dashboard.urgency} portalBase="/lecturer" />
-      )}
-      <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-8">
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-seal-text">Lecturer Dashboard</h1>
         <p className="mt-1 text-sm text-seal-text-muted">
@@ -59,27 +49,37 @@ export function LecturerDashboardPage() {
         <h2 className="text-lg font-bold text-seal-text">Judging</h2>
         <div className="grid gap-4 sm:grid-cols-3">
           <StatCard label="Teams assigned" value={assignments.length} href="/lecturer/scoring" />
-          <StatCard label="Pending scoring" value={pendingScoring} href="/lecturer/scoring" />
-          <StatCard label="Completed" value={completedScoring} href="/lecturer/history" />
+          <StatCard
+            label="Pending scoring"
+            value={dashboard?.stats.remaining ?? 0}
+            href="/lecturer/scoring"
+          />
+          <StatCard
+            label="Completed"
+            value={dashboard?.stats.scored ?? 0}
+            href="/lecturer/history"
+          />
         </div>
-        {dashboard ? (
-          <JudgeQuickStart dashboard={dashboard} portalBase="/lecturer" />
-        ) : (
-          <div className="flex flex-wrap gap-3">
-            <Link
-              href="/lecturer/scoring"
-              className="border-2 border-navy bg-seal-yellow px-4 py-2 text-sm text-navy font-mono font-bold shadow-[4px_4px_0_0_#0c1228]"
-            >
-              Go to Scoring
-            </Link>
-            <Link
-              href="/lecturer/rounds"
-              className="border-2 border-navy bg-white px-4 py-2 text-sm font-mono font-bold text-navy shadow-[4px_4px_0_0_#0c1228] hover:bg-seal-surface-sunken"
-            >
-              Assigned Rounds
-            </Link>
-          </div>
+        {dashboard && dashboard.scoringSuggestions.length > 0 && (
+          <ScoringSuggestionsPanel
+            suggestions={dashboard.scoringSuggestions}
+            portalBase="/lecturer"
+          />
         )}
+        <div className="flex flex-wrap gap-3">
+          <Link
+            href="/lecturer/scoring"
+            className="border-2 border-navy bg-seal-yellow px-4 py-2 text-sm text-navy font-mono font-bold shadow-[4px_4px_0_0_#0c1228]"
+          >
+            Go to Scoring
+          </Link>
+          <Link
+            href="/lecturer/rounds"
+            className="border-2 border-navy bg-white px-4 py-2 text-sm font-mono font-bold text-navy shadow-[4px_4px_0_0_#0c1228] hover:bg-seal-surface-sunken"
+          >
+            Assigned Rounds
+          </Link>
+        </div>
       </section>
 
       <section className="flex flex-col gap-4">
@@ -104,6 +104,5 @@ export function LecturerDashboardPage() {
         </div>
       </section>
     </div>
-    </>
   );
 }

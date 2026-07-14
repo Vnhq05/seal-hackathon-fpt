@@ -30,11 +30,18 @@ function processQueue(error: unknown, token: string | null = null) {
 }
 
 function clearSessionAndRedirect() {
+  const hadSession =
+    !!useAuthStore.getState().refreshToken ||
+    (typeof window !== "undefined" && !!localStorage.getItem("access_token"));
+
   useAuthStore.getState().clearAuth();
   if (typeof window !== "undefined") {
     localStorage.removeItem("access_token");
     document.cookie = "auth-check=; path=/; Max-Age=0; SameSite=Lax";
-    window.location.href = "/login";
+    // Guests hitting a protected API on a public page should not be bounced to login.
+    if (hadSession) {
+      window.location.href = "/login";
+    }
   }
 }
 

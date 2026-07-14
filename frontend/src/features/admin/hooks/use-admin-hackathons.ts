@@ -97,6 +97,31 @@ export function useDeleteEvent() {
   });
 }
 
+export function useUploadEventAvatar() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ eventId, file }: { eventId: string; file: File }) =>
+      eventApi.uploadAvatar(eventId, file),
+    onSuccess: (_data, { eventId }) => {
+      qc.invalidateQueries({ queryKey: [ADMIN_EVENTS_KEY] });
+      qc.invalidateQueries({ queryKey: [ADMIN_EVENT_KEY, eventId] });
+      qc.invalidateQueries({ queryKey: ["featured-open-events"] });
+    },
+  });
+}
+
+export function useDeleteEventAvatar() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (eventId: string) => eventApi.deleteAvatar(eventId),
+    onSuccess: (_data, eventId) => {
+      qc.invalidateQueries({ queryKey: [ADMIN_EVENTS_KEY] });
+      qc.invalidateQueries({ queryKey: [ADMIN_EVENT_KEY, eventId] });
+      qc.invalidateQueries({ queryKey: ["featured-open-events"] });
+    },
+  });
+}
+
 // ── Backward-compat aliases ──
 /** @deprecated Use useAdminEvents instead */
 export const useAdminHackathons = useAdminEvents;

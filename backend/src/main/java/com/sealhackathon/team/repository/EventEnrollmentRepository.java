@@ -24,7 +24,15 @@ public interface EventEnrollmentRepository extends JpaRepository<EventEnrollment
 
     List<EventEnrollment> findByEventId(UUID eventId);
 
-    @Query("SELECT COUNT(e) FROM EventEnrollment e WHERE e.userId = :userId AND e.status IN :statuses")
+    /**
+     * Active = PENDING/APPROVED on an event that has not ended or been cancelled/completed.
+     * Students are treated as released after the competition ends so they can enroll elsewhere.
+     */
+    @Query("SELECT COUNT(e) FROM EventEnrollment e, HackathonEvent he "
+            + "WHERE e.eventId = he.id AND e.userId = :userId AND e.status IN :statuses "
+            + "AND he.status <> com.sealhackathon.event.domain.enums.EventStatus.CANCELLED "
+            + "AND he.status <> com.sealhackathon.event.domain.enums.EventStatus.COMPLETED "
+            + "AND he.endDate >= CURRENT_DATE")
     long countByUserIdAndStatusIn(@Param("userId") UUID userId, @Param("statuses") List<EnrollmentStatus> statuses);
 
     @Query("SELECT e FROM EventEnrollment e WHERE e.eventId = :eventId AND e.status = 'APPROVED' " +
@@ -38,10 +46,19 @@ public interface EventEnrollmentRepository extends JpaRepository<EventEnrollment
             @Param("eventId") UUID eventId,
             @Param("excludeUserId") UUID excludeUserId);
 
-    @Query("SELECT e FROM EventEnrollment e WHERE e.userId = :userId AND e.status IN :statuses")
-    Optional<EventEnrollment> findByUserIdAndStatusIn(@Param("userId") UUID userId, @Param("statuses") List<EnrollmentStatus> statuses);
+    @Query("SELECT e FROM EventEnrollment e, HackathonEvent he "
+            + "WHERE e.eventId = he.id AND e.userId = :userId AND e.status IN :statuses "
+            + "AND he.status <> com.sealhackathon.event.domain.enums.EventStatus.CANCELLED "
+            + "AND he.status <> com.sealhackathon.event.domain.enums.EventStatus.COMPLETED "
+            + "AND he.endDate >= CURRENT_DATE "
+            + "ORDER BY e.enrolledAt DESC")
+    List<EventEnrollment> findByUserIdAndStatusIn(@Param("userId") UUID userId, @Param("statuses") List<EnrollmentStatus> statuses);
 
-    @Query("SELECT COUNT(e) > 0 FROM EventEnrollment e WHERE e.userId = :userId AND e.status IN :statuses AND e.eventId <> :eventId")
+    @Query("SELECT COUNT(e) > 0 FROM EventEnrollment e, HackathonEvent he "
+            + "WHERE e.eventId = he.id AND e.userId = :userId AND e.status IN :statuses AND e.eventId <> :eventId "
+            + "AND he.status <> com.sealhackathon.event.domain.enums.EventStatus.CANCELLED "
+            + "AND he.status <> com.sealhackathon.event.domain.enums.EventStatus.COMPLETED "
+            + "AND he.endDate >= CURRENT_DATE")
     boolean existsActiveEnrollmentInOtherEvent(
             @Param("userId") UUID userId,
             @Param("eventId") UUID eventId,

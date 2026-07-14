@@ -6,7 +6,7 @@ import { useAuthStore } from "@/features/auth/store/auth.store";
 import { useDashboardSummary } from "@/features/dashboard/hooks/use-dashboard-summary";
 import { useDashboardHackathons } from "@/features/dashboard/hooks/use-dashboard-hackathons";
 import { useDashboardTeam } from "@/features/dashboard/hooks/use-dashboard-team";
-import { useMyActiveEnrollment } from "@/features/events/hooks/use-enrollment";
+import { useMyActiveEnrollment, useWithdrawEnrollment } from "@/features/events/hooks/use-enrollment";
 import { EventScheduleTimeline } from "@/features/events/components/event-schedule-timeline";
 import { useEventSchedule } from "@/features/events/hooks/use-event-schedule";
 import {
@@ -279,11 +279,15 @@ function DashboardEventCard({
     userType?: string;
   } | null;
 }) {
+  const [confirmLeave, setConfirmLeave] = useState(false);
+  const [leaveError, setLeaveError] = useState<string | null>(null);
   const isEnrolled = activeEnrollment?.eventId === event.id;
   const isPending = isEnrolled && activeEnrollment?.status === "PENDING";
   const isApproved = isEnrolled && activeEnrollment?.status === "APPROVED";
 
-  const { canEnroll, enrollmentBlockReason, registrationClosedReason } =
+  const { mutate: leaveCompetition, isPending: leaving } = useWithdrawEnrollment(event.id);
+
+  const { canEnroll, canModifyMembers, enrollmentBlockReason, registrationClosedReason } =
     useEventParticipationGate(event, profile
       ? {
           studentStanding:
@@ -295,43 +299,97 @@ function DashboardEventCard({
         }
       : undefined);
   const blockReason = enrollmentBlockReason ?? registrationClosedReason;
+  const canLeave = (isApproved || isPending) && canModifyMembers;
+
+  const handleLeave = () => {
+    setLeaveError(null);
+    leaveCompetition(undefined, {
+      onSuccess: () => setConfirmLeave(false),
+      onError: (err) => {
+        setLeaveError(err instanceof Error ? err.message : "Failed to leave competition");
+      },
+    });
+  };
 
   return (
-    <div className="flex w-full items-center justify-between gap-4 border-2 border-navy bg-white p-5 shadow-[4px_4px_0_0_#0c1228]">
-      <div className="min-w-0 flex-1">
-        <h3 className="font-mono text-base font-bold text-navy">{event.name}</h3>
-        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-seal-text-secondary">
-          <span>{event.season} {event.year}</span>
-          <span>{event.trackCount} track{event.trackCount !== 1 ? "s" : ""}</span>
-          <span>Register by: {formatDate(event.registrationDeadline)}</span>
+    <div className="flex w-full flex-col gap-3 border-2 border-navy bg-white p-5 shadow-[4px_4px_0_0_#0c1228]">
+      <div className="flex w-full items-center justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <h3 className="font-mono text-base font-bold text-navy">{event.name}</h3>
+          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-seal-text-secondary">
+            <span>{event.season} {event.year}</span>
+            <span>{event.trackCount} track{event.trackCount !== 1 ? "s" : ""}</span>
+            <span>Register by: {formatDate(event.registrationDeadline)}</span>
+          </div>
+        </div>
+
+        <div className="flex flex-shrink-0 items-center gap-2">
+          {isApproved ? (
+            <span className="inline-flex items-center rounded-lg bg-emerald-50 px-4 py-2 text-xs font-semibold text-emerald-700">
+              Participating
+            </span>
+          ) : isPending ? (
+            <span className="inline-flex items-center rounded-lg bg-amber-50 px-4 py-2 text-xs font-semibold text-amber-700">
+              Pending approval
+            </span>
+          ) : canEnroll ? (
+            <Link
+              href={`/hackathons/${event.id}/register`}
+              className="inline-flex items-center border-2 border-navy bg-seal-yellow px-4 py-2 text-xs text-navy font-mono font-bold shadow-[4px_4px_0_0_#0c1228]"
+            >
+              Register
+            </Link>
+          ) : (
+            <span
+              className="inline-flex max-w-[200px] items-center rounded-lg bg-amber-50 px-4 py-2 text-xs font-semibold text-amber-700"
+              title={blockReason ?? undefined}
+            >
+              {blockReason ? "Unavailable" : "Register"}
+            </span>
+          )}
+
+          {canLeave && !confirmLeave && (
+            <button
+              type="button"
+              onClick={() => {
+                setLeaveError(null);
+                setConfirmLeave(true);
+              }}
+              className="inline-flex items-center rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-xs font-semibold text-red-700 hover:bg-red-100"
+            >
+              Leave competition
+            </button>
+          )}
         </div>
       </div>
 
-      <div className="flex-shrink-0">
-        {isApproved ? (
-          <span className="inline-flex items-center rounded-lg bg-emerald-50 px-4 py-2 text-xs font-semibold text-emerald-700">
-            Participating
-          </span>
-        ) : isPending ? (
-          <span className="inline-flex items-center rounded-lg bg-amber-50 px-4 py-2 text-xs font-semibold text-amber-700">
-            Pending approval
-          </span>
-        ) : canEnroll ? (
-          <Link
-            href={`/hackathons/${event.id}/register`}
-            className="inline-flex items-center border-2 border-navy bg-seal-yellow px-4 py-2 text-xs text-navy font-mono font-bold shadow-[4px_4px_0_0_#0c1228]"
-          >
-            Register
-          </Link>
-        ) : (
-          <span
-            className="inline-flex max-w-[200px] items-center rounded-lg bg-amber-50 px-4 py-2 text-xs font-semibold text-amber-700"
-            title={blockReason ?? undefined}
-          >
-            {blockReason ? "Unavailable" : "Register"}
-          </span>
-        )}
-      </div>
+      {confirmLeave && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-800">
+          <p className="font-medium">Leave this competition?</p>
+          <p className="mt-1 text-red-700/90">
+            You can only leave before the competition starts. If you are on a team, you will also leave that team.
+          </p>
+          {leaveError && <p className="mt-2 text-red-700">{leaveError}</p>}
+          <div className="mt-3 flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setConfirmLeave(false)}
+              disabled={leaving}
+              className="border-2 border-navy bg-white px-3 py-1.5 text-xs font-semibold text-seal-text"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleLeave}
+              disabled={leaving}
+              className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+            >
+              {leaving ? "Leaving..." : "Leave competition"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

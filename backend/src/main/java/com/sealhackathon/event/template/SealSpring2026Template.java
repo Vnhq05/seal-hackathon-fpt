@@ -54,7 +54,7 @@ public final class SealSpring2026Template {
 
 
 
-    public static final String EVENT_DESCRIPTION = "SEAL Hackathon Spring 2026 — Agentic RAG";
+    public static final String EVENT_DESCRIPTION = "SEAL Hackathon Spring 2026 - Agentic RAG";
 
 
 
@@ -184,13 +184,13 @@ public final class SealSpring2026Template {
 
                 day1.atTime(14, 0), day1.atTime(16, 0), null, 2));
 
-        schedules.add(schedule(ScheduleType.MILESTONE, "Milestone 1 — Idea & architecture completion",
+        schedules.add(schedule(ScheduleType.MILESTONE, "Milestone 1 - Idea & architecture completion",
 
                 "Design Agentic RAG architecture",
 
                 day2.atTime(7, 0), day2.atTime(10, 0), ScheduleGate.SLIDE_SUBMISSION, 3));
 
-        schedules.add(schedule(ScheduleType.MILESTONE, "Milestone 2 — Pitching & product completion",
+        schedules.add(schedule(ScheduleType.MILESTONE, "Milestone 2 - Pitching & product completion",
 
                 "Parallel pitching and coding",
 
@@ -204,7 +204,7 @@ public final class SealSpring2026Template {
 
         schedules.add(schedule(ScheduleType.FINAL, "Finals",
 
-                "7-minute presentation + 3-minute Q&A — Top 6 teams",
+                "7-minute presentation + 3-minute Q&A - Top 6 teams",
 
                 day2.atTime(15, 30), day2.atTime(17, 0), null, 6));
 
@@ -300,7 +300,7 @@ public final class SealSpring2026Template {
 
                     .name(name)
 
-                    .description("SEAL Spring 2026 — " + name)
+                    .description("SEAL Spring 2026 - " + name)
 
                     .maxTeams(maxTeamsPerTrack)
 

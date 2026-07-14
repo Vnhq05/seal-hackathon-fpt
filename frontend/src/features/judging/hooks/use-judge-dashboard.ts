@@ -1,9 +1,19 @@
 import { useQuery } from "@tanstack/react-query";
 import { judgingApi } from "@/lib/api/judging.api";
 import type { JudgeScoringAssignment } from "@/lib/api/judging.api";
-import type { JudgeDashboard, AssignedRoundCard } from "@/features/judging/types/judge.types";
+import type {
+  JudgeDashboard,
+  AssignedRoundCard,
+  ScoringEventSuggestion,
+} from "@/features/judging/types/judge.types";
 
 export const JUDGE_DASHBOARD_KEY = "judge-dashboard" as const;
+
+export function isPendingScore(a: JudgeScoringAssignment): boolean {
+  if (!a.submissionId) return false;
+  if (a.conflictOfInterest || a.scoringAllowed === false) return false;
+  return a.scoringStatus !== "COMPLETED" && a.scoringStatus !== "LOCKED";
+}
 
 function groupAssignmentsByRound(
   assignments: Awaited<ReturnType<typeof judgingApi.getMyAssignments>>,
@@ -31,28 +41,66 @@ function groupAssignmentsByRound(
       scored,
       total: items.length,
       status: isClosed ? "closed" : "open",
+      eventId: first.eventId,
     } as AssignedRoundCard;
   });
 }
 
-function buildUnscoredAssignments(
+/** One suggestion per event that still has teams this judge has not finished scoring. */
+function buildScoringSuggestions(
   assignments: JudgeScoringAssignment[],
-  assignedRounds: AssignedRoundCard[],
-): JudgeScoringAssignment[] {
-  const nearestOpen = assignedRounds
-    .filter((r) => r.scored < r.total && r.status === "open")
-    .sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime())[0];
-  if (!nearestOpen) return [];
+): ScoringEventSuggestion[] {
+  type Acc = {
+    eventId: string;
+    eventName: string;
+    roundId: string;
+    roundName: string;
+    remaining: number;
+    total: number;
+    deadline: string | null;
+  };
 
-  return assignments
-    .filter((a) => a.roundId === nearestOpen.id)
-    .filter((a) => a.scoringStatus !== "COMPLETED" && a.scoringStatus !== "LOCKED")
-    .filter((a) => !a.conflictOfInterest && a.submissionId && a.scoringAllowed !== false)
-    .sort(
-      (a, b) =>
-        new Date(a.scoringDeadline ?? 0).getTime() - new Date(b.scoringDeadline ?? 0).getTime(),
-    )
-    .slice(0, 5);
+  const byEvent = new Map<string, Acc>();
+
+  for (const a of assignments) {
+    if (!a.eventId || !a.eventName) continue;
+    if (!a.submissionId) continue;
+
+    const existing = byEvent.get(a.eventId) ?? {
+      eventId: a.eventId,
+      eventName: a.eventName,
+      roundId: a.roundId,
+      roundName: a.roundName,
+      remaining: 0,
+      total: 0,
+      deadline: a.scoringDeadline,
+    };
+
+    existing.total += 1;
+    if (isPendingScore(a)) {
+      existing.remaining += 1;
+      // Prefer the nearest open deadline among pending items
+      if (
+        a.scoringDeadline &&
+        (!existing.deadline ||
+          new Date(a.scoringDeadline).getTime() < new Date(existing.deadline).getTime())
+      ) {
+        existing.deadline = a.scoringDeadline;
+        existing.roundId = a.roundId;
+        existing.roundName = a.roundName;
+      }
+    }
+
+    byEvent.set(a.eventId, existing);
+  }
+
+  return Array.from(byEvent.values())
+    .filter((s) => s.remaining > 0)
+    .sort((a, b) => {
+      const da = a.deadline ? new Date(a.deadline).getTime() : Number.MAX_SAFE_INTEGER;
+      const db = b.deadline ? new Date(b.deadline).getTime() : Number.MAX_SAFE_INTEGER;
+      return da - db;
+    });
 }
 
 export function useJudgeDashboard() {
@@ -61,37 +109,21 @@ export function useJudgeDashboard() {
     queryFn: async () => {
       const assignments = await judgingApi.getMyAssignments();
       const assignedRounds = groupAssignmentsByRound(assignments);
+      const scoringSuggestions = buildScoringSuggestions(assignments);
       const scored = assignments.filter(
         (a) => a.scoringStatus === "COMPLETED" || a.scoringStatus === "LOCKED",
       ).length;
-
-      const urgentRound = assignedRounds
-        .filter((r) => r.scored < r.total && r.status === "open")
-        .sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime())[0];
+      const remaining = scoringSuggestions.reduce((sum, s) => sum + s.remaining, 0);
 
       return {
-        urgency: urgentRound
-          ? {
-              message: `Complete scoring for ${urgentRound.roundName}`,
-              remainingHours: Math.max(
-                0,
-                Math.round(
-                  (new Date(urgentRound.deadline).getTime() - Date.now()) / (1000 * 60 * 60),
-                ),
-              ),
-              remainingSubmissions: urgentRound.total - urgentRound.scored,
-              roundId: urgentRound.id,
-            }
-          : null,
         stats: {
           roundsAssigned: assignedRounds.length,
           totalSubmissions: assignments.length,
           scored,
-          remaining: assignments.length - scored,
+          remaining,
         },
         assignedRounds,
-        recentActivity: [],
-        unscoredAssignments: buildUnscoredAssignments(assignments, assignedRounds),
+        scoringSuggestions,
       };
     },
   });

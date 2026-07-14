@@ -91,6 +91,11 @@ public class HackathonEvent extends BaseEntity {
     @Column(name = "registration_open_date")
     private LocalDate registrationOpenDate;
 
+    /** Public API path to optional event avatar image (e.g. /api/public/files/events/{id}/avatar.webp). */
+    @Size(max = 500)
+    @Column(name = "avatar_url", length = 500)
+    private String avatarUrl;
+
     @Min(0)
     @Column(name = "min_team")
     private Integer minTeam;

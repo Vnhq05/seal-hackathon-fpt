@@ -1,4 +1,5 @@
 import type { EventResponse } from "@/lib/api";
+import { resolveFileUrl } from "@/lib/files";
 
 function CalendarSmallIcon() {
   return (
@@ -34,19 +35,26 @@ interface RegistrationHeaderProps {
 }
 
 export function RegistrationHeader({ hackathon }: RegistrationHeaderProps) {
+  const avatarSrc = resolveFileUrl(hackathon.avatarUrl);
+
   return (
     <div className="flex items-center gap-4">
-      <div
-        className="flex flex-shrink-0 items-center justify-center overflow-hidden rounded"
-        style={{
-          width: 80,
-          height: 80,
-          backgroundColor: "rgba(223,226,236,0.8)",
-          border: "1px solid rgba(223,226,236,0.8)",
-        }}
-      >
-        {/* EventResponse does not include bannerUrl */}
-      </div>
+      {avatarSrc && (
+        <div
+          className="flex flex-shrink-0 items-center justify-center overflow-hidden rounded"
+          style={{
+            width: 80,
+            height: 80,
+            border: "1px solid rgba(223,226,236,0.8)",
+          }}
+        >
+          <img
+            src={avatarSrc}
+            alt=""
+            className="h-full w-full object-cover"
+          />
+        </div>
+      )}
       <div className="flex flex-col gap-1">
         <h1
           style={{

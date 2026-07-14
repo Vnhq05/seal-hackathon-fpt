@@ -1,7 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import type { UserType, AccountStatus } from "@/lib/api/types";
 import type { UserProfile } from "@/lib/api/user.api";
+import { resolveFileUrl } from "@/lib/files";
+import { ProfileAvatarDialog } from "@/features/profile/components/profile-avatar-dialog";
+import {
+  useDeleteProfileAvatar,
+  useUploadProfileAvatar,
+} from "@/features/profile/hooks/use-profile-avatar";
 
 export type ProfileTab = "personal" | "security" | "events";
 
@@ -51,6 +58,11 @@ interface ProfileHeaderProps {
 }
 
 export function ProfileHeader({ profile, activeTab, onTabChange }: ProfileHeaderProps) {
+  const [avatarOpen, setAvatarOpen] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+  const { mutate: uploadAvatar, isPending: isUploading } = useUploadProfileAvatar();
+  const { mutate: removeAvatar, isPending: isRemoving } = useDeleteProfileAvatar();
+
   const initials = profile.fullName
     .split(" ")
     .map((n) => n[0])
@@ -58,6 +70,7 @@ export function ProfileHeader({ profile, activeTab, onTabChange }: ProfileHeader
     .toUpperCase()
     .slice(0, 2);
 
+  const avatarSrc = resolveFileUrl(profile.avatarUrl);
   const status = profile.status ?? "ACTIVE";
   const statusStyle = STATUS_STYLE[status] ?? STATUS_STYLE.ACTIVE;
 
@@ -81,8 +94,13 @@ export function ProfileHeader({ profile, activeTab, onTabChange }: ProfileHeader
       <div style={{ padding: "0 24px 0 24px" }}>
         {/* Avatar & Edit row */}
         <div className="flex items-end justify-between" style={{ marginTop: -40 }}>
-          <div
-            className="flex items-center justify-center rounded-full"
+          <button
+            type="button"
+            onClick={() => {
+              setAvatarError(null);
+              setAvatarOpen(true);
+            }}
+            className="flex items-center justify-center overflow-hidden rounded-full"
             style={{
               width: 80,
               height: 80,
@@ -90,22 +108,38 @@ export function ProfileHeader({ profile, activeTab, onTabChange }: ProfileHeader
               border: "4px solid #ffffff",
               boxShadow: "0px 1px 1px rgba(0, 0, 0, 0.05)",
               flexShrink: 0,
+              padding: 0,
+              cursor: "pointer",
             }}
+            aria-label="Change profile photo"
           >
-            <span
-              style={{
-                fontSize: "24px",
-                fontWeight: 600,
-                color: "#0e1528",
-                lineHeight: "31.2px",
-                letterSpacing: "-0.24px",
-              }}
-            >
-              {initials}
-            </span>
-          </div>
+            {avatarSrc ? (
+              <img
+                src={avatarSrc}
+                alt=""
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <span
+                style={{
+                  fontSize: "24px",
+                  fontWeight: 600,
+                  color: "#0e1528",
+                  lineHeight: "31.2px",
+                  letterSpacing: "-0.24px",
+                }}
+              >
+                {initials}
+              </span>
+            )}
+          </button>
 
           <button
+            type="button"
+            onClick={() => {
+              setAvatarError(null);
+              setAvatarOpen(true);
+            }}
             className="flex items-center gap-1 border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]"
             style={{
               border: "1px solid rgba(223,226,236,0.8)",
@@ -116,6 +150,7 @@ export function ProfileHeader({ profile, activeTab, onTabChange }: ProfileHeader
               color: "#0e1528",
               letterSpacing: "0.24px",
               lineHeight: "12px",
+              cursor: "pointer",
             }}
           >
             <EditIcon />
@@ -246,6 +281,33 @@ export function ProfileHeader({ profile, activeTab, onTabChange }: ProfileHeader
           })}
         </div>
       </div>
+
+      <ProfileAvatarDialog
+        open={avatarOpen}
+        onClose={() => setAvatarOpen(false)}
+        avatarUrl={profile.avatarUrl}
+        isUploading={isUploading}
+        isRemoving={isRemoving}
+        error={avatarError}
+        onUpload={(file) => {
+          setAvatarError(null);
+          uploadAvatar(file, {
+            onSuccess: () => setAvatarOpen(false),
+            onError: (err) => {
+              setAvatarError(err instanceof Error ? err.message : "Failed to upload avatar.");
+            },
+          });
+        }}
+        onRemove={() => {
+          setAvatarError(null);
+          removeAvatar(undefined, {
+            onSuccess: () => setAvatarOpen(false),
+            onError: (err) => {
+              setAvatarError(err instanceof Error ? err.message : "Failed to remove avatar.");
+            },
+          });
+        }}
+      />
     </div>
   );
 }

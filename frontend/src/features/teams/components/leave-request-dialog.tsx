@@ -36,7 +36,8 @@ export function LeaveTeamDialog({ eventId, teamId, teamName, onClose }: LeaveTea
         <h3 className="font-semibold text-seal-text">Leave team?</h3>
         <p className="mt-2 text-sm text-seal-text-muted">
           Are you sure you want to leave <strong className="text-seal-text">{teamName}</strong>?
-          You will return to the waiting list and can join another team.
+          You can only leave before the competition starts. You will return to the waiting list
+          and can join another team.
         </p>
         {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
         <div className="mt-4 flex justify-end gap-2">

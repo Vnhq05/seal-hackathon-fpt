@@ -74,53 +74,57 @@ export function EventEditDashboard({
 
   if (isLoading) {
     return (
-      <div style={{ padding: 24 }}>
-        <div className="animate-pulse rounded" style={{ height: 32, width: 280, backgroundColor: "rgba(223,226,236,0.8)", marginBottom: 16 }} />
-        <div className="animate-pulse rounded" style={{ height: 200, backgroundColor: "rgba(223,226,236,0.8)" }} />
+      <div className="mx-auto w-full max-w-4xl px-2 py-6 sm:px-4">
+        <div className="mb-4 h-8 w-72 animate-pulse rounded bg-seal-border/80" />
+        <div className="h-48 animate-pulse rounded bg-seal-border/80" />
       </div>
     );
   }
 
   if (isError || !event) {
     return (
-      <div style={{ padding: 24 }}>
-        <p style={{ color: "#991b1b" }}>Failed to load event.</p>
-        <Link href={`${portalBase}/hackathons`} style={{ color: "#0284c7", fontSize: 14 }}>← Back to Event Management</Link>
+      <div className="mx-auto w-full max-w-4xl px-2 py-6 sm:px-4">
+        <p className="text-red-700">Failed to load event.</p>
+        <Link href={`${portalBase}/hackathons`} className="mt-2 inline-block text-sm text-sky-600">
+          ← Back to Event Management
+        </Link>
       </div>
     );
   }
 
   return (
-    <div style={{ padding: 24 }}>
+    <div className="mx-auto w-full max-w-4xl px-2 py-2 sm:px-4">
       <Link
         href={`${portalBase}/hackathons`}
-        style={{ fontSize: 13, color: "#8891a5", textDecoration: "none", marginBottom: 16, display: "inline-block" }}
+        className="mb-5 inline-flex items-center gap-1 text-[13px] text-seal-text-muted no-underline transition-colors hover:text-navy"
       >
         ← Back to Event Management
       </Link>
 
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 32, fontWeight: 700, color: "#0e1528", letterSpacing: "-0.64px", lineHeight: "38.4px" }}>
+      <header className="mb-8 border-b-2 border-navy/10 pb-6">
+        <h1 className="text-[28px] font-bold leading-tight tracking-[-0.02em] text-navy sm:text-[32px]">
           {event.name}
         </h1>
-        <p style={{ fontSize: 14, color: "#8891a5", marginTop: 4 }}>
-          {event.season} {event.year} · {STATUS_LABELS[event.status] ?? event.status}
+        <p className="mt-2 text-sm text-seal-text-muted">
+          {event.season} {event.year}
+          <span className="mx-2 text-navy/20">·</span>
+          {STATUS_LABELS[event.status] ?? event.status}
         </p>
-      </div>
+      </header>
 
-      <div style={{ marginBottom: 24, maxWidth: 720 }}>
+      <div className="flex flex-col gap-6">
         <EventPhasePanel eventId={eventId} currentStatus={event.status} />
-      </div>
 
-      <div id="allowed-email-domains" style={{ marginBottom: 24, maxWidth: 720 }}>
-        <AllowedEmailDomainsPanel eventId={eventId} readOnly />
-      </div>
+        <div id="allowed-email-domains">
+          <AllowedEmailDomainsPanel eventId={eventId} readOnly />
+        </div>
 
-      <div style={{ marginBottom: 24 }}>
-        <EventEditTabs activeTab={activeTab} onTabChange={setActiveTab} />
-      </div>
+        <div className="border-t-2 border-navy/10 pt-6">
+          <EventEditTabs activeTab={activeTab} onTabChange={setActiveTab} />
+        </div>
 
-      <div style={{ marginTop: 24 }}>{tabContent}</div>
+        <div>{tabContent}</div>
+      </div>
     </div>
   );
 }

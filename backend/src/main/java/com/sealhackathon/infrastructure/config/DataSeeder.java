@@ -56,6 +56,16 @@ public class DataSeeder implements CommandLineRunner {
             "scoretest106@fpt.edu.vn"
     );
 
+    /** Students for second scoring demo event (DEV Scoring Feature Test B). */
+    public static final List<String> SCORING_TEST_STUDENT_EMAILS_B = List.of(
+            "scoretest107@fpt.edu.vn",
+            "scoretest108@fpt.edu.vn",
+            "scoretest109@fpt.edu.vn",
+            "scoretest110@fpt.edu.vn",
+            "scoretest111@fpt.edu.vn",
+            "scoretest112@fpt.edu.vn"
+    );
+
     /** Students for {@link FeedbackDemoSeeder} — completed event, feedback form at /student/feedback. */
     public static final List<String> FEEDBACK_TEST_STUDENT_EMAILS = List.of(
             "feedbacktest101@fpt.edu.vn",
@@ -70,6 +80,13 @@ public class DataSeeder implements CommandLineRunner {
             "progresstest103@fpt.edu.vn",
             "progresstest104@fpt.edu.vn",
             "progresstest105@fpt.edu.vn"
+    );
+
+    /** Students for {@link LeaveTeamDemoSeeder} — OPEN event, before competition start. */
+    public static final List<String> LEAVE_TEST_STUDENT_EMAILS = List.of(
+            "leavetest101@fpt.edu.vn",
+            "leavetest102@fpt.edu.vn",
+            "leavetest103@fpt.edu.vn"
     );
 
     /** General-purpose students for other events — see {@link OtherEventStudentSeeder}. */
@@ -94,6 +111,7 @@ public class DataSeeder implements CommandLineRunner {
     private final ScoringDemoSeeder scoringDemoSeeder;
     private final FeedbackDemoSeeder feedbackDemoSeeder;
     private final ProgressDemoSeeder progressDemoSeeder;
+    private final LeaveTeamDemoSeeder leaveTeamDemoSeeder;
     private final OtherEventStudentSeeder otherEventStudentSeeder;
     private final HackathonEventRepository eventRepository;
     private final TransactionTemplate transactionTemplate;
@@ -149,6 +167,12 @@ public class DataSeeder implements CommandLineRunner {
         seedUser("scoretest104@fpt.edu.vn", "Score Test 104", UserType.FPT_STUDENT, 6);
         seedUser("scoretest105@fpt.edu.vn", "Score Test 105", UserType.FPT_STUDENT, 5);
         seedUser("scoretest106@fpt.edu.vn", "Score Test 106", UserType.FPT_STUDENT, 6);
+        seedUser("scoretest107@fpt.edu.vn", "Score Test 107", UserType.FPT_STUDENT, 5);
+        seedUser("scoretest108@fpt.edu.vn", "Score Test 108", UserType.FPT_STUDENT, 5);
+        seedUser("scoretest109@fpt.edu.vn", "Score Test 109", UserType.FPT_STUDENT, 6);
+        seedUser("scoretest110@fpt.edu.vn", "Score Test 110", UserType.FPT_STUDENT, 6);
+        seedUser("scoretest111@fpt.edu.vn", "Score Test 111", UserType.FPT_STUDENT, 5);
+        seedUser("scoretest112@fpt.edu.vn", "Score Test 112", UserType.FPT_STUDENT, 6);
 
         seedUser("feedbacktest101@fpt.edu.vn", "Feedback Test 101", UserType.FPT_STUDENT, 5);
         seedUser("feedbacktest102@fpt.edu.vn", "Feedback Test 102", UserType.FPT_STUDENT, 5);
@@ -160,11 +184,16 @@ public class DataSeeder implements CommandLineRunner {
         seedUser("progresstest104@fpt.edu.vn", "Progress Test 104", UserType.FPT_STUDENT, 6);
         seedUser("progresstest105@fpt.edu.vn", "Progress Test 105", UserType.FPT_STUDENT, 5);
 
+        seedUser("leavetest101@fpt.edu.vn", "Leave Test 101", UserType.FPT_STUDENT, 5);
+        seedUser("leavetest102@fpt.edu.vn", "Leave Test 102", UserType.FPT_STUDENT, 5);
+        seedUser("leavetest103@fpt.edu.vn", "Leave Test 103", UserType.FPT_STUDENT, 6);
+
         eventDemoSeeder.seed();
         submissionDemoSeeder.seed();
         scoringDemoSeeder.seed();
         feedbackDemoSeeder.seed();
         progressDemoSeeder.seed();
+        leaveTeamDemoSeeder.seed();
         otherEventStudentSeeder.seed();
         judgingDemoSeeder.seedIfMissing();
         publishReadyDemoSeeder.seedIfReady();

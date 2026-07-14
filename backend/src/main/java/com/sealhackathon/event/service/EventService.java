@@ -8,6 +8,7 @@ import com.sealhackathon.common.exception.DuplicateResourceException;
 import com.sealhackathon.common.exception.ResourceNotFoundException;
 import com.sealhackathon.common.util.PrizeAmountUtils;
 import com.sealhackathon.common.util.SeasonUtils;
+import com.sealhackathon.common.storage.FileStorageService;
 import com.sealhackathon.event.domain.HackathonEvent;
 import com.sealhackathon.event.domain.HonoredGuest;
 import com.sealhackathon.event.domain.Prize;
@@ -29,6 +30,7 @@ import com.sealhackathon.event.event.EventCreatedEvent;
 import com.sealhackathon.event.template.SealSpring2026Template;
 import com.sealhackathon.event.repository.HackathonEventRepository;
 import com.sealhackathon.event.repository.ScoringTemplateRepository;
+import com.sealhackathon.team.service.TeamService;
 import com.sealhackathon.user.dto.snapshot.UserSnapshot;
 import com.sealhackathon.user.service.UserPublicService;
 import lombok.RequiredArgsConstructor;
@@ -42,6 +44,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -78,10 +81,14 @@ public class EventService {
     private final AllowedEmailDomainService allowedEmailDomainService;
     private final ScoringTemplateRepository scoringTemplateRepository;
     private final UserPublicService userPublicService;
+    private final FileStorageService fileStorageService;
     private final JudgeAssignmentService judgeAssignmentService;
     @Autowired
     @Lazy
     private FormatRuleEngine formatRuleEngine;
+    @Autowired
+    @Lazy
+    private TeamService teamService;
 
     @Transactional
     public EventResponse createEvent(CreateEventRequest request) {
@@ -359,6 +366,11 @@ public class EventService {
         event.setStatus(target);
         EventResponse response = toResponse(eventRepository.save(event));
 
+        // Undersized teams cannot compete — force members out when registration locks or competition starts
+        if (target == EventStatus.CLOSED_REGISTRATION || target == EventStatus.ACTIVE) {
+            teamService.disbandUndersizedTeams(eventId);
+        }
+
         auditService.log(
                 authPublicService.getCurrentUserId(),
                 "EVENT_STATUS_CHANGE",
@@ -414,16 +426,109 @@ public class EventService {
         assertPubliclyVisible(event);
     }
 
+    /**
+     * Public visibility rules:
+     * <ul>
+     *   <li>Cancelled events are never public.</li>
+     *   <li>OPEN (resolved live status) is public even before rounds exist —
+     *       matches {@link #listPublicEvents} when filtering by status=OPEN.</li>
+     *   <li>Other non-cancelled statuses require at least one round (published set).</li>
+     * </ul>
+     */
     private void assertPubliclyVisible(HackathonEvent event) {
-        if (event.getStatus() == EventStatus.CANCELLED || event.getRounds().isEmpty()) {
+        if (event.getStatus() == EventStatus.CANCELLED) {
+            throw new ResourceNotFoundException("Event", "id", event.getId());
+        }
+        if (resolveStatus(event) == EventStatus.OPEN) {
+            return;
+        }
+        if (event.getRounds().isEmpty()) {
             throw new ResourceNotFoundException("Event", "id", event.getId());
         }
     }
 
+    /**
+     * Public event listing. When {@code status} is null, returns published events
+     * (not cancelled and with at least one round). When {@code status} is set (e.g. OPEN),
+     * filters by resolved live status and does not require rounds.
+     */
     @Transactional(readOnly = true)
     public Page<EventResponse> listPublicEvents(EventStatus status, Pageable pageable) {
-        Page<HackathonEvent> page = eventRepository.findPublishedEvents(pageable);
-        return page.map(this::toResponse);
+        if (status == null) {
+            return eventRepository.findPublishedEvents(pageable).map(this::toResponse);
+        }
+
+        Page<HackathonEvent> all = eventRepository.findByFilters(null, null, null, Pageable.unpaged());
+        List<EventResponse> filtered = all.getContent().stream()
+                .map(this::toResponse)
+                .filter(e -> e.getStatus() == status)
+                .toList();
+
+        int start = (int) pageable.getOffset();
+        int end = Math.min(start + pageable.getPageSize(), filtered.size());
+        List<EventResponse> slice = start >= filtered.size() ? List.of() : filtered.subList(start, end);
+        return new PageImpl<>(slice, pageable, filtered.size());
+    }
+
+    @Transactional
+    public EventResponse uploadAvatar(UUID eventId, MultipartFile file, String ipAddress) {
+        HackathonEvent event = getEvent(eventId);
+        enforceOwnership(event);
+        assertEventMutable(event);
+
+        String previousUrl = event.getAvatarUrl();
+        String newUrl = fileStorageService.storeEventAvatar(file, eventId);
+        event.setAvatarUrl(newUrl);
+        EventResponse response = toResponse(eventRepository.save(event));
+
+        if (previousUrl != null && !previousUrl.equals(newUrl)) {
+            fileStorageService.deleteIfExists(previousUrl);
+        }
+
+        auditService.log(
+                authPublicService.getCurrentUserId(),
+                "EVENT_AVATAR_UPLOAD",
+                eventId,
+                "HackathonEvent",
+                null,
+                "{\"avatarUrl\":\"" + newUrl + "\"}",
+                ipAddress);
+
+        return response;
+    }
+
+    @Transactional
+    public EventResponse deleteAvatar(UUID eventId, String ipAddress) {
+        HackathonEvent event = getEvent(eventId);
+        enforceOwnership(event);
+        assertEventMutable(event);
+
+        String previousUrl = event.getAvatarUrl();
+        if (previousUrl != null) {
+            fileStorageService.deleteIfExists(previousUrl);
+            event.setAvatarUrl(null);
+            eventRepository.save(event);
+        }
+
+        auditService.log(
+                authPublicService.getCurrentUserId(),
+                "EVENT_AVATAR_DELETE",
+                eventId,
+                "HackathonEvent",
+                previousUrl != null ? "{\"avatarUrl\":\"" + previousUrl + "\"}" : null,
+                null,
+                ipAddress);
+
+        return toResponse(event);
+    }
+
+    private void assertEventMutable(HackathonEvent event) {
+        EventStatus liveStatus = resolveStatus(event);
+        if (liveStatus == EventStatus.ACTIVE || liveStatus == EventStatus.COMPLETED) {
+            throw new BusinessException(
+                    "Cannot modify event during or after the competition period.",
+                    HttpStatus.BAD_REQUEST) {};
+        }
     }
 
     @Transactional(readOnly = true)
@@ -548,8 +653,8 @@ public class EventService {
     }
 
     private void validateDateRange(java.time.LocalDate start, java.time.LocalDate end) {
-        if (!end.isAfter(start)) {
-            throw new BusinessException("End date must be after start date", HttpStatus.BAD_REQUEST) {};
+        if (end.isBefore(start)) {
+            throw new BusinessException("End date must be on or after start date", HttpStatus.BAD_REQUEST) {};
         }
     }
 
@@ -679,6 +784,7 @@ public class EventService {
                 .description(event.getDescription())
                 .location(event.getLocation())
                 .format(event.getFormat())
+                .avatarUrl(event.getAvatarUrl())
                 .competitionFormat(event.getCompetitionFormat())
                 .minTeam(event.getMinTeam())
                 .maxTeam(event.getMaxTeam())

@@ -188,6 +188,7 @@ public class UserPublicServiceImpl implements UserPublicService {
                 .passwordHash(user.getPasswordHash())
                 .fullName(user.getFullName())
                 .phone(user.getPhone())
+                .avatarUrl(user.getAvatarUrl())
                 .studentId(user.getStudentId())
                 .universityName(UniversityUtils.resolveUniversityName(
                         user.getUserType(), user.getUniversityName()))

@@ -396,6 +396,92 @@ class TeamServiceTest {
         assertThat(response.getMembers().get(0).getFullName()).isEqualTo("Member");
     }
 
+    // ── Leave / undersized team rules ──
+
+    @Test
+    void leaveTeam_shouldRemoveMember_whenNotLeader() {
+        UUID eventId = UUID.randomUUID();
+        UUID teamId = UUID.randomUUID();
+        UUID leaderId = UUID.randomUUID();
+        UUID memberId = UUID.randomUUID();
+        stubTeamSizeConfig();
+
+        Team team = buildTeam(teamId, eventId);
+        team.setLeaderId(leaderId);
+        team.setStatus(TeamStatus.CONFIRMED);
+        TeamMember member = TeamMember.builder().userId(memberId).role(TeamMemberRole.MEMBER).build();
+
+        when(teamRepository.findById(teamId)).thenReturn(Optional.of(team));
+        when(teamMemberRepository.findByTeamIdAndUserId(teamId, memberId)).thenReturn(Optional.of(member));
+        when(teamMemberRepository.countByTeamId(teamId)).thenReturn(2);
+        when(teamRepository.save(any(Team.class))).thenAnswer(i -> i.getArgument(0));
+
+        teamService.leaveTeam(memberId, teamId);
+
+        verify(teamMemberRepository).delete(member);
+        verify(eventPublisher).publishEvent(any(com.sealhackathon.team.event.MemberLeftEvent.class));
+        assertThat(team.getStatus()).isEqualTo(TeamStatus.FORMING);
+    }
+
+    @Test
+    void leaveTeam_shouldThrow_whenLeader() {
+        UUID teamId = UUID.randomUUID();
+        UUID leaderId = UUID.randomUUID();
+
+        Team team = buildTeam(teamId, UUID.randomUUID());
+        team.setLeaderId(leaderId);
+        when(teamRepository.findById(teamId)).thenReturn(Optional.of(team));
+
+        assertThatThrownBy(() -> teamService.leaveTeam(leaderId, teamId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("Team leader cannot leave");
+    }
+
+    @Test
+    void disbandUndersizedTeams_shouldForceLeaveMembers() {
+        UUID eventId = UUID.randomUUID();
+        UUID teamId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        stubTeamSizeConfig();
+
+        Team team = buildTeam(teamId, eventId);
+        team.setStatus(TeamStatus.FORMING);
+        TeamMember member = TeamMember.builder().userId(userId).role(TeamMemberRole.LEADER).build();
+
+        when(teamRepository.findByEventId(eventId)).thenReturn(List.of(team));
+        when(teamMemberRepository.countByTeamId(teamId)).thenReturn(1);
+        when(teamMemberRepository.findByTeamId(teamId)).thenReturn(List.of(member));
+        when(teamRepository.save(any(Team.class))).thenAnswer(i -> i.getArgument(0));
+        doNothing().when(enrollmentService).forceWithdrawEnrollment(userId, eventId);
+
+        int count = teamService.disbandUndersizedTeams(eventId);
+
+        assertThat(count).isEqualTo(1);
+        assertThat(team.getStatus()).isEqualTo(TeamStatus.DISBANDED);
+        verify(teamMemberRepository).delete(member);
+        verify(eventPublisher).publishEvent(any(com.sealhackathon.team.event.MemberLeftEvent.class));
+        verify(enrollmentService).forceWithdrawEnrollment(userId, eventId);
+    }
+
+    @Test
+    void disbandUndersizedTeams_shouldSkipConfirmedTeamsAtMinSize() {
+        UUID eventId = UUID.randomUUID();
+        UUID teamId = UUID.randomUUID();
+        stubTeamSizeConfig();
+
+        Team team = buildTeam(teamId, eventId);
+        team.setStatus(TeamStatus.CONFIRMED);
+
+        when(teamRepository.findByEventId(eventId)).thenReturn(List.of(team));
+        when(teamMemberRepository.countByTeamId(teamId)).thenReturn(3);
+
+        int count = teamService.disbandUndersizedTeams(eventId);
+
+        assertThat(count).isZero();
+        assertThat(team.getStatus()).isEqualTo(TeamStatus.CONFIRMED);
+        verify(teamMemberRepository, org.mockito.Mockito.never()).delete(any());
+    }
+
     private Team buildTeam(UUID teamId, UUID eventId) {
         Team team = Team.builder()
                 .eventId(eventId)

@@ -296,6 +296,15 @@ public class ScoreReviewService {
                 && !active
                 && !publishedResultRepository.existsByRoundId(submission.getRoundId());
 
+        UUID noteAuthorId = review == null ? null
+                : review.getResolvedBy() != null
+                        ? review.getResolvedBy()
+                        : (review.getStatus() == ScoreReviewStatus.APPROVED
+                                ? review.getApprovedBy() : null);
+        UserSnapshot resolver = noteAuthorId != null
+                ? userPublicService.findById(noteAuthorId).orElse(null)
+                : null;
+
         return ScoreReviewContextResponse.builder()
                 .reviewId(review != null ? review.getId() : null)
                 .submissionId(submissionId)
@@ -306,6 +315,10 @@ public class ScoreReviewService {
                 .canRequestAdjustment(canRequest)
                 .canEditForAdjustment(approved && requesterRole == UserType.LECTURER)
                 .requestNote(review != null ? review.getRequestNote() : null)
+                .resolutionNote(review != null ? review.getResolutionNote() : null)
+                .resolvedBy(review != null ? review.getResolvedBy() : null)
+                .resolvedByRole(resolver != null ? resolver.getUserType() : null)
+                .resolvedByFullName(resolver != null ? resolver.getFullName() : null)
                 .build();
     }
 
@@ -549,6 +562,12 @@ public class ScoreReviewService {
     private ScoreReviewResponse toSummaryResponse(ScoreReviewRequest review) {
         UserSnapshot requester = review.getRequestedBy() != null
                 ? userPublicService.findById(review.getRequestedBy()).orElse(null) : null;
+        UUID noteAuthorId = review.getResolvedBy() != null
+                ? review.getResolvedBy()
+                : (review.getStatus() == ScoreReviewStatus.APPROVED
+                        ? review.getApprovedBy() : null);
+        UserSnapshot resolver = noteAuthorId != null
+                ? userPublicService.findById(noteAuthorId).orElse(null) : null;
 
         return ScoreReviewResponse.builder()
                 .id(review.getId())
@@ -570,6 +589,9 @@ public class ScoreReviewService {
                 .approvedBy(review.getApprovedBy())
                 .createdAt(review.getCreatedAt())
                 .resolvedAt(review.getResolvedAt())
+                .resolvedBy(review.getResolvedBy())
+                .resolvedByRole(resolver != null ? resolver.getUserType() : null)
+                .resolvedByFullName(resolver != null ? resolver.getFullName() : null)
                 .resolutionNote(review.getResolutionNote())
                 .build();
     }

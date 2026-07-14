@@ -11,7 +11,7 @@ ORDER BY created_at;
 
 IF @eventId IS NULL
 BEGIN
-    PRINT 'No empty Spring 2026 GENERIC event found — skipping.';
+    PRINT 'No empty Spring 2026 GENERIC event found - skipping.';
     RETURN;
 END
 
@@ -22,7 +22,7 @@ SET name = N'SEAL Hackathon Spring 2026',
     end_date = '2026-08-15',
     registration_open_date = '2026-03-15',
     registration_deadline = '2026-07-31',
-    description = N'SEAL Hackathon Spring 2026 — Agentic RAG',
+    description = N'SEAL Hackathon Spring 2026 - Agentic RAG',
     location = N'FPT University Da Nang',
     format = 'OFFLINE',
     min_team = 3,
@@ -39,9 +39,9 @@ IF NOT EXISTS (SELECT 1 FROM tracks WHERE event_id = @eventId)
 BEGIN
     INSERT INTO tracks (id, event_id, name, description, max_teams, status, created_at, updated_at)
     VALUES
-        (NEWID(), @eventId, N'Track A', N'SEAL Spring 2026 — Track A', 8, 'OPEN', @now, @now),
-        (NEWID(), @eventId, N'Track B', N'SEAL Spring 2026 — Track B', 8, 'OPEN', @now, @now),
-        (NEWID(), @eventId, N'Track C', N'SEAL Spring 2026 — Track C', 8, 'OPEN', @now, @now);
+        (NEWID(), @eventId, N'Track A', N'SEAL Spring 2026 - Track A', 8, 'OPEN', @now, @now),
+        (NEWID(), @eventId, N'Track B', N'SEAL Spring 2026 - Track B', 8, 'OPEN', @now, @now),
+        (NEWID(), @eventId, N'Track C', N'SEAL Spring 2026 - Track C', 8, 'OPEN', @now, @now);
 END
 
 -- Rounds
@@ -104,10 +104,10 @@ BEGIN
         (NEWID(), @eventId, 'WORKSHOP', N'Workshop', NULL, '2026-04-09 09:00:00', '2026-04-09 12:00:00', NULL, 0, @now, @now),
         (NEWID(), @eventId, 'OPENING', N'Opening & track draw', N'Teams pick tracks in turn; organizers draw topics per track', '2026-04-11 14:00:00', '2026-04-11 17:00:00', NULL, 1, @now, @now),
         (NEWID(), @eventId, 'TRACK_DRAW', N'Track selection draw', NULL, '2026-04-11 14:00:00', '2026-04-11 16:00:00', NULL, 2, @now, @now),
-        (NEWID(), @eventId, 'MILESTONE', N'Milestone 1 — Idea & architecture completion', N'Design Agentic RAG architecture', '2026-04-12 07:00:00', '2026-04-12 10:00:00', 'SLIDE_SUBMISSION', 3, @now, @now),
-        (NEWID(), @eventId, 'MILESTONE', N'Milestone 2 — Pitching & product completion', N'Parallel pitching and coding', '2026-04-12 10:00:00', '2026-04-12 14:00:00', 'DEMO_SUBMISSION', 4, @now, @now),
+        (NEWID(), @eventId, 'MILESTONE', N'Milestone 1 - Idea & architecture completion', N'Design Agentic RAG architecture', '2026-04-12 07:00:00', '2026-04-12 10:00:00', 'SLIDE_SUBMISSION', 3, @now, @now),
+        (NEWID(), @eventId, 'MILESTONE', N'Milestone 2 - Pitching & product completion', N'Parallel pitching and coding', '2026-04-12 10:00:00', '2026-04-12 14:00:00', 'DEMO_SUBMISSION', 4, @now, @now),
         (NEWID(), @eventId, 'SCORING', N'Preliminary scoring', N'5-minute presentation + 3-minute Q&A', '2026-04-12 14:00:00', '2026-04-12 15:30:00', NULL, 5, @now, @now),
-        (NEWID(), @eventId, 'FINAL', N'Finals', N'7-minute presentation + 3-minute Q&A — Top 6 teams', '2026-04-12 15:30:00', '2026-04-12 17:00:00', NULL, 6, @now, @now),
+        (NEWID(), @eventId, 'FINAL', N'Finals', N'7-minute presentation + 3-minute Q&A - Top 6 teams', '2026-04-12 15:30:00', '2026-04-12 17:00:00', NULL, 6, @now, @now),
         (NEWID(), @eventId, 'CEREMONY', N'Awards & closing ceremony', NULL, '2026-04-12 17:00:00', '2026-04-12 18:00:00', NULL, 7, @now, @now);
 END
 

@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { useAuthStore } from "@/features/auth/store/auth.store";
+import { resolveFileUrl } from "@/lib/files";
 import { SEAL_TOPNAV } from "@/shared/ui/seal-pixel";
 
 function SearchIcon() {
@@ -15,76 +15,30 @@ function SearchIcon() {
   );
 }
 
-function ChevronRight() {
-  return (
-    <svg width="4" height="6" viewBox="0 0 4 6" fill="none" aria-hidden="true">
-      <path d="M1 1l2 2-2 2" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
 export interface PortalTopNavLink {
   href: string;
   label: string;
 }
 
 interface PortalTopNavProps {
-  breadcrumbMap: Record<string, { label: string; href: string }[]>;
-  defaultBreadcrumb: { label: string; href: string };
-  pathPrefix: string;
   navLinks?: PortalTopNavLink[];
   searchPlaceholder?: string;
-  resolveBreadcrumbs?: (pathname: string) => { label: string; href: string }[] | undefined;
 }
 
 export function PortalTopNav({
-  breadcrumbMap,
-  defaultBreadcrumb,
-  pathPrefix,
   navLinks = [],
   searchPlaceholder = "Search...",
-  resolveBreadcrumbs,
 }: PortalTopNavProps) {
-  const pathname = usePathname();
   const user = useAuthStore((s) => s.user);
   const [search, setSearch] = useState("");
-
-  const crumbs =
-    breadcrumbMap[pathname] ??
-    resolveBreadcrumbs?.(pathname) ??
-    (pathname.startsWith(pathPrefix) ? [defaultBreadcrumb] : [defaultBreadcrumb]);
 
   const initials = user?.fullName
     ? user.fullName.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
     : "U";
+  const avatarSrc = resolveFileUrl(user?.avatarUrl);
 
   return (
-    <header className={`${SEAL_TOPNAV} sticky top-0 z-30 flex h-16 flex-shrink-0 items-center justify-between px-6`}>
-      <nav className="flex items-center gap-2" aria-label="Breadcrumb">
-        {crumbs.map((crumb, i) => {
-          const isLast = i === crumbs.length - 1;
-          return (
-            <span key={`${crumb.href}-${crumb.label}`} className="flex items-center gap-2">
-              {i > 0 ? (
-                <span className="text-seal-text-muted">
-                  <ChevronRight />
-                </span>
-              ) : null}
-              {isLast ? (
-                <span className="font-mono text-xs font-bold uppercase text-navy">{crumb.label}</span>
-              ) : (
-                <Link
-                  href={crumb.href}
-                  className="font-mono text-xs font-semibold uppercase text-seal-text-secondary transition-colors hover:text-navy"
-                >
-                  {crumb.label}
-                </Link>
-              )}
-            </span>
-          );
-        })}
-      </nav>
-
+    <header className={`${SEAL_TOPNAV} sticky top-0 z-30 flex h-16 flex-shrink-0 items-center justify-end px-6`}>
       <div className="flex items-center gap-6">
         {navLinks.length > 0 ? (
           <nav className="hidden items-center gap-1 md:flex">
@@ -113,8 +67,12 @@ export function PortalTopNav({
               className="w-full border-none bg-transparent font-mono text-xs text-seal-text outline-none placeholder:text-seal-text-muted"
             />
           </div>
-          <div className="ml-1 flex h-9 w-9 flex-shrink-0 items-center justify-center border-2 border-navy bg-seal-yellow">
-            <span className="font-mono text-[11px] font-bold text-navy">{initials}</span>
+          <div className="ml-1 flex h-9 w-9 flex-shrink-0 items-center justify-center overflow-hidden border-2 border-navy bg-seal-yellow">
+            {avatarSrc ? (
+              <img src={avatarSrc} alt="" className="h-full w-full object-cover" />
+            ) : (
+              <span className="font-mono text-[11px] font-bold text-navy">{initials}</span>
+            )}
           </div>
         </div>
       </div>

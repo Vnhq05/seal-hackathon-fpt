@@ -26,6 +26,7 @@ import { useSystemTeamConfig } from "@/features/teams/hooks/use-system-team-conf
 import { useProfile } from "@/features/profile/hooks/use-profile";
 import { useAuthStore } from "@/features/auth/store/auth.store";
 import { ParticipationBlockBanner } from "@/features/events/components/participation-block-banner";
+import { resolveFileUrl } from "@/lib/files";
 
 const SECTION_LINKS = [
   { id: "about", label: "About" },
@@ -120,6 +121,7 @@ function HeroSection({ event }: { event: EventResponse }) {
   const blockReason = enrollmentBlockReason ?? registrationClosedReason;
   const semester = formatSemesterRange(systemConfig?.semesterMin, systemConfig?.semesterMax);
   const prizePool = calcTotalPrizePool(event.prizes);
+  const avatarSrc = resolveFileUrl(event.avatarUrl);
 
   return (
     <section className="relative min-h-[88vh] overflow-hidden bg-seal-dark pt-16">
@@ -138,6 +140,13 @@ function HeroSection({ event }: { event: EventResponse }) {
 
       <div className="relative mx-auto max-w-7xl px-4 pb-20 sm:px-6 lg:px-8">
         <div className="flex flex-wrap items-center gap-3 pt-12">
+          {avatarSrc && (
+            <img
+              src={avatarSrc}
+              alt=""
+              className="h-14 w-14 border-2 border-seal-cyan/30 object-cover"
+            />
+          )}
           <span className="rounded border border-seal-cyan/20 bg-seal-cyan/10 px-3 py-1 font-mono text-xs font-semibold text-seal-cyan">
             {event.season} {event.year}
           </span>
@@ -161,7 +170,7 @@ function HeroSection({ event }: { event: EventResponse }) {
         <div className="mt-8 flex flex-wrap gap-4 text-sm text-slate-300">
           <div className="flex items-center gap-2">
             <CalendarIcon />
-            <span>{formatEventDate(event.startDate)} — {formatEventDate(event.endDate)}</span>
+            <span>{formatEventDate(event.startDate)} - {formatEventDate(event.endDate)}</span>
           </div>
           {event.location && (
             <div className="flex items-center gap-2">
@@ -384,7 +393,7 @@ function ScheduleSection({
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <SectionHeader
           title="Competition Schedule"
-          subtitle="Mark your calendar — every round counts."
+          subtitle="Mark your calendar - every round counts."
         />
 
         {schedules.length > 0 && (

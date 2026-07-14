@@ -286,9 +286,16 @@ public class TeamService {
 
         return toResponse(team, leaderId, null);
     }
+    /**
+     * Voluntary leave — allowed only before the competition starts
+     * (OPEN / UPCOMING via {@link FormatRuleEngine#assertCanModifyTeamMembers}).
+     */
     @Transactional
     public void leaveTeam(UUID currentUserId, UUID teamId) {
         Team team = getTeam(teamId);
+        if (team.getStatus() == TeamStatus.DISBANDED) {
+            throw new BusinessException("Team is disbanded", HttpStatus.BAD_REQUEST) {};
+        }
         formatRuleEngine.assertCanModifyTeamMembers(team.getEventId());
 
         if (currentUserId.equals(team.getLeaderId())) {
@@ -306,6 +313,43 @@ public class TeamService {
 
         updateTeamStatus(team);
         syncRecruitingStatus(teamId);
+    }
+
+    /**
+     * Force-remove undersized teams and withdraw those students from the event.
+     * Called when registration closes or the competition becomes ACTIVE.
+     *
+     * @return number of teams disbanded
+     */
+    @Transactional
+    public int disbandUndersizedTeams(UUID eventId) {
+        int minSize = getMinTeamSize();
+        int disbanded = 0;
+
+        for (Team team : teamRepository.findByEventId(eventId)) {
+            if (team.getStatus() == TeamStatus.DISBANDED) {
+                continue;
+            }
+            int size = teamMemberRepository.countByTeamId(team.getId());
+            if (size >= minSize) {
+                continue;
+            }
+
+            List<TeamMember> members = teamMemberRepository.findByTeamId(team.getId());
+            for (TeamMember member : members) {
+                UUID userId = member.getUserId();
+                teamMemberRepository.delete(member);
+                eventPublisher.publishEvent(new MemberLeftEvent(team.getId(), userId));
+                enrollmentService.forceWithdrawEnrollment(userId, eventId);
+            }
+
+            team.setStatus(TeamStatus.DISBANDED);
+            team.setRecruiting(false);
+            teamRepository.save(team);
+            disbanded++;
+        }
+
+        return disbanded;
     }
 
     // ── Transfer leadership — BR-20 ──

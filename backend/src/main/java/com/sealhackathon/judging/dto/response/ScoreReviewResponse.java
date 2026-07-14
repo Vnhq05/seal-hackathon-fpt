@@ -1,5 +1,6 @@
 package com.sealhackathon.judging.dto.response;
 
+import com.sealhackathon.common.enums.UserType;
 import com.sealhackathon.event.domain.enums.RoundType;
 import com.sealhackathon.judging.domain.enums.ScoreAdjustmentType;
 import com.sealhackathon.judging.domain.enums.ScoreReviewStatus;
@@ -40,6 +41,9 @@ public class ScoreReviewResponse {
     private UUID approvedBy;
     private LocalDateTime createdAt;
     private LocalDateTime resolvedAt;
+    private UUID resolvedBy;
+    private UserType resolvedByRole;
+    private String resolvedByFullName;
     private String resolutionNote;
     private List<ScoreReviewJudgeScoreResponse> judgeScores;
 }

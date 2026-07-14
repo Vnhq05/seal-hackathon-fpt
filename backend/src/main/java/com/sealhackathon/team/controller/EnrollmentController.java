@@ -116,11 +116,11 @@ public class EnrollmentController {
     }
 
     @PostMapping("/withdraw")
-    @Operation(summary = "Withdraw enrollment from event")
+    @Operation(summary = "Leave event before competition starts (also leaves team if any)")
     public ResponseEntity<ApiResponse<Void>> withdraw(
             @PathVariable UUID eventId) {
         UUID userId = authPublicService.getCurrentUserId();
         enrollmentService.withdrawEnrollment(userId, eventId);
-        return ResponseEntity.ok(ApiResponse.success("Enrollment withdrawn", null));
+        return ResponseEntity.ok(ApiResponse.success("Left the competition successfully", null));
     }
 }

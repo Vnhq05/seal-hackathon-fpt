@@ -41,6 +41,8 @@ export interface EventResponse {
   description: string | null;
   location: string | null;
   format: string;
+  /** Public path to optional event avatar; null when not set. */
+  avatarUrl: string | null;
   competitionFormat?: CompetitionFormat;
   minTeam: number | null;
   maxTeam: number | null;
@@ -178,6 +180,18 @@ export const eventApi = {
       query.status = (query.status as EventStatus[]).join(",");
     }
     return api.get<Page<EventResponse>>("/events", { params: query });
+  },
+
+  uploadAvatar(eventId: string, file: File): Promise<EventResponse> {
+    const formData = new FormData();
+    formData.append("file", file);
+    return api.post<EventResponse>(`/events/${eventId}/avatar`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  },
+
+  deleteAvatar(eventId: string): Promise<EventResponse> {
+    return api.delete<EventResponse>(`/events/${eventId}/avatar`);
   },
 
   /** @deprecated Use scheduleApi.list() */

@@ -40,12 +40,15 @@ export function EventDetailDialog({ event, onClose, canRegister, activeEnrollmen
   const isSeal = event.competitionFormat === "SEAL_RAG_2026";
   const { data: schedules } = useEventSchedule(event.id, isSeal);
   const { mutateAsync: enroll, isPending: enrolling } = useEnroll(event.id);
-  const { mutateAsync: withdraw, isPending: withdrawing } = useWithdrawEnrollment(event.id);
+
+  const enrolledEventId = activeEnrollment?.eventId ?? event.id;
+  const { mutateAsync: withdraw, isPending: withdrawing } = useWithdrawEnrollment(enrolledEventId);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [confirmLeave, setConfirmLeave] = useState(false);
 
   const { data: profile } = useProfile();
-  const { canEnroll, enrollmentBlockReason, registrationClosedReason } =
+  const { canEnroll, enrollmentBlockReason, registrationClosedReason, canModifyMembers } =
     useEventParticipationGate(event, {
       studentStanding: profile?.studentStanding ?? "ENROLLED",
       semester: profile?.semester,
@@ -57,6 +60,8 @@ export function EventDetailDialog({ event, onClose, canRegister, activeEnrollmen
   const enrolledEventName = isEnrolledElsewhere
     ? allEvents?.find((e) => e.id === activeEnrollment.eventId)?.name ?? "another competition"
     : null;
+
+  const canLeaveCompetition = isEnrolledHere && canModifyMembers;
 
   const handleRegister = async () => {
     setError(null);
@@ -77,12 +82,14 @@ export function EventDetailDialog({ event, onClose, canRegister, activeEnrollmen
     setError(null);
     try {
       await withdraw();
-      setSuccess("Withdrawn from the competition.");
+      setConfirmLeave(false);
+      setSuccess("You left the competition.");
       setTimeout(() => {
         setSuccess(null);
+        onClose();
       }, 1500);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to withdraw");
+      setError(err instanceof Error ? err.message : "Failed to leave the competition");
     }
   };
 
@@ -194,13 +201,47 @@ export function EventDetailDialog({ event, onClose, canRegister, activeEnrollmen
 
           {isEnrolledElsewhere && !success && (
             <div className="rounded-lg bg-amber-50 p-3 text-xs font-medium text-amber-700">
-              You are currently enrolled in <span className="font-bold">{enrolledEventName}</span>. Withdraw from that competition first to register here.
+              You are currently enrolled in <span className="font-bold">{enrolledEventName}</span>. Leave that competition
+              first to register here.
             </div>
           )}
 
           {!isEnrolledHere && !isEnrolledElsewhere && !canEnroll && (enrollmentBlockReason || registrationClosedReason) && (
             <div className="rounded-lg bg-amber-50 p-3 text-xs font-medium text-amber-700">
               {enrollmentBlockReason ?? registrationClosedReason}
+            </div>
+          )}
+
+          {isEnrolledHere && !canModifyMembers && !success && (
+            <div className="rounded-lg bg-amber-50 p-3 text-xs font-medium text-amber-700">
+              You can only leave this competition before it starts.
+            </div>
+          )}
+
+          {confirmLeave && (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-800">
+              <p className="font-medium">Leave this competition?</p>
+              <p className="mt-1 text-red-700/90">
+                You can only leave before the competition starts. If you are on a team, you will also leave that team.
+              </p>
+              <div className="mt-3 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setConfirmLeave(false)}
+                  disabled={withdrawing}
+                  className="border-2 border-navy bg-white px-3 py-1.5 text-xs font-semibold text-seal-text"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleWithdraw}
+                  disabled={withdrawing}
+                  className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+                >
+                  {withdrawing ? "Leaving..." : "Leave competition"}
+                </button>
+              </div>
             </div>
           )}
 
@@ -212,13 +253,15 @@ export function EventDetailDialog({ event, onClose, canRegister, activeEnrollmen
                 }`}>
                   {isPendingHere ? "Pending approval" : "Enrolled"}
                 </span>
-                <button
-                  onClick={handleWithdraw}
-                  disabled={withdrawing}
-                  className="rounded-lg border border-red-200 bg-red-50 px-5 py-2 text-xs font-semibold text-red-700 transition-colors hover:bg-red-100 disabled:opacity-50"
-                >
-                  {withdrawing ? "Withdrawing..." : "Withdraw"}
-                </button>
+                {canLeaveCompetition && !confirmLeave && (
+                  <button
+                    onClick={() => setConfirmLeave(true)}
+                    disabled={withdrawing}
+                    className="rounded-lg border border-red-200 bg-red-50 px-5 py-2 text-xs font-semibold text-red-700 transition-colors hover:bg-red-100 disabled:opacity-50"
+                  >
+                    Leave competition
+                  </button>
+                )}
               </>
             ) : canRegister && event.status === "OPEN" && !isEnrolledElsewhere && canEnroll ? (
               <button

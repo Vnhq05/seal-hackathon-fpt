@@ -15,7 +15,11 @@ export function useUpdateProfile() {
       queryClient.invalidateQueries({ queryKey: [PROFILE_QUERY_KEY] });
       if (user && accessToken) {
         setAuth(
-          { ...user, fullName: data.fullName },
+          {
+            ...user,
+            fullName: data.fullName,
+            avatarUrl: data.avatarUrl ?? user.avatarUrl,
+          },
           accessToken,
         );
       }

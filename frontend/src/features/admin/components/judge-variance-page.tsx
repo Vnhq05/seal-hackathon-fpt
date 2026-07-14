@@ -9,6 +9,7 @@ import {
   useScoreReviews,
 } from "@/features/admin/hooks/use-score-reviews";
 import type { ScoreReviewResponse, ScoreReviewStatus } from "@/lib/api/score-review.api";
+import { scoreReviewNoteLabel } from "@/lib/api/score-review.api";
 
 const headerCell: React.CSSProperties = {
   fontSize: 12, fontWeight: 600, color: "#8891a5",
@@ -24,6 +25,37 @@ const inputStyle: React.CSSProperties = {
 };
 
 type RoundTypeFilter = "PRELIMINARY" | "FINAL" | "";
+type ListTab = "active" | "history";
+
+const ACTIVE_STATUSES = new Set<ScoreReviewStatus>(["OPEN", "APPROVED"]);
+const HISTORY_STATUSES = new Set<ScoreReviewStatus>([
+  "REJECTED",
+  "ADJUSTED",
+  "RESOLVED",
+  "IGNORED",
+]);
+
+const COL_COUNT = 8;
+
+const LIST_TABS: { id: ListTab; label: string }[] = [
+  { id: "active", label: "In progress" },
+  { id: "history", label: "History" },
+];
+
+const tabBaseStyle: React.CSSProperties = {
+  fontSize: 13,
+  letterSpacing: "0.02em",
+  lineHeight: "16px",
+  background: "none",
+  border: "none",
+  padding: "12px 4px 10px",
+  marginRight: 24,
+  cursor: "pointer",
+  whiteSpace: "nowrap",
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 8,
+};
 
 function rowBackground(deviation: number): string | undefined {
   if (deviation >= 50) return "rgba(254, 226, 226, 0.5)";
@@ -180,7 +212,7 @@ function ReviewDetailModal({
                   rows={3}
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
-                  placeholder="Coordinator note (optional)"
+                  placeholder="Rejection / decision note (shown to judges)"
                   className="w-full rounded border border-seal-border px-3 py-2 text-sm"
                 />
                 <div className="flex justify-end gap-2">
@@ -214,7 +246,7 @@ function ReviewDetailModal({
                   rows={3}
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
-                  placeholder="Closing note (optional)"
+                  placeholder="Closing note (shown to judges, optional)"
                   className="w-full rounded border border-seal-border px-3 py-2 text-sm"
                 />
                 <div className="flex justify-end">
@@ -244,7 +276,15 @@ function ReviewDetailModal({
                 )}
                 {review.resolutionNote && (
                   <p className={review.resolvedAt ? "mt-2" : ""}>
-                    <span className="font-medium text-seal-text">Note:</span> {review.resolutionNote}
+                    <span className="font-medium text-seal-text">
+                      {scoreReviewNoteLabel(review.resolvedByRole)}:
+                    </span>{" "}
+                    {review.resolutionNote}
+                    {review.resolvedByFullName?.trim() ? (
+                      <span className="mt-1 block text-xs text-seal-text-muted">
+                        By {review.resolvedByFullName.trim()}
+                      </span>
+                    ) : null}
                   </p>
                 )}
               </div>
@@ -264,6 +304,7 @@ function ReviewRow({
   onSelect: () => void;
 }) {
   const bg = rowBackground(review.deviationValue);
+  const note = review.resolutionNote?.trim();
   return (
     <tr style={{ borderTop: "1px solid rgba(198,198,205,0.3)", backgroundColor: bg }}>
       <td style={{ ...bodyCell, fontWeight: 600 }}>{review.teamName}</td>
@@ -273,6 +314,23 @@ function ReviewRow({
         {review.minJudgeScore.toFixed(0)} – {review.maxJudgeScore.toFixed(0)}
       </td>
       <td style={bodyCell}><StatusBadge status={review.status} /></td>
+      <td style={{ ...bodyCell, color: note ? "#0e1528" : "#8891a5", maxWidth: 280 }}>
+        {note ? (
+          <span
+            title={note}
+            style={{
+              display: "block",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {note}
+          </span>
+        ) : (
+          "—"
+        )}
+      </td>
       <td style={bodyCell}>{new Date(review.createdAt).toLocaleString()}</td>
       <td style={bodyCell}>
         <button type="button" onClick={onSelect} className="text-sm font-semibold text-royal hover:underline">
@@ -285,28 +343,35 @@ function ReviewRow({
 
 export function JudgeVariancePage() {
   const [eventId, setEventId] = useState("");
-  const [statusFilter, setStatusFilter] = useState<ScoreReviewStatus | "">("OPEN");
+  const [listTab, setListTab] = useState<ListTab>("active");
   const [roundTypeFilter, setRoundTypeFilter] = useState<RoundTypeFilter>("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const { data: eventsPage } = useAdminEvents();
   const events = eventsPage?.content ?? [];
 
-  const { data: reviews = [], isLoading } = useScoreReviews(
-    eventId,
-    statusFilter ? { status: statusFilter } : undefined,
+  const { data: reviews = [], isLoading } = useScoreReviews(eventId);
+
+  const openReviews = useMemo(
+    () => reviews.filter((r) => ACTIVE_STATUSES.has(r.status)),
+    [reviews],
   );
+  const historyReviews = useMemo(
+    () => reviews.filter((r) => HISTORY_STATUSES.has(r.status)),
+    [reviews],
+  );
+  const pendingCount = openReviews.length;
+  const historyCount = historyReviews.length;
 
   const displayedReviews = useMemo(() => {
-    let list = reviews;
+    const statusSet = listTab === "active" ? ACTIVE_STATUSES : HISTORY_STATUSES;
+    let list = reviews.filter((r) => statusSet.has(r.status));
     if (roundTypeFilter) {
       list = list.filter((r) => r.roundType === roundTypeFilter);
     }
     return [...list].sort((a, b) => b.deviationValue - a.deviationValue);
-  }, [reviews, roundTypeFilter]);
+  }, [reviews, listTab, roundTypeFilter]);
 
-  const openReviews = reviews.filter((r) => r.status === "OPEN" || r.status === "APPROVED");
-  const pendingCount = openReviews.length;
   const avgDeviation = reviews.length
     ? reviews.reduce((s, r) => s + r.deviationValue, 0) / reviews.length
     : 0;
@@ -328,20 +393,6 @@ export function JudgeVariancePage() {
           {events.map((e) => (
             <option key={e.id} value={e.id}>{e.name}</option>
           ))}
-        </select>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as ScoreReviewStatus | "")}
-          style={inputStyle}
-          disabled={!eventId}
-        >
-          <option value="">All statuses</option>
-          <option value="OPEN">OPEN</option>
-          <option value="APPROVED">APPROVED</option>
-          <option value="ADJUSTED">ADJUSTED</option>
-          <option value="RESOLVED">CLOSED</option>
-          <option value="REJECTED">REJECTED</option>
-          <option value="IGNORED">IGNORED</option>
         </select>
         <select
           value={roundTypeFilter}
@@ -388,6 +439,54 @@ export function JudgeVariancePage() {
             </span>
           )}
         </div>
+
+        {eventId && (
+          <div
+            style={{
+              padding: "0 16px",
+              backgroundColor: "#f8f9fc",
+              borderBottom: "1px solid rgba(223,226,236,0.9)",
+            }}
+          >
+            <div className="flex items-stretch" role="tablist" aria-label="Score review list">
+              {LIST_TABS.map((tab) => {
+                const isActive = listTab === tab.id;
+                const count = tab.id === "active" ? pendingCount : historyCount;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={isActive}
+                    onClick={() => setListTab(tab.id)}
+                    style={{
+                      ...tabBaseStyle,
+                      fontWeight: isActive ? 700 : 500,
+                      color: isActive ? "#0e1528" : "#8891a5",
+                      borderBottom: isActive ? "2px solid #38bdf8" : "2px solid transparent",
+                    }}
+                  >
+                    {tab.label}
+                    <span
+                      className="inline-flex min-w-[1.25rem] items-center justify-center rounded-full px-1.5 py-0.5 text-[11px] font-semibold tabular-nums"
+                      style={{
+                        backgroundColor: isActive
+                          ? tab.id === "active"
+                            ? "rgba(251, 191, 36, 0.25)"
+                            : "rgba(14, 21, 40, 0.08)"
+                          : "rgba(14, 21, 40, 0.06)",
+                        color: isActive && tab.id === "active" ? "#92400e" : "#4b5568",
+                      }}
+                    >
+                      {isLoading ? "–" : count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {!eventId ? (
           <p style={{ ...bodyCell, textAlign: "center", color: "#8891a5", padding: "48px 16px" }}>
             Select an event to view the list.
@@ -401,6 +500,7 @@ export function JudgeVariancePage() {
                 <th style={{ ...headerCell, width: 100 }}>Deviation</th>
                 <th style={{ ...headerCell, width: 120 }}>Score Range</th>
                 <th style={{ ...headerCell, width: 100 }}>Status</th>
+                <th style={headerCell}>Resolution</th>
                 <th style={headerCell}>Created</th>
                 <th style={{ ...headerCell, width: 90 }} />
               </tr>
@@ -409,7 +509,7 @@ export function JudgeVariancePage() {
               {isLoading
                 ? Array.from({ length: 3 }).map((_, i) => (
                     <tr key={i}>
-                      {Array.from({ length: 7 }).map((__, j) => (
+                      {Array.from({ length: COL_COUNT }).map((__, j) => (
                         <td key={j} style={{ padding: "14px 16px" }}>
                           <div className="animate-pulse rounded" style={{ height: 14, backgroundColor: "rgba(223,226,236,0.8)", width: "60%" }} />
                         </td>
@@ -421,8 +521,10 @@ export function JudgeVariancePage() {
                   ))}
               {!isLoading && eventId && displayedReviews.length === 0 && (
                 <tr>
-                  <td colSpan={7} style={{ ...bodyCell, textAlign: "center", color: "#8891a5", padding: "48px 16px" }}>
-                    No reviews found.
+                  <td colSpan={COL_COUNT} style={{ ...bodyCell, textAlign: "center", color: "#8891a5", padding: "48px 16px" }}>
+                    {listTab === "active"
+                      ? "No reviews in progress."
+                      : "No review history yet."}
                   </td>
                 </tr>
               )}

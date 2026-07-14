@@ -1,7 +1,5 @@
 /* ── Judge Portal types ── */
 
-import type { JudgeScoringAssignment } from "@/lib/api/judging.api";
-
 export type RoundStatus = "open" | "upcoming" | "closed";
 export type SubmissionScoringStatus =
   | "NOT_STARTED"
@@ -17,18 +15,22 @@ export type SubmissionFilterTab =
 
 /* ── Dashboard ── */
 
-export interface JudgeDashboardUrgency {
-  message: string;
-  remainingHours: number;
-  remainingSubmissions: number;
-  roundId: string;
-}
-
 export interface JudgeDashboardStats {
   roundsAssigned: number;
   totalSubmissions: number;
   scored: number;
   remaining: number;
+}
+
+/** Per-event suggestion shown on lecturer dashboard while scoring is incomplete. */
+export interface ScoringEventSuggestion {
+  eventId: string;
+  eventName: string;
+  roundId: string;
+  roundName: string;
+  remaining: number;
+  total: number;
+  deadline: string | null;
 }
 
 export interface AssignedRoundCard {
@@ -39,22 +41,14 @@ export interface AssignedRoundCard {
   scored: number;
   total: number;
   status: RoundStatus;
-}
-
-export interface RecentScoringActivity {
-  id: string;
-  teamName: string;
-  timeAgo: string;
-  score: number;
-  maxScore: number;
+  eventId: string | null;
 }
 
 export interface JudgeDashboard {
-  urgency: JudgeDashboardUrgency | null;
   stats: JudgeDashboardStats;
   assignedRounds: AssignedRoundCard[];
-  recentActivity: RecentScoringActivity[];
-  unscoredAssignments: JudgeScoringAssignment[];
+  /** Events that still need scoring from this judge — empty when fully scored. */
+  scoringSuggestions: ScoringEventSuggestion[];
 }
 
 /* ── Assigned Rounds ── */

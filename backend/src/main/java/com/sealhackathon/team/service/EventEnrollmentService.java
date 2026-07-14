@@ -21,6 +21,8 @@ import com.sealhackathon.team.domain.Team;
 import com.sealhackathon.team.domain.TeamMember;
 import com.sealhackathon.team.domain.enums.EnrollmentStatus;
 import com.sealhackathon.team.domain.enums.InvitationStatus;
+import com.sealhackathon.team.domain.enums.TeamMemberRole;
+import com.sealhackathon.team.domain.enums.TeamStatus;
 import com.sealhackathon.team.dto.request.EnrollRequest;
 import com.sealhackathon.team.dto.request.UpdateMatchingProfileRequest;
 import com.sealhackathon.infrastructure.mail.MailSendException;
@@ -29,6 +31,7 @@ import com.sealhackathon.team.dto.response.EnrollmentActionResult;
 import com.sealhackathon.team.dto.response.EnrollmentResponse;
 import com.sealhackathon.team.dto.response.MatchingCandidateResponse;
 import com.sealhackathon.team.dto.response.PublicMatchingProfileResponse;
+import com.sealhackathon.team.event.MemberLeftEvent;
 import com.sealhackathon.team.repository.EventEnrollmentRepository;
 import com.sealhackathon.team.repository.InvitationRepository;
 import com.sealhackathon.team.repository.TeamMemberRepository;
@@ -37,6 +40,7 @@ import com.sealhackathon.user.dto.snapshot.UserSnapshot;
 import com.sealhackathon.user.service.UserPublicService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -68,6 +72,7 @@ public class EventEnrollmentService {
     private final AllowedEmailDomainService allowedEmailDomainService;
     private final MagicLinkTokenService magicLinkTokenService;
     private final SystemConfigService systemConfigService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Value("${app.frontend.url}")
     private String frontendUrl;
@@ -304,26 +309,81 @@ public class EventEnrollmentService {
         return toResponse(enrollmentRepository.save(enrollment), null);
     }
 
+    /**
+     * Student voluntarily leaves the event before the competition starts.
+     * Also removes them from their team (if any). Leaders transfer to another member when possible.
+     */
     @Transactional
     public void withdrawEnrollment(UUID userId, UUID eventId) {
+        formatRuleEngine.assertCanModifyTeamMembers(eventId);
+
         EventEnrollment enrollment = enrollmentRepository.findByUserIdAndEventId(userId, eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Enrollment", "userId+eventId", userId + "+" + eventId));
 
-        Optional<TeamMember> teamMember = teamMemberRepository.findByUserIdAndEventId(userId, eventId);
-        if (teamMember.isPresent()) {
-            throw new BusinessException(
-                    "Cannot withdraw enrollment while on a team. Leave the team first.",
-                    HttpStatus.BAD_REQUEST) {};
+        if (enrollment.getStatus() != EnrollmentStatus.PENDING
+                && enrollment.getStatus() != EnrollmentStatus.APPROVED) {
+            throw new BusinessException("Enrollment is not active", HttpStatus.BAD_REQUEST) {};
         }
+
+        teamMemberRepository.findByUserIdAndEventId(userId, eventId)
+                .ifPresent(member -> removeFromTeamOnEventLeave(member));
 
         enrollment.setStatus(EnrollmentStatus.WITHDRAWN);
         enrollmentRepository.save(enrollment);
+    }
+
+    /**
+     * System force-withdraw after undersized-team cleanup or similar phase transitions.
+     * Does not check competition phase — caller already removed team membership.
+     */
+    @Transactional
+    public void forceWithdrawEnrollment(UUID userId, UUID eventId) {
+        enrollmentRepository.findByUserIdAndEventId(userId, eventId).ifPresent(enrollment -> {
+            if (enrollment.getStatus() == EnrollmentStatus.PENDING
+                    || enrollment.getStatus() == EnrollmentStatus.APPROVED) {
+                enrollment.setStatus(EnrollmentStatus.WITHDRAWN);
+                enrollmentRepository.save(enrollment);
+            }
+        });
+    }
+
+    private void removeFromTeamOnEventLeave(TeamMember membership) {
+        Team team = membership.getTeam();
+        UUID userId = membership.getUserId();
+        UUID teamId = team.getId();
+        boolean wasLeader = userId.equals(team.getLeaderId());
+
+        teamMemberRepository.delete(membership);
+        eventPublisher.publishEvent(new MemberLeftEvent(teamId, userId));
+
+        List<TeamMember> remaining = teamMemberRepository.findByTeamId(teamId);
+        if (remaining.isEmpty()) {
+            team.setStatus(TeamStatus.DISBANDED);
+            team.setRecruiting(false);
+            teamRepository.save(team);
+            return;
+        }
+
+        if (wasLeader) {
+            TeamMember newLeader = remaining.getFirst();
+            newLeader.setRole(TeamMemberRole.LEADER);
+            teamMemberRepository.save(newLeader);
+            team.setLeaderId(newLeader.getUserId());
+        }
+
+        int minSize = systemConfigService.getConfig().getMinTeamMembers();
+        if (remaining.size() < minSize && team.getStatus() == TeamStatus.CONFIRMED) {
+            team.setStatus(TeamStatus.FORMING);
+        }
+        teamRepository.save(team);
     }
 
     @Transactional(readOnly = true)
     public EnrollmentResponse getMyActiveEnrollment(UUID userId) {
         EventEnrollment enrollment = enrollmentRepository.findByUserIdAndStatusIn(
                 userId, ACTIVE_STATUSES)
+                .stream()
+                .findFirst()
                 .orElse(null);
         if (enrollment == null) return null;
         return toResponse(enrollment, null);

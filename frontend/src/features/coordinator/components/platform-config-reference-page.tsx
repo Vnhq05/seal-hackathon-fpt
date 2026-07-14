@@ -2,30 +2,19 @@
 
 import { useSystemTeamConfig } from "@/features/teams/hooks/use-system-team-config";
 import { useRegistrationAllowedDomains } from "@/features/events/hooks/use-allowed-email-domains";
+import { SealCard } from "@/shared/ui/seal-card";
 
-const labelStyle: React.CSSProperties = {
-  fontSize: 14,
-  fontWeight: 600,
-  color: "#8891a5",
-  marginBottom: 4,
-  display: "block",
-};
-
-const readOnlyStyle: React.CSSProperties = {
-  border: "1px solid rgba(223,226,236,0.8)",
-  borderRadius: 8,
-  padding: "11px 16px",
-  fontSize: 14,
-  width: "100%",
-  backgroundColor: "#eef0f6",
-  color: "#4a5468",
-};
+const labelClass = "mb-1.5 block text-sm font-semibold text-seal-text-muted";
+const readOnlyClass =
+  "w-full rounded-lg border border-seal-border/80 bg-seal-surface-sunken px-4 py-2.5 text-sm text-seal-text-secondary";
+const sectionBoxClass =
+  "max-h-60 overflow-y-auto whitespace-pre-wrap rounded-lg border border-seal-border/60 bg-seal-surface-sunken px-3.5 py-3 text-[13px] leading-relaxed text-seal-text-secondary";
 
 function Field({ label, value }: { label: string; value: string | number }) {
   return (
     <div>
-      <label style={labelStyle}>{label}</label>
-      <input value={value} disabled readOnly style={readOnlyStyle} />
+      <label className={labelClass}>{label}</label>
+      <input value={value} disabled readOnly className={readOnlyClass} />
     </div>
   );
 }
@@ -35,36 +24,34 @@ export function PlatformConfigReferencePage() {
   const { data: allowedDomains = [], isLoading: domainsLoading } = useRegistrationAllowedDomains();
 
   return (
-    <div style={{ padding: 24 }}>
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 32, fontWeight: 700, color: "#0e1528", letterSpacing: "-0.64px", lineHeight: "38.4px" }}>
+    <div className="mx-auto w-full max-w-4xl px-2 py-2 sm:px-4">
+      <header className="mb-8 border-b-2 border-navy/10 pb-6">
+        <h1 className="text-[28px] font-bold leading-tight tracking-[-0.02em] text-navy sm:text-[32px]">
           Platform Configuration
         </h1>
-        <p style={{ fontSize: 14, color: "#8891a5", lineHeight: "21px", marginTop: 4 }}>
-          Read-only view of platform settings managed by the administrator. Coordinators reference these values when creating events.
+        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-seal-text-muted">
+          Read-only view of platform settings managed by the administrator. Coordinators
+          reference these values when creating events.
         </p>
-      </div>
+      </header>
 
       {isError && (
-        <div style={{
-          backgroundColor: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8,
-          padding: "12px 16px", marginBottom: 16, fontSize: 13, color: "#991b1b",
-        }}>
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-800">
           {error?.message || "Failed to load platform configuration."}
         </div>
       )}
 
-      <div className="flex flex-col gap-6 p-8 max-w-[720px] border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]">
+      <SealCard className="space-y-6 p-5 sm:p-7">
         {isLoading ? (
-          <p style={{ fontSize: 14, color: "#8891a5" }}>Loading configuration...</p>
+          <p className="text-sm text-seal-text-muted">Loading configuration...</p>
         ) : config ? (
           <>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field label="Current Season" value={config.currentSeason} />
               <Field label="Current Year" value={config.currentYear} />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field label="Min Members / Team" value={config.minTeamMembers} />
               <Field label="Max Members / Team" value={config.maxTeamMembers} />
               <Field label="Min Teams (event to run)" value={config.minTeams ?? "—"} />
@@ -75,45 +62,22 @@ export function PlatformConfigReferencePage() {
 
             {config.defaultRules && (
               <div>
-                <label style={labelStyle}>Default Rules</label>
-                <div
-                  style={{
-                    padding: 12,
-                    backgroundColor: "#eef0f6",
-                    borderRadius: 8,
-                    fontSize: 13,
-                    color: "#4a5468",
-                    whiteSpace: "pre-wrap",
-                    maxHeight: 240,
-                    overflowY: "auto",
-                  }}
-                >
-                  {config.defaultRules}
-                </div>
+                <label className={labelClass}>Default Rules</label>
+                <div className={sectionBoxClass}>{config.defaultRules}</div>
               </div>
             )}
 
             <div>
-              <label style={labelStyle}>Allowed Email Domains (External Students)</label>
+              <label className={labelClass}>Allowed Email Domains (External Students)</label>
               {domainsLoading ? (
-                <p style={{ fontSize: 13, color: "#8891a5" }}>Loading domains...</p>
+                <p className="text-[13px] text-seal-text-muted">Loading domains...</p>
               ) : allowedDomains.length === 0 ? (
-                <p style={{ fontSize: 13, color: "#8891a5" }}>No domains configured.</p>
+                <p className="text-[13px] text-seal-text-muted">No domains configured.</p>
               ) : (
-                <div
-                  style={{
-                    padding: 12,
-                    backgroundColor: "#eef0f6",
-                    borderRadius: 8,
-                    fontSize: 13,
-                    color: "#4a5468",
-                    maxHeight: 240,
-                    overflowY: "auto",
-                  }}
-                >
+                <div className={sectionBoxClass}>
                   {allowedDomains.map((domain) => (
-                    <div key={domain.id ?? domain.domain} style={{ marginBottom: 6 }}>
-                      <span style={{ fontFamily: "monospace" }}>@{domain.domain}</span>
+                    <div key={domain.id ?? domain.domain} className="mb-1.5 last:mb-0">
+                      <span className="font-mono">@{domain.domain}</span>
                       {domain.universityLabel ? ` — ${domain.universityLabel}` : ""}
                     </div>
                   ))}
@@ -122,7 +86,7 @@ export function PlatformConfigReferencePage() {
             </div>
           </>
         ) : null}
-      </div>
+      </SealCard>
     </div>
   );
 }

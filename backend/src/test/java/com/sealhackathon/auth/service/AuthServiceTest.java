@@ -10,6 +10,7 @@ import com.sealhackathon.auth.security.JwtProvider;
 import com.sealhackathon.common.enums.AccountStatus;
 import com.sealhackathon.common.enums.StudentStanding;
 import com.sealhackathon.common.enums.UserType;
+import com.sealhackathon.common.exception.AccountLockedException;
 import com.sealhackathon.common.exception.AccountNotActivatedException;
 import com.sealhackathon.common.exception.DuplicateResourceException;
 import com.sealhackathon.common.exception.InvalidCredentialsException;
@@ -261,6 +262,26 @@ class AuthServiceTest {
         assertThatThrownBy(() -> authService.login(
                 LoginRequest.builder().email("pending@test.com").password("pass").build(), "127.0.0.1"))
                 .isInstanceOf(AccountNotActivatedException.class);
+    }
+
+    @Test
+    void login_shouldThrow_whenAccountDeactivated() {
+        UserSnapshot user = UserSnapshot.builder()
+                .id(UUID.randomUUID())
+                .email("locked@test.com")
+                .passwordHash("hashed")
+                .status(AccountStatus.LOCKED)
+                .build();
+
+        when(userPublicService.findByEmail("locked@test.com")).thenReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> authService.login(
+                LoginRequest.builder().email("locked@test.com").password("password").build(), "127.0.0.1"))
+                .isInstanceOf(AccountLockedException.class)
+                .hasMessageContaining("deactivated");
+
+        verify(passwordEncoder, never()).matches(anyString(), anyString());
+        verify(userPublicService, never()).getLockState(any());
     }
 
     @Test

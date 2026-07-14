@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import type { EventResponse } from "@/lib/api";
+import { resolveFileUrl } from "@/lib/files";
 import {
   CalendarIcon,
   ClockIcon,
@@ -123,6 +124,7 @@ interface HackathonCardProps {
 export function HackathonCard({ hackathon }: HackathonCardProps) {
   const isEnded =
     hackathon.status === "COMPLETED" || hackathon.status === "CANCELLED";
+  const avatarSrc = resolveFileUrl(hackathon.avatarUrl);
 
   return (
     <Link
@@ -138,36 +140,64 @@ export function HackathonCard({ hackathon }: HackathonCardProps) {
             : undefined,
       }}
     >
-      {/* Banner placeholder -- EventResponse does not include bannerUrl */}
-      <div
-        className="relative h-32 w-full overflow-hidden"
-        style={{ backgroundColor: "rgba(223,226,236,0.8)" }}
-      >
-        {isEnded && (
-          <div
-            className="pointer-events-none absolute inset-0 bg-seal-surface/50"
-            style={{ mixBlendMode: "saturation" }}
-          />
-        )}
+      {avatarSrc && (
         <div
-          className="absolute right-2 top-2 flex items-center gap-1 rounded px-2 py-1"
-          style={{
-            backgroundColor:
-              STATUS_COLORS[hackathon.status] ?? "#8891a5",
-            backdropFilter: "blur(2px)",
-          }}
+          className="relative h-32 w-full overflow-hidden"
+          style={{ backgroundColor: "rgba(223,226,236,0.8)" }}
         >
-          {hackathon.status === "ACTIVE" && (
-            <span
-              className="block rounded-full"
-              style={{ width: 6, height: 6, backgroundColor: "#fff" }}
+          <img
+            src={avatarSrc}
+            alt=""
+            className="h-full w-full object-cover"
+          />
+          {isEnded && (
+            <div
+              className="pointer-events-none absolute inset-0 bg-seal-surface/50"
+              style={{ mixBlendMode: "saturation" }}
             />
           )}
-          <span style={{ ...metaStyle, color: "#ffffff" }}>
-            {STATUS_LABELS[hackathon.status] ?? hackathon.status}
-          </span>
+          <div
+            className="absolute right-2 top-2 flex items-center gap-1 rounded px-2 py-1"
+            style={{
+              backgroundColor:
+                STATUS_COLORS[hackathon.status] ?? "#8891a5",
+              backdropFilter: "blur(2px)",
+            }}
+          >
+            {hackathon.status === "ACTIVE" && (
+              <span
+                className="block rounded-full"
+                style={{ width: 6, height: 6, backgroundColor: "#fff" }}
+              />
+            )}
+            <span style={{ ...metaStyle, color: "#ffffff" }}>
+              {STATUS_LABELS[hackathon.status] ?? hackathon.status}
+            </span>
+          </div>
         </div>
-      </div>
+      )}
+
+      {!avatarSrc && (
+        <div className="flex justify-end px-6 pt-4">
+          <div
+            className="flex items-center gap-1 rounded px-2 py-1"
+            style={{
+              backgroundColor:
+                STATUS_COLORS[hackathon.status] ?? "#8891a5",
+            }}
+          >
+            {hackathon.status === "ACTIVE" && (
+              <span
+                className="block rounded-full"
+                style={{ width: 6, height: 6, backgroundColor: "#fff" }}
+              />
+            )}
+            <span style={{ ...metaStyle, color: "#ffffff" }}>
+              {STATUS_LABELS[hackathon.status] ?? hackathon.status}
+            </span>
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-col p-6">
         <h3

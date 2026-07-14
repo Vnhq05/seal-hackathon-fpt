@@ -16,6 +16,7 @@ import com.sealhackathon.event.dto.request.UpdateEventStatusRequest;
 import com.sealhackathon.event.domain.enums.PrizeRank;
 import com.sealhackathon.event.dto.response.EventResponse;
 import com.sealhackathon.event.repository.HackathonEventRepository;
+import com.sealhackathon.team.service.TeamService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,6 +29,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -52,6 +54,7 @@ class EventServiceTest {
     @Mock private AuthPublicService authPublicService;
     @Mock private EventJudgeService eventJudgeService;
     @Mock private RoundService roundService;
+    @Mock private TeamService teamService;
 
     @InjectMocks private EventService eventService;
 
@@ -68,6 +71,8 @@ class EventServiceTest {
         when(authPublicService.getCurrentUserRole()).thenReturn(UserType.SYSTEM_ADMIN);
         when(authPublicService.getCurrentUserId()).thenReturn(ADMIN_USER_ID);
         when(authPublicService.getCurrentUserEmail()).thenReturn(ADMIN_EMAIL);
+        ReflectionTestUtils.setField(eventService, "teamService", teamService);
+        when(teamService.disbandUndersizedTeams(any())).thenReturn(0);
     }
 
     private static final LocalDate REG_OPEN = LocalDate.now().minusDays(1);
@@ -117,7 +122,7 @@ class EventServiceTest {
 
         assertThatThrownBy(() -> eventService.createEvent(request))
                 .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("End date must be after start date");
+                .hasMessageContaining("End date must be on or after start date");
     }
 
     // ── BR-10: Unique event name ──
@@ -329,6 +334,7 @@ class EventServiceTest {
 
         assertThat(result.getStatus()).isEqualTo(EventStatus.CLOSED_REGISTRATION);
         verify(auditService).log(any(), eq("EVENT_STATUS_CHANGE"), eq(eventId), any(), any(), any(), any());
+        verify(teamService).disbandUndersizedTeams(eventId);
     }
 
     @Test
@@ -398,6 +404,7 @@ class EventServiceTest {
                 "127.0.0.1");
 
         assertThat(result.getStatus()).isEqualTo(EventStatus.ACTIVE);
+        verify(teamService).disbandUndersizedTeams(eventId);
     }
 
     private HackathonEvent buildEvent(UUID id, EventStatus status) {
@@ -427,5 +434,49 @@ class EventServiceTest {
                 .build();
         event.setId(id);
         return event;
+    }
+
+    // ── Public visibility: OPEN list vs detail parity ──
+
+    @Test
+    void getPublicEventById_shouldSucceed_whenOpenWithoutRounds() {
+        UUID eventId = UUID.randomUUID();
+        HackathonEvent event = buildEvent(eventId, EventStatus.UPCOMING);
+        event.setRounds(new java.util.ArrayList<>());
+        event.setTracks(new java.util.ArrayList<>());
+        event.setPrizes(new java.util.ArrayList<>());
+        event.setHonoredGuests(new java.util.ArrayList<>());
+        event.setMentorAssignments(new java.util.ArrayList<>());
+        event.setTiebreakerCriterionIds(new java.util.ArrayList<>());
+
+        when(eventRepository.findByIdWithDetails(eventId)).thenReturn(Optional.of(event));
+
+        EventResponse result = eventService.getPublicEventById(eventId);
+
+        assertThat(result.getId()).isEqualTo(eventId);
+        assertThat(result.getStatus()).isEqualTo(EventStatus.OPEN);
+        assertThat(result.getRoundCount()).isZero();
+    }
+
+    @Test
+    void getPublicEventById_shouldThrow_whenUpcomingWithoutRounds() {
+        UUID eventId = UUID.randomUUID();
+        HackathonEvent event = HackathonEvent.builder()
+                .name("Not Yet Open")
+                .season("Summer")
+                .year(2026)
+                .startDate(LocalDate.now().plusMonths(3))
+                .endDate(LocalDate.now().plusMonths(5))
+                .registrationOpenDate(LocalDate.now().plusMonths(1))
+                .registrationDeadline(LocalDate.now().plusMonths(2))
+                .status(EventStatus.UPCOMING)
+                .build();
+        event.setId(eventId);
+        event.setRounds(new java.util.ArrayList<>());
+
+        when(eventRepository.findByIdWithDetails(eventId)).thenReturn(Optional.of(event));
+
+        assertThatThrownBy(() -> eventService.getPublicEventById(eventId))
+                .isInstanceOf(ResourceNotFoundException.class);
     }
 }

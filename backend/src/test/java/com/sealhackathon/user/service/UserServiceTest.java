@@ -44,6 +44,7 @@ class UserServiceTest {
     @Mock private UserRepository userRepository;
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private ApplicationEventPublisher eventPublisher;
+    @Mock private com.sealhackathon.common.storage.FileStorageService fileStorageService;
 
     @InjectMocks private UserService userService;
 

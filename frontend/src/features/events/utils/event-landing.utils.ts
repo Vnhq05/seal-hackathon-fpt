@@ -67,7 +67,7 @@ export function getStatusMeta(status: EventStatus) {
 
 export function formatTeamSize(event: EventResponse): string {
   if (event.minTeam != null && event.maxTeam != null) {
-    return `${event.minTeam}–${event.maxTeam} members`;
+    return `${event.minTeam}-${event.maxTeam} members`;
   }
   if (event.minTeam != null) return `Min ${event.minTeam} members`;
   if (event.maxTeam != null) return `Up to ${event.maxTeam} members`;
@@ -80,7 +80,7 @@ export function formatSemesterRange(
 ): string | null {
   if (semesterMin == null && semesterMax == null) return null;
   if (semesterMin != null && semesterMax != null) {
-    return `Semester ${semesterMin}–${semesterMax}`;
+    return `Semester ${semesterMin}-${semesterMax}`;
   }
   if (semesterMin != null) return `Semester ${semesterMin}+`;
   return `Up to semester ${semesterMax}`;

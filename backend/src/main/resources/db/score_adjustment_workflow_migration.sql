@@ -29,5 +29,40 @@ SET adjustment_type = N'AUTO_DEVIATION'
 WHERE adjustment_type IS NULL;
 GO
 
+-- Status CHECK must include APPROVED/REJECTED/ADJUSTED (score adjustment workflow).
+DECLARE @statusCk NVARCHAR(256);
+SELECT @statusCk = cc.name
+FROM sys.check_constraints cc
+WHERE cc.parent_object_id = OBJECT_ID(N'score_review_requests')
+  AND cc.definition LIKE N'%status%'
+  AND (
+      cc.definition NOT LIKE N'%APPROVED%'
+      OR cc.definition NOT LIKE N'%REJECTED%'
+      OR cc.definition NOT LIKE N'%ADJUSTED%'
+  );
+
+IF @statusCk IS NOT NULL
+    EXEC('ALTER TABLE score_review_requests DROP CONSTRAINT [' + @statusCk + ']');
+GO
+
+IF NOT EXISTS (
+    SELECT 1 FROM sys.check_constraints cc
+    WHERE cc.parent_object_id = OBJECT_ID(N'score_review_requests')
+      AND cc.name = N'CK_score_review_requests_status'
+)
+BEGIN
+    ALTER TABLE score_review_requests
+    ADD CONSTRAINT CK_score_review_requests_status
+    CHECK ([status] IN (
+        N'OPEN',
+        N'APPROVED',
+        N'ADJUSTED',
+        N'REJECTED',
+        N'RESOLVED',
+        N'IGNORED'
+    ));
+END
+GO
+
 PRINT 'score_adjustment_workflow_migration completed.';
 GO

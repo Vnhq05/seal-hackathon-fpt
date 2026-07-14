@@ -8,7 +8,7 @@ import {
   createHackathonSchema,
   type CreateHackathonFormValues,
 } from "@/features/admin/schemas/hackathon.schema";
-import { useCreateEvent } from "@/features/admin/hooks/use-admin-hackathons";
+import { useCreateEvent, useUploadEventAvatar } from "@/features/admin/hooks/use-admin-hackathons";
 import { useSystemTeamConfig } from "@/features/teams/hooks/use-system-team-config";
 import {
   blockNonLetterNameInput,
@@ -58,8 +58,10 @@ export function CreateHackathonPage() {
   const router = useRouter();
   const portalBase = useStaffPortalBase();
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const { data: systemConfig, isLoading: isConfigLoading } = useSystemTeamConfig();
   const { mutate: create, isPending } = useCreateEvent();
+  const { mutateAsync: uploadAvatar, isPending: isUploadingAvatar } = useUploadEventAvatar();
 
   const seasonYearReady = Boolean(systemConfig?.currentSeason && systemConfig?.currentYear);
 
@@ -102,7 +104,21 @@ export function CreateHackathonPage() {
     };
 
     create(payload, {
-      onSuccess: (event) => router.push(`${portalBase}/hackathons/${event.id}`),
+      onSuccess: async (event) => {
+        try {
+          if (avatarFile) {
+            await uploadAvatar({ eventId: event.id, file: avatarFile });
+          }
+          router.push(`${portalBase}/hackathons/${event.id}`);
+        } catch (err) {
+          setSaveError(
+            err instanceof Error
+              ? `Event created, but avatar upload failed: ${err.message}`
+              : "Event created, but avatar upload failed",
+          );
+          router.push(`${portalBase}/hackathons/${event.id}`);
+        }
+      },
       onError: (err) =>
         setSaveError(err instanceof Error ? err.message : "Failed to create event"),
     });
@@ -167,6 +183,21 @@ export function CreateHackathonPage() {
             )}
           />
           {errors.name && <p style={errorStyle}>{errors.name.message}</p>}
+        </div>
+
+        <div>
+          <label style={labelStyle}>Avatar (optional)</label>
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            onChange={(e) => setAvatarFile(e.target.files?.[0] ?? null)}
+            style={inputStyle}
+          />
+          {avatarFile && (
+            <p style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>
+              Selected: {avatarFile.name}
+            </p>
+          )}
         </div>
 
         <div>
@@ -279,10 +310,10 @@ export function CreateHackathonPage() {
         <div className="flex gap-3" style={{ marginTop: 8 }}>
           <button
             type="submit"
-            disabled={isPending || isConfigLoading || !seasonYearReady}
+            disabled={isPending || isUploadingAvatar || isConfigLoading || !seasonYearReady}
             className="border-2 border-navy bg-seal-yellow px-6 py-2.5 text-sm text-navy font-mono font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isPending ? "Creating..." : "Create"}
+            {isPending || isUploadingAvatar ? "Creating..." : "Create"}
           </button>
           <button
             type="button"

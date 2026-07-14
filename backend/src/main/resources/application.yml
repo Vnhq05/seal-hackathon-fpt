@@ -44,13 +44,27 @@ app:
     access-token-expiration-ms: 900000
     refresh-token-expiration-days: 7
     password-reset-token-expiration-minutes: 15
+    issuer: ${APP_JWT_ISSUER:seal-hackathon}
+  frontend:
+    url: ${APP_FRONTEND_URL:http://localhost:3000}
+  cors:
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:3000}
+    max-age-seconds: ${APP_CORS_MAX_AGE_SECONDS:3600}
+  storage:
+    upload-dir: ${APP_STORAGE_UPLOAD_DIR:./uploads}
   seeder:
     resync-dev-accounts: ${SEEDER_RESYNC_DEV_ACCOUNTS:true}
+    default-password: ${APP_SEEDER_DEFAULT_PASSWORD:12345678}
+    student-id-prefix: ${APP_SEEDER_STUDENT_ID_PREFIX:SE19100}
+  protected-emails: ${APP_PROTECTED_EMAILS:admin@seal.com,coordinator@seal.com,lecturer1@fpt.edu.vn,lecturer2@fpt.edu.vn,lecturer3@fpt.edu.vn,lecturer4@fpt.edu.vn,lecturer5@fpt.edu.vn}
   magic-link:
     expiration-minutes: 30
   otp:
     expiration-seconds: 180
     resend-cooldown-seconds: 300
+  submission:
+    pdf:
+      max-size-bytes: ${APP_SUBMISSION_PDF_MAX_SIZE_BYTES:5242880}
   hackathon:
     judging:
       max-judges-per-team: 3
@@ -68,6 +82,11 @@ app:
       fpt-student-id-pattern: "^SE[0-9]{6}$"
     feedback:
       max-rating: 5
+    seal:
+      max-tracks: ${APP_HACKATHON_SEAL_MAX_TRACKS:3}
+      max-teams-per-track: ${APP_HACKATHON_SEAL_MAX_TEAMS_PER_TRACK:8}
+      finalist-count: ${APP_HACKATHON_SEAL_FINALIST_COUNT:6}
+      top-per-track: ${APP_HACKATHON_SEAL_TOP_PER_TRACK:2}
   progress:
     alert-lead-time-hours: 6
     stalled-hours: 24

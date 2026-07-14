@@ -1,5 +1,6 @@
 package com.sealhackathon.judging.dto.response;
 
+import com.sealhackathon.common.enums.UserType;
 import com.sealhackathon.judging.domain.enums.ScoreAdjustmentType;
 import com.sealhackathon.judging.domain.enums.ScoreReviewStatus;
 import lombok.AllArgsConstructor;
@@ -27,4 +28,8 @@ public class ScoreReviewContextResponse {
     private boolean canRequestAdjustment;
     private boolean canEditForAdjustment;
     private String requestNote;
+    private String resolutionNote;
+    private UUID resolvedBy;
+    private UserType resolvedByRole;
+    private String resolvedByFullName;
 }

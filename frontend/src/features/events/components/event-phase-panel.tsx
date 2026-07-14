@@ -78,29 +78,33 @@ export function EventPhasePanel({
   }
 
   return (
-    <SealCard className="space-y-4 p-4">
-      <div>
-        <h2 className="font-mono text-sm font-bold text-navy">Event Phase</h2>
-        <p className="mt-1 text-sm text-seal-text-secondary">
-          Transition the competition through registration, competition day, scoring, and completion.
-        </p>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs font-semibold uppercase text-seal-text-muted">Current:</span>
-        <span
-          className={`inline-flex rounded border px-3 py-1 text-xs font-semibold ${STATUS_COLORS[currentStatus]}`}
-        >
-          {STATUS_DISPLAY_LABELS[currentStatus]}
-        </span>
+    <SealCard className="space-y-5 p-5 sm:p-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 className="font-mono text-sm font-bold text-navy">Event Phase</h2>
+          <p className="mt-1 max-w-md text-sm text-seal-text-secondary">
+            Move the event through registration, competition, scoring, and completion.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-semibold uppercase tracking-wide text-seal-text-muted">
+            Current
+          </span>
+          <span
+            className={`inline-flex rounded border px-3 py-1 text-xs font-semibold ${STATUS_COLORS[currentStatus]}`}
+          >
+            {STATUS_DISPLAY_LABELS[currentStatus]}
+          </span>
+        </div>
       </div>
 
       {nextStatuses.length > 0 && (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-3">
           {nextStatuses.map((target) => (
             <SealButton
               key={target}
               type="button"
+              className="!w-auto min-w-[160px]"
               variant={target === "CLOSED_REGISTRATION" || target === "COMPLETED" ? "secondary" : "primary"}
               disabled={isPending}
               onClick={() => handleAction(target)}
@@ -112,18 +116,24 @@ export function EventPhasePanel({
       )}
 
       {pendingTarget && (
-        <div className="rounded border border-amber-300 bg-amber-50 p-4 space-y-3">
+        <div className="space-y-3 rounded border border-amber-300 bg-amber-50 p-4">
           <p className="text-sm text-amber-950">
             Confirm phase change to <strong>{STATUS_DISPLAY_LABELS[pendingTarget]}</strong>?
             {pendingTarget === "CLOSED_REGISTRATION" &&
               " Team member changes will be blocked after this step."}
           </p>
-          <div className="flex gap-2">
-            <SealButton type="button" disabled={isPending} onClick={() => executeTransition(pendingTarget)}>
+          <div className="flex flex-wrap gap-2">
+            <SealButton
+              type="button"
+              className="!w-auto"
+              disabled={isPending}
+              onClick={() => executeTransition(pendingTarget)}
+            >
               {isPending ? "Updating..." : "Confirm"}
             </SealButton>
             <SealButton
               type="button"
+              className="!w-auto"
               variant="secondary"
               disabled={isPending}
               onClick={() => setPendingTarget(null)}

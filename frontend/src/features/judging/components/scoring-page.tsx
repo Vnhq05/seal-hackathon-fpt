@@ -14,6 +14,8 @@ import { useScoreReviewContext } from "@/features/judging/hooks/use-score-review
 import {
   SCORE_REVIEW_ADJUSTMENT_CONFLICT_MESSAGE,
   SCORE_REVIEW_DEVIATION_TOO_LOW_MESSAGE,
+  scoreReviewNoteLabel,
+  type ScoreReviewContextResponse,
 } from "@/lib/api/score-review.api";
 import { ScoreHistoryCard } from "@/features/judging/components/score-history-card";
 import {
@@ -28,7 +30,6 @@ import { SEAL_SCORE_BUTTON_LABELS } from "@/features/judging/constants/scoring-s
 import { usePortalBase } from "@/shared/hooks/use-portal-base";
 import { SubmissionPdfViewer } from "@/features/submissions/components/submission-pdf-viewer";
 import type { SubmissionForScoring } from "@/features/judging/types/judge.types";
-import type { ScoreReviewContextResponse } from "@/lib/api/score-review.api";
 
 function hasScore(score: number | null | undefined): score is number {
   return score != null;
@@ -537,7 +538,11 @@ function ScoringPageContent({
         )}
       </div>
 
-      {(completed || adjustmentContext?.status === "OPEN" || adjustmentContext?.status === "APPROVED") && (
+      {(completed
+        || adjustmentContext?.status === "OPEN"
+        || adjustmentContext?.status === "APPROVED"
+        || adjustmentContext?.status === "REJECTED"
+        || adjustmentContext?.status === "IGNORED") && (
         <div className="flex flex-col gap-3 border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-4">
           {adjustmentContext && adjustmentContext.deviationValue >= adjustmentContext.deviationThreshold && (
             <p className="text-sm text-amber-800">
@@ -546,19 +551,33 @@ function ScoringPageContent({
             </p>
           )}
 
-          {adjustmentContext?.status === "OPEN" && (
-            <p className="text-sm text-amber-800">
-              An adjustment request is pending coordinator review.
-              {adjustmentContext.requestNote && (
-                <span className="mt-1 block text-xs">Note: {adjustmentContext.requestNote}</span>
-              )}
-            </p>
-          )}
-
           {adjustmentContext?.canEditForAdjustment && (
             <p className="text-sm text-blue-800">
               Coordinator approved score adjustment. Update your scores and submit again.
             </p>
+          )}
+
+          {(adjustmentContext?.status === "REJECTED" || adjustmentContext?.status === "IGNORED") && (
+            <div className="rounded border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-800">
+              <p className="font-medium">
+                {adjustmentContext.status === "REJECTED"
+                  ? "Your adjustment request was rejected."
+                  : "Your adjustment request was closed without changes."}
+              </p>
+              <p className="mt-2 text-sm text-gray-800">
+                <span className="font-medium">
+                  {scoreReviewNoteLabel(adjustmentContext.resolvedByRole)}:
+                </span>{" "}
+                {adjustmentContext.resolutionNote?.trim()
+                  ? adjustmentContext.resolutionNote.trim()
+                  : "No reason was provided."}
+              </p>
+              {adjustmentContext.resolvedByFullName?.trim() ? (
+                <p className="mt-1 text-xs text-gray-600">
+                  By {adjustmentContext.resolvedByFullName.trim()}
+                </p>
+              ) : null}
+            </div>
           )}
 
           {adjustmentBanner && (

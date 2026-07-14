@@ -30,6 +30,8 @@ public class EventResponse {
     private String description;
     private String location;
     private String format;
+    /** Public path to optional event avatar; null when not set. */
+    private String avatarUrl;
     private CompetitionFormat competitionFormat;
     private Integer minTeam;
     private Integer maxTeam;

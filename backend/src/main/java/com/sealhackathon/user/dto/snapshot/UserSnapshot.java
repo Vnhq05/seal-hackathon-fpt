@@ -21,6 +21,7 @@ public class UserSnapshot {
     private String passwordHash;
     private String fullName;
     private String phone;
+    private String avatarUrl;
     private String studentId;
     private String universityName;
     private UserType userType;

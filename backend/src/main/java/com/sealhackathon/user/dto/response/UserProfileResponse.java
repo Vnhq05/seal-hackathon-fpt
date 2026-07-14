@@ -21,6 +21,8 @@ public class UserProfileResponse {
     private String email;
     private String fullName;
     private String phone;
+    /** Public path to optional profile avatar; null when not set. */
+    private String avatarUrl;
     private String studentId;
     private String universityName;
     private UserType userType;

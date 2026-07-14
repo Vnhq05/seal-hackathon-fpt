@@ -1,14 +1,32 @@
 import { useQuery } from "@tanstack/react-query";
 import { publicApi } from "@/lib/api/public.api";
+import type { EventResponse } from "@/lib/api/event.api";
 
-// Client-side OPEN filter until backend wires status in listPublicEvents (see EventService.listPublicEvents).
+async function fetchAllOpenEvents(): Promise<EventResponse[]> {
+  const pageSize = 50;
+  let page = 0;
+  let last = false;
+  const events: EventResponse[] = [];
+
+  while (!last) {
+    const result = await publicApi.listActiveEvents({
+      status: "OPEN",
+      page,
+      size: pageSize,
+    });
+    events.push(...result.content);
+    last = result.last || result.content.length === 0;
+    page += 1;
+    if (page > 100) break;
+  }
+
+  return events.filter((e) => e.status === "OPEN");
+}
+
 export function useFeaturedOpenEvents() {
   return useQuery({
     queryKey: ["featured-open-events"],
-    queryFn: async () => {
-      const page = await publicApi.listActiveEvents({ size: 20 });
-      return page.content.filter((e) => e.status === "OPEN");
-    },
+    queryFn: fetchAllOpenEvents,
     staleTime: 60_000,
   });
 }

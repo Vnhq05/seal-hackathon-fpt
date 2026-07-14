@@ -45,6 +45,7 @@ export interface UserInfo {
   id: string;
   email: string;
   fullName: string;
+  avatarUrl?: string | null;
   userType: UserType;
   status: AccountStatus;
 }

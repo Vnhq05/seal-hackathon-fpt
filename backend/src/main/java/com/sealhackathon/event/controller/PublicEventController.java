@@ -25,9 +25,12 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.Valid;
+
+import com.sealhackathon.event.domain.enums.EventStatus;
 
 import java.util.List;
 import java.util.UUID;
@@ -45,10 +48,11 @@ public class PublicEventController {
     private final PublicRegistrationService publicRegistrationService;
 
     @GetMapping
-    @Operation(summary = "List published events (public)")
+    @Operation(summary = "List published events (public). Optional status filter uses resolved live status (e.g. OPEN).")
     public ResponseEntity<ApiResponse<Page<EventResponse>>> listActiveEvents(
+            @RequestParam(required = false) EventStatus status,
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        Page<EventResponse> page = eventService.listPublicEvents(null, pageable);
+        Page<EventResponse> page = eventService.listPublicEvents(status, pageable);
         return ResponseEntity.ok(ApiResponse.success(page));
     }
 

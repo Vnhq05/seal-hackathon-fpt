@@ -13,6 +13,7 @@ import {
   PortalNavLink,
   type PortalAccent,
 } from "@/shared/layouts/portal-nav-link";
+import { resolveFileUrl } from "@/lib/files";
 
 export interface PortalNavItem {
   href: string;
@@ -81,6 +82,7 @@ export function PortalSidebar({
   const initials = user?.fullName
     ? user.fullName.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
     : "U";
+  const avatarSrc = resolveFileUrl(user?.avatarUrl);
 
   return (
     <aside className="relative flex w-60 min-h-screen flex-shrink-0 flex-col border-r-2 border-navy/20 bg-navy p-4">
@@ -110,8 +112,12 @@ export function PortalSidebar({
 
       <div className="relative mb-5">
         <div className="flex items-center gap-3 border-2 border-white/10 bg-white/5 p-2.5">
-          <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center border-2 border-white/20 bg-white/10`}>
-            <span className="font-mono text-xs font-bold text-white">{initials}</span>
+          <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center overflow-hidden border-2 border-white/20 bg-white/10`}>
+            {avatarSrc ? (
+              <img src={avatarSrc} alt="" className="h-full w-full object-cover" />
+            ) : (
+              <span className="font-mono text-xs font-bold text-white">{initials}</span>
+            )}
           </div>
           <div className="min-w-0">
             <p className="truncate font-mono text-xs font-bold text-white">

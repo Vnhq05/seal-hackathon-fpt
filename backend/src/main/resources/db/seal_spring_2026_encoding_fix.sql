@@ -30,10 +30,10 @@ GO
 
 -- ── Repair SEAL_RAG_2026 event content ──
 UPDATE hackathon_events
-SET description = N'SEAL Hackathon Spring 2026 — Agentic RAG',
+SET description = N'SEAL Hackathon Spring 2026 - Agentic RAG',
     updated_at = SYSUTCDATETIME()
 WHERE competition_format = 'SEAL_RAG_2026'
-  AND (description IS NULL OR description LIKE N'%â%' OR description LIKE N'%Ã%' OR description NOT LIKE N'%—%Agentic RAG%');
+  AND (description IS NULL OR description LIKE N'%â%' OR description LIKE N'%Ã%' OR description NOT LIKE N'%- Agentic RAG%');
 GO
 
 UPDATE t
@@ -44,9 +44,9 @@ SET t.name = CASE
         ELSE t.name
     END,
     t.description = CASE
-        WHEN t.name LIKE N'%A' OR t.name LIKE N'% A' OR t.name LIKE N'Track A' THEN N'SEAL Spring 2026 — Track A'
-        WHEN t.name LIKE N'%B' OR t.name LIKE N'% B' OR t.name LIKE N'Track B' THEN N'SEAL Spring 2026 — Track B'
-        WHEN t.name LIKE N'%C' OR t.name LIKE N'% C' OR t.name LIKE N'Track C' THEN N'SEAL Spring 2026 — Track C'
+        WHEN t.name LIKE N'%A' OR t.name LIKE N'% A' OR t.name LIKE N'Track A' THEN N'SEAL Spring 2026 - Track A'
+        WHEN t.name LIKE N'%B' OR t.name LIKE N'% B' OR t.name LIKE N'Track B' THEN N'SEAL Spring 2026 - Track B'
+        WHEN t.name LIKE N'%C' OR t.name LIKE N'% C' OR t.name LIKE N'Track C' THEN N'SEAL Spring 2026 - Track C'
         ELSE t.description
     END,
     t.updated_at = SYSUTCDATETIME()

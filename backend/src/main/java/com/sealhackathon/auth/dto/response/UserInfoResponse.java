@@ -18,6 +18,7 @@ public class UserInfoResponse {
     private UUID id;
     private String email;
     private String fullName;
+    private String avatarUrl;
     private UserType userType;
     private AccountStatus status;
 }

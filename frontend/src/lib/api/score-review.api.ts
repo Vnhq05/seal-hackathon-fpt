@@ -10,6 +10,8 @@ export type ScoreReviewStatus =
 
 export type ScoreAdjustmentType = "AUTO_DEVIATION" | "JUDGE_REQUESTED";
 
+export type ScoreReviewResolverRole = "SYSTEM_ADMIN" | "EVENT_COORDINATOR" | string;
+
 export interface ScoreReviewJudgeScore {
   judgeUserId: string;
   judgeFullName: string | null;
@@ -38,6 +40,9 @@ export interface ScoreReviewResponse {
   approvedBy?: string | null;
   createdAt: string;
   resolvedAt: string | null;
+  resolvedBy?: string | null;
+  resolvedByRole?: ScoreReviewResolverRole | null;
+  resolvedByFullName?: string | null;
   resolutionNote: string | null;
   judgeScores?: ScoreReviewJudgeScore[];
 }
@@ -52,6 +57,17 @@ export interface ScoreReviewContextResponse {
   canRequestAdjustment: boolean;
   canEditForAdjustment: boolean;
   requestNote?: string | null;
+  resolutionNote?: string | null;
+  resolvedBy?: string | null;
+  resolvedByRole?: ScoreReviewResolverRole | null;
+  resolvedByFullName?: string | null;
+}
+
+/** Label for resolution notes shown to judges, based on who closed the request. */
+export function scoreReviewNoteLabel(role?: ScoreReviewResolverRole | null): string {
+  if (role === "SYSTEM_ADMIN") return "Admin note";
+  if (role === "EVENT_COORDINATOR") return "Coordinator note";
+  return "Decision note";
 }
 
 export interface ResolveScoreReviewRequest {

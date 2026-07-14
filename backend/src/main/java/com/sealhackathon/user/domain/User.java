@@ -60,6 +60,11 @@ public class User extends BaseEntity {
     @Column(name = "phone")
     private String phone;
 
+    /** Public API path to optional profile avatar (e.g. /api/public/files/users/{id}/avatar.webp). */
+    @Size(max = 500)
+    @Column(name = "avatar_url", length = 500)
+    private String avatarUrl;
+
     // ── BR-03: FPT_STUDENT → required, regex SE[0-9]{6}
     //           EXTERNAL_STUDENT → required, free-form
     //           Internal roles → nullable ──
