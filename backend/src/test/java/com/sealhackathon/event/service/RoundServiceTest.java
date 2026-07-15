@@ -25,6 +25,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -153,6 +154,89 @@ class RoundServiceTest {
         assertThatThrownBy(() -> roundService.createRound(eventId, request))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("Cannot modify rounds");
+    }
+
+    @Test
+    void createRound_shouldThrow_whenSealFormatAndRoundTypeNull() {
+        when(formatRuleEngine.isSealFormat(event)).thenReturn(true);
+        when(roundRepository.existsByHackathonEventIdAndRoundNumber(eventId, 1)).thenReturn(false);
+        when(roundRepository.existsOverlappingRoundForNew(any(), any(), any())).thenReturn(false);
+
+        CreateRoundRequest request = CreateRoundRequest.builder()
+                .roundNumber(1)
+                .name("Seal Round")
+                .startDate(LocalDateTime.of(2026, 7, 1, 0, 0))
+                .endDate(LocalDateTime.of(2026, 7, 15, 23, 59))
+                .submissionDeadline(LocalDateTime.of(2026, 7, 10, 23, 59))
+                .scoringDeadline(LocalDateTime.of(2026, 7, 14, 23, 59))
+                .advancementCutoff(5)
+                .build();
+
+        assertThatThrownBy(() -> roundService.createRound(eventId, request))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("roundType is required for SEAL format rounds");
+    }
+
+    @Test
+    void createRound_shouldPass_whenGenericFormatAndRoundTypeNull() {
+        when(roundRepository.existsByHackathonEventIdAndRoundNumber(eventId, 1)).thenReturn(false);
+        when(roundRepository.existsOverlappingRoundForNew(any(), any(), any())).thenReturn(false);
+        when(roundRepository.save(any(Round.class))).thenAnswer(i -> {
+            Round r = i.getArgument(0);
+            r.setId(UUID.randomUUID());
+            return r;
+        });
+
+        CreateRoundRequest request = CreateRoundRequest.builder()
+                .roundNumber(1)
+                .name("Generic Round")
+                .startDate(LocalDateTime.of(2026, 7, 1, 0, 0))
+                .endDate(LocalDateTime.of(2026, 7, 15, 23, 59))
+                .submissionDeadline(LocalDateTime.of(2026, 7, 10, 23, 59))
+                .scoringDeadline(LocalDateTime.of(2026, 7, 14, 23, 59))
+                .advancementCutoff(5)
+                .build();
+
+        assertThatCode(() -> roundService.createRound(eventId, request))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    void updateRound_shouldThrow_whenSealFormatAndRoundTypeNull() {
+        UUID roundId = UUID.randomUUID();
+        Round existing = Round.builder()
+                .hackathonEvent(event)
+                .roundNumber(1)
+                .name("Existing")
+                .startDate(LocalDateTime.of(2026, 7, 1, 0, 0))
+                .endDate(LocalDateTime.of(2026, 7, 15, 23, 59))
+                .submissionDeadline(LocalDateTime.of(2026, 7, 10, 23, 59))
+                .scoringDeadline(LocalDateTime.of(2026, 7, 14, 23, 59))
+                .advancementCutoff(5)
+                .roundWeight(100)
+                .build();
+        existing.setId(roundId);
+
+        when(formatRuleEngine.isSealFormat(event)).thenReturn(true);
+        when(roundRepository.findById(roundId)).thenReturn(Optional.of(existing));
+        when(roundRepository.findByHackathonEventIdOrderByRoundNumberAsc(eventId))
+                .thenReturn(List.of(existing));
+        when(roundRepository.existsOverlappingRound(eq(eventId), eq(roundId), any(), any()))
+                .thenReturn(false);
+
+        CreateRoundRequest request = CreateRoundRequest.builder()
+                .roundNumber(1)
+                .name("Updated Seal Round")
+                .startDate(LocalDateTime.of(2026, 7, 1, 0, 0))
+                .endDate(LocalDateTime.of(2026, 7, 15, 23, 59))
+                .submissionDeadline(LocalDateTime.of(2026, 7, 10, 23, 59))
+                .scoringDeadline(LocalDateTime.of(2026, 7, 14, 23, 59))
+                .advancementCutoff(5)
+                .build();
+
+        assertThatThrownBy(() -> roundService.updateRound(roundId, request))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("roundType is required for SEAL format rounds");
     }
 
     private HackathonEvent buildEvent(UUID id) {
