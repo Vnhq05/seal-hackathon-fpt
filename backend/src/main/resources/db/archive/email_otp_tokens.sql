@@ -6,7 +6,7 @@ BEGIN
     CREATE TABLE email_otp_tokens (
         id UNIQUEIDENTIFIER NOT NULL PRIMARY KEY,
         user_id UNIQUEIDENTIFIER NOT NULL,
-        code NVARCHAR(6) NOT NULL,
+        code NVARCHAR(64) NOT NULL,
         expires_at DATETIME2(6) NOT NULL,
         resend_allowed_at DATETIME2(6) NOT NULL,
         used BIT NOT NULL DEFAULT 0,

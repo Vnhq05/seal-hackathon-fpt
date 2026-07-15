@@ -8,35 +8,81 @@ A complete backend system for managing Hackathon competitions, built with **Spri
 
 - Java 21
 - Maven 3.9+
-- PostgreSQL 16+
+- SQL Server (database `SEAL`)
 - Docker (for Testcontainers)
 
 ### Run
 
 ```bash
 # 1. Clone and enter project
-cd seal-hackathon
+cd backend
 
-# 2. Configure database
-cp src/main/resources/application.yml src/main/resources/application-local.yml
-# Edit application-local.yml with your PostgreSQL credentials
+# 2. Configure database (copy backend/.env.example → backend/.env)
+# Set DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
 
 # 3. Build
 ./mvnw clean package -DskipTests
 
-# 4. Run
-./mvnw spring-boot:run -Dspring-boot.run.profiles=local
+# 4. Run (dev profile seeds scoring templates and default rules only)
+./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
 
 # 5. Access
 # API:     http://localhost:8080
 # Swagger: http://localhost:8080/swagger-ui.html
 ```
 
+### Accounts and data
+
+There are no demo accounts. `DataSeeder` seeds reference data only (scoring templates, default
+rules); every account is real and is created either by self-registration or from the admin UI.
+
+**One-time bootstrap.** `AuthService.register()` accepts only `FPT_STUDENT` and `EXTERNAL_STUDENT`,
+and `AdminUserController` requires `hasRole('SYSTEM_ADMIN')` — so on an empty database there is no
+way to create the first admin through the app. `bootstrap_admin.sql` exists to break that cycle:
+
+```powershell
+# 1. Generate a BCrypt hash (PowerShell hides the password as you type; Git Bash does not)
+mvn -q dependency:build-classpath -Dmdep.outputFile=target/cp.txt
+java -cp "$(Get-Content target/cp.txt)" tools/GenerateAdminHash.java
+
+# 2. Paste the hash into @passwordHash in src/main/resources/db/bootstrap_admin.sql, then:
+sqlcmd -S localhost -U sa -P "<password>" -d SEAL -I `
+  -i src/main/resources/db/bootstrap_admin.sql
+```
+
+Log in as that admin, then create coordinators, lecturers and students at `/admin/users`. Students
+can also self-register at `/register`.
+
+Keep the admin address in sync across `bootstrap_admin.sql`, `reset_and_seed_template.sql`
+(`@ownerEmail`), `purge_demo_data.sql`, and `app.protected-emails` (`application.yml`,
+`application-dev.properties`, `.env`). `app.protected-emails` is what stops the account from being
+deleted through the admin UI — locking yourself out again. Re-running `bootstrap_admin.sql` with a
+fresh hash resets the password if that happens.
+
 ### Test
 
 ```bash
-# Unit + Integration tests (requires Docker for Testcontainers)
+# Unit tests always run. Integration tests require Docker (SQL Server Testcontainers).
+# Without Docker, @Testcontainers(disabledWithoutDocker=true) skips ITs — they do not silently pass assertions.
 ./mvnw test
+```
+
+Schema for tests: Flyway applies `V0`+`V1`+… on Microsoft SQL Server (`mssqlserver` Testcontainers),
+`ddl-auto=validate` — same filtered unique / CHECK constraints as production.
+
+### SQL scripts (ops)
+
+Schema is owned by Flyway (`db/migration/`). Manual ops scripts live under `db/archive/`:
+
+| Script | Does |
+|--------|------|
+| `db/archive/bootstrap_admin.sql` | Creates (or resets) the single `SYSTEM_ADMIN` account |
+| `db/archive/reset_and_seed_template.sql` | Wipes **all** events and rebuilds the SEAL template |
+| `db/archive/purge_demo_data.sql` | Deletes every account except the admin |
+
+```powershell
+sqlcmd -S localhost -U sa -P "<password>" -d SEAL -I `
+  -i src/main/resources/db/archive/bootstrap_admin.sql
 ```
 
 ## Project Stats
@@ -61,11 +107,11 @@ cp src/main/resources/application.yml src/main/resources/application-local.yml
 | Framework | Spring Boot 3.5.3 |
 | Architecture | Spring Modulith 1.3.3 |
 | Security | Spring Security 6, JWT (jjwt 0.12.6) |
-| Persistence | Spring Data JPA, Hibernate, PostgreSQL |
+| Persistence | Spring Data JPA, Hibernate, SQL Server |
 | Validation | Bean Validation, Custom Validators |
 | Mapping | MapStruct 1.6.3, Lombok |
 | Documentation | SpringDoc OpenAPI 2.8.8 |
-| Testing | JUnit 5, Mockito, Testcontainers |
+| Testing | JUnit 5, Mockito, Testcontainers (SQL Server) |
 | Build | Maven |
 
 ## Module Overview
