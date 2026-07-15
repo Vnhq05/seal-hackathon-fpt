@@ -1,129 +1,28 @@
 package com.sealhackathon.infrastructure.config;
 
 import com.sealhackathon.common.domain.SystemConfig;
-import com.sealhackathon.common.enums.AccountStatus;
-import com.sealhackathon.common.enums.StudentStanding;
-import com.sealhackathon.common.enums.UserType;
 import com.sealhackathon.common.repository.SystemConfigRepository;
-import com.sealhackathon.common.util.UniversityUtils;
 import com.sealhackathon.event.domain.ScoringTemplate;
 import com.sealhackathon.event.domain.ScoringTemplateCriterion;
-import com.sealhackathon.event.domain.HackathonEvent;
-import com.sealhackathon.event.repository.HackathonEventRepository;
 import com.sealhackathon.event.repository.ScoringTemplateRepository;
-import com.sealhackathon.user.domain.User;
-import com.sealhackathon.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.support.TransactionTemplate;
 
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
-
+/**
+ * Seeds reference data only: default rules and scoring templates. Accounts and event data are
+ * created through the app or the SQL scripts under {@code src/main/resources/db}.
+ */
 @Slf4j
 @Component
 @Profile("dev")
 @RequiredArgsConstructor
 public class DataSeeder implements CommandLineRunner {
 
-    private static final String DEV_COORDINATOR_EMAIL = EventDemoSeeder.DEV_COORDINATOR_EMAIL;
-    private static final String DEV_ADMIN_EMAIL = "admin@seal.com";
-
-    /** Dev login hints — password for all seeded accounts: {@link #DEMO_TEST_STUDENT_PASSWORD_HINT} */
-    public static final String DEMO_TEST_STUDENT_PASSWORD_HINT = "12345678";
-
-    /** Used by {@link EventDemoSeeder} (Fall Demo teams). */
-    public static final List<String> DEMO_TEST_STUDENT_EMAILS = List.of(
-            "student1@fpt.edu.vn",
-            "student2@fpt.edu.vn",
-            "student3@fpt.edu.vn",
-            "student4@fpt.edu.vn"
-    );
-
-    /** Students for {@link ScoringDemoSeeder} — separate from submission-lock demo enrollments. */
-    public static final List<String> SCORING_TEST_STUDENT_EMAILS = List.of(
-            "scoretest101@fpt.edu.vn",
-            "scoretest102@fpt.edu.vn",
-            "scoretest103@fpt.edu.vn",
-            "scoretest104@fpt.edu.vn",
-            "scoretest105@fpt.edu.vn",
-            "scoretest106@fpt.edu.vn"
-    );
-
-    /** Students for second scoring demo event (DEV Scoring Feature Test B). */
-    public static final List<String> SCORING_TEST_STUDENT_EMAILS_B = List.of(
-            "scoretest107@fpt.edu.vn",
-            "scoretest108@fpt.edu.vn",
-            "scoretest109@fpt.edu.vn",
-            "scoretest110@fpt.edu.vn",
-            "scoretest111@fpt.edu.vn",
-            "scoretest112@fpt.edu.vn"
-    );
-
-    /** Students for {@link FeedbackDemoSeeder} — completed event, feedback form at /student/feedback. */
-    public static final List<String> FEEDBACK_TEST_STUDENT_EMAILS = List.of(
-            "feedbacktest101@fpt.edu.vn",
-            "feedbacktest102@fpt.edu.vn",
-            "feedbacktest103@fpt.edu.vn"
-    );
-
-    /** Students for {@link ProgressDemoSeeder} — active submission phase, team not submitted. */
-    public static final List<String> PROGRESS_TEST_STUDENT_EMAILS = List.of(
-            "progresstest101@fpt.edu.vn",
-            "progresstest102@fpt.edu.vn",
-            "progresstest103@fpt.edu.vn",
-            "progresstest104@fpt.edu.vn",
-            "progresstest105@fpt.edu.vn"
-    );
-
-    /** Students for {@link LeaveTeamDemoSeeder} — OPEN event, before competition start. */
-    public static final List<String> LEAVE_TEST_STUDENT_EMAILS = List.of(
-            "leavetest101@fpt.edu.vn",
-            "leavetest102@fpt.edu.vn",
-            "leavetest103@fpt.edu.vn"
-    );
-
-    /** General-purpose students for other events — see {@link OtherEventStudentSeeder}. */
-    public static final String ALT_EVENT_TEST_STUDENT_TARGET_EVENT = "SEAL Summer Hackathon P";
-    public static final List<String> ALT_EVENT_TEST_STUDENT_EMAILS = List.of(
-            "teststudent101@fpt.edu.vn",
-            "teststudent102@fpt.edu.vn",
-            "teststudent103@fpt.edu.vn",
-            "teststudent104@fpt.edu.vn"
-    );
-
-    private static final Set<String> DEV_OWNERSHIP_REALIGN_FROM = Set.of("system", DEV_ADMIN_EMAIL);
-
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
     private final ScoringTemplateRepository scoringTemplateRepository;
     private final SystemConfigRepository systemConfigRepository;
-    private final EventDemoSeeder eventDemoSeeder;
-    private final SubmissionDemoSeeder submissionDemoSeeder;
-    private final JudgingDemoSeeder judgingDemoSeeder;
-    private final PublishReadyDemoSeeder publishReadyDemoSeeder;
-    private final ScoringDemoSeeder scoringDemoSeeder;
-    private final FeedbackDemoSeeder feedbackDemoSeeder;
-    private final ProgressDemoSeeder progressDemoSeeder;
-    private final LeaveTeamDemoSeeder leaveTeamDemoSeeder;
-    private final OtherEventStudentSeeder otherEventStudentSeeder;
-    private final HackathonEventRepository eventRepository;
-    private final TransactionTemplate transactionTemplate;
-
-    @Value("${app.seeder.resync-dev-accounts:true}")
-    private boolean resyncDevAccounts;
-
-    @Value("${app.seeder.default-password:12345678}")
-    private String defaultSeedPassword;
-
-    @Value("${app.seeder.student-id-prefix:SE19100}")
-    private String studentIdPrefix;
 
     private static final String DEFAULT_RULES = """
             1. Teams must comply with the configured minimum and maximum member limits.
@@ -138,94 +37,6 @@ public class DataSeeder implements CommandLineRunner {
     public void run(String... args) {
         seedDefaultRules();
         seedScoringTemplates();
-        seedUser("admin@seal.com", "System Admin", UserType.SYSTEM_ADMIN, null);
-        seedUser("admin2@seal.com", "Platform Admin", UserType.SYSTEM_ADMIN, null);
-        seedUser("coordinator@seal.com", "Event Coordinator", UserType.EVENT_COORDINATOR, null);
-
-        seedUser("lecturer1@fpt.edu.vn", "Nguyen Van A", UserType.LECTURER, null);
-        seedUser("lecturer2@fpt.edu.vn", "Tran Thi B", UserType.LECTURER, null);
-        seedUser("lecturer3@fpt.edu.vn", "Le Van C", UserType.LECTURER, null);
-        seedUser("lecturer4@fpt.edu.vn", "Pham Thi D", UserType.LECTURER, null);
-        seedUser("lecturer5@fpt.edu.vn", "Hoang Van E", UserType.LECTURER, null);
-        seedUser("mentor.lbtest@fpt.edu.vn", "LB Test Mentor", UserType.LECTURER, null);
-
-        seedUser("student1@fpt.edu.vn", "Sinh Vien 1", UserType.FPT_STUDENT, 5);
-        seedUser("student2@fpt.edu.vn", "Sinh Vien 2", UserType.FPT_STUDENT, 6);
-        seedUser("student3@fpt.edu.vn", "Sinh Vien 3", UserType.FPT_STUDENT, 5);
-        seedUser("student4@fpt.edu.vn", "Sinh Vien 4", UserType.FPT_STUDENT, 6);
-        seedUser("student5@fpt.edu.vn", "Sinh Vien 5", UserType.FPT_STUDENT, 5);
-        seedUser("student6@fpt.edu.vn", "Sinh Vien 6", UserType.FPT_STUDENT, 7);
-
-        seedUser("teststudent101@fpt.edu.vn", "Test Student 101", UserType.FPT_STUDENT, 5);
-        seedUser("teststudent102@fpt.edu.vn", "Test Student 102", UserType.FPT_STUDENT, 5);
-        seedUser("teststudent103@fpt.edu.vn", "Test Student 103", UserType.FPT_STUDENT, 6);
-        seedUser("teststudent104@fpt.edu.vn", "Test Student 104", UserType.FPT_STUDENT, 6);
-
-        seedUser("scoretest101@fpt.edu.vn", "Score Test 101", UserType.FPT_STUDENT, 5);
-        seedUser("scoretest102@fpt.edu.vn", "Score Test 102", UserType.FPT_STUDENT, 5);
-        seedUser("scoretest103@fpt.edu.vn", "Score Test 103", UserType.FPT_STUDENT, 6);
-        seedUser("scoretest104@fpt.edu.vn", "Score Test 104", UserType.FPT_STUDENT, 6);
-        seedUser("scoretest105@fpt.edu.vn", "Score Test 105", UserType.FPT_STUDENT, 5);
-        seedUser("scoretest106@fpt.edu.vn", "Score Test 106", UserType.FPT_STUDENT, 6);
-        seedUser("scoretest107@fpt.edu.vn", "Score Test 107", UserType.FPT_STUDENT, 5);
-        seedUser("scoretest108@fpt.edu.vn", "Score Test 108", UserType.FPT_STUDENT, 5);
-        seedUser("scoretest109@fpt.edu.vn", "Score Test 109", UserType.FPT_STUDENT, 6);
-        seedUser("scoretest110@fpt.edu.vn", "Score Test 110", UserType.FPT_STUDENT, 6);
-        seedUser("scoretest111@fpt.edu.vn", "Score Test 111", UserType.FPT_STUDENT, 5);
-        seedUser("scoretest112@fpt.edu.vn", "Score Test 112", UserType.FPT_STUDENT, 6);
-
-        seedUser("feedbacktest101@fpt.edu.vn", "Feedback Test 101", UserType.FPT_STUDENT, 5);
-        seedUser("feedbacktest102@fpt.edu.vn", "Feedback Test 102", UserType.FPT_STUDENT, 5);
-        seedUser("feedbacktest103@fpt.edu.vn", "Feedback Test 103", UserType.FPT_STUDENT, 6);
-
-        seedUser("progresstest101@fpt.edu.vn", "Progress Test 101", UserType.FPT_STUDENT, 5);
-        seedUser("progresstest102@fpt.edu.vn", "Progress Test 102", UserType.FPT_STUDENT, 5);
-        seedUser("progresstest103@fpt.edu.vn", "Progress Test 103", UserType.FPT_STUDENT, 6);
-        seedUser("progresstest104@fpt.edu.vn", "Progress Test 104", UserType.FPT_STUDENT, 6);
-        seedUser("progresstest105@fpt.edu.vn", "Progress Test 105", UserType.FPT_STUDENT, 5);
-
-        seedUser("leavetest101@fpt.edu.vn", "Leave Test 101", UserType.FPT_STUDENT, 5);
-        seedUser("leavetest102@fpt.edu.vn", "Leave Test 102", UserType.FPT_STUDENT, 5);
-        seedUser("leavetest103@fpt.edu.vn", "Leave Test 103", UserType.FPT_STUDENT, 6);
-
-        eventDemoSeeder.seed();
-        submissionDemoSeeder.seed();
-        scoringDemoSeeder.seed();
-        feedbackDemoSeeder.seed();
-        progressDemoSeeder.seed();
-        leaveTeamDemoSeeder.seed();
-        otherEventStudentSeeder.seed();
-        judgingDemoSeeder.seedIfMissing();
-        publishReadyDemoSeeder.seedIfReady();
-        if (resyncDevAccounts) {
-            alignDevEventOwnership();
-        }
-    }
-
-    /**
-     * Dev-only: coordinators list/manage events by {@code createdBy}. Admin- or system-owned
-     * seeded events are reassigned to the default coordinator account on startup.
-     */
-    void alignDevEventOwnership() {
-        transactionTemplate.executeWithoutResult(status -> {
-            List<UUID> eventIds = eventRepository.findAll().stream()
-                    .filter(this::shouldRealignDevOwnership)
-                    .map(HackathonEvent::getId)
-                    .toList();
-            if (eventIds.isEmpty()) {
-                return;
-            }
-            int updated = eventRepository.reassignOwnership(eventIds, DEV_COORDINATOR_EMAIL);
-            log.info("Aligned {} dev event(s) to coordinator owner {}", updated, DEV_COORDINATOR_EMAIL);
-        });
-    }
-
-    private boolean shouldRealignDevOwnership(HackathonEvent event) {
-        String owner = event.getCreatedBy();
-        if (owner == null || owner.isBlank()) {
-            return true;
-        }
-        return DEV_OWNERSHIP_REALIGN_FROM.contains(owner.trim().toLowerCase());
     }
 
     private void seedDefaultRules() {
@@ -315,43 +126,5 @@ public class DataSeeder implements CommandLineRunner {
                 .minScore(minScore)
                 .maxScore(maxScore)
                 .build();
-    }
-
-    private void seedUser(String email, String fullName, UserType userType, Integer semester) {
-        User existing = userRepository.findByEmail(email).orElse(null);
-        if (existing != null) {
-            if (resyncDevAccounts) {
-                resyncDevAccount(existing);
-            }
-            return;
-        }
-
-        User.UserBuilder builder = User.builder()
-                .email(email)
-                .passwordHash(passwordEncoder.encode(defaultSeedPassword))
-                .fullName(fullName)
-                .userType(userType)
-                .status(AccountStatus.ACTIVE)
-                .studentStanding(StudentStanding.ENROLLED);
-
-        if (userType == UserType.FPT_STUDENT) {
-            String idNum = email.replaceAll("[^0-9]", "");
-            builder.studentId(studentIdPrefix + idNum);
-            builder.semester(semester);
-            builder.universityName(UniversityUtils.FPT_UNIVERSITY_NAME);
-        }
-
-        userRepository.save(builder.build());
-        log.info("Seeded account: {} [{}]", email, userType);
-    }
-
-    private void resyncDevAccount(User user) {
-        user.setPasswordHash(passwordEncoder.encode(defaultSeedPassword));
-        user.setStatus(AccountStatus.ACTIVE);
-        user.setFailedLoginAttempts(0);
-        user.setLockedUntil(null);
-        user.setStudentStanding(StudentStanding.ENROLLED);
-        userRepository.save(user);
-        log.info("Re-synced dev account: {} [{}]", user.getEmail(), user.getUserType());
     }
 }

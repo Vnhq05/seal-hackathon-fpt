@@ -52,10 +52,6 @@ app:
     max-age-seconds: ${APP_CORS_MAX_AGE_SECONDS:3600}
   storage:
     upload-dir: ${APP_STORAGE_UPLOAD_DIR:./uploads}
-  seeder:
-    resync-dev-accounts: ${SEEDER_RESYNC_DEV_ACCOUNTS:true}
-    default-password: ${APP_SEEDER_DEFAULT_PASSWORD:12345678}
-    student-id-prefix: ${APP_SEEDER_STUDENT_ID_PREFIX:SE19100}
   protected-emails: ${APP_PROTECTED_EMAILS:admin@seal.com,coordinator@seal.com,lecturer1@fpt.edu.vn,lecturer2@fpt.edu.vn,lecturer3@fpt.edu.vn,lecturer4@fpt.edu.vn,lecturer5@fpt.edu.vn}
   magic-link:
     expiration-minutes: 30
