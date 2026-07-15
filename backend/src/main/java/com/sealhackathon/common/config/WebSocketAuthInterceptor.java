@@ -1,6 +1,6 @@
 package com.sealhackathon.common.config;
 
-import com.sealhackathon.auth.security.JwtProvider;
+import com.sealhackathon.auth.security.AccessTokenAuthenticator;
 import com.sealhackathon.auth.security.UserPrincipal;
 import com.sealhackathon.common.enums.UserType;
 import com.sealhackathon.ranking.service.LiveScoreService;
@@ -31,15 +31,15 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
     private static final Pattern LEADERBOARD_TOPIC =
             Pattern.compile("^/topic/events/([0-9a-fA-F-]{36})/leaderboard$");
 
-    private final JwtProvider jwtProvider;
+    private final AccessTokenAuthenticator accessTokenAuthenticator;
     private final MentorChatService mentorChatService;
     private final LiveScoreService liveScoreService;
 
     public WebSocketAuthInterceptor(
-            JwtProvider jwtProvider,
+            AccessTokenAuthenticator accessTokenAuthenticator,
             @Lazy MentorChatService mentorChatService,
             LiveScoreService liveScoreService) {
-        this.jwtProvider = jwtProvider;
+        this.accessTokenAuthenticator = accessTokenAuthenticator;
         this.mentorChatService = mentorChatService;
         this.liveScoreService = liveScoreService;
     }
@@ -58,19 +58,14 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
             }
 
             String token = authHeader.substring(7);
-            if (!jwtProvider.validateToken(token)) {
-                throw new IllegalArgumentException("Missing or invalid authentication token");
-            }
+            AccessTokenAuthenticator.AuthenticatedSession session = accessTokenAuthenticator.authenticate(token)
+                    .orElseThrow(() -> new IllegalArgumentException("Missing or invalid authentication token"));
 
-            UUID userId = jwtProvider.getUserIdFromToken(token);
-            String email = jwtProvider.getEmailFromToken(token);
-            String role = jwtProvider.getRoleFromToken(token);
-
-            UserPrincipal principal = new UserPrincipal(userId, email);
+            UserPrincipal principal = new UserPrincipal(session.userId(), session.email());
             UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
                     principal,
                     null,
-                    List.of(new SimpleGrantedAuthority("ROLE_" + role))
+                    List.of(new SimpleGrantedAuthority("ROLE_" + session.role().name()))
             );
             accessor.setUser(auth);
         }

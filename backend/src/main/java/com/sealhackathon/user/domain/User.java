@@ -113,4 +113,11 @@ public class User extends BaseEntity {
     @Column(name = "temporary_account", nullable = false, columnDefinition = "BIT NOT NULL DEFAULT 0")
     @Builder.Default
     private boolean temporaryAccount = false;
+
+    /**
+     * Watermark for access-token revocation. Tokens with {@code iat} before this instant
+     * are rejected (refresh tokens are revoked separately).
+     */
+    @Column(name = "sessions_invalidated_at")
+    private LocalDateTime sessionsInvalidatedAt;
 }

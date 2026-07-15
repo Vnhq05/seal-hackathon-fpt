@@ -33,6 +33,7 @@ class JwtProviderTest {
         assertThat(jwtProvider.getUserIdFromToken(token)).isEqualTo(userId);
         assertThat(jwtProvider.getEmailFromToken(token)).isEqualTo(email);
         assertThat(jwtProvider.getRoleFromToken(token)).isEqualTo(role);
+        assertThat(jwtProvider.getIssuedAtFromToken(token)).isNotNull();
     }
 
     @Test

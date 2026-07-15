@@ -16,13 +16,12 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    private final JwtProvider jwtProvider;
+    private final AccessTokenAuthenticator accessTokenAuthenticator;
 
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request,
@@ -30,21 +29,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     @NonNull FilterChain filterChain) throws ServletException, IOException {
         String token = extractToken(request);
 
-        if (token != null && jwtProvider.validateToken(token)) {
-            UUID userId = jwtProvider.getUserIdFromToken(token);
-            String email = jwtProvider.getEmailFromToken(token);
-            String role = jwtProvider.getRoleFromToken(token);
-
-            UserPrincipal principal = new UserPrincipal(userId, email);
-
-            UsernamePasswordAuthenticationToken authentication =
-                    new UsernamePasswordAuthenticationToken(
-                            principal,
-                            null,
-                            List.of(new SimpleGrantedAuthority("ROLE_" + role))
-                    );
-            authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-            SecurityContextHolder.getContext().setAuthentication(authentication);
+        if (token != null) {
+            accessTokenAuthenticator.authenticate(token).ifPresent(session -> {
+                UserPrincipal principal = new UserPrincipal(session.userId(), session.email());
+                UsernamePasswordAuthenticationToken authentication =
+                        new UsernamePasswordAuthenticationToken(
+                                principal,
+                                null,
+                                List.of(new SimpleGrantedAuthority("ROLE_" + session.role().name()))
+                        );
+                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+            });
         }
 
         filterChain.doFilter(request, response);

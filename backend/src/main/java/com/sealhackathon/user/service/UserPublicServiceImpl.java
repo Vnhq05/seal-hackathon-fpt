@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -181,6 +182,15 @@ public class UserPublicServiceImpl implements UserPublicService {
         return userRepository.countByStatus(AccountStatus.ACTIVE);
     }
 
+    @Override
+    @Transactional
+    public void markSessionsInvalidated(UUID userId) {
+        User user = getUserEntity(userId);
+        // Store UTC so comparison with JWT iat (Instant) is timezone-safe.
+        user.setSessionsInvalidatedAt(LocalDateTime.now(ZoneOffset.UTC));
+        userRepository.save(user);
+    }
+
     private User getUserEntity(UUID userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
@@ -201,6 +211,7 @@ public class UserPublicServiceImpl implements UserPublicService {
                 .status(user.getStatus())
                 .semester(user.getSemester())
                 .studentStanding(user.getStudentStanding())
+                .sessionsInvalidatedAt(user.getSessionsInvalidatedAt())
                 .build();
     }
 }

@@ -48,4 +48,7 @@ public interface UserPublicService {
     boolean hasRole(UUID userId, UserType role);
 
     long countActiveUsers();
+
+    /** Marks all prior access tokens invalid via sessions_invalidated_at watermark. */
+    void markSessionsInvalidated(UUID userId);
 }

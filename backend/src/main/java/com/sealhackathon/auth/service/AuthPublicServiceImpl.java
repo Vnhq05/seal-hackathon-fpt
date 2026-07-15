@@ -1,7 +1,9 @@
 package com.sealhackathon.auth.service;
 
 import com.sealhackathon.auth.security.UserPrincipal;
+import com.sealhackathon.auth.service.TokenService;
 import com.sealhackathon.common.enums.UserType;
+import com.sealhackathon.user.service.UserPublicService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -16,6 +18,7 @@ import java.util.UUID;
 public class AuthPublicServiceImpl implements AuthPublicService {
 
     private final TokenService tokenService;
+    private final UserPublicService userPublicService;
 
     @Override
     public UUID getCurrentUserId() {
@@ -42,6 +45,7 @@ public class AuthPublicServiceImpl implements AuthPublicService {
     @Override
     @Transactional
     public void invalidateAllSessions(UUID userId) {
+        userPublicService.markSessionsInvalidated(userId);
         tokenService.revokeAllUserTokens(userId);
     }
 
