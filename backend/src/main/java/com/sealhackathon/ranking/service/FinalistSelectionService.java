@@ -3,7 +3,6 @@ package com.sealhackathon.ranking.service;
 import com.sealhackathon.common.exception.BusinessException;
 import com.sealhackathon.common.exception.ResourceNotFoundException;
 import com.sealhackathon.event.domain.Round;
-import com.sealhackathon.event.domain.enums.CompetitionFormat;
 import com.sealhackathon.event.domain.enums.EventStatus;
 import com.sealhackathon.event.domain.enums.RoundType;
 import com.sealhackathon.event.repository.HackathonEventRepository;
@@ -86,7 +85,7 @@ public class FinalistSelectionService {
                 .findByRoundIdAndVersionOrderByRankAsc(preliminary.getId(), latestVersion);
 
         SelectionState state = new SelectionState();
-        if (event.getCompetitionFormat() == CompetitionFormat.SEAL_RAG_2026) {
+        if (formatRuleEngine.isSealFormat(event)) {
             selectSealFinalists(eventId, preliminary.getId(), rankings, state);
         } else {
             selectGenericFinalists(preliminary, rankings, state);
@@ -114,7 +113,7 @@ public class FinalistSelectionService {
                 .contestedSlots(contestedResponses)
                 .summary(FinalistSelectionSummaryResponse.builder()
                         .selectedCount(finalistResponses.size())
-                        .targetCount(event.getCompetitionFormat() == CompetitionFormat.SEAL_RAG_2026
+                        .targetCount(formatRuleEngine.isSealFormat(event)
                                 ? formatRuleEngine.getSealFinalistCount()
                                 : preliminary.getAdvancementCutoff())
                         .penaltyEvaluationRequired(penaltyRequired)

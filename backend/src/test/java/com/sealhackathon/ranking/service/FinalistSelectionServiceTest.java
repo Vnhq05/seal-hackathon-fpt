@@ -106,6 +106,7 @@ class FinalistSelectionServiceTest {
 
         when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
         when(eventService.resolveStatus(event)).thenReturn(EventStatus.SCORING);
+        when(formatRuleEngine.isSealFormat(event)).thenReturn(true);
         when(roundRepository.findByHackathonEventIdOrderByRoundNumberAsc(eventId)).thenReturn(List.of(preliminary));
         when(rankingRepository.findMaxVersionByRoundId(roundId)).thenReturn(1);
         when(rankingRepository.findByRoundIdAndVersionOrderByRankAsc(roundId, 1)).thenReturn(rankings);
@@ -160,6 +161,7 @@ class FinalistSelectionServiceTest {
 
         when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
         when(eventService.resolveStatus(event)).thenReturn(EventStatus.SCORING);
+        when(formatRuleEngine.isSealFormat(event)).thenReturn(true);
         when(roundRepository.findByHackathonEventIdOrderByRoundNumberAsc(eventId)).thenReturn(List.of(preliminary));
         when(rankingRepository.findMaxVersionByRoundId(roundId)).thenReturn(1);
         when(rankingRepository.findByRoundIdAndVersionOrderByRankAsc(roundId, 1)).thenReturn(List.of(r1, r2, r3));
