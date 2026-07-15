@@ -1,5 +1,6 @@
 package com.sealhackathon.user.dto.request;
 
+import com.sealhackathon.common.constants.PasswordPolicy;
 import com.sealhackathon.common.enums.UserType;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -21,7 +22,7 @@ public class CreateInternalAccountRequest {
     private String email;
 
     @NotBlank(message = "Password is required")
-    @Size(min = 6, message = "Password must be at least 6 characters")
+    @Size(min = PasswordPolicy.MIN_LENGTH, max = PasswordPolicy.MAX_LENGTH, message = "Password must be between 8 and 72 characters")
     private String password;
 
     @NotBlank(message = "Full name is required")

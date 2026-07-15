@@ -4,6 +4,10 @@ import {
   matchesAllowedDomain,
   universityMatchesEmail,
 } from "@/lib/email-domain";
+import {
+  PASSWORD_MAX_LENGTH,
+  PASSWORD_MIN_LENGTH,
+} from "@/lib/password-policy";
 
 export const USER_TYPES = ["FPT_STUDENT", "EXTERNAL_STUDENT"] as const;
 
@@ -20,8 +24,8 @@ const baseRegisterSchema = z.object({
   universityName: z.string().optional(),
   semester: z.number().int().min(1).max(10).optional().or(z.nan().transform(() => undefined)),
   password: z.string()
-    .min(8, "Password must be at least 8 characters")
-    .max(72, "Password must not exceed 72 characters")
+    .min(PASSWORD_MIN_LENGTH, "Password must be at least 8 characters")
+    .max(PASSWORD_MAX_LENGTH, "Password must not exceed 72 characters")
     .regex(/[a-z]/, "Password must contain at least one lowercase letter")
     .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
     .regex(/\d/, "Password must contain at least one digit"),

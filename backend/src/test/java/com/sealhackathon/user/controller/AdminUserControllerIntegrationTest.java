@@ -71,7 +71,7 @@ class AdminUserControllerIntegrationTest extends BaseIntegrationTest {
                         .header("Authorization", "Bearer " + tokenFor(admin))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"email":"newlecturer@test.com","password":"pass123",
+                                {"email":"newlecturer@test.com","password":"pass1234",
                                  "fullName":"New Lecturer","userType":"LECTURER"}
                                 """))
                 .andExpect(status().isCreated())
@@ -89,7 +89,7 @@ class AdminUserControllerIntegrationTest extends BaseIntegrationTest {
                         .header("Authorization", "Bearer " + tokenFor(admin))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"email":"student@test.com","password":"pass123",
+                                {"email":"student@test.com","password":"pass1234",
                                  "fullName":"Student","userType":"FPT_STUDENT"}
                                 """))
                 .andExpect(status().isBadRequest());

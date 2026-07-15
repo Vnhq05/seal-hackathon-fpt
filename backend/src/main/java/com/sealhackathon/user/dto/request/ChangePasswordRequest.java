@@ -1,5 +1,6 @@
 package com.sealhackathon.user.dto.request;
 
+import com.sealhackathon.common.constants.PasswordPolicy;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
@@ -17,6 +18,6 @@ public class ChangePasswordRequest {
     private String currentPassword;
 
     @NotBlank(message = "New password is required")
-    @Size(min = 6, message = "Password must be at least 6 characters")
+    @Size(min = PasswordPolicy.MIN_LENGTH, max = PasswordPolicy.MAX_LENGTH, message = "Password must be between 8 and 72 characters")
     private String newPassword;
 }

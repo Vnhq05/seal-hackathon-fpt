@@ -4,6 +4,10 @@ import { useState } from "react";
 import { useAdminUsers, useApproveOrReject, useCreateInternalAccount, useDeactivateUser, useDeleteUser, useReactivateUser } from "@/features/admin/hooks/use-admin-users";
 import type { UserListItem, CreateInternalAccountRequest } from "@/lib/api";
 import type { UserType, AccountStatus } from "@/lib/api";
+import {
+  PASSWORD_MAX_LENGTH,
+  PASSWORD_MIN_LENGTH,
+} from "@/lib/password-policy";
 
 const headerCell: React.CSSProperties = {
   fontSize: 12, fontWeight: 600, color: "#8891a5",
@@ -81,7 +85,8 @@ function CreateAccountModal({ onClose }: { onClose: () => void }) {
     if (!email.trim()) errs.email = "Email is required";
     else if (!isValidEmail(email)) errs.email = "Email must be a valid email address";
     if (!password) errs.password = "Password is required";
-    else if (password.length < 6) errs.password = "Password must be at least 6 characters";
+    else if (password.length < PASSWORD_MIN_LENGTH) errs.password = "Password must be at least 8 characters";
+    else if (password.length > PASSWORD_MAX_LENGTH) errs.password = "Password must not exceed 72 characters";
     setFieldErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -137,7 +142,7 @@ function CreateAccountModal({ onClose }: { onClose: () => void }) {
           </div>
           <div>
             <label style={{ fontSize: 13, fontWeight: 600, color: "#0e1528", display: "block", marginBottom: 4 }}>Password *</label>
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} style={{ ...inputStyle, width: "100%", borderColor: fieldErrors.password ? "#ef4444" : undefined }} placeholder="Min. 6 characters" />
+            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} style={{ ...inputStyle, width: "100%", borderColor: fieldErrors.password ? "#ef4444" : undefined }} placeholder="Min. 8 characters" />
             {fieldErrors.password && <p style={{ fontSize: 12, color: "#ef4444", marginTop: 4 }}>{fieldErrors.password}</p>}
           </div>
           <div>
