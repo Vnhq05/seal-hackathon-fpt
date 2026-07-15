@@ -37,6 +37,7 @@ class RoundServiceTest {
     @Mock private RoundRepository roundRepository;
     @Mock private HackathonEventRepository eventRepository;
     @Mock private ApplicationEventPublisher eventPublisher;
+    @Mock private FormatRuleEngine formatRuleEngine;
 
     @InjectMocks private RoundService roundService;
 

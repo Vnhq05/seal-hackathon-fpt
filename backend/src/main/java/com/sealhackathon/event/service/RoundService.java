@@ -5,7 +5,6 @@ import com.sealhackathon.common.exception.ResourceNotFoundException;
 import com.sealhackathon.event.domain.HackathonEvent;
 import com.sealhackathon.event.domain.Round;
 import com.sealhackathon.event.domain.enums.AdvancementRule;
-import com.sealhackathon.event.domain.enums.CompetitionFormat;
 import com.sealhackathon.event.domain.enums.EventStatus;
 import com.sealhackathon.event.domain.enums.RoundType;
 import com.sealhackathon.event.dto.request.CreateRoundRequest;
@@ -31,6 +30,7 @@ public class RoundService {
     private final RoundRepository roundRepository;
     private final HackathonEventRepository eventRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final FormatRuleEngine formatRuleEngine;
 
     @Transactional
     public RoundResponse createRound(UUID eventId, CreateRoundRequest request) {
@@ -281,7 +281,7 @@ public class RoundService {
     }
 
     private void validateSealRoundType(HackathonEvent event, RoundType roundType) {
-        if (event.getCompetitionFormat() == CompetitionFormat.SEAL_RAG_2026 && roundType == null) {
+        if (formatRuleEngine.isSealFormat(event) && roundType == null) {
             throw new BusinessException(
                     "roundType is required for SEAL format rounds (PRELIMINARY or FINAL)",
                     HttpStatus.BAD_REQUEST) {};
