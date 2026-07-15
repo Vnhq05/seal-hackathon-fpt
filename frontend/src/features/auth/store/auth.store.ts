@@ -3,6 +3,8 @@ import { createJSONStorage, persist, type StateStorage } from "zustand/middlewar
 import type { AuthState } from "@/features/auth/types/auth.types";
 import type { UserInfo } from "@/lib/api/auth.api";
 
+const SESSION_MAX_AGE_SECONDS = 7 * 24 * 60 * 60;
+
 function createAuthStorage(): StateStorage {
   return {
     getItem: (name) => {
@@ -11,7 +13,7 @@ function createAuthStorage(): StateStorage {
     },
     setItem: (name, value) => {
       localStorage.setItem(name, value);
-      document.cookie = `${name}=${encodeURIComponent(value)}; path=/; SameSite=Lax`;
+      document.cookie = `${name}=${encodeURIComponent(value)}; path=/; Max-Age=${SESSION_MAX_AGE_SECONDS}; SameSite=Lax`;
     },
     removeItem: (name) => {
       localStorage.removeItem(name);

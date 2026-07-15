@@ -6,6 +6,8 @@ import { authApi, type LoginRequest } from "@/lib/api/auth.api";
 import type { UserType } from "@/lib/api/types";
 import { useAuthStore } from "@/features/auth/store/auth.store";
 
+const SESSION_MAX_AGE_SECONDS = 7 * 24 * 60 * 60;
+
 const USER_TYPE_HOME: Record<UserType, string> = {
   SYSTEM_ADMIN: "/admin",
   EVENT_COORDINATOR: "/coordinator",
@@ -26,7 +28,7 @@ export function useLogin() {
       setRefreshToken(data.refreshToken);
       if (typeof window !== "undefined") {
         localStorage.setItem("access_token", data.accessToken);
-        document.cookie = "auth-check=1; path=/; SameSite=Lax";
+        document.cookie = `auth-check=1; path=/; Max-Age=${SESSION_MAX_AGE_SECONDS}; SameSite=Lax`;
       }
       router.push(USER_TYPE_HOME[data.user.userType] ?? "/student");
     },
