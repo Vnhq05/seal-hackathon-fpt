@@ -85,6 +85,7 @@ public class EventService {
     private final TeamService teamService;
     private final EventStatusResolver eventStatusResolver;
     private final EventFinder eventFinder;
+    private final EventOwnershipGuard eventOwnershipGuard;
 
     @Transactional
     public EventResponse createEvent(CreateEventRequest request) {
@@ -583,14 +584,7 @@ public class EventService {
     }
 
     private void enforceOwnership(HackathonEvent event) {
-        UserType role = authPublicService.getCurrentUserRole();
-        if (role == UserType.SYSTEM_ADMIN) {
-            return;
-        }
-        String currentEmail = authPublicService.getCurrentUserEmail();
-        if (!currentEmail.equals(event.getCreatedBy())) {
-            throw new BusinessException("You can only manage events you created", HttpStatus.FORBIDDEN) {};
-        }
+        eventOwnershipGuard.enforceOwnership(event);
     }
 
     private void applyCoordinatorOwner(HackathonEvent event, String coordinatorEmail) {
@@ -613,7 +607,7 @@ public class EventService {
     }
 
     public void enforceEventOwnership(UUID eventId) {
-        enforceOwnership(getEvent(eventId));
+        eventOwnershipGuard.enforceEventOwnership(eventId);
     }
 
     private void validateYear(Integer year) {

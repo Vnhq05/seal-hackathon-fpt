@@ -5,8 +5,8 @@ import com.sealhackathon.common.exception.BusinessException;
 import com.sealhackathon.common.exception.ResourceNotFoundException;
 import com.sealhackathon.event.domain.enums.EventStatus;
 import com.sealhackathon.event.dto.snapshot.EventSnapshot;
+import com.sealhackathon.event.service.EventOwnershipGuard;
 import com.sealhackathon.event.service.EventPublicService;
-import com.sealhackathon.event.service.EventService;
 import com.sealhackathon.feedback.domain.ParticipantFeedback;
 import com.sealhackathon.feedback.dto.request.SubmitParticipantFeedbackRequest;
 import com.sealhackathon.feedback.dto.response.ParticipantFeedbackResponse;
@@ -39,7 +39,7 @@ public class ParticipantFeedbackService {
 
     private final ParticipantFeedbackRepository feedbackRepository;
     private final EventPublicService eventPublicService;
-    private final EventService eventService;
+    private final EventOwnershipGuard eventOwnershipGuard;
     private final TeamMemberRepository teamMemberRepository;
     private final TeamRepository teamRepository;
     private final UserPublicService userPublicService;
@@ -97,7 +97,7 @@ public class ParticipantFeedbackService {
     public List<ParticipantFeedbackResponse> listFeedback(UUID eventId, UserType requesterRole) {
         requireEvent(eventId);
         if (requesterRole == UserType.EVENT_COORDINATOR) {
-            eventService.enforceEventOwnership(eventId);
+            eventOwnershipGuard.enforceEventOwnership(eventId);
         }
 
         return feedbackRepository.findByEventIdOrderBySubmittedAtDesc(eventId).stream()
@@ -109,7 +109,7 @@ public class ParticipantFeedbackService {
     public ParticipantFeedbackSummaryResponse getSummary(UUID eventId, UserType requesterRole) {
         requireEvent(eventId);
         if (requesterRole == UserType.EVENT_COORDINATOR) {
-            eventService.enforceEventOwnership(eventId);
+            eventOwnershipGuard.enforceEventOwnership(eventId);
         }
 
         List<ParticipantFeedback> feedbacks = feedbackRepository.findByEventIdOrderBySubmittedAtDesc(eventId);

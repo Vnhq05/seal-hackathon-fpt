@@ -82,6 +82,7 @@ class EventStatusResolverWiringSmokeTest {
     @Import({
             EventStatusResolver.class,
             EventFinder.class,
+            EventOwnershipGuard.class,
             FormatRuleEngine.class,
             EventService.class,
             EventPublicServiceImpl.class,

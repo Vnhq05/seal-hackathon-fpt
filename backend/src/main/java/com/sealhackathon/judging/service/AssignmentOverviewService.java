@@ -12,7 +12,7 @@ import com.sealhackathon.event.repository.HackathonEventRepository;
 import com.sealhackathon.event.repository.RoundRepository;
 import com.sealhackathon.event.repository.TrackRepository;
 import com.sealhackathon.event.service.EventJudgeService;
-import com.sealhackathon.event.service.EventService;
+import com.sealhackathon.event.service.EventOwnershipGuard;
 import com.sealhackathon.event.service.JudgeAssignmentService;
 import com.sealhackathon.judging.domain.TeamJudgeAssignment;
 import com.sealhackathon.judging.dto.request.CreateTeamAssignmentsRequest;
@@ -61,7 +61,7 @@ public class AssignmentOverviewService {
     private final TeamPublicService teamPublicService;
     private final TeamMemberRepository teamMemberRepository;
     private final UserPublicService userPublicService;
-    private final EventService eventService;
+    private final EventOwnershipGuard eventOwnershipGuard;
 
     @Value("${app.hackathon.judging.max-judges-per-team:3}")
     private int maxJudgesPerTeam;
@@ -85,7 +85,7 @@ public class AssignmentOverviewService {
             throw new BusinessException("Round does not belong to this event", HttpStatus.BAD_REQUEST) {};
         }
 
-        eventService.enforceEventOwnership(eventId);
+        eventOwnershipGuard.enforceEventOwnership(eventId);
 
         List<Team> teams = teamRepository.findByEventId(eventId).stream()
                 .filter(t -> trackId == null || trackId.equals(t.getTrackId()))
@@ -121,7 +121,7 @@ public class AssignmentOverviewService {
     public List<TeamJudgeAssignmentResponse> assignJudges(CreateTeamAssignmentsRequest request) {
         HackathonEvent event = eventRepository.findById(request.getEventId())
                 .orElseThrow(() -> new ResourceNotFoundException("Event", "id", request.getEventId()));
-        eventService.enforceEventOwnership(request.getEventId());
+        eventOwnershipGuard.enforceEventOwnership(request.getEventId());
 
         Round round = roundRepository.findById(request.getRoundId())
                 .orElseThrow(() -> new ResourceNotFoundException("Round", "id", request.getRoundId()));
@@ -167,7 +167,7 @@ public class AssignmentOverviewService {
 
         Team team = teamRepository.findById(assignment.getTeamId())
                 .orElseThrow(() -> new ResourceNotFoundException("Team", "id", assignment.getTeamId()));
-        eventService.enforceEventOwnership(team.getEventId());
+        eventOwnershipGuard.enforceEventOwnership(team.getEventId());
 
         assignmentRepository.delete(assignment);
     }

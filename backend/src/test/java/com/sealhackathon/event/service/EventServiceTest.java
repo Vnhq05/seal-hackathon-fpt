@@ -57,6 +57,7 @@ class EventServiceTest {
     @Mock private RoundService roundService;
     @Mock private TeamService teamService;
     @Mock private FormatRuleEngine formatRuleEngine;
+    @Mock private EventOwnershipGuard eventOwnershipGuard;
     @Spy private EventStatusResolver eventStatusResolver = new EventStatusResolver();
 
     @InjectMocks private EventService eventService;

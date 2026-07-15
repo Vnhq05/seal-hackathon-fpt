@@ -6,7 +6,7 @@ import com.sealhackathon.common.exception.ResourceNotFoundException;
 import com.sealhackathon.event.domain.Round;
 import com.sealhackathon.event.dto.snapshot.RoundSnapshot;
 import com.sealhackathon.event.repository.RoundRepository;
-import com.sealhackathon.event.service.EventService;
+import com.sealhackathon.event.service.EventOwnershipGuard;
 import com.sealhackathon.event.service.FormatRuleEngine;
 import com.sealhackathon.progress.domain.enums.ProgressRiskLevel;
 import com.sealhackathon.progress.dto.response.TeamProgressResponse;
@@ -44,7 +44,7 @@ public class TeamProgressQueryService {
     private final TeamProgressEvaluationService evaluationService;
     private final TeamProgressScanService teamProgressScanService;
     private final FormatRuleEngine formatRuleEngine;
-    private final EventService eventService;
+    private final EventOwnershipGuard eventOwnershipGuard;
 
     @Transactional(readOnly = true)
     public List<TeamProgressResponse> getProgressByRound(UUID eventId,
@@ -54,7 +54,7 @@ public class TeamProgressQueryService {
         Round round = loadRound(eventId, roundId);
 
         if (requesterRole == UserType.EVENT_COORDINATOR) {
-            eventService.enforceEventOwnership(eventId);
+            eventOwnershipGuard.enforceEventOwnership(eventId);
         }
 
         List<TeamProgressResponse> all = buildProgressForRound(round);
