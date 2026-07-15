@@ -111,7 +111,7 @@ export function LoginForm() {
             <Input
               id="password"
               type={showPassword ? "text" : "password"}
-              placeholder="12345678"
+              placeholder="Your password"
               autoComplete="current-password"
               error={errors.password?.message}
               className="pr-12"
