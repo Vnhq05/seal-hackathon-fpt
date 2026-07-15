@@ -5,10 +5,12 @@ import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -32,7 +34,11 @@ import java.util.List;
  * BR-47  submittedAt used as final tie-breaker in ranking.
  */
 @Entity
-@Table(name = "submission_versions")
+@Table(name = "submission_versions", uniqueConstraints = {
+        @UniqueConstraint(name = "uq_submission_version_number", columnNames = {"submission_id", "version_number"})
+}, indexes = {
+        @Index(name = "idx_submission_versions_submission_id", columnList = "submission_id")
+})
 @Getter
 @Setter
 @NoArgsConstructor

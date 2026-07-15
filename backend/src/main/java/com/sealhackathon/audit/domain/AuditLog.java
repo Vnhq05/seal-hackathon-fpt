@@ -34,7 +34,8 @@ import java.util.UUID;
 @Entity
 @Table(name = "audit_logs", indexes = {
         @Index(name = "idx_audit_actor_id", columnList = "actor_id"),
-        @Index(name = "idx_audit_timestamp", columnList = "timestamp")
+        @Index(name = "idx_audit_timestamp", columnList = "timestamp"),
+        @Index(name = "idx_audit_target", columnList = "target_type, target_id")
 })
 @Getter
 @NoArgsConstructor
