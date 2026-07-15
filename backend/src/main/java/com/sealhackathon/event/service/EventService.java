@@ -132,7 +132,7 @@ public class EventService {
             validatePrizes(prizeRequests);
         }
 
-        if (competitionFormat == CompetitionFormat.SEAL_RAG_2026) {
+        if (formatRuleEngine.isSealFormat(competitionFormat)) {
             SealSpring2026Template.apply(event,
                     formatRuleEngine.getSealMaxTeamsPerTrack(),
                     formatRuleEngine.getSealTopPerTrack(),
@@ -168,12 +168,12 @@ public class EventService {
         HackathonEvent saved = eventRepository.save(event);
         eventRepository.flush();
 
-        if (competitionFormat == CompetitionFormat.SEAL_RAG_2026) {
+        if (formatRuleEngine.isSealFormat(competitionFormat)) {
             eventScheduleService.seedSchedules(saved, SealSpring2026Template.buildSchedules(saved));
             allowedEmailDomainService.seedDomains(saved.getId(), SealSpring2026Template.buildDefaultEmailDomains());
         }
 
-        if (prizeRequests != null && competitionFormat != CompetitionFormat.SEAL_RAG_2026) {
+        if (prizeRequests != null && !formatRuleEngine.isSealFormat(competitionFormat)) {
             for (PrizeRequest p : prizeRequests) {
                 saved.getPrizes().add(buildPrize(saved, p));
             }
