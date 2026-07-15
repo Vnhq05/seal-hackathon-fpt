@@ -25,6 +25,7 @@ class AllowedEmailDomainServiceTest {
 
     @Mock private AllowedEmailDomainRepository domainRepository;
     @Mock private HackathonEventRepository eventRepository;
+    @Mock private FormatRuleEngine formatRuleEngine;
 
     @InjectMocks private AllowedEmailDomainService allowedEmailDomainService;
 

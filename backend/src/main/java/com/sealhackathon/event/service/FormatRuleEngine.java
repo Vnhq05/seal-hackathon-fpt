@@ -58,8 +58,16 @@ public class FormatRuleEngine {
                 .orElse(CompetitionFormat.GENERIC);
     }
 
+    public boolean isSealFormat(CompetitionFormat format) {
+        return format == CompetitionFormat.SEAL_RAG_2026;
+    }
+
+    public boolean isSealFormat(HackathonEvent event) {
+        return isSealFormat(event.getCompetitionFormat());
+    }
+
     public boolean isSealFormat(UUID eventId) {
-        return getFormat(eventId) == CompetitionFormat.SEAL_RAG_2026;
+        return isSealFormat(getFormat(eventId));
     }
 
     public void validateTrackCapacity(UUID eventId, UUID trackId) {

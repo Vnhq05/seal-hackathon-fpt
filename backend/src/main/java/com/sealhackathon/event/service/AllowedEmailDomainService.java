@@ -6,7 +6,6 @@ import com.sealhackathon.common.exception.ResourceNotFoundException;
 import com.sealhackathon.common.util.EmailDomainValidator;
 import com.sealhackathon.event.domain.AllowedEmailDomain;
 import com.sealhackathon.event.domain.HackathonEvent;
-import com.sealhackathon.event.domain.enums.CompetitionFormat;
 import com.sealhackathon.event.dto.request.AddAllowedEmailDomainRequest;
 import com.sealhackathon.event.dto.response.AllowedEmailDomainResponse;
 import com.sealhackathon.event.repository.AllowedEmailDomainRepository;
@@ -26,6 +25,7 @@ public class AllowedEmailDomainService {
 
     private final AllowedEmailDomainRepository domainRepository;
     private final HackathonEventRepository eventRepository;
+    private final FormatRuleEngine formatRuleEngine;
 
     @Transactional
     public List<AllowedEmailDomainResponse> listPlatformDomains() {
@@ -105,7 +105,7 @@ public class AllowedEmailDomainService {
         HackathonEvent event = ensureEventExists(eventId);
         List<AllowedEmailDomain> domains = effectivePlatformDomains();
         if (domains.isEmpty()) {
-            if (event.getCompetitionFormat() == CompetitionFormat.SEAL_RAG_2026) {
+            if (formatRuleEngine.isSealFormat(event)) {
                 throw new BusinessException(
                         "No allowed email domains configured for this event. Contact the organizer.",
                         HttpStatus.BAD_REQUEST) {};
