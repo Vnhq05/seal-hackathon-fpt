@@ -23,7 +23,8 @@ import java.util.UUID;
  * Child entity of JudgeScore aggregate.
  * One row per (judge-score, criteria) — the actual numeric score.
  *
- * BR-35  Score range per criteria (minScore–maxScore on Criteria entity).
+ * BR-35  Score range per criteria (minScore–maxScore on Criteria) is enforced in
+ *        JudgingService, not by DB CHECK keyed to criteria_id.
  * BR-36  Comment required at min or max of the scale (service layer).
  *
  * References Criteria by ID — cross-module (criteria owned by event module).
@@ -49,7 +50,13 @@ public class JudgeScoreDetail extends BaseEntity {
     @Column(name = "criteria_id", nullable = false)
     private UUID criteriaId;
 
-    // ── BR-35: integer score validated per criteria min/max at service layer ──
+    /**
+     * Coarse Bean Validation safety net (0–100).
+     * <p>BR-35 authentic range is {@code Criteria.minScore}–{@code Criteria.maxScore}
+     * and is validated in {@code JudgingService} against the criteria_id. The DB column
+     * stays INTEGER without a per-criteria CHECK/trigger to avoid brittle cross-row
+     * constraints when criteria scales change after scores exist.
+     */
     @NotNull
     @Min(0)
     @Max(100)
