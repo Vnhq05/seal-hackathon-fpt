@@ -181,6 +181,7 @@ class ParticipantFeedbackIntegrationTest extends BaseIntegrationTest {
                 .build());
         teamMemberRepository.save(TeamMember.builder()
                 .team(team)
+                .eventId(team.getEventId())
                 .userId(leader.getId())
                 .role(TeamMemberRole.LEADER)
                 .joinedAt(LocalDateTime.now())
@@ -197,6 +198,7 @@ class ParticipantFeedbackIntegrationTest extends BaseIntegrationTest {
                 .build());
         teamMemberRepository.save(TeamMember.builder()
                 .team(team)
+                .eventId(team.getEventId())
                 .userId(leader.getId())
                 .role(TeamMemberRole.LEADER)
                 .joinedAt(LocalDateTime.now())

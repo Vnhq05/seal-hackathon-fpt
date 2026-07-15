@@ -204,6 +204,7 @@ public class TeamJoinRequestService {
 
         TeamMember member = TeamMember.builder()
                 .team(team)
+                .eventId(team.getEventId())
                 .userId(requesterId)
                 .role(TeamMemberRole.MEMBER)
                 .joinedAt(LocalDateTime.now())

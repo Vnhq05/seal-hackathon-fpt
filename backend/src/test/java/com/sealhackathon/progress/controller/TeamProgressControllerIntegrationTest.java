@@ -103,6 +103,7 @@ class TeamProgressControllerIntegrationTest extends BaseIntegrationTest {
 
         teamMemberRepository.save(TeamMember.builder()
                 .team(team)
+                .eventId(team.getEventId())
                 .userId(student.getId())
                 .role(TeamMemberRole.LEADER)
                 .joinedAt(LocalDateTime.now())
@@ -110,6 +111,7 @@ class TeamProgressControllerIntegrationTest extends BaseIntegrationTest {
 
         teamMemberRepository.save(TeamMember.builder()
                 .team(otherTeam)
+                .eventId(otherTeam.getEventId())
                 .userId(otherStudent.getId())
                 .role(TeamMemberRole.LEADER)
                 .joinedAt(LocalDateTime.now())

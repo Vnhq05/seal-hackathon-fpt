@@ -199,6 +199,7 @@ class AwardControllerIntegrationTest extends BaseIntegrationTest {
                 .build());
         teamMemberRepository.save(TeamMember.builder()
                 .team(team)
+                .eventId(team.getEventId())
                 .userId(leader.getId())
                 .role(TeamMemberRole.LEADER)
                 .joinedAt(LocalDateTime.now())
@@ -206,6 +207,7 @@ class AwardControllerIntegrationTest extends BaseIntegrationTest {
         if (extraMember != null) {
             teamMemberRepository.save(TeamMember.builder()
                     .team(team)
+                    .eventId(team.getEventId())
                     .userId(extraMember.getId())
                     .role(TeamMemberRole.MEMBER)
                     .joinedAt(LocalDateTime.now())
@@ -223,6 +225,7 @@ class AwardControllerIntegrationTest extends BaseIntegrationTest {
                 .build());
         teamMemberRepository.save(TeamMember.builder()
                 .team(team)
+                .eventId(team.getEventId())
                 .userId(leader.getId())
                 .role(TeamMemberRole.LEADER)
                 .joinedAt(LocalDateTime.now())

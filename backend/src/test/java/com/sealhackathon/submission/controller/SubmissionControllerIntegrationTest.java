@@ -76,7 +76,7 @@ class SubmissionControllerIntegrationTest extends BaseIntegrationTest {
                 .leaderId(leader.getId()).status(TeamStatus.CONFIRMED).build());
 
         teamMemberRepository.save(TeamMember.builder()
-                .team(team).userId(leader.getId())
+                .team(team).eventId(team.getEventId()).userId(leader.getId())
                 .role(TeamMemberRole.LEADER)
                 .joinedAt(LocalDateTime.now()).build());
     }
@@ -158,7 +158,7 @@ class SubmissionControllerIntegrationTest extends BaseIntegrationTest {
                 .leaderId(leader.getId()).status(TeamStatus.CONFIRMED).build());
 
         teamMemberRepository.save(TeamMember.builder()
-                .team(team).userId(leader.getId())
+                .team(team).eventId(team.getEventId()).userId(leader.getId())
                 .role(TeamMemberRole.LEADER)
                 .joinedAt(LocalDateTime.now()).build());
 

@@ -72,6 +72,7 @@ public class AutoMatchService {
                 UUID userId = group.get(j);
                 TeamMember member = TeamMember.builder()
                         .team(team)
+                        .eventId(eventId)
                         .userId(userId)
                         .role(j == 0 ? TeamMemberRole.LEADER : TeamMemberRole.MEMBER)
                         .joinedAt(LocalDateTime.now())

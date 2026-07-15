@@ -24,17 +24,15 @@ public interface TeamMemberRepository extends JpaRepository<TeamMember, UUID> {
 
     Optional<TeamMember> findByTeamIdAndUserId(UUID teamId, UUID userId);
 
-    @Query("SELECT tm FROM TeamMember tm WHERE tm.userId = :userId AND tm.team.eventId = :eventId")
-    Optional<TeamMember> findByUserIdAndEventId(@Param("userId") UUID userId, @Param("eventId") UUID eventId);
+    Optional<TeamMember> findByUserIdAndEventId(UUID userId, UUID eventId);
 
-    @Query("SELECT COUNT(tm) > 0 FROM TeamMember tm WHERE tm.userId = :userId AND tm.team.eventId = :eventId")
-    boolean existsByUserIdAndEventId(@Param("userId") UUID userId, @Param("eventId") UUID eventId);
+    boolean existsByUserIdAndEventId(UUID userId, UUID eventId);
 
-    @Query("SELECT tm.team.id FROM TeamMember tm WHERE tm.userId = :userId AND tm.team.eventId = :eventId")
+    @Query("SELECT tm.team.id FROM TeamMember tm WHERE tm.userId = :userId AND tm.eventId = :eventId")
     Optional<UUID> findTeamIdByUserIdAndEventId(@Param("userId") UUID userId, @Param("eventId") UUID eventId);
 
     @Query("SELECT tm FROM TeamMember tm JOIN tm.team t "
-            + "WHERE t.eventId = :eventId AND t.status = :status")
+            + "WHERE tm.eventId = :eventId AND t.status = :status")
     List<TeamMember> findByEventIdAndTeamStatus(
             @Param("eventId") UUID eventId, @Param("status") TeamStatus status);
 

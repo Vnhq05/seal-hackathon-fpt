@@ -161,6 +161,7 @@ public class InvitationService {
 
         TeamMember member = TeamMember.builder()
                 .team(team)
+                .eventId(team.getEventId())
                 .userId(userId)
                 .role(TeamMemberRole.MEMBER)
                 .joinedAt(LocalDateTime.now())

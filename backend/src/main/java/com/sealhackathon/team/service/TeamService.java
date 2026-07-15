@@ -118,6 +118,7 @@ public class TeamService {
         // Add creator as leader member
         TeamMember leader = TeamMember.builder()
                 .team(team)
+                .eventId(team.getEventId())
                 .userId(currentUserId)
                 .role(TeamMemberRole.LEADER)
                 .joinedAt(LocalDateTime.now())
