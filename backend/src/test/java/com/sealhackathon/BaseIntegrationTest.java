@@ -15,11 +15,9 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.containers.MSSQLServerContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-
-import java.util.UUID;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
@@ -28,16 +26,18 @@ import java.util.UUID;
 public abstract class BaseIntegrationTest {
 
     @Container
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine")
-            .withDatabaseName("seal_test")
-            .withUsername("test")
-            .withPassword("test");
+    @SuppressWarnings("resource")
+    static MSSQLServerContainer<?> mssql = new MSSQLServerContainer<>("mcr.microsoft.com/mssql/server:2022-latest")
+            .acceptLicense()
+            .withPassword("Seal_Test_Password_123");
 
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", postgres::getJdbcUrl);
-        registry.add("spring.datasource.username", postgres::getUsername);
-        registry.add("spring.datasource.password", postgres::getPassword);
+        registry.add("spring.datasource.url", mssql::getJdbcUrl);
+        registry.add("spring.datasource.username", mssql::getUsername);
+        registry.add("spring.datasource.password", mssql::getPassword);
+        registry.add("spring.datasource.driver-class-name",
+                () -> "com.microsoft.sqlserver.jdbc.SQLServerDriver");
     }
 
     @Autowired protected MockMvc mockMvc;
