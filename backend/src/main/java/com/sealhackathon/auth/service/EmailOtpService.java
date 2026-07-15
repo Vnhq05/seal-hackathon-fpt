@@ -3,6 +3,7 @@ package com.sealhackathon.auth.service;
 import com.sealhackathon.auth.domain.EmailOtpToken;
 import com.sealhackathon.auth.repository.EmailOtpTokenRepository;
 import com.sealhackathon.common.exception.BusinessException;
+import com.sealhackathon.common.util.TokenHasher;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -33,21 +34,22 @@ public class EmailOtpService {
         emailOtpTokenRepository.invalidateAllByUserId(userId);
 
         LocalDateTime now = LocalDateTime.now();
-        String code = generateCode();
+        String plaintext = generateCode();
 
         EmailOtpToken token = EmailOtpToken.builder()
                 .userId(userId)
-                .code(code)
+                .code(TokenHasher.hash(plaintext))
                 .expiresAt(now.plusSeconds(expirationSeconds))
                 .resendAllowedAt(now.plusSeconds(resendCooldownSeconds))
                 .build();
         emailOtpTokenRepository.save(token);
-        return code;
+        return plaintext;
     }
 
     @Transactional
-    public EmailOtpToken validate(UUID userId, String code) {
-        EmailOtpToken token = emailOtpTokenRepository.findByUserIdAndCodeAndUsedFalse(userId, code)
+    public EmailOtpToken validate(UUID userId, String plaintext) {
+        EmailOtpToken token = emailOtpTokenRepository
+                .findByUserIdAndCodeAndUsedFalse(userId, TokenHasher.hash(plaintext))
                 .orElseThrow(() -> new BusinessException(
                         "Invalid verification code.", HttpStatus.BAD_REQUEST) {});
 

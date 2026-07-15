@@ -5,6 +5,7 @@ import com.sealhackathon.auth.domain.RefreshToken;
 import com.sealhackathon.auth.repository.PasswordResetTokenRepository;
 import com.sealhackathon.auth.repository.RefreshTokenRepository;
 import com.sealhackathon.common.exception.InvalidTokenException;
+import com.sealhackathon.common.util.TokenHasher;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -31,23 +32,26 @@ class TokenServiceTest {
     @InjectMocks private TokenService tokenService;
 
     @Test
-    void createRefreshToken_shouldSaveAndReturnToken() {
+    void createRefreshToken_shouldSaveHashAndReturnPlaintext() {
         UUID userId = UUID.randomUUID();
         when(refreshTokenRepository.save(any(RefreshToken.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        String token = tokenService.createRefreshToken(userId);
+        String plaintext = tokenService.createRefreshToken(userId);
 
-        assertThat(token).isNotBlank();
+        assertThat(plaintext).isNotBlank();
         ArgumentCaptor<RefreshToken> captor = ArgumentCaptor.forClass(RefreshToken.class);
         verify(refreshTokenRepository).save(captor.capture());
         assertThat(captor.getValue().getUserId()).isEqualTo(userId);
         assertThat(captor.getValue().isRevoked()).isFalse();
+        assertThat(captor.getValue().getToken()).isEqualTo(TokenHasher.hash(plaintext));
+        assertThat(captor.getValue().getToken()).isNotEqualTo(plaintext);
     }
 
     @Test
     void validateRefreshToken_shouldThrow_whenTokenNotFound() {
-        when(refreshTokenRepository.findByTokenAndRevokedFalse("bad")).thenReturn(Optional.empty());
+        when(refreshTokenRepository.findByTokenAndRevokedFalse(TokenHasher.hash("bad")))
+                .thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> tokenService.validateRefreshToken("bad"))
                 .isInstanceOf(InvalidTokenException.class);
@@ -55,32 +59,34 @@ class TokenServiceTest {
 
     @Test
     void validateRefreshToken_shouldThrow_whenTokenExpired() {
+        String plaintext = "expired";
         RefreshToken expired = RefreshToken.builder()
-                .token("expired")
+                .token(TokenHasher.hash(plaintext))
                 .userId(UUID.randomUUID())
                 .expiresAt(LocalDateTime.now().minusHours(1))
                 .build();
-        when(refreshTokenRepository.findByTokenAndRevokedFalse("expired"))
+        when(refreshTokenRepository.findByTokenAndRevokedFalse(TokenHasher.hash(plaintext)))
                 .thenReturn(Optional.of(expired));
         when(refreshTokenRepository.save(any())).thenReturn(expired);
 
-        assertThatThrownBy(() -> tokenService.validateRefreshToken("expired"))
+        assertThatThrownBy(() -> tokenService.validateRefreshToken(plaintext))
                 .isInstanceOf(InvalidTokenException.class);
     }
 
     @Test
     void validateRefreshToken_shouldReturnToken_whenValid() {
+        String plaintext = "valid";
         RefreshToken valid = RefreshToken.builder()
-                .token("valid")
+                .token(TokenHasher.hash(plaintext))
                 .userId(UUID.randomUUID())
                 .expiresAt(LocalDateTime.now().plusDays(7))
                 .build();
-        when(refreshTokenRepository.findByTokenAndRevokedFalse("valid"))
+        when(refreshTokenRepository.findByTokenAndRevokedFalse(TokenHasher.hash(plaintext)))
                 .thenReturn(Optional.of(valid));
 
-        RefreshToken result = tokenService.validateRefreshToken("valid");
+        RefreshToken result = tokenService.validateRefreshToken(plaintext);
 
-        assertThat(result.getToken()).isEqualTo("valid");
+        assertThat(result.getToken()).isEqualTo(TokenHasher.hash(plaintext));
     }
 
     @Test
@@ -92,16 +98,17 @@ class TokenServiceTest {
 
     @Test
     void validatePasswordResetToken_shouldThrow_whenExpired() {
+        String plaintext = "exp";
         PasswordResetToken expired = PasswordResetToken.builder()
-                .token("exp")
+                .token(TokenHasher.hash(plaintext))
                 .userId(UUID.randomUUID())
                 .expiresAt(LocalDateTime.now().minusMinutes(1))
                 .build();
-        when(passwordResetTokenRepository.findByTokenAndUsedFalse("exp"))
+        when(passwordResetTokenRepository.findByTokenAndUsedFalse(TokenHasher.hash(plaintext)))
                 .thenReturn(Optional.of(expired));
         when(passwordResetTokenRepository.save(any())).thenReturn(expired);
 
-        assertThatThrownBy(() -> tokenService.validatePasswordResetToken("exp"))
+        assertThatThrownBy(() -> tokenService.validatePasswordResetToken(plaintext))
                 .isInstanceOf(InvalidTokenException.class);
     }
 }

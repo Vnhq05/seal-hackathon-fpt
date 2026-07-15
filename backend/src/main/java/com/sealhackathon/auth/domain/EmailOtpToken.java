@@ -35,7 +35,7 @@ public class EmailOtpToken extends BaseEntity {
     private UUID userId;
 
     @NotBlank
-    @Column(name = "code", nullable = false, length = 6)
+    @Column(name = "code", nullable = false, length = 64)
     private String code;
 
     @NotNull

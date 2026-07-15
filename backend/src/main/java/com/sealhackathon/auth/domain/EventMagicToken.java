@@ -40,7 +40,7 @@ public class EventMagicToken extends BaseEntity {
     private UUID eventId;
 
     @NotBlank
-    @Column(name = "token", nullable = false, unique = true)
+    @Column(name = "token", nullable = false, unique = true, length = 64)
     private String token;
 
     @NotNull

@@ -3,6 +3,7 @@ package com.sealhackathon.auth.service;
 import com.sealhackathon.auth.domain.EmailOtpToken;
 import com.sealhackathon.auth.repository.EmailOtpTokenRepository;
 import com.sealhackathon.common.exception.BusinessException;
+import com.sealhackathon.common.util.TokenHasher;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -30,7 +31,7 @@ class EmailOtpServiceTest {
     @InjectMocks private EmailOtpService emailOtpService;
 
     @Test
-    void create_shouldPersistSixDigitCode() {
+    void create_shouldPersistHashOfSixDigitCode() {
         UUID userId = UUID.randomUUID();
         ReflectionTestUtils.setField(emailOtpService, "expirationSeconds", 180);
         ReflectionTestUtils.setField(emailOtpService, "resendCooldownSeconds", 300);
@@ -46,7 +47,8 @@ class EmailOtpServiceTest {
         verify(emailOtpTokenRepository).save(captor.capture());
         EmailOtpToken saved = captor.getValue();
         assertThat(saved.getUserId()).isEqualTo(userId);
-        assertThat(saved.getCode()).isEqualTo(code);
+        assertThat(saved.getCode()).isEqualTo(TokenHasher.hash(code));
+        assertThat(saved.getCode()).isNotEqualTo(code);
         assertThat(saved.isUsed()).isFalse();
         assertThat(saved.getExpiresAt()).isAfter(LocalDateTime.now().plusSeconds(179));
         assertThat(saved.getResendAllowedAt()).isAfter(LocalDateTime.now().plusSeconds(299));
@@ -55,7 +57,8 @@ class EmailOtpServiceTest {
     @Test
     void validate_shouldThrow_whenCodeNotFound() {
         UUID userId = UUID.randomUUID();
-        when(emailOtpTokenRepository.findByUserIdAndCodeAndUsedFalse(userId, "123456"))
+        when(emailOtpTokenRepository.findByUserIdAndCodeAndUsedFalse(
+                userId, TokenHasher.hash("123456")))
                 .thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> emailOtpService.validate(userId, "123456"))
@@ -67,17 +70,19 @@ class EmailOtpServiceTest {
     @Test
     void validate_shouldThrow_whenExpired() {
         UUID userId = UUID.randomUUID();
+        String code = "123456";
         EmailOtpToken expired = EmailOtpToken.builder()
                 .userId(userId)
-                .code("123456")
+                .code(TokenHasher.hash(code))
                 .expiresAt(LocalDateTime.now().minusSeconds(1))
                 .resendAllowedAt(LocalDateTime.now().minusSeconds(1))
                 .build();
-        when(emailOtpTokenRepository.findByUserIdAndCodeAndUsedFalse(userId, "123456"))
+        when(emailOtpTokenRepository.findByUserIdAndCodeAndUsedFalse(
+                userId, TokenHasher.hash(code)))
                 .thenReturn(Optional.of(expired));
         when(emailOtpTokenRepository.save(any())).thenReturn(expired);
 
-        assertThatThrownBy(() -> emailOtpService.validate(userId, "123456"))
+        assertThatThrownBy(() -> emailOtpService.validate(userId, code))
                 .isInstanceOf(BusinessException.class)
                 .satisfies(ex -> assertThat(((BusinessException) ex).getHttpStatus())
                         .isEqualTo(HttpStatus.GONE));
@@ -88,7 +93,7 @@ class EmailOtpServiceTest {
         UUID userId = UUID.randomUUID();
         EmailOtpToken latest = EmailOtpToken.builder()
                 .userId(userId)
-                .code("111111")
+                .code(TokenHasher.hash("111111"))
                 .expiresAt(LocalDateTime.now().plusMinutes(2))
                 .resendAllowedAt(LocalDateTime.now().plusSeconds(120))
                 .build();
@@ -105,7 +110,7 @@ class EmailOtpServiceTest {
     void markUsed_shouldSetUsedFlag() {
         EmailOtpToken token = EmailOtpToken.builder()
                 .userId(UUID.randomUUID())
-                .code("654321")
+                .code(TokenHasher.hash("654321"))
                 .used(false)
                 .build();
         when(emailOtpTokenRepository.save(token)).thenReturn(token);

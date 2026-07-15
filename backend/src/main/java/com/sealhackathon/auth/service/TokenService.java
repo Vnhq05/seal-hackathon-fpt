@@ -5,6 +5,7 @@ import com.sealhackathon.auth.domain.RefreshToken;
 import com.sealhackathon.auth.repository.PasswordResetTokenRepository;
 import com.sealhackathon.auth.repository.RefreshTokenRepository;
 import com.sealhackathon.common.exception.InvalidTokenException;
+import com.sealhackathon.common.util.TokenHasher;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -28,19 +29,20 @@ public class TokenService {
 
     @Transactional
     public String createRefreshToken(UUID userId) {
-        String token = UUID.randomUUID().toString();
+        String plaintext = UUID.randomUUID().toString();
         RefreshToken refreshToken = RefreshToken.builder()
-                .token(token)
+                .token(TokenHasher.hash(plaintext))
                 .userId(userId)
                 .expiresAt(LocalDateTime.now().plusDays(refreshTokenExpirationDays))
                 .build();
         refreshTokenRepository.save(refreshToken);
-        return token;
+        return plaintext;
     }
 
     @Transactional
-    public RefreshToken validateRefreshToken(String token) {
-        RefreshToken refreshToken = refreshTokenRepository.findByTokenAndRevokedFalse(token)
+    public RefreshToken validateRefreshToken(String plaintext) {
+        String tokenHash = TokenHasher.hash(plaintext);
+        RefreshToken refreshToken = refreshTokenRepository.findByTokenAndRevokedFalse(tokenHash)
                 .orElseThrow(InvalidTokenException::new);
 
         if (refreshToken.getExpiresAt().isBefore(LocalDateTime.now())) {
@@ -53,8 +55,8 @@ public class TokenService {
     }
 
     @Transactional
-    public void revokeRefreshToken(String token) {
-        refreshTokenRepository.findByTokenAndRevokedFalse(token)
+    public void revokeRefreshToken(String plaintext) {
+        refreshTokenRepository.findByTokenAndRevokedFalse(TokenHasher.hash(plaintext))
                 .ifPresent(rt -> {
                     rt.setRevoked(true);
                     refreshTokenRepository.save(rt);
@@ -69,19 +71,20 @@ public class TokenService {
     @Transactional
     public String createPasswordResetToken(UUID userId) {
         passwordResetTokenRepository.invalidateAllByUserId(userId);
-        String token = UUID.randomUUID().toString();
+        String plaintext = UUID.randomUUID().toString();
         PasswordResetToken resetToken = PasswordResetToken.builder()
-                .token(token)
+                .token(TokenHasher.hash(plaintext))
                 .userId(userId)
                 .expiresAt(LocalDateTime.now().plusMinutes(passwordResetTokenExpirationMinutes))
                 .build();
         passwordResetTokenRepository.save(resetToken);
-        return token;
+        return plaintext;
     }
 
     @Transactional
-    public PasswordResetToken validatePasswordResetToken(String token) {
-        PasswordResetToken resetToken = passwordResetTokenRepository.findByTokenAndUsedFalse(token)
+    public PasswordResetToken validatePasswordResetToken(String plaintext) {
+        String tokenHash = TokenHasher.hash(plaintext);
+        PasswordResetToken resetToken = passwordResetTokenRepository.findByTokenAndUsedFalse(tokenHash)
                 .orElseThrow(InvalidTokenException::new);
 
         if (resetToken.getExpiresAt().isBefore(LocalDateTime.now())) {

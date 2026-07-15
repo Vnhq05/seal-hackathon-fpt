@@ -32,7 +32,7 @@ import java.util.UUID;
 public class PasswordResetToken extends BaseEntity {
 
     @NotBlank
-    @Column(name = "token", nullable = false, unique = true)
+    @Column(name = "token", nullable = false, unique = true, length = 64)
     private String token;
 
     @NotNull
