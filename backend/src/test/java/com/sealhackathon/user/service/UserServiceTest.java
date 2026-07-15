@@ -14,6 +14,7 @@ import com.sealhackathon.user.dto.request.UpdateProfileRequest;
 import com.sealhackathon.user.dto.response.UserListResponse;
 import com.sealhackathon.user.dto.response.UserProfileResponse;
 import com.sealhackathon.user.repository.UserRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -25,9 +26,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -44,9 +47,15 @@ class UserServiceTest {
     @Mock private UserRepository userRepository;
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private ApplicationEventPublisher eventPublisher;
+    @Mock private com.sealhackathon.auth.service.AuthPublicService authPublicService;
     @Mock private com.sealhackathon.common.storage.FileStorageService fileStorageService;
 
     @InjectMocks private UserService userService;
+
+    @BeforeEach
+    void initProtectedEmails() {
+        ReflectionTestUtils.setField(userService, "protectedEmails", Set.of("protected@test.com"));
+    }
 
     // ═══════════════════════════════════════
     //  Profile
@@ -336,6 +345,67 @@ class UserServiceTest {
 
         assertThat(result.getContent()).hasSize(1);
         assertThat(result.getContent().get(0).getStatus()).isEqualTo(AccountStatus.PENDING);
+    }
+
+    // ═══════════════════════════════════════
+    //  Soft-delete
+    // ═══════════════════════════════════════
+
+    @Test
+    void deleteUser_shouldSoftDelete_whenReferencedAsLeaderAndSubmitter() {
+        // Simulates user with teams.leader_id + submissions.submitted_by + audit_logs.actor_id:
+        // soft-delete must succeed without hard-delete (UUID refs stay valid).
+        UUID adminId = UUID.randomUUID();
+        UUID targetId = UUID.randomUUID();
+        User target = buildUser(targetId, "leader@fpt.edu.vn", AccountStatus.ACTIVE, UserType.FPT_STUDENT);
+        target.setStudentId("SE123456");
+        target.setPhone("0901234567");
+
+        when(userRepository.findById(targetId)).thenReturn(Optional.of(target));
+        when(passwordEncoder.encode(anyString())).thenReturn("rotated-hash");
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        userService.deleteUser(targetId, adminId);
+
+        ArgumentCaptor<User> saved = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).save(saved.capture());
+        verify(userRepository, never()).delete(any());
+        verify(authPublicService).invalidateAllSessions(targetId);
+
+        User deleted = saved.getValue();
+        assertThat(deleted.getStatus()).isEqualTo(AccountStatus.DELETED);
+        assertThat(deleted.getEmail()).isEqualTo("deleted+" + targetId.toString().replace("-", "") + "@deleted.local");
+        assertThat(deleted.getFullName()).isEqualTo("Deleted User");
+        assertThat(deleted.getPhone()).isNull();
+        assertThat(deleted.getStudentId()).isNull();
+        assertThat(deleted.getPasswordHash()).isEqualTo("rotated-hash");
+        assertThat(deleted.getId()).isEqualTo(targetId);
+    }
+
+    @Test
+    void deleteUser_shouldBeIdempotent_whenAlreadyDeleted() {
+        UUID adminId = UUID.randomUUID();
+        UUID targetId = UUID.randomUUID();
+        User target = buildUser(targetId, "deleted+abc@deleted.local", AccountStatus.DELETED, UserType.FPT_STUDENT);
+        when(userRepository.findById(targetId)).thenReturn(Optional.of(target));
+
+        userService.deleteUser(targetId, adminId);
+
+        verify(userRepository, never()).save(any());
+        verify(userRepository, never()).delete(any());
+        verify(authPublicService, never()).invalidateAllSessions(any());
+    }
+
+    @Test
+    void reactivateUser_shouldRejectDeleted() {
+        UUID adminId = UUID.randomUUID();
+        UUID targetId = UUID.randomUUID();
+        User target = buildUser(targetId, "x@deleted.local", AccountStatus.DELETED, UserType.FPT_STUDENT);
+        when(userRepository.findById(targetId)).thenReturn(Optional.of(target));
+
+        assertThatThrownBy(() -> userService.reactivateUser(targetId, adminId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("Deleted");
     }
 
     // ═══════════════════════════════════════

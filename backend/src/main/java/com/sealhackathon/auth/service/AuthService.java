@@ -185,8 +185,8 @@ public class AuthService {
         UserSnapshot user = userPublicService.findByEmail(request.getEmail())
                 .orElseThrow(InvalidCredentialsException::new);
 
-        // Admin deactivate sets LOCKED — block before temporary failed-attempt lock
-        if (user.getStatus() == AccountStatus.LOCKED) {
+        // Admin deactivate / soft-delete — block before temporary failed-attempt lock
+        if (user.getStatus() == AccountStatus.LOCKED || user.getStatus() == AccountStatus.DELETED) {
             throw new AccountLockedException();
         }
 
@@ -227,7 +227,7 @@ public class AuthService {
         UserSnapshot user = userPublicService.findById(refreshToken.getUserId())
                 .orElseThrow(InvalidCredentialsException::new);
 
-        if (user.getStatus() == AccountStatus.LOCKED) {
+        if (user.getStatus() == AccountStatus.LOCKED || user.getStatus() == AccountStatus.DELETED) {
             tokenService.revokeRefreshToken(refreshTokenStr);
             throw new AccountLockedException();
         }
@@ -296,16 +296,9 @@ public class AuthService {
         UserSnapshot user = userPublicService.findById(magicToken.getUserId())
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", magicToken.getUserId()));
 
-        if (user.getStatus() == AccountStatus.LOCKED) {
+        if (user.getStatus() == AccountStatus.LOCKED || user.getStatus() == AccountStatus.DELETED) {
             throw new AccountLockedException();
         }
-
-        LockState lockState = userPublicService.getLockState(user.getId());
-        if (lockState.isLocked()) {
-            throw new AccountLockedException(lockState.getLockedUntil());
-        }
-
-        userPublicService.activateParticipant(user.getId());
         userPublicService.resetFailedAttempts(user.getId());
 
         UserSnapshot activatedUser = userPublicService.findById(user.getId())

@@ -5,5 +5,7 @@ public enum AccountStatus {
     PENDING,
     ACTIVE,
     REJECTED,
-    LOCKED
+    LOCKED,
+    /** Soft-deleted; row retained for audit/FK UUID refs. Not reusable for login. */
+    DELETED
 }

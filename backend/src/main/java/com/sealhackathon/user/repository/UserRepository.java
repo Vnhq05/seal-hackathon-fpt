@@ -21,12 +21,15 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     boolean existsByEmail(String email);
 
+    boolean existsByStudentId(String studentId);
+
     Page<User> findByStatus(AccountStatus status, Pageable pageable);
 
     Page<User> findByUserType(UserType userType, Pageable pageable);
 
     @Query("SELECT u FROM User u WHERE " +
-            "(:status IS NULL OR u.status = :status) AND " +
+            "(:status IS NULL AND u.status <> com.sealhackathon.common.enums.AccountStatus.DELETED " +
+            "OR u.status = :status) AND " +
             "(:userType IS NULL OR u.userType = :userType) AND " +
             "(:search IS NULL OR LOWER(u.fullName) LIKE LOWER(CONCAT('%', :search, '%')) " +
             "OR LOWER(u.email) LIKE LOWER(CONCAT('%', :search, '%')))")
@@ -48,7 +51,8 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     @Query("SELECT u FROM User u WHERE u.userType IN "
             + "(com.sealhackathon.common.enums.UserType.FPT_STUDENT, "
             + "com.sealhackathon.common.enums.UserType.EXTERNAL_STUDENT) AND "
-            + "(:status IS NULL OR u.status = :status) AND "
+            + "(:status IS NULL AND u.status <> com.sealhackathon.common.enums.AccountStatus.DELETED "
+            + "OR u.status = :status) AND "
             + "(:search IS NULL OR LOWER(u.fullName) LIKE LOWER(CONCAT('%', :search, '%')) "
             + "OR LOWER(u.email) LIKE LOWER(CONCAT('%', :search, '%')))")
     Page<User> findStudentParticipants(@Param("status") AccountStatus status,

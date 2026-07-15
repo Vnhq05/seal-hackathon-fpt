@@ -29,7 +29,7 @@ public class CustomUserDetailsService implements UserDetailsService {
                 user.getStatus() == AccountStatus.ACTIVE,
                 true,
                 true,
-                user.getStatus() != AccountStatus.LOCKED,
+                user.getStatus() != AccountStatus.LOCKED && user.getStatus() != AccountStatus.DELETED,
                 List.of(new SimpleGrantedAuthority("ROLE_" + user.getUserType().name()))
         );
     }

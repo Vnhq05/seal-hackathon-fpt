@@ -134,7 +134,7 @@ public class AdminUserController {
     }
 
     @DeleteMapping("/{userId}")
-    @Operation(summary = "Delete user account when no references exist")
+    @Operation(summary = "Soft-delete user (status=DELETED, anonymize PII; row kept for audit refs)")
     public ResponseEntity<ApiResponse<Void>> deleteUser(@PathVariable UUID userId) {
         userService.deleteUser(userId, authPublicService.getCurrentUserId());
         return ResponseEntity.ok(ApiResponse.success("Account deleted successfully", null));

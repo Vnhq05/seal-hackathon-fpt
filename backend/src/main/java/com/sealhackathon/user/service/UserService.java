@@ -50,11 +50,10 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final ApplicationEventPublisher eventPublisher;
-    private final UserReferenceService userReferenceService;
     private final AuthPublicService authPublicService;
     private final FileStorageService fileStorageService;
 
-    @Value("${app.protected-emails:admin@seal.com,coordinator@seal.com,lecturer1@fpt.edu.vn,lecturer2@fpt.edu.vn,lecturer3@fpt.edu.vn,lecturer4@fpt.edu.vn,lecturer5@fpt.edu.vn}")
+    @Value("${app.protected-emails:sinhvienfpt1908@gmail.com}")
     private String protectedEmailsConfig;
 
     private Set<String> protectedEmails;
@@ -310,6 +309,11 @@ public class UserService {
                     "Rejected accounts cannot be reactivated",
                     HttpStatus.BAD_REQUEST) {};
         }
+        if (user.getStatus() == AccountStatus.DELETED) {
+            throw new BusinessException(
+                    "Deleted accounts cannot be reactivated",
+                    HttpStatus.BAD_REQUEST) {};
+        }
         if (user.getStatus() == AccountStatus.ACTIVE) {
             return toProfileResponse(user);
         }
@@ -324,17 +328,25 @@ public class UserService {
         User user = getUser(userId);
         guardAccountManagement(user, currentUserId);
 
-        if (userReferenceService.hasReferences(userId)) {
-            String details = userReferenceService.describeReferences(userId).stream()
-                    .collect(Collectors.joining("; "));
-            throw new BusinessException(
-                    "Cannot delete user: account is referenced in the system (" + details
-                            + "). Deactivate the account instead.",
-                    HttpStatus.CONFLICT) {};
+        if (user.getStatus() == AccountStatus.DELETED) {
+            return;
         }
 
+        // Soft-delete: keep row so audit_logs.actor_id and other UUID refs stay valid.
         authPublicService.invalidateAllSessions(userId);
-        userRepository.delete(user);
+
+        String tombstoneId = userId.toString().replace("-", "");
+        user.setStatus(AccountStatus.DELETED);
+        user.setEmail("deleted+" + tombstoneId + "@deleted.local");
+        user.setFullName("Deleted User");
+        user.setPhone(null);
+        user.setStudentId(null);
+        user.setUniversityName(null);
+        user.setAvatarUrl(null);
+        user.setPasswordHash(passwordEncoder.encode(UUID.randomUUID().toString()));
+        user.setFailedLoginAttempts(0);
+        user.setLockedUntil(null);
+        userRepository.save(user);
     }
 
     // ═══════════════════════════════════════
