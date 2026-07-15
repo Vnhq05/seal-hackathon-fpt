@@ -7,7 +7,7 @@ import com.sealhackathon.event.domain.enums.EventStatus;
 import com.sealhackathon.event.domain.enums.RoundType;
 import com.sealhackathon.event.dto.response.TrackResponse;
 import com.sealhackathon.event.repository.HackathonEventRepository;
-import com.sealhackathon.event.service.EventService;
+import com.sealhackathon.event.service.EventStatusResolver;
 import com.sealhackathon.ranking.dto.response.EventRankingBoard;
 import com.sealhackathon.ranking.dto.response.RankingResponse;
 import com.sealhackathon.ranking.repository.PublishedResultRepository;
@@ -32,7 +32,7 @@ import java.util.stream.Collectors;
 public class SeasonRankingService {
 
     private final HackathonEventRepository eventRepository;
-    private final EventService eventService;
+    private final EventStatusResolver eventStatusResolver;
     private final RankingService rankingService;
     private final RankingRepository rankingRepository;
     private final PublishedResultRepository publishedResultRepository;
@@ -52,7 +52,7 @@ public class SeasonRankingService {
 
         return events.stream()
                 .filter(e -> {
-                    EventStatus resolved = eventService.resolveStatus(e);
+                    EventStatus resolved = eventStatusResolver.resolveStatus(e);
                     return resolved == EventStatus.ACTIVE
                             || resolved == EventStatus.SCORING
                             || resolved == EventStatus.COMPLETED;

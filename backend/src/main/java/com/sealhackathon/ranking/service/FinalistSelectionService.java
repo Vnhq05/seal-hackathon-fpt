@@ -8,7 +8,7 @@ import com.sealhackathon.event.domain.enums.RoundType;
 import com.sealhackathon.event.repository.HackathonEventRepository;
 import com.sealhackathon.event.repository.RoundRepository;
 import com.sealhackathon.event.repository.TrackRepository;
-import com.sealhackathon.event.service.EventService;
+import com.sealhackathon.event.service.EventStatusResolver;
 import com.sealhackathon.event.service.FormatRuleEngine;
 import com.sealhackathon.ranking.domain.FinalistContestedSlot;
 import com.sealhackathon.ranking.domain.FinalistContestedSlotTeam;
@@ -53,7 +53,7 @@ public class FinalistSelectionService {
     private final TrackRepository trackRepository;
     private final TeamPublicService teamPublicService;
     private final SubmissionPublicService submissionPublicService;
-    private final EventService eventService;
+    private final EventStatusResolver eventStatusResolver;
     private final RankingTieBreakComparator tieBreakComparator;
     private final FormatRuleEngine formatRuleEngine;
 
@@ -62,7 +62,7 @@ public class FinalistSelectionService {
         var event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Event", "id", eventId));
 
-        EventStatus resolved = eventService.resolveStatus(event);
+        EventStatus resolved = eventStatusResolver.resolveStatus(event);
         if (resolved != EventStatus.SCORING && resolved != EventStatus.ACTIVE
                 && resolved != EventStatus.COMPLETED) {
             throw new BusinessException(

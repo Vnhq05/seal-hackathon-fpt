@@ -9,7 +9,7 @@ import com.sealhackathon.event.domain.enums.RoundType;
 import com.sealhackathon.event.repository.HackathonEventRepository;
 import com.sealhackathon.event.repository.RoundRepository;
 import com.sealhackathon.event.repository.TrackRepository;
-import com.sealhackathon.event.service.EventService;
+import com.sealhackathon.event.service.EventStatusResolver;
 import com.sealhackathon.event.service.FormatRuleEngine;
 import com.sealhackathon.ranking.domain.FinalistContestedSlot;
 import com.sealhackathon.ranking.domain.FinalistSelection;
@@ -57,7 +57,7 @@ class FinalistSelectionServiceTest {
     @Mock private TrackRepository trackRepository;
     @Mock private TeamPublicService teamPublicService;
     @Mock private SubmissionPublicService submissionPublicService;
-    @Mock private EventService eventService;
+    @Mock private EventStatusResolver eventStatusResolver;
     @Mock private RankingTieBreakComparator tieBreakComparator;
     @Mock private FormatRuleEngine formatRuleEngine;
 
@@ -105,7 +105,7 @@ class FinalistSelectionServiceTest {
         }
 
         when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
-        when(eventService.resolveStatus(event)).thenReturn(EventStatus.SCORING);
+        when(eventStatusResolver.resolveStatus(event)).thenReturn(EventStatus.SCORING);
         when(formatRuleEngine.isSealFormat(event)).thenReturn(true);
         when(roundRepository.findByHackathonEventIdOrderByRoundNumberAsc(eventId)).thenReturn(List.of(preliminary));
         when(rankingRepository.findMaxVersionByRoundId(roundId)).thenReturn(1);
@@ -160,7 +160,7 @@ class FinalistSelectionServiceTest {
                 TeamSnapshot.builder().id(team3).name("T3").trackId(trackA).build()));
 
         when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
-        when(eventService.resolveStatus(event)).thenReturn(EventStatus.SCORING);
+        when(eventStatusResolver.resolveStatus(event)).thenReturn(EventStatus.SCORING);
         when(formatRuleEngine.isSealFormat(event)).thenReturn(true);
         when(roundRepository.findByHackathonEventIdOrderByRoundNumberAsc(eventId)).thenReturn(List.of(preliminary));
         when(rankingRepository.findMaxVersionByRoundId(roundId)).thenReturn(1);
@@ -200,7 +200,7 @@ class FinalistSelectionServiceTest {
                 ranking(UUID.randomUUID(), BigDecimal.valueOf(60)));
 
         when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
-        when(eventService.resolveStatus(event)).thenReturn(EventStatus.SCORING);
+        when(eventStatusResolver.resolveStatus(event)).thenReturn(EventStatus.SCORING);
         when(roundRepository.findByHackathonEventIdOrderByRoundNumberAsc(eventId)).thenReturn(List.of(preliminary));
         when(rankingRepository.findMaxVersionByRoundId(roundId)).thenReturn(1);
         when(rankingRepository.findByRoundIdAndVersionOrderByRankAsc(roundId, 1)).thenReturn(rankings);
