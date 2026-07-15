@@ -13,6 +13,12 @@ spring:
       # Required for computed columns + filtered indexes on judge_assignments (SQL Server)
       connection-init-sql: SET QUOTED_IDENTIFIER ON
 
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
+    locations: classpath:db/migration
+
   jpa:
     hibernate:
       ddl-auto: validate
