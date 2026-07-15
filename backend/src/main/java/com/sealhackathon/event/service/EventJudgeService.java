@@ -8,10 +8,9 @@ import com.sealhackathon.event.domain.EventJudgeAssignment;
 import com.sealhackathon.event.domain.HackathonEvent;
 import com.sealhackathon.event.dto.response.EventJudgeResponse;
 import com.sealhackathon.event.repository.EventJudgeAssignmentRepository;
-import com.sealhackathon.event.service.EventService;
 import com.sealhackathon.user.dto.snapshot.UserSnapshot;
 import com.sealhackathon.user.service.UserPublicService;
-import org.springframework.context.annotation.Lazy;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,24 +21,16 @@ import java.util.List;
 import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
 public class EventJudgeService {
 
     private final EventJudgeAssignmentRepository eventJudgeRepository;
-    private final EventService eventService;
+    private final EventFinder eventFinder;
     private final UserPublicService userPublicService;
-
-    public EventJudgeService(
-            EventJudgeAssignmentRepository eventJudgeRepository,
-            @Lazy EventService eventService,
-            UserPublicService userPublicService) {
-        this.eventJudgeRepository = eventJudgeRepository;
-        this.eventService = eventService;
-        this.userPublicService = userPublicService;
-    }
 
     @Transactional(readOnly = true)
     public List<EventJudgeResponse> getEventJudges(UUID eventId) {
-        eventService.getEvent(eventId);
+        eventFinder.getEvent(eventId);
         return eventJudgeRepository.findByHackathonEventId(eventId).stream()
                 .map(this::toResponse)
                 .toList();
@@ -47,7 +38,7 @@ public class EventJudgeService {
 
     @Transactional
     public EventJudgeResponse assignEventJudge(UUID eventId, UUID judgeUserId) {
-        HackathonEvent event = eventService.getEvent(eventId);
+        HackathonEvent event = eventFinder.getEvent(eventId);
         UserSnapshot judge = validateLecturer(judgeUserId);
 
         if (eventJudgeRepository.existsByHackathonEventIdAndJudgeUserId(eventId, judgeUserId)) {

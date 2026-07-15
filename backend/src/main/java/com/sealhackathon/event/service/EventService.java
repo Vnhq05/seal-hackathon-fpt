@@ -34,10 +34,8 @@ import com.sealhackathon.team.service.TeamService;
 import com.sealhackathon.user.dto.snapshot.UserSnapshot;
 import com.sealhackathon.user.service.UserPublicService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -83,12 +81,10 @@ public class EventService {
     private final UserPublicService userPublicService;
     private final FileStorageService fileStorageService;
     private final JudgeAssignmentService judgeAssignmentService;
-    @Autowired
-    @Lazy
-    private FormatRuleEngine formatRuleEngine;
-    @Autowired
-    @Lazy
-    private TeamService teamService;
+    private final FormatRuleEngine formatRuleEngine;
+    private final TeamService teamService;
+    private final EventStatusResolver eventStatusResolver;
+    private final EventFinder eventFinder;
 
     @Transactional
     public EventResponse createEvent(CreateEventRequest request) {
@@ -574,8 +570,7 @@ public class EventService {
     }
 
     HackathonEvent getEvent(UUID eventId) {
-        return eventRepository.findById(eventId)
-                .orElseThrow(() -> new ResourceNotFoundException("Event", "id", eventId));
+        return eventFinder.getEvent(eventId);
     }
 
     /**
@@ -584,30 +579,7 @@ public class EventService {
      * {@link EventStatus#SCORING} are kept as hard overrides from persisted state.
      */
     public EventStatus resolveStatus(HackathonEvent event) {
-        if (event.getStatus() == EventStatus.CANCELLED) {
-            return EventStatus.CANCELLED;
-        }
-        if (event.getStatus() == EventStatus.COMPLETED) {
-            return EventStatus.COMPLETED;
-        }
-        if (event.getStatus() == EventStatus.CLOSED_REGISTRATION
-                || event.getStatus() == EventStatus.SCORING) {
-            return event.getStatus();
-        }
-
-        LocalDate today = LocalDate.now();
-
-        if (today.isAfter(event.getEndDate())) {
-            return EventStatus.COMPLETED;
-        }
-        if (!today.isBefore(event.getStartDate())) {
-            return EventStatus.ACTIVE;
-        }
-        if (event.getRegistrationOpenDate() != null
-                && !today.isBefore(event.getRegistrationOpenDate())) {
-            return EventStatus.OPEN;
-        }
-        return EventStatus.UPCOMING;
+        return eventStatusResolver.resolveStatus(event);
     }
 
     private void enforceOwnership(HackathonEvent event) {

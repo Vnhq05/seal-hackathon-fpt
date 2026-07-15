@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.quality.Strictness;
 import org.mockito.junit.jupiter.MockitoSettings;
@@ -55,6 +56,8 @@ class EventServiceTest {
     @Mock private EventJudgeService eventJudgeService;
     @Mock private RoundService roundService;
     @Mock private TeamService teamService;
+    @Mock private FormatRuleEngine formatRuleEngine;
+    @Spy private EventStatusResolver eventStatusResolver = new EventStatusResolver();
 
     @InjectMocks private EventService eventService;
 
@@ -71,7 +74,7 @@ class EventServiceTest {
         when(authPublicService.getCurrentUserRole()).thenReturn(UserType.SYSTEM_ADMIN);
         when(authPublicService.getCurrentUserId()).thenReturn(ADMIN_USER_ID);
         when(authPublicService.getCurrentUserEmail()).thenReturn(ADMIN_EMAIL);
-        ReflectionTestUtils.setField(eventService, "teamService", teamService);
+        ReflectionTestUtils.setField(eventService, "eventFinder", new EventFinder(eventRepository));
         when(teamService.disbandUndersizedTeams(any())).thenReturn(0);
     }
 

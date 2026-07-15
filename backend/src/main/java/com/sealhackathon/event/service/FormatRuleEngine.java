@@ -9,9 +9,7 @@ import com.sealhackathon.event.repository.HackathonEventRepository;
 import com.sealhackathon.event.repository.TrackRepository;
 import com.sealhackathon.team.repository.TeamRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -36,9 +34,7 @@ public class FormatRuleEngine {
     private final HackathonEventRepository eventRepository;
     private final TrackRepository trackRepository;
     private final TeamRepository teamRepository;
-    @Autowired
-    @Lazy
-    private EventService eventService;
+    private final EventStatusResolver eventStatusResolver;
 
     public int getSealMaxTracks() {
         return sealMaxTracks;
@@ -114,7 +110,7 @@ public class FormatRuleEngine {
 
     public void assertCanScore(UUID eventId) {
         HackathonEvent event = getEvent(eventId);
-        EventStatus resolved = eventService.resolveStatus(event);
+        EventStatus resolved = eventStatusResolver.resolveStatus(event);
         if (!canScore(resolved)) {
             throw new BusinessException(
                     "Event is not in SCORING phase. Current status: " + resolved,
@@ -128,7 +124,7 @@ public class FormatRuleEngine {
 
     public void assertCanCreateTeam(UUID eventId) {
         HackathonEvent event = getEvent(eventId);
-        EventStatus resolved = eventService.resolveStatus(event);
+        EventStatus resolved = eventStatusResolver.resolveStatus(event);
         if (resolved == EventStatus.CANCELLED || resolved == EventStatus.COMPLETED) {
             throw new BusinessException("Event is not open for team formation", HttpStatus.BAD_REQUEST);
         }
@@ -140,7 +136,7 @@ public class FormatRuleEngine {
     public void assertCanModifyTeamMembers(UUID eventId) {
         HackathonEvent event = getEvent(eventId);
         EventStatus persisted = event.getStatus();
-        EventStatus resolved = eventService.resolveStatus(event);
+        EventStatus resolved = eventStatusResolver.resolveStatus(event);
         if (resolved == EventStatus.CANCELLED || resolved == EventStatus.COMPLETED) {
             throw new BusinessException("Team member changes are not allowed in the current event phase",
                     HttpStatus.BAD_REQUEST);

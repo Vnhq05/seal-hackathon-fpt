@@ -30,7 +30,7 @@ import java.util.UUID;
 public class EventPublicServiceImpl implements EventPublicService {
 
     private final HackathonEventRepository eventRepository;
-    private final EventService eventService;
+    private final EventStatusResolver eventStatusResolver;
     private final RoundRepository roundRepository;
     private final CriteriaRepository criteriaRepository;
     private final TrackRepository trackRepository;
@@ -146,7 +146,7 @@ public class EventPublicServiceImpl implements EventPublicService {
     @Transactional(readOnly = true)
     public boolean isEventActive(UUID eventId) {
         return eventRepository.findById(eventId)
-                .map(e -> eventService.resolveStatus(e) == EventStatus.ACTIVE)
+                .map(e -> eventStatusResolver.resolveStatus(e) == EventStatus.ACTIVE)
                 .orElse(false);
     }
 
@@ -155,7 +155,7 @@ public class EventPublicServiceImpl implements EventPublicService {
     public EventStatus getResolvedEventStatus(UUID eventId) {
         HackathonEvent event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Event", "id", eventId));
-        return eventService.resolveStatus(event);
+        return eventStatusResolver.resolveStatus(event);
     }
 
     @Override
@@ -194,7 +194,7 @@ public class EventPublicServiceImpl implements EventPublicService {
                 .endDate(event.getEndDate())
                 .registrationDeadline(event.getRegistrationDeadline())
                 .registrationOpenDate(event.getRegistrationOpenDate())
-                .status(eventService.resolveStatus(event))
+                .status(eventStatusResolver.resolveStatus(event))
                 .competitionFormat(event.getCompetitionFormat())
                 .semesterMin(event.getSemesterMin())
                 .semesterMax(event.getSemesterMax())
