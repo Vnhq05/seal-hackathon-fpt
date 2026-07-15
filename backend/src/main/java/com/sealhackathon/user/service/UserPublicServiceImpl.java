@@ -3,6 +3,7 @@ package com.sealhackathon.user.service;
 import com.sealhackathon.common.enums.AccountStatus;
 import com.sealhackathon.common.enums.StudentStanding;
 import com.sealhackathon.common.enums.UserType;
+import com.sealhackathon.common.exception.DuplicateResourceException;
 import com.sealhackathon.common.exception.ResourceNotFoundException;
 import com.sealhackathon.common.util.UniversityUtils;
 import com.sealhackathon.user.domain.User;
@@ -102,13 +103,17 @@ public class UserPublicServiceImpl implements UserPublicService {
                                   String phone, String studentId, String universityName,
                                   UserType userType, Integer semester, boolean temporaryAccount,
                                   StudentStanding studentStanding) {
+        if (studentId != null && !studentId.isBlank()
+                && userRepository.existsByStudentId(studentId.trim())) {
+            throw new DuplicateResourceException("User", "studentId", studentId.trim());
+        }
         StudentStanding standing = studentStanding != null ? studentStanding : StudentStanding.ENROLLED;
         User user = User.builder()
                 .email(email)
                 .passwordHash(passwordHash)
                 .fullName(fullName)
                 .phone(phone)
-                .studentId(studentId)
+                .studentId(studentId != null && !studentId.isBlank() ? studentId.trim() : null)
                 .universityName(UniversityUtils.resolveUniversityName(userType, universityName))
                 .userType(userType)
                 .status(AccountStatus.PENDING)
