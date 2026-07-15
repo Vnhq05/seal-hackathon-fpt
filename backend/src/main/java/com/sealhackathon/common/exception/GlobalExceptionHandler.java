@@ -5,6 +5,7 @@ import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.InvalidDataAccessResourceUsageException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -106,6 +107,15 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.CONFLICT)
                 .body(ApiResponse.error("Operation could not be completed due to a data conflict."));
+    }
+
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    public ResponseEntity<ApiResponse<Void>> handleOptimisticLock(OptimisticLockingFailureException ex) {
+        log.warn("Optimistic lock conflict: {}", ex.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(ApiResponse.error(
+                        "This record was updated by someone else. Refresh and try again."));
     }
 
     @ExceptionHandler(InvalidDataAccessResourceUsageException.class)

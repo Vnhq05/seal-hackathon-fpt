@@ -10,6 +10,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -53,4 +54,8 @@ public class TeamJoinRequest extends BaseEntity {
 
     @Column(name = "resolved_at")
     private LocalDateTime resolvedAt;
+
+    @Version
+    @Column(name = "version")
+    private Long version;
 }

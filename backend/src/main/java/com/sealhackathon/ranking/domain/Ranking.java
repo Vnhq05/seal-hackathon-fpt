@@ -6,6 +6,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import jakarta.persistence.Version;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -55,7 +56,7 @@ public class Ranking extends BaseEntity {
     @Column(name = "round_id", nullable = false)
     private UUID roundId;
 
-    // ── BR-44: computed final score (precision 5, scale 2 → max 999.99) ──
+    // ── BR-44: computed final score (DECIMAL(7,4)) ──
     @NotNull
     @Column(name = "final_score", nullable = false, precision = 7, scale = 4)
     private BigDecimal finalScore;
@@ -66,7 +67,7 @@ public class Ranking extends BaseEntity {
     @Column(name = "rank", nullable = false)
     private Integer rank;
 
-    // ── BR-48: incremented on each recalculation ──
+    // ── BR-48: incremented on each recalculation (business snapshot version) ──
     @NotNull
     @Min(1)
     @Column(name = "version", nullable = false)
@@ -75,4 +76,9 @@ public class Ranking extends BaseEntity {
     @NotNull
     @Column(name = "calculated_at", nullable = false)
     private LocalDateTime calculatedAt;
+
+    /** Optimistic lock — separate from business {@link #version}. */
+    @Version
+    @Column(name = "lock_version")
+    private Long lockVersion;
 }

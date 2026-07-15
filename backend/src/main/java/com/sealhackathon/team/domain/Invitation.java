@@ -7,9 +7,11 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -31,7 +33,9 @@ import java.util.UUID;
  * References User (inviter) by ID — cross-module, no JPA relationship.
  */
 @Entity
-@Table(name = "invitations")
+@Table(name = "invitations", indexes = {
+        @Index(name = "idx_invitations_team_id", columnList = "team_id")
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -62,4 +66,8 @@ public class Invitation extends BaseEntity {
 
     @Column(name = "expires_at")
     private LocalDateTime expiresAt;
+
+    @Version
+    @Column(name = "version")
+    private Long version;
 }

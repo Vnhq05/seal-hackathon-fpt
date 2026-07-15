@@ -12,6 +12,7 @@ import jakarta.persistence.Index;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import jakarta.persistence.Version;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -78,4 +79,8 @@ public class Submission extends BaseEntity {
     @OneToMany(mappedBy = "submission", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @Builder.Default
     private List<SubmissionVersion> versions = new ArrayList<>();
+
+    @Version
+    @Column(name = "opt_lock")
+    private Long optLock;
 }

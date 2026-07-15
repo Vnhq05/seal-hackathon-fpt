@@ -9,6 +9,7 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import jakarta.persistence.Version;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
@@ -93,4 +94,8 @@ public class ScoreReviewRequest extends BaseEntity {
     @Size(max = 2000)
     @Column(name = "resolution_note")
     private String resolutionNote;
+
+    @Version
+    @Column(name = "version")
+    private Long version;
 }
