@@ -77,7 +77,7 @@ class ScoreReviewIntegrationTest extends BaseIntegrationTest {
                 .startDate(LocalDate.of(2026, 1, 1))
                 .endDate(LocalDate.of(2026, 12, 31))
                 .registrationDeadline(LocalDate.of(2026, 6, 1))
-                .status(EventStatus.ACTIVE)
+                .status(EventStatus.SCORING)
                 .build());
         eventId = event.getId();
 

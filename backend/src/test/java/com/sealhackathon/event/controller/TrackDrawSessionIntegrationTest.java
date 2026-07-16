@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MvcResult;
 
+import java.time.LocalDate;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.is;
@@ -162,16 +163,24 @@ class TrackDrawSessionIntegrationTest extends BaseIntegrationTest {
     }
 
     private UUID createSealEvent() throws Exception {
+        LocalDate today = LocalDate.now();
+        LocalDate regOpen = today.minusDays(7);
+        LocalDate regClose = today.plusDays(14);
+        LocalDate start = today.plusDays(30);
+        LocalDate end = start.plusDays(1);
+
+        String body = """
+                {"name":"SEAL Draw Test","season":"SPRING","year":%d,
+                 "startDate":"%s","endDate":"%s",
+                 "registrationOpenDate":"%s",
+                 "registrationDeadline":"%s",
+                 "competitionFormat":"SEAL_RAG_2026"}
+                """.formatted(today.getYear(), start, end, regOpen, regClose);
+
         MvcResult result = mockMvc.perform(post("/api/events")
                         .header("Authorization", "Bearer " + tokenFor(admin))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"name":"SEAL Draw Test","season":"SPRING","year":2026,
-                                 "startDate":"2026-04-12","endDate":"2026-04-12",
-                                 "registrationOpenDate":"2026-03-01",
-                                 "registrationDeadline":"2026-04-10",
-                                 "competitionFormat":"SEAL_RAG_2026"}
-                                """))
+                        .content(body))
                 .andExpect(status().isCreated())
                 .andReturn();
         JsonNode data = objectMapper.readTree(result.getResponse().getContentAsString()).get("data");
@@ -179,6 +188,7 @@ class TrackDrawSessionIntegrationTest extends BaseIntegrationTest {
     }
 
     private UUID createTeam(User leader, String name) throws Exception {
+        seedApprovedEnrollment(leader.getId(), eventId);
         MvcResult result = mockMvc.perform(post("/api/events/" + eventId + "/teams")
                         .header("Authorization", "Bearer " + tokenFor(leader))
                         .contentType(MediaType.APPLICATION_JSON)

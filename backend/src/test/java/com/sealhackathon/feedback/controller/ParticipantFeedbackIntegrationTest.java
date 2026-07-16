@@ -149,8 +149,8 @@ class ParticipantFeedbackIntegrationTest extends BaseIntegrationTest {
                 .andExpect(status().isCreated());
     }
 
-    private UUID seedEvent(String name, LocalDate start, LocalDate end, EventStatus status, String createdBy) {
-        HackathonEvent event = HackathonEvent.builder()
+    private UUID seedEvent(String name, LocalDate start, LocalDate end, EventStatus status, String ownerEmail) {
+        HackathonEvent event = eventRepository.save(HackathonEvent.builder()
                 .name(name)
                 .season("SPRING")
                 .year(2026)
@@ -158,9 +158,8 @@ class ParticipantFeedbackIntegrationTest extends BaseIntegrationTest {
                 .endDate(end)
                 .registrationDeadline(start.minusDays(2))
                 .status(status)
-                .build();
-        event.setCreatedBy(createdBy);
-        event = eventRepository.save(event);
+                .build());
+        assignEventOwner(event.getId(), ownerEmail);
         return event.getId();
     }
 

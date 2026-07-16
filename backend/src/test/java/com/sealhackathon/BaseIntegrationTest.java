@@ -4,7 +4,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sealhackathon.auth.security.JwtProvider;
 import com.sealhackathon.common.enums.AccountStatus;
 import com.sealhackathon.common.enums.UserType;
+import com.sealhackathon.event.repository.HackathonEventRepository;
 import com.sealhackathon.support.DockerAvailabilityCondition;
+import com.sealhackathon.team.domain.EventEnrollment;
+import com.sealhackathon.team.domain.enums.EnrollmentStatus;
+import com.sealhackathon.team.repository.EventEnrollmentRepository;
 import com.sealhackathon.user.domain.User;
 import com.sealhackathon.user.repository.UserRepository;
 import jakarta.persistence.EntityManager;
@@ -19,7 +23,11 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.testcontainers.containers.MSSQLServerContainer;
+
+import java.util.List;
+import java.util.UUID;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
@@ -114,8 +122,11 @@ public abstract class BaseIntegrationTest {
     @Autowired protected UserRepository userRepository;
     @Autowired protected PasswordEncoder passwordEncoder;
     @Autowired protected JwtProvider jwtProvider;
+    @Autowired protected HackathonEventRepository eventRepository;
+    @Autowired protected EventEnrollmentRepository enrollmentRepository;
     @Autowired private JdbcTemplate jdbcTemplate;
     @Autowired private EntityManager entityManager;
+    @Autowired private TransactionTemplate transactionTemplate;
 
     @BeforeEach
     protected void cleanDatabase() {
@@ -123,6 +134,24 @@ public abstract class BaseIntegrationTest {
             jdbcTemplate.update(sql);
         }
         entityManager.clear();
+    }
+
+    /**
+     * Sets business event owner via JPQL UPDATE (bypasses {@code created_by} {@code updatable=false}
+     * and AuditorAware overwrite on insert). See adr-event-owner-vs-created-by.md.
+     */
+    protected void assignEventOwner(UUID eventId, String ownerEmail) {
+        transactionTemplate.executeWithoutResult(status ->
+                eventRepository.reassignOwnership(List.of(eventId), ownerEmail));
+        entityManager.clear();
+    }
+
+    protected void seedApprovedEnrollment(UUID userId, UUID eventId) {
+        enrollmentRepository.save(EventEnrollment.builder()
+                .userId(userId)
+                .eventId(eventId)
+                .status(EnrollmentStatus.APPROVED)
+                .build());
     }
 
     protected User createUser(String email, UserType type, AccountStatus status) {

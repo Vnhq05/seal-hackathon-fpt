@@ -29,14 +29,16 @@ class TeamControllerIntegrationTest extends BaseIntegrationTest {
 
     @BeforeEach
     void setUp() {
+        LocalDate today = LocalDate.now();
         HackathonEvent event = eventRepository.save(HackathonEvent.builder()
                 .name("Test Event")
                 .season("Summer")
-                .year(2026)
-                .startDate(LocalDate.of(2026, 1, 1))
-                .endDate(LocalDate.of(2026, 12, 31))
-                .registrationDeadline(LocalDate.of(2026, 12, 1))
-                .status(EventStatus.ACTIVE)
+                .year(today.getYear())
+                .registrationOpenDate(today.minusDays(7))
+                .registrationDeadline(today.plusDays(14))
+                .startDate(today.plusDays(30))
+                .endDate(today.plusDays(32))
+                .status(EventStatus.OPEN)
                 .build());
         eventId = event.getId();
     }
@@ -57,6 +59,7 @@ class TeamControllerIntegrationTest extends BaseIntegrationTest {
     @Test
     void createTeam_shouldReturn201_andStatusForming() throws Exception {
         User student = createStudent();
+        seedApprovedEnrollment(student.getId(), eventId);
 
         mockMvc.perform(post("/api/events/" + eventId + "/teams")
                         .header("Authorization", "Bearer " + tokenFor(student))
@@ -76,6 +79,8 @@ class TeamControllerIntegrationTest extends BaseIntegrationTest {
     void createTeam_shouldReturn409_whenNameDuplicate() throws Exception {
         User s1 = createUser("s1@fpt.edu.vn", UserType.FPT_STUDENT, AccountStatus.ACTIVE);
         User s2 = createUser("s2@fpt.edu.vn", UserType.FPT_STUDENT, AccountStatus.ACTIVE);
+        seedApprovedEnrollment(s1.getId(), eventId);
+        seedApprovedEnrollment(s2.getId(), eventId);
 
         mockMvc.perform(post("/api/events/" + eventId + "/teams")
                 .header("Authorization", "Bearer " + tokenFor(s1))
@@ -98,6 +103,7 @@ class TeamControllerIntegrationTest extends BaseIntegrationTest {
     @Test
     void createTeam_shouldReturn409_whenAlreadyInTeam() throws Exception {
         User student = createStudent();
+        seedApprovedEnrollment(student.getId(), eventId);
 
         mockMvc.perform(post("/api/events/" + eventId + "/teams")
                 .header("Authorization", "Bearer " + tokenFor(student))
@@ -120,6 +126,7 @@ class TeamControllerIntegrationTest extends BaseIntegrationTest {
     @Test
     void getMyTeam_shouldReturnTeam_afterCreation() throws Exception {
         User student = createStudent();
+        seedApprovedEnrollment(student.getId(), eventId);
 
         mockMvc.perform(post("/api/events/" + eventId + "/teams")
                 .header("Authorization", "Bearer " + tokenFor(student))

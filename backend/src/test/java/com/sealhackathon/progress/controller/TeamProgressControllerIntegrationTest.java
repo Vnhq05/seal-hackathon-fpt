@@ -64,8 +64,6 @@ class TeamProgressControllerIntegrationTest extends BaseIntegrationTest {
                 .registrationDeadline(LocalDate.of(2026, 12, 1))
                 .status(EventStatus.ACTIVE)
                 .build());
-        event.setCreatedBy(coordinator.getEmail());
-        event = eventRepository.save(event);
         eventId = event.getId();
 
         Round round = roundRepository.save(Round.builder()
@@ -115,6 +113,8 @@ class TeamProgressControllerIntegrationTest extends BaseIntegrationTest {
                 .team(team)
                 .assignedAt(LocalDateTime.now())
                 .build());
+
+        assignEventOwner(eventId, coordinator.getEmail());
     }
 
     @Test

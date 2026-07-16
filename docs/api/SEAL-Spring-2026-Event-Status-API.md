@@ -55,7 +55,7 @@ Example: persisted `ACTIVE` before `startDate` → API shows `OPEN`; transition 
 | `UPCOMING`, `OPEN` | Create teams, invite/join members |
 | `CLOSED_REGISTRATION` | No team/member changes (persisted sticky) |
 | `ACTIVE` | Submit round deliverables |
-| `ACTIVE`, `SCORING` | Judge scoring |
+| `SCORING` | Judge scoring |
 | `SCORING`, `COMPLETED` | View published results (when enabled) |
 
 Enforced via `FormatRuleEngine.assertCanCreateTeam()` and `assertCanModifyTeamMembers()` in team/invitation/join flows.
