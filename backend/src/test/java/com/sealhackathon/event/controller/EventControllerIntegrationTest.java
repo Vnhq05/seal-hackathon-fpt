@@ -39,13 +39,13 @@ class EventControllerIntegrationTest extends BaseIntegrationTest {
                         .header("Authorization", "Bearer " + tokenFor(coord))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"name":"Hackathon 2026","season":"Summer","year":2026,
+                                {"name":"Hackathon Summer","season":"Summer","year":2026,
                                  "startDate":"2026-07-01","endDate":"2026-08-31",
                                  "registrationOpenDate":"2026-06-01",
                                  "registrationDeadline":"2026-06-30"}
                                 """))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.data.name", is("Hackathon 2026")))
+                .andExpect(jsonPath("$.data.name", is("Hackathon Summer")))
                 .andExpect(jsonPath("$.data.status", is("OPEN")));
     }
 
@@ -62,6 +62,7 @@ class EventControllerIntegrationTest extends BaseIntegrationTest {
                         .content("""
                                 {"name":"Duplicate","season":"Fall","year":2026,
                                  "startDate":"2026-09-01","endDate":"2026-11-30",
+                                 "registrationOpenDate":"2026-08-01",
                                  "registrationDeadline":"2026-08-31"}
                                 """))
                 .andExpect(status().isConflict());

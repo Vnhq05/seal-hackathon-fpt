@@ -3,10 +3,13 @@ package com.sealhackathon.judging.controller;
 import com.sealhackathon.BaseIntegrationTest;
 import com.sealhackathon.event.domain.Criteria;
 import com.sealhackathon.event.domain.HackathonEvent;
+import com.sealhackathon.event.domain.JudgeAssignment;
 import com.sealhackathon.event.domain.Round;
+import com.sealhackathon.event.domain.enums.AssignmentScope;
 import com.sealhackathon.event.domain.enums.EventStatus;
 import com.sealhackathon.event.repository.CriteriaRepository;
 import com.sealhackathon.event.repository.HackathonEventRepository;
+import com.sealhackathon.event.repository.JudgeAssignmentRepository;
 import com.sealhackathon.event.repository.RoundRepository;
 import com.sealhackathon.judging.domain.ScoreReviewRequest;
 import com.sealhackathon.judging.domain.TeamJudgeAssignment;
@@ -47,6 +50,7 @@ class ScoreReviewIntegrationTest extends BaseIntegrationTest {
     @Autowired private TeamRepository teamRepository;
     @Autowired private SubmissionRepository submissionRepository;
     @Autowired private TeamJudgeAssignmentRepository teamJudgeAssignmentRepository;
+    @Autowired private JudgeAssignmentRepository judgeAssignmentRepository;
     @Autowired private JudgeScoreRepository judgeScoreRepository;
     @Autowired private ScoreReviewRequestRepository scoreReviewRequestRepository;
 
@@ -109,6 +113,13 @@ class ScoreReviewIntegrationTest extends BaseIntegrationTest {
         submissionId = submission.getId();
 
         for (User judge : List.of(judge1, judge2, judge3)) {
+            judgeAssignmentRepository.save(JudgeAssignment.builder()
+                    .round(round)
+                    .judgeUserId(judge.getId())
+                    .scope(AssignmentScope.ROUND)
+                    .active(true)
+                    .assignedAt(LocalDateTime.now())
+                    .build());
             teamJudgeAssignmentRepository.save(TeamJudgeAssignment.builder()
                     .teamId(teamId)
                     .roundId(roundId)
