@@ -42,6 +42,7 @@ import static com.sealhackathon.team.domain.enums.TeamStatus.FORMING;
 public class TeamJoinRequestService {
 
     private final TeamJoinRequestRepository joinRequestRepository;
+    private final JoinRequestStatusService joinRequestStatusService;
     private final TeamRepository teamRepository;
     private final TeamMemberRepository teamMemberRepository;
     private final EventEnrollmentService enrollmentService;
@@ -187,9 +188,9 @@ public class TeamJoinRequestService {
         UUID requesterId = joinRequest.getRequesterId();
 
         if (teamMemberRepository.existsByUserIdAndEventId(requesterId, eventId)) {
-            joinRequest.setStatus(JoinRequestStatus.REJECTED);
-            joinRequest.setResolvedAt(LocalDateTime.now());
-            joinRequestRepository.save(joinRequest);
+            // Own transaction: the throw below would otherwise roll the rejection back, leaving a
+            // request that can never be accepted sitting PENDING in the leader's queue forever.
+            joinRequestStatusService.retire(joinRequest.getId(), JoinRequestStatus.REJECTED);
             throw new BusinessException("User is already in a team for this event", HttpStatus.CONFLICT) {};
         }
 

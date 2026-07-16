@@ -39,6 +39,7 @@ import static com.sealhackathon.team.domain.enums.TeamStatus.FORMING;
 public class InvitationService {
 
     private final InvitationRepository invitationRepository;
+    private final InvitationStatusService invitationStatusService;
     private final TeamRepository teamRepository;
     private final TeamMemberRepository teamMemberRepository;
     private final UserPublicService userPublicService;
@@ -145,8 +146,7 @@ public class InvitationService {
 
         int currentSize = teamMemberRepository.countByTeamId(team.getId());
         if (currentSize >= getMaxTeamSize()) {
-            invitation.setStatus(InvitationStatus.EXPIRED);
-            invitationRepository.save(invitation);
+            invitationStatusService.retire(invitation.getId(), InvitationStatus.EXPIRED);
             throw new BusinessException("Team is already full", HttpStatus.BAD_REQUEST) {};
         }
 
@@ -261,8 +261,10 @@ public class InvitationService {
         }
 
         if (invitation.getExpiresAt() != null && invitation.getExpiresAt().isBefore(LocalDateTime.now())) {
-            invitation.setStatus(InvitationStatus.EXPIRED);
-            invitationRepository.save(invitation);
+            // Own transaction: the throw below would otherwise roll the status back and the row
+            // would stay PENDING forever -- still listed for the invitee, and still blocking any
+            // re-invite via the duplicate guard in sendInvitation.
+            invitationStatusService.retire(invitation.getId(), InvitationStatus.EXPIRED);
             throw new BusinessException("Invitation has expired", HttpStatus.BAD_REQUEST) {};
         }
     }

@@ -31,12 +31,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class InvitationServiceTest {
 
     @Mock private InvitationRepository invitationRepository;
+    @Mock private InvitationStatusService invitationStatusService;
     @Mock private TeamRepository teamRepository;
     @Mock private TeamMemberRepository teamMemberRepository;
     @Mock private UserPublicService userPublicService;
@@ -155,11 +157,13 @@ class InvitationServiceTest {
         invitation.setId(invitationId);
 
         when(invitationRepository.findById(invitationId)).thenReturn(Optional.of(invitation));
-        when(invitationRepository.save(any())).thenReturn(invitation);
 
         assertThatThrownBy(() -> invitationService.acceptInvitation(userId, invitationId))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("expired");
+
+        // Retiring the row has to happen off this transaction, because the throw above rolls it back.
+        verify(invitationStatusService).retire(invitationId, InvitationStatus.EXPIRED);
     }
 
     @Test
