@@ -1,5 +1,7 @@
 package com.sealhackathon.audit.listener;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sealhackathon.audit.service.AuditService;
 import com.sealhackathon.auth.event.LoginFailedEvent;
 import com.sealhackathon.auth.event.PasswordResetEvent;
@@ -45,6 +47,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
+import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.UUID;
 
 @Component
@@ -53,6 +58,7 @@ import java.util.UUID;
 public class AuditEventListener {
 
     private final AuditService auditService;
+    private final ObjectMapper objectMapper;
 
     private static final UUID SYSTEM_ACTOR = UUID.fromString("00000000-0000-0000-0000-000000000000");
 
@@ -75,7 +81,7 @@ public class AuditEventListener {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onLoginFailed(LoginFailedEvent e) {
         auditService.log(SYSTEM_ACTOR, "LOGIN_FAILED", null, "User",
-                null, "{\"email\":\"" + e.email() + "\",\"attempt\":" + e.attemptCount() + "}",
+                null, json("email", e.email(), "attempt", e.attemptCount()),
                 e.ipAddress());
     }
 
@@ -94,29 +100,29 @@ public class AuditEventListener {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onAccountApproved(AccountApprovedEvent e) {
         auditService.log(SYSTEM_ACTOR, "ACCOUNT_APPROVED", e.userId(), "User",
-                "{\"status\":\"PENDING\"}", "{\"status\":\"ACTIVE\"}", null);
+                json("status", "PENDING"), json("status", "ACTIVE"), null);
     }
 
     @TransactionalEventListener
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onAccountRejected(AccountRejectedEvent e) {
         auditService.log(SYSTEM_ACTOR, "ACCOUNT_REJECTED", e.userId(), "User",
-                "{\"status\":\"PENDING\"}",
-                "{\"status\":\"REJECTED\",\"reason\":\"" + e.reason() + "\"}", null);
+                json("status", "PENDING"),
+                json("status", "REJECTED", "reason", e.reason()), null);
     }
 
     @TransactionalEventListener
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onInternalAccountCreated(InternalAccountCreatedEvent e) {
         auditService.log(SYSTEM_ACTOR, "INTERNAL_ACCOUNT_CREATED", e.userId(), "User",
-                null, "{\"role\":\"" + e.role() + "\"}", null);
+                null, json("role", e.role()), null);
     }
 
     @TransactionalEventListener
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onProfileUpdated(ProfileUpdatedEvent e) {
         auditService.log(e.userId(), "PROFILE_UPDATED", e.userId(), "User",
-                null, "{\"changedFields\":" + e.changedFields() + "}", null);
+                null, json("changedFields", e.changedFields()), null);
     }
 
     // ═══════════════════════════════════════
@@ -127,43 +133,43 @@ public class AuditEventListener {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onEventCreated(EventCreatedEvent e) {
         auditService.log(SYSTEM_ACTOR, "EVENT_CREATED", e.eventId(), "HackathonEvent",
-                null, "{\"name\":\"" + e.name() + "\"}", null);
+                null, json("name", e.name()), null);
     }
 
     @TransactionalEventListener
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onEventActivated(EventActivatedEvent e) {
         auditService.log(SYSTEM_ACTOR, "EVENT_ACTIVATED", e.eventId(), "HackathonEvent",
-                "{\"status\":\"DRAFT\"}", "{\"status\":\"ACTIVE\"}", null);
+                json("status", "DRAFT"), json("status", "ACTIVE"), null);
     }
 
     @TransactionalEventListener
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onEventConfigChanged(EventConfigChangedEvent e) {
         auditService.log(SYSTEM_ACTOR, "EVENT_CONFIG_CHANGED", e.eventId(), "HackathonEvent",
-                "{\"" + e.field() + "\":\"" + e.oldValue() + "\"}",
-                "{\"" + e.field() + "\":\"" + e.newValue() + "\"}", null);
+                json(e.field(), e.oldValue()),
+                json(e.field(), e.newValue()), null);
     }
 
     @TransactionalEventListener
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onJudgeAssigned(JudgeAssignedEvent e) {
         auditService.log(SYSTEM_ACTOR, "JUDGE_ASSIGNED", e.assignmentId(), "JudgeAssignment",
-                null, "{\"judgeId\":\"" + e.judgeId() + "\",\"roundId\":\"" + e.roundId() + "\"}", null);
+                null, json("judgeId", e.judgeId(), "roundId", e.roundId()), null);
     }
 
     @TransactionalEventListener
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onMentorAssigned(MentorAssignedEvent e) {
         auditService.log(SYSTEM_ACTOR, "MENTOR_ASSIGNED", e.assignmentId(), "MentorAssignment",
-                null, "{\"mentorId\":\"" + e.mentorId() + "\",\"eventId\":\"" + e.eventId() + "\"}", null);
+                null, json("mentorId", e.mentorId(), "eventId", e.eventId()), null);
     }
 
     @TransactionalEventListener
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onScoringWindowReopened(ScoringWindowReopenedEvent e) {
         auditService.log(SYSTEM_ACTOR, "SCORING_WINDOW_REOPENED", e.roundId(), "Round",
-                null, "{\"newDeadline\":\"" + e.newDeadline() + "\"}", null);
+                null, json("newDeadline", e.newDeadline()), null);
     }
 
     // ═══════════════════════════════════════
@@ -174,22 +180,22 @@ public class AuditEventListener {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onTeamCreated(TeamCreatedEvent e) {
         auditService.log(e.leaderId(), "TEAM_CREATED", e.teamId(), "Team",
-                null, "{\"name\":\"" + e.teamName() + "\"}", null);
+                null, json("name", e.teamName()), null);
     }
 
     @TransactionalEventListener
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onTeamConfirmed(TeamConfirmedEvent e) {
         auditService.log(SYSTEM_ACTOR, "TEAM_CONFIRMED", e.teamId(), "Team",
-                "{\"status\":\"FORMING\"}",
-                "{\"status\":\"CONFIRMED\",\"memberCount\":" + e.memberCount() + "}", null);
+                json("status", "FORMING"),
+                json("status", "CONFIRMED", "memberCount", e.memberCount()), null);
     }
 
     @TransactionalEventListener
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onMemberJoined(MemberJoinedEvent e) {
         auditService.log(e.userId(), "MEMBER_JOINED", e.teamId(), "Team",
-                null, "{\"role\":\"" + e.role() + "\"}", null);
+                null, json("role", e.role()), null);
     }
 
     @TransactionalEventListener
@@ -203,14 +209,14 @@ public class AuditEventListener {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onInvitationSent(InvitationSentEvent e) {
         auditService.log(SYSTEM_ACTOR, "INVITATION_SENT", e.invitationId(), "Invitation",
-                null, "{\"inviteeEmail\":\"" + e.inviteeEmail() + "\"}", null);
+                null, json("inviteeEmail", e.inviteeEmail()), null);
     }
 
     @TransactionalEventListener
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onJoinRequestCreated(JoinRequestCreatedEvent e) {
         safeLog(e.requesterId(), "JOIN_REQUEST_CREATED", e.joinRequestId(), "TeamJoinRequest",
-                null, "{\"teamId\":\"" + e.teamId() + "\"}", null);
+                null, json("teamId", e.teamId()), null);
     }
 
     @TransactionalEventListener
@@ -218,14 +224,14 @@ public class AuditEventListener {
     public void onJoinRequestResolved(JoinRequestResolvedEvent e) {
         safeLog(SYSTEM_ACTOR, e.accepted() ? "JOIN_REQUEST_ACCEPTED" : "JOIN_REQUEST_REJECTED",
                 e.joinRequestId(), "TeamJoinRequest",
-                null, "{\"requesterId\":\"" + e.requesterId() + "\"}", null);
+                null, json("requesterId", e.requesterId()), null);
     }
 
     @TransactionalEventListener
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onLeaveRequestCreated(LeaveRequestCreatedEvent e) {
         auditService.log(e.userId(), "LEAVE_REQUEST_CREATED", e.leaveRequestId(), "TeamLeaveRequest",
-                null, "{\"teamId\":\"" + e.teamId() + "\"}", null);
+                null, json("teamId", e.teamId()), null);
     }
 
     @TransactionalEventListener
@@ -233,14 +239,14 @@ public class AuditEventListener {
     public void onLeaveRequestResolved(LeaveRequestResolvedEvent e) {
         auditService.log(SYSTEM_ACTOR, e.approved() ? "LEAVE_REQUEST_APPROVED" : "LEAVE_REQUEST_REJECTED",
                 e.leaveRequestId(), "TeamLeaveRequest",
-                null, "{\"userId\":\"" + e.userId() + "\"}", null);
+                null, json("userId", e.userId()), null);
     }
 
     @TransactionalEventListener
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onMentorTeamAssigned(MentorTeamAssignedEvent e) {
         auditService.log(SYSTEM_ACTOR, "MENTOR_TEAM_ASSIGNED", e.teamId(), "MentorTeam",
-                null, "{\"mentorId\":\"" + e.mentorId() + "\"}", null);
+                null, json("mentorId", e.mentorId()), null);
     }
 
     // ═══════════════════════════════════════
@@ -251,14 +257,14 @@ public class AuditEventListener {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onSubmissionCreated(SubmissionCreatedEvent e) {
         auditService.log(SYSTEM_ACTOR, "SUBMISSION_CREATED", e.submissionId(), "Submission",
-                null, "{\"version\":" + e.versionNumber() + "}", null);
+                null, json("version", e.versionNumber()), null);
     }
 
     @TransactionalEventListener
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onSubmissionUpdated(SubmissionUpdatedEvent e) {
         auditService.log(SYSTEM_ACTOR, "SUBMISSION_UPDATED", e.submissionId(), "Submission",
-                null, "{\"newVersion\":" + e.newVersionNumber() + "}", null);
+                null, json("newVersion", e.newVersionNumber()), null);
     }
 
     // ═══════════════════════════════════════
@@ -268,24 +274,20 @@ public class AuditEventListener {
     @TransactionalEventListener
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onScoreCreated(ScoreCreatedEvent e) {
-        String payload = String.format(
-                "{\"judgeId\":\"%s\",\"teamId\":\"%s\",\"roundId\":\"%s\",\"submissionId\":\"%s\",\"timestamp\":\"%s\"}",
-                e.judgeId(), e.teamId(), e.roundId(), e.submissionId(), java.time.LocalDateTime.now());
         auditService.log(e.judgeId(), "SCORE_CREATED", e.judgeScoreId(), "JudgeScore",
-                null, payload, null);
+                null, json("judgeId", e.judgeId(), "teamId", e.teamId(), "roundId", e.roundId(),
+                        "submissionId", e.submissionId(), "timestamp", LocalDateTime.now()), null);
     }
 
     @TransactionalEventListener
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onScoreUpdated(ScoreUpdatedEvent e) {
         for (var change : e.changes()) {
-            String oldVal = change.oldScore() != null ? change.oldScore().toString() : "null";
-            String payload = String.format(
-                    "{\"judgeId\":\"%s\",\"teamId\":\"%s\",\"roundId\":\"%s\",\"criteriaId\":\"%s\",\"oldScore\":%s,\"newScore\":%s,\"timestamp\":\"%s\"}",
-                    e.judgeId(), e.teamId(), e.roundId(), change.criteriaId(),
-                    oldVal, change.newScore(), java.time.LocalDateTime.now());
             auditService.log(e.judgeId(), "SCORE_UPDATED", e.judgeScoreId(), "JudgeScore",
-                    "{\"oldScore\":" + oldVal + "}", payload, null);
+                    json("oldScore", change.oldScore()),
+                    json("judgeId", e.judgeId(), "teamId", e.teamId(), "roundId", e.roundId(),
+                            "criteriaId", change.criteriaId(), "oldScore", change.oldScore(),
+                            "newScore", change.newScore(), "timestamp", LocalDateTime.now()), null);
         }
     }
 
@@ -300,7 +302,7 @@ public class AuditEventListener {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onConflictDetected(ConflictDetectedEvent e) {
         auditService.log(e.judgeId(), "CONFLICT_DETECTED", e.submissionId(), "JudgeScore",
-                null, "{\"teamId\":\"" + e.teamId() + "\"}", null);
+                null, json("teamId", e.teamId()), null);
     }
 
     // ═══════════════════════════════════════
@@ -311,52 +313,69 @@ public class AuditEventListener {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onRankingRecalculated(RankingRecalculatedEvent e) {
         auditService.log(SYSTEM_ACTOR, "RANKING_RECALCULATED", e.roundId(), "Ranking",
-                null, "{\"version\":" + e.version() + ",\"teamCount\":" + e.teamCount() + "}", null);
+                null, json("version", e.version(), "teamCount", e.teamCount()), null);
     }
 
     @TransactionalEventListener
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onResultsPublished(ResultsPublishedEvent e) {
         auditService.log(e.publishedBy(), "RESULTS_PUBLISHED", e.roundId(), "PublishedResult",
-                null, "{\"disputeDeadline\":\"" + e.disputeDeadline() + "\"}", null);
+                null, json("disputeDeadline", e.disputeDeadline()), null);
     }
 
     @TransactionalEventListener
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onDisputeFiled(DisputeFiledEvent e) {
         auditService.log(e.filedBy(), "DISPUTE_FILED", e.disputeId(), "Dispute",
-                null, "{\"teamId\":\"" + e.teamId() + "\"}", null);
+                null, json("teamId", e.teamId()), null);
     }
 
     @TransactionalEventListener
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onDisputeResolved(DisputeResolvedEvent e) {
         auditService.log(e.resolvedBy(), "DISPUTE_RESOLVED", e.disputeId(), "Dispute",
-                null, "{\"resolution\":\"" + e.resolution() + "\"}", null);
+                null, json("resolution", e.resolution()), null);
     }
 
     @TransactionalEventListener
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onScoreReviewCreated(ScoreReviewCreatedEvent e) {
         auditService.log(SYSTEM_ACTOR, "SCORE_REVIEW_CREATED", e.reviewId(), "ScoreReviewRequest",
-                null, "{\"submissionId\":\"" + e.submissionId()
-                        + "\",\"deviationValue\":" + e.deviationValue() + "}", null);
+                null, json("submissionId", e.submissionId(),
+                        "deviationValue", e.deviationValue()), null);
     }
 
     @TransactionalEventListener
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onScoreReviewResolved(ScoreReviewResolvedEvent e) {
         auditService.log(e.resolvedBy(), "SCORE_REVIEW_RESOLVED", e.reviewId(), "ScoreReviewRequest",
-                null, "{\"status\":\"" + e.status() + "\"}", null);
+                null, json("status", e.status()), null);
     }
 
     @TransactionalEventListener
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onParticipantFeedbackSubmitted(ParticipantFeedbackSubmittedEvent e) {
         auditService.log(e.userId(), "PARTICIPANT_FEEDBACK_SUBMITTED", e.feedbackId(), "ParticipantFeedback",
-                null, "{\"eventId\":\"" + e.eventId()
-                        + "\",\"teamId\":\"" + e.teamId()
-                        + "\",\"overallRating\":" + e.overallRating() + "}", null);
+                null, json("eventId", e.eventId(), "teamId", e.teamId(),
+                        "overallRating", e.overallRating()), null);
+    }
+
+    /**
+     * Audit payloads were concatenated by hand, so any value carrying a quote or backslash
+     * produced a row no parser could read -- team names, event names and rejection reasons are
+     * all free text. Jackson also renders a null as null rather than the string "null".
+     */
+    private String json(Object... keyValuePairs) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        for (int i = 0; i < keyValuePairs.length; i += 2) {
+            payload.put(String.valueOf(keyValuePairs[i]), keyValuePairs[i + 1]);
+        }
+        try {
+            return objectMapper.writeValueAsString(payload);
+        } catch (JsonProcessingException ex) {
+            log.error("Failed to serialize audit payload for keys {}", payload.keySet(), ex);
+            return null;
+        }
     }
 
     private void safeLog(UUID actorId, String action, UUID targetId, String targetType,

@@ -1,21 +1,27 @@
 package com.sealhackathon.audit.listener;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sealhackathon.audit.service.AuditService;
 import com.sealhackathon.auth.event.LoginFailedEvent;
 import com.sealhackathon.auth.event.UserLoggedInEvent;
+import com.sealhackathon.event.event.EventCreatedEvent;
 import com.sealhackathon.judging.event.ScoreCreatedEvent;
 import com.sealhackathon.ranking.event.ResultsPublishedEvent;
 import com.sealhackathon.user.event.AccountApprovedEvent;
 import com.sealhackathon.user.event.AccountRejectedEvent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
@@ -26,6 +32,9 @@ import static org.mockito.Mockito.verify;
 class AuditEventListenerTest {
 
     @Mock private AuditService auditService;
+
+    /** Real mapper, module-registered like the Spring-managed one: payloads carry LocalDateTime. */
+    @Spy private ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
     @InjectMocks private AuditEventListener listener;
 
@@ -92,5 +101,37 @@ class AuditEventListenerTest {
 
         verify(auditService).log(eq(publisherId), eq("RESULTS_PUBLISHED"),
                 eq(roundId), eq("PublishedResult"), isNull(), any(), isNull());
+    }
+
+    @Test
+    void onEventCreated_shouldEmitParseableJson_whenNameCarriesQuotesAndBackslash() throws Exception {
+        UUID eventId = UUID.randomUUID();
+        // Event names are free text. Hand-concatenated JSON broke on every one of these.
+        String name = "Sự kiện \"Rồng Vàng\" \\ 2026";
+
+        listener.onEventCreated(new EventCreatedEvent(eventId, name, "coord@test.com"));
+
+        ArgumentCaptor<String> newValue = ArgumentCaptor.forClass(String.class);
+        verify(auditService).log(any(UUID.class), eq("EVENT_CREATED"), eq(eventId),
+                eq("HackathonEvent"), isNull(), newValue.capture(), isNull());
+
+        JsonNode parsed = objectMapper.readTree(newValue.getValue());
+        assertThat(parsed.get("name").asText()).isEqualTo(name);
+    }
+
+    @Test
+    void onAccountRejected_shouldEmitParseableJson_whenReasonCarriesQuotes() throws Exception {
+        UUID userId = UUID.randomUUID();
+        String reason = "Thiếu giấy tờ \"CMND\"";
+
+        listener.onAccountRejected(new AccountRejectedEvent(userId, "a@b.com", reason));
+
+        ArgumentCaptor<String> newValue = ArgumentCaptor.forClass(String.class);
+        verify(auditService).log(any(UUID.class), eq("ACCOUNT_REJECTED"), eq(userId), eq("User"),
+                any(), newValue.capture(), isNull());
+
+        JsonNode parsed = objectMapper.readTree(newValue.getValue());
+        assertThat(parsed.get("status").asText()).isEqualTo("REJECTED");
+        assertThat(parsed.get("reason").asText()).isEqualTo(reason);
     }
 }
