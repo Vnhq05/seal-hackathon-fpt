@@ -19,6 +19,8 @@ public interface EmailOtpTokenRepository extends JpaRepository<EmailOtpToken, UU
 
     Optional<EmailOtpToken> findTopByUserIdOrderByCreatedAtDesc(UUID userId);
 
+    Optional<EmailOtpToken> findTopByUserIdAndUsedFalseOrderByCreatedAtDesc(UUID userId);
+
     @Modifying
     @Query("UPDATE EmailOtpToken t SET t.used = true WHERE t.userId = :userId AND t.used = false")
     void invalidateAllByUserId(@Param("userId") UUID userId);

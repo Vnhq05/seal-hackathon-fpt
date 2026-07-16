@@ -64,6 +64,7 @@ app:
   otp:
     expiration-seconds: 180
     resend-cooldown-seconds: 300
+    max-attempts: ${APP_OTP_MAX_ATTEMPTS:5}
   submission:
     pdf:
       max-size-bytes: ${APP_SUBMISSION_PDF_MAX_SIZE_BYTES:5242880}

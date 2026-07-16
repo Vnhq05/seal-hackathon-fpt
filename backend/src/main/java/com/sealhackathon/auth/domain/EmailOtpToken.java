@@ -49,4 +49,9 @@ public class EmailOtpToken extends BaseEntity {
     @Column(name = "used", nullable = false)
     @Builder.Default
     private boolean used = false;
+
+    /** Consecutive wrong verification attempts for this token; burns token at max. */
+    @Column(name = "attempts", nullable = false)
+    @Builder.Default
+    private int attempts = 0;
 }
