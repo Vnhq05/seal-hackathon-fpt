@@ -110,6 +110,7 @@ class EventStatusResolverWiringSmokeTest {
         @Bean AuthPublicService authPublicService() { return mock(AuthPublicService.class); }
         @Bean EventScheduleService eventScheduleService() { return mock(EventScheduleService.class); }
         @Bean AllowedEmailDomainService allowedEmailDomainService() { return mock(AllowedEmailDomainService.class); }
+        @Bean TrackDrawSessionService trackDrawSessionService() { return mock(TrackDrawSessionService.class); }
         @Bean ScoringTemplateRepository scoringTemplateRepository() { return mock(ScoringTemplateRepository.class); }
         @Bean UserPublicService userPublicService() { return mock(UserPublicService.class); }
         @Bean FileStorageService fileStorageService() { return mock(FileStorageService.class); }
