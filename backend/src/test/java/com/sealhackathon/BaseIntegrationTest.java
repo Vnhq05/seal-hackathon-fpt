@@ -62,6 +62,11 @@ public abstract class BaseIntegrationTest {
         registry.add("spring.datasource.password", mssql::getPassword);
         registry.add("spring.datasource.driver-class-name",
                 () -> "com.microsoft.sqlserver.jdbc.SQLServerDriver");
+        // application.yml enables smtp.auth + starttls for Gmail; GreenMail is plain SMTP.
+        registry.add("spring.mail.username", () -> "");
+        registry.add("spring.mail.password", () -> "");
+        registry.add("spring.mail.properties.mail.smtp.auth", () -> "false");
+        registry.add("spring.mail.properties.mail.smtp.starttls.enable", () -> "false");
     }
 
     /** Application tables wiped before each test (children → parents). Keeps flyway_schema_history / sysdiagrams. */
