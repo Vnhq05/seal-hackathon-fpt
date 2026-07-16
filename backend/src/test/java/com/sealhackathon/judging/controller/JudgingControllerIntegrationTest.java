@@ -49,14 +49,6 @@ class JudgingControllerIntegrationTest extends BaseIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        submissionRepository.deleteAll();
-        judgeAssignmentRepository.deleteAll();
-        criteriaRepository.deleteAll();
-        roundRepository.deleteAll();
-        teamRepository.deleteAll();
-        eventRepository.deleteAll();
-        super.cleanDatabase();
-
         judge = createJudge();
 
         HackathonEvent event = eventRepository.save(HackathonEvent.builder()

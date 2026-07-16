@@ -1,10 +1,8 @@
 package com.sealhackathon.event.controller;
 
 import com.sealhackathon.BaseIntegrationTest;
-import com.sealhackathon.event.repository.ScoringTemplateRepository;
 import com.sealhackathon.user.domain.User;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 
 import static org.hamcrest.Matchers.hasSize;
@@ -15,15 +13,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 class ScoringTemplateControllerIntegrationTest extends BaseIntegrationTest {
-
-    @Autowired
-    private ScoringTemplateRepository scoringTemplateRepository;
-
-    @Override
-    protected void cleanDatabase() {
-        scoringTemplateRepository.deleteAll();
-        super.cleanDatabase();
-    }
 
     @Test
     void createAndList_shouldReturnTemplateWithCriteria() throws Exception {

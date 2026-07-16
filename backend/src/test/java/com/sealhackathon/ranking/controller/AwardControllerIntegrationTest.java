@@ -61,16 +61,6 @@ class AwardControllerIntegrationTest extends BaseIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        participationCertificateRepository.deleteAll();
-        teamAwardRepository.deleteAll();
-        rankingRepository.deleteAll();
-        prizeRepository.deleteAll();
-        teamMemberRepository.deleteAll();
-        teamRepository.deleteAll();
-        roundRepository.deleteAll();
-        eventRepository.deleteAll();
-        super.cleanDatabase();
-
         admin = createAdmin();
         leader1 = createUser("leader1@fpt.edu.vn", UserType.FPT_STUDENT, AccountStatus.ACTIVE);
         leader2 = createUser("leader2@fpt.edu.vn", UserType.FPT_STUDENT, AccountStatus.ACTIVE);

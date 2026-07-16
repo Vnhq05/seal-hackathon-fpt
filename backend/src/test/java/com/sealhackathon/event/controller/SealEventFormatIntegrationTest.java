@@ -27,12 +27,6 @@ class SealEventFormatIntegrationTest extends BaseIntegrationTest {
     @Autowired
     private HackathonEventRepository eventRepository;
 
-    @Override
-    protected void cleanDatabase() {
-        eventRepository.deleteAll();
-        super.cleanDatabase();
-    }
-
     @Test
     @WithMockUser(roles = "SYSTEM_ADMIN")
     void createSealEvent_appliesTemplate() throws Exception {

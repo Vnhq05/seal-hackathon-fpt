@@ -8,8 +8,6 @@ import com.sealhackathon.event.domain.enums.EventStatus;
 import com.sealhackathon.event.repository.CriteriaRepository;
 import com.sealhackathon.event.repository.HackathonEventRepository;
 import com.sealhackathon.event.repository.RoundRepository;
-import com.sealhackathon.ranking.repository.PublishedResultRepository;
-import com.sealhackathon.ranking.repository.RankingRepository;
 import com.sealhackathon.user.domain.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,21 +28,12 @@ class RankingControllerIntegrationTest extends BaseIntegrationTest {
     @Autowired private HackathonEventRepository eventRepository;
     @Autowired private RoundRepository roundRepository;
     @Autowired private CriteriaRepository criteriaRepository;
-    @Autowired private RankingRepository rankingRepository;
-    @Autowired private PublishedResultRepository publishedResultRepository;
 
     private UUID roundId;
     private UUID eventId;
 
     @BeforeEach
     void setUp() {
-        publishedResultRepository.deleteAll();
-        rankingRepository.deleteAll();
-        criteriaRepository.deleteAll();
-        roundRepository.deleteAll();
-        eventRepository.deleteAll();
-        super.cleanDatabase();
-
         HackathonEvent event = eventRepository.save(HackathonEvent.builder()
                 .name("Ranking Event").season("Summer").year(2026)
                 .startDate(LocalDate.of(2026, 1, 1))

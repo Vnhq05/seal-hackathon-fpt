@@ -62,16 +62,6 @@ class ScoreReviewIntegrationTest extends BaseIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        scoreReviewRequestRepository.deleteAll();
-        judgeScoreRepository.deleteAll();
-        teamJudgeAssignmentRepository.deleteAll();
-        submissionRepository.deleteAll();
-        criteriaRepository.deleteAll();
-        roundRepository.deleteAll();
-        teamRepository.deleteAll();
-        eventRepository.deleteAll();
-        super.cleanDatabase();
-
         judge1 = createUser("judge1@test.com", com.sealhackathon.common.enums.UserType.LECTURER,
                 com.sealhackathon.common.enums.AccountStatus.ACTIVE);
         judge2 = createUser("judge2@test.com", com.sealhackathon.common.enums.UserType.LECTURER,

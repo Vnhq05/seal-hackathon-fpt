@@ -6,7 +6,6 @@ import com.sealhackathon.common.enums.UserType;
 import com.sealhackathon.event.domain.HackathonEvent;
 import com.sealhackathon.event.domain.enums.EventStatus;
 import com.sealhackathon.event.repository.HackathonEventRepository;
-import com.sealhackathon.feedback.repository.ParticipantFeedbackRepository;
 import com.sealhackathon.team.domain.Team;
 import com.sealhackathon.team.domain.TeamMember;
 import com.sealhackathon.team.domain.enums.TeamMemberRole;
@@ -34,7 +33,6 @@ class ParticipantFeedbackIntegrationTest extends BaseIntegrationTest {
     @Autowired private HackathonEventRepository eventRepository;
     @Autowired private TeamRepository teamRepository;
     @Autowired private TeamMemberRepository teamMemberRepository;
-    @Autowired private ParticipantFeedbackRepository feedbackRepository;
 
     private User coordinator;
     private User student;
@@ -45,12 +43,6 @@ class ParticipantFeedbackIntegrationTest extends BaseIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        feedbackRepository.deleteAll();
-        teamMemberRepository.deleteAll();
-        teamRepository.deleteAll();
-        eventRepository.deleteAll();
-        super.cleanDatabase();
-
         coordinator = createCoordinator();
         student = createStudent();
         formingStudent = createUser("forming@fpt.edu.vn", UserType.FPT_STUDENT, AccountStatus.ACTIVE);

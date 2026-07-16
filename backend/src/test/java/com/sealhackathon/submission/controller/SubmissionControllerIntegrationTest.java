@@ -46,13 +46,6 @@ class SubmissionControllerIntegrationTest extends BaseIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        submissionRepository.deleteAll();
-        teamMemberRepository.deleteAll();
-        teamRepository.deleteAll();
-        roundRepository.deleteAll();
-        eventRepository.deleteAll();
-        super.cleanDatabase();
-
         leader = createUser("leader@fpt.edu.vn", UserType.FPT_STUDENT, AccountStatus.ACTIVE);
 
         HackathonEvent event = eventRepository.save(HackathonEvent.builder()

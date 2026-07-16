@@ -4,14 +4,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.sealhackathon.BaseIntegrationTest;
 import com.sealhackathon.common.enums.AccountStatus;
 import com.sealhackathon.common.enums.UserType;
-import com.sealhackathon.event.repository.HackathonEventRepository;
-import com.sealhackathon.event.repository.TrackDrawSessionRepository;
-import com.sealhackathon.team.repository.TeamMemberRepository;
-import com.sealhackathon.team.repository.TeamRepository;
 import com.sealhackathon.user.domain.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -26,11 +21,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 class TrackDrawSessionIntegrationTest extends BaseIntegrationTest {
 
-    @Autowired private HackathonEventRepository eventRepository;
-    @Autowired private TeamRepository teamRepository;
-    @Autowired private TeamMemberRepository teamMemberRepository;
-    @Autowired private TrackDrawSessionRepository drawSessionRepository;
-
     private User admin;
     private User leader1;
     private User leader2;
@@ -43,12 +33,6 @@ class TrackDrawSessionIntegrationTest extends BaseIntegrationTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        drawSessionRepository.deleteAll();
-        teamMemberRepository.deleteAll();
-        teamRepository.deleteAll();
-        eventRepository.deleteAll();
-        super.cleanDatabase();
-
         admin = createAdmin();
         leader1 = createUser("leader1@fpt.edu.vn", UserType.FPT_STUDENT, AccountStatus.ACTIVE);
         leader2 = createUser("leader2@fpt.edu.vn", UserType.FPT_STUDENT, AccountStatus.ACTIVE);

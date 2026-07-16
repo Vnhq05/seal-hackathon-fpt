@@ -6,8 +6,6 @@ import com.sealhackathon.common.enums.UserType;
 import com.sealhackathon.event.domain.HackathonEvent;
 import com.sealhackathon.event.domain.enums.EventStatus;
 import com.sealhackathon.event.repository.HackathonEventRepository;
-import com.sealhackathon.team.repository.TeamMemberRepository;
-import com.sealhackathon.team.repository.TeamRepository;
 import com.sealhackathon.user.domain.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,18 +24,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class TeamControllerIntegrationTest extends BaseIntegrationTest {
 
     @Autowired private HackathonEventRepository eventRepository;
-    @Autowired private TeamRepository teamRepository;
-    @Autowired private TeamMemberRepository teamMemberRepository;
 
     private UUID eventId;
 
     @BeforeEach
     void setUp() {
-        teamMemberRepository.deleteAll();
-        teamRepository.deleteAll();
-        eventRepository.deleteAll();
-        super.cleanDatabase();
-
         HackathonEvent event = eventRepository.save(HackathonEvent.builder()
                 .name("Test Event")
                 .season("Summer")

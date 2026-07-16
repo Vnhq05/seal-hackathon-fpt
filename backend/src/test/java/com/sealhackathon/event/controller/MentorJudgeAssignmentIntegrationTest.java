@@ -9,7 +9,6 @@ import com.sealhackathon.event.domain.enums.EventStatus;
 import com.sealhackathon.event.domain.enums.RoundType;
 import com.sealhackathon.event.repository.EventJudgeAssignmentRepository;
 import com.sealhackathon.event.repository.HackathonEventRepository;
-import com.sealhackathon.event.repository.MentorAssignmentRepository;
 import com.sealhackathon.event.repository.RoundRepository;
 import com.sealhackathon.event.repository.TrackRepository;
 import com.sealhackathon.user.domain.User;
@@ -25,7 +24,6 @@ import java.util.UUID;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -37,7 +35,6 @@ class MentorJudgeAssignmentIntegrationTest extends BaseIntegrationTest {
     @Autowired private TrackRepository trackRepository;
     @Autowired private RoundRepository roundRepository;
     @Autowired private EventJudgeAssignmentRepository eventJudgeRepository;
-    @Autowired private MentorAssignmentRepository mentorAssignmentRepository;
 
     private User admin;
     private User mentor;
@@ -49,13 +46,6 @@ class MentorJudgeAssignmentIntegrationTest extends BaseIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        mentorAssignmentRepository.deleteAll();
-        eventJudgeRepository.deleteAll();
-        roundRepository.deleteAll();
-        trackRepository.deleteAll();
-        eventRepository.deleteAll();
-        super.cleanDatabase();
-
         admin = createAdmin();
         mentor = createUser("mentor@test.com", com.sealhackathon.common.enums.UserType.LECTURER,
                 com.sealhackathon.common.enums.AccountStatus.ACTIVE);

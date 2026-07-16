@@ -29,12 +29,6 @@ class EventControllerIntegrationTest extends BaseIntegrationTest {
     @Autowired
     private HackathonEventRepository eventRepository;
 
-    @Override
-    protected void cleanDatabase() {
-        eventRepository.deleteAll();
-        super.cleanDatabase();
-    }
-
     // ── BR-08: Coordinator creates event ──
 
     @Test

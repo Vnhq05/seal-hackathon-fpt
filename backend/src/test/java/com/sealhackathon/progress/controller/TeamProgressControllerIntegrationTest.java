@@ -50,13 +50,6 @@ class TeamProgressControllerIntegrationTest extends BaseIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        mentorTeamRepository.deleteAll();
-        teamMemberRepository.deleteAll();
-        teamRepository.deleteAll();
-        roundRepository.deleteAll();
-        eventRepository.deleteAll();
-        super.cleanDatabase();
-
         coordinator = createCoordinator();
         mentor = createMentor();
         student = createStudent();
