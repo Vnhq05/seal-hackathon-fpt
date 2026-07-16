@@ -160,6 +160,20 @@ public abstract class BaseIntegrationTest {
         return greenMail.getReceivedMessages();
     }
 
+    /**
+     * Runs {@code action} with the embedded SMTP server stopped, so mail sending genuinely fails.
+     * Mocking the mail bean cannot stand in for this: the failure has to travel out through
+     * EmailService's real {@code @Transactional} proxy to reproduce what a live outage does.
+     */
+    protected void withMailServerDown(Runnable action) {
+        greenMail.stop();
+        try {
+            action.run();
+        } finally {
+            greenMail.start();
+        }
+    }
+
     /** Sets the business owner of an event. See adr-event-owner-vs-created-by.md. */
     protected void assignEventOwner(UUID eventId, UUID ownerUserId) {
         transactionTemplate.executeWithoutResult(status ->
