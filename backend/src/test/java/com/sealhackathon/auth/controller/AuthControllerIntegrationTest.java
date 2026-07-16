@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -173,6 +174,48 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"email":"lock@test.com","password":"password123"}
+                                """))
+                .andExpect(status().isLocked());
+    }
+
+    @Test
+    void login_shouldPersistFailedAttemptsInDb_afterWrongPassword() throws Exception {
+        User user = createUser("persist-fail@test.com", UserType.FPT_STUDENT, AccountStatus.ACTIVE);
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"persist-fail@test.com","password":"wrong"}
+                                """))
+                .andExpect(status().isUnauthorized());
+
+        entityManager.clear();
+        User reloaded = userRepository.findById(user.getId()).orElseThrow();
+        assertThat(reloaded.getFailedLoginAttempts()).isEqualTo(1);
+        assertThat(reloaded.getLockedUntil()).isNull();
+    }
+
+    @Test
+    void login_shouldSetLockedUntil_after5Failures_andRejectCorrectPassword() throws Exception {
+        User user = createUser("lock-until@test.com", UserType.FPT_STUDENT, AccountStatus.ACTIVE);
+
+        for (int i = 0; i < 5; i++) {
+            mockMvc.perform(post("/api/auth/login")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""
+                            {"email":"lock-until@test.com","password":"wrong"}
+                            """));
+        }
+
+        entityManager.clear();
+        User reloaded = userRepository.findById(user.getId()).orElseThrow();
+        assertThat(reloaded.getFailedLoginAttempts()).isEqualTo(5);
+        assertThat(reloaded.getLockedUntil()).isNotNull();
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"lock-until@test.com","password":"password123"}
                                 """))
                 .andExpect(status().isLocked());
     }

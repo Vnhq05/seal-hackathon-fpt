@@ -125,7 +125,7 @@ public abstract class BaseIntegrationTest {
     @Autowired protected HackathonEventRepository eventRepository;
     @Autowired protected EventEnrollmentRepository enrollmentRepository;
     @Autowired private JdbcTemplate jdbcTemplate;
-    @Autowired private EntityManager entityManager;
+    @Autowired protected EntityManager entityManager;
     @Autowired private TransactionTemplate transactionTemplate;
 
     @BeforeEach

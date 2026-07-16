@@ -12,6 +12,7 @@ import com.sealhackathon.user.dto.snapshot.UserSnapshot;
 import com.sealhackathon.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
@@ -74,11 +75,13 @@ public class UserPublicServiceImpl implements UserPublicService {
     }
 
     @Override
-    @Transactional
-    public void incrementFailedAttempts(UUID userId) {
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public int incrementFailedAttempts(UUID userId) {
         User user = getUserEntity(userId);
-        user.setFailedLoginAttempts(user.getFailedLoginAttempts() + 1);
+        int next = user.getFailedLoginAttempts() + 1;
+        user.setFailedLoginAttempts(next);
         userRepository.save(user);
+        return next;
     }
 
     @Override
@@ -91,7 +94,7 @@ public class UserPublicServiceImpl implements UserPublicService {
     }
 
     @Override
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void lockAccount(UUID userId, LocalDateTime until) {
         User user = getUserEntity(userId);
         user.setLockedUntil(until);

@@ -315,13 +315,13 @@ public class AuthService {
 
     // ── BR-06: Handle failed login ──
     private void handleFailedLogin(UserSnapshot user, String ipAddress) {
-        userPublicService.incrementFailedAttempts(user.getId());
-        LockState lockState = userPublicService.getLockState(user.getId());
+        // Use returned count — do not re-read via getLockState (outer TX may hold stale entity)
+        int attempts = userPublicService.incrementFailedAttempts(user.getId());
 
         eventPublisher.publishEvent(new LoginFailedEvent(
-                user.getEmail(), ipAddress, lockState.getFailedAttempts(), LocalDateTime.now()));
+                user.getEmail(), ipAddress, attempts, LocalDateTime.now()));
 
-        if (lockState.getFailedAttempts() >= maxFailedAttempts) {
+        if (attempts >= maxFailedAttempts) {
             LocalDateTime lockUntil = LocalDateTime.now().plusMinutes(lockDurationMinutes);
             userPublicService.lockAccount(user.getId(), lockUntil);
         }

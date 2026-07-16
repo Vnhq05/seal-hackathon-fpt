@@ -24,7 +24,8 @@ public interface UserPublicService {
 
     LockState getLockState(UUID userId);
 
-    void incrementFailedAttempts(UUID userId);
+    /** Returns the new consecutive failed-attempt count after increment. */
+    int incrementFailedAttempts(UUID userId);
 
     void resetFailedAttempts(UUID userId);
 

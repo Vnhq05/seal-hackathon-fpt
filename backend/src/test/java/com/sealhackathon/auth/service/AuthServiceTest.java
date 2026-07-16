@@ -294,10 +294,10 @@ class AuthServiceTest {
                 .status(AccountStatus.ACTIVE)
                 .build();
         LockState lockState = LockState.builder().failedAttempts(0).build();
-        LockState afterIncrement = LockState.builder().failedAttempts(1).build();
 
         when(userPublicService.findByEmail("wrong@test.com")).thenReturn(Optional.of(user));
-        when(userPublicService.getLockState(userId)).thenReturn(lockState).thenReturn(afterIncrement);
+        when(userPublicService.getLockState(userId)).thenReturn(lockState);
+        when(userPublicService.incrementFailedAttempts(userId)).thenReturn(1);
         when(passwordEncoder.matches("wrong", "hashed")).thenReturn(false);
 
         assertThatThrownBy(() -> authService.login(
@@ -305,6 +305,53 @@ class AuthServiceTest {
                 .isInstanceOf(InvalidCredentialsException.class);
 
         verify(userPublicService).incrementFailedAttempts(userId);
+        verify(userPublicService, never()).lockAccount(any(), any());
+    }
+
+    @Test
+    void login_shouldLockAccount_whenFailedAttemptsReachThreshold() {
+        UUID userId = UUID.randomUUID();
+        UserSnapshot user = UserSnapshot.builder()
+                .id(userId)
+                .email("lock@test.com")
+                .passwordHash("hashed")
+                .status(AccountStatus.ACTIVE)
+                .build();
+        LockState lockState = LockState.builder().failedAttempts(0).build();
+
+        when(userPublicService.findByEmail("lock@test.com")).thenReturn(Optional.of(user));
+        when(userPublicService.getLockState(userId)).thenReturn(lockState);
+        when(userPublicService.incrementFailedAttempts(userId)).thenReturn(5);
+        when(passwordEncoder.matches("wrong", "hashed")).thenReturn(false);
+
+        assertThatThrownBy(() -> authService.login(
+                LoginRequest.builder().email("lock@test.com").password("wrong").build(), "127.0.0.1"))
+                .isInstanceOf(InvalidCredentialsException.class);
+
+        verify(userPublicService).lockAccount(eq(userId), any());
+    }
+
+    @Test
+    void login_shouldNotLock_whenBelowThreshold() {
+        UUID userId = UUID.randomUUID();
+        UserSnapshot user = UserSnapshot.builder()
+                .id(userId)
+                .email("almost@test.com")
+                .passwordHash("hashed")
+                .status(AccountStatus.ACTIVE)
+                .build();
+        LockState lockState = LockState.builder().failedAttempts(0).build();
+
+        when(userPublicService.findByEmail("almost@test.com")).thenReturn(Optional.of(user));
+        when(userPublicService.getLockState(userId)).thenReturn(lockState);
+        when(userPublicService.incrementFailedAttempts(userId)).thenReturn(4);
+        when(passwordEncoder.matches("wrong", "hashed")).thenReturn(false);
+
+        assertThatThrownBy(() -> authService.login(
+                LoginRequest.builder().email("almost@test.com").password("wrong").build(), "127.0.0.1"))
+                .isInstanceOf(InvalidCredentialsException.class);
+
+        verify(userPublicService, never()).lockAccount(any(), any());
     }
 
     // ── BR-03: External student requires universityName ──
