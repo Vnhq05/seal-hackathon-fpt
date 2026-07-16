@@ -58,6 +58,9 @@ class EventServiceTest {
     @Mock private TeamService teamService;
     @Mock private FormatRuleEngine formatRuleEngine;
     @Mock private EventOwnershipGuard eventOwnershipGuard;
+    @Mock private EventScheduleService eventScheduleService;
+    @Mock private AllowedEmailDomainService allowedEmailDomainService;
+    @Mock private TrackDrawSessionService trackDrawSessionService;
     @Spy private EventStatusResolver eventStatusResolver = new EventStatusResolver();
 
     @InjectMocks private EventService eventService;
@@ -236,6 +239,10 @@ class EventServiceTest {
 
         eventService.deleteEvent(eventId, "127.0.0.1");
 
+        // The three non-cascaded children must be cleared before the event, or the V12 FK blocks it.
+        verify(eventScheduleService).deleteByEvent(eventId);
+        verify(allowedEmailDomainService).deleteByEvent(eventId);
+        verify(trackDrawSessionService).deleteByEvent(eventId);
         verify(eventRepository).delete(event);
         verify(auditService).log(any(), any(), any(), any(), any(), any(), any());
     }

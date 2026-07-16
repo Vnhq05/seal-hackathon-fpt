@@ -28,6 +28,12 @@ public class EventScheduleService {
                 .toList();
     }
 
+    /** Removes an event's schedule rows. Called when the owning event is deleted (V12 FK). */
+    @Transactional
+    public void deleteByEvent(UUID eventId) {
+        scheduleRepository.deleteByEventId(eventId);
+    }
+
     @Transactional
     public void seedSchedules(HackathonEvent event, List<EventSchedule> schedules) {
         scheduleRepository.deleteByEventId(event.getId());

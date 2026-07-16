@@ -44,6 +44,16 @@ public class TrackDrawSessionService {
     private final FormatRuleEngine formatRuleEngine;
     private final TeamPublicService teamPublicService;
 
+    /**
+     * Removes an event's draw session when the owning event is deleted (V12 FK). Deleted as an entity,
+     * not a bulk query, so the session's queue rows cascade first -- track_draw_queue's FK to the
+     * session is NO ACTION and would otherwise block the delete.
+     */
+    @Transactional
+    public void deleteByEvent(UUID eventId) {
+        sessionRepository.findByEventId(eventId).ifPresent(sessionRepository::delete);
+    }
+
     @Transactional
     public TrackDrawSessionResponse openDrawSession(UUID eventId, UUID openedBy,
                                                      OpenTrackDrawSessionRequest request) {

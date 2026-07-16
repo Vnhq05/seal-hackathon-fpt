@@ -67,6 +67,12 @@ public class AllowedEmailDomainService {
         return listPlatformDomains();
     }
 
+    /** Removes an event's whitelist rows. Called when the owning event is deleted (V12 FK). */
+    @Transactional
+    public void deleteByEvent(UUID eventId) {
+        domainRepository.deleteByEventId(eventId);
+    }
+
     @Transactional
     public void seedDomains(UUID eventId, List<AllowedEmailDomain> domains) {
         List<AllowedEmailDomain> source = effectivePlatformDomains();

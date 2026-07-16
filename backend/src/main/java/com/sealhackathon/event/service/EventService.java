@@ -77,6 +77,7 @@ public class EventService {
     private final EventJudgeService eventJudgeService;
     private final EventScheduleService eventScheduleService;
     private final AllowedEmailDomainService allowedEmailDomainService;
+    private final TrackDrawSessionService trackDrawSessionService;
     private final ScoringTemplateRepository scoringTemplateRepository;
     private final UserPublicService userPublicService;
     private final FileStorageService fileStorageService;
@@ -275,6 +276,14 @@ public class EventService {
         }
 
         String eventName = event.getName();
+
+        // These three children reference the event but are not JPA-cascaded from it (they map event_id
+        // as a plain UUID). Before V12 they had no FK either, so deleting an event silently orphaned
+        // them; now the FK would block the delete. Remove them here, the way JPA removes rounds/tracks.
+        eventScheduleService.deleteByEvent(eventId);
+        allowedEmailDomainService.deleteByEvent(eventId);
+        trackDrawSessionService.deleteByEvent(eventId);
+
         eventRepository.delete(event);
 
         auditService.log(

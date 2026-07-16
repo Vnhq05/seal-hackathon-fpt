@@ -17,4 +17,6 @@ public interface AllowedEmailDomainRepository extends JpaRepository<AllowedEmail
     boolean existsByEventId(UUID eventId);
 
     void deleteByEventIdAndId(UUID eventId, UUID id);
+
+    void deleteByEventId(UUID eventId);
 }
