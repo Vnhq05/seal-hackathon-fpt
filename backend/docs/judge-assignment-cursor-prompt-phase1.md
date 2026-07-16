@@ -1,3 +1,11 @@
+> **SUPERSEDED — tư liệu lịch sử, không còn hiệu lực.**
+> Mô hình "`trackId` nullable, suy phạm vi từ `RoundType`" mô tả ở đây đã được Phase 2 thay bằng
+> `AssignmentScope { ROUND, TRACK, GROUP }` — xem `judge-assignment-cursor-prompt-phase2.md`.
+> Luật hiện hành: **`trackId` phụ thuộc `scope`, không phụ thuộc `RoundType`.** PRELIMINARY +
+> `scope=ROUND` (judge chấm toàn vòng loại) là hợp lệ; chỉ FINAL mới bắt buộc ROUND scope.
+> Mục 0 dưới đây nói "KHÔNG thêm `scope` enum / `CompetitionGroup` / `active` flag" — cả ba
+> đều đã tồn tại trong code từ Phase 2/3. Đừng dùng file này làm căn cứ luật.
+
 # TASK (Phase 1): Judge chấm theo Round/Track — bỏ gán thủ công từng Team
 
 ## Mục tiêu Phase 1 (tối thiểu, không làm Group/audit/notification/deactivate ở bước này)

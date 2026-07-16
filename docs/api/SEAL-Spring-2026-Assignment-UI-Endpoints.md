@@ -192,12 +192,12 @@ Field `roundType` (`PRELIMINARY` | `FINAL`) và `judgeCount` dùng cho tab + rea
 
 #### `GET /api/events/{eventId}/rounds/{roundId}/judges`
 
-**Query params:**
+**Query params:** — tất cả optional, dùng để lọc. Bỏ trống = toàn bộ judge của round.
 
-| Round type | `trackId` |
-|------------|-----------|
-| `PRELIMINARY` | **Bắt buộc** |
-| `FINAL` | **Không gửi** |
+| Param | Ghi chú |
+|-------|---------|
+| `trackId` | Lọc theo Track |
+| `groupId` | Lọc theo Group |
 
 **Response `data`:** `JudgeAssignmentResponse[]`
 ```json
@@ -223,20 +223,36 @@ Field `roundType` (`PRELIMINARY` | `FINAL`) và `judgeCount` dùng cho tab + rea
 
 #### `POST /api/events/{eventId}/rounds/{roundId}/judges`
 
-**Request (Preliminary):**
-```json
-{
-  "judgeUserId": "uuid",
-  "trackId": "uuid"
-}
-```
+Phạm vi chấm do `scope` quyết định, **không** suy từ loại Round.
 
-**Request (Grand Final):**
+**Request (ROUND scope — chấm toàn round):**
 ```json
 {
   "judgeUserId": "uuid"
 }
 ```
+
+**Request (TRACK scope):**
+```json
+{
+  "judgeUserId": "uuid",
+  "scope": "TRACK",
+  "trackId": "uuid"
+}
+```
+
+**Request (GROUP scope):**
+```json
+{
+  "judgeUserId": "uuid",
+  "scope": "GROUP",
+  "trackId": "uuid",
+  "groupId": "uuid"
+}
+```
+
+`scope` có thể bỏ trống — khi đó suy ra từ `trackId`/`groupId` (không có cả hai → `ROUND`).
+Grand Final chỉ chấp nhận ROUND scope: gửi kèm `trackId`/`groupId` → `400`.
 
 **Response `201` `data`:** `JudgeAssignmentResponse`
 

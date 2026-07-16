@@ -127,12 +127,14 @@ class MentorJudgeAssignmentIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
-    void assignJudge_preliminary_requiresTrackId() throws Exception {
+    void assignJudge_preliminary_defaultsToRoundScope_whenTrackIdOmitted() throws Exception {
         mockMvc.perform(post("/api/events/" + eventId + "/rounds/" + preliminaryRoundId + "/judges")
                         .header("Authorization", "Bearer " + tokenFor(admin))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"judgeUserId\":\"" + judge.getId() + "\"}"))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.scope", is("ROUND")))
+                .andExpect(jsonPath("$.data.trackId").value(nullValue()));
     }
 
     @Test
@@ -166,10 +168,18 @@ class MentorJudgeAssignmentIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
-    void listJudges_preliminary_requiresTrackIdQuery() throws Exception {
+    void listJudges_preliminary_withoutTrackIdQuery_returnsRoundJudges() throws Exception {
+        mockMvc.perform(post("/api/events/" + eventId + "/rounds/" + preliminaryRoundId + "/judges")
+                        .header("Authorization", "Bearer " + tokenFor(admin))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"judgeUserId\":\"" + judge.getId() + "\",\"trackId\":\"" + trackId + "\"}"))
+                .andExpect(status().isCreated());
+
         mockMvc.perform(get("/api/events/" + eventId + "/rounds/" + preliminaryRoundId + "/judges")
                         .header("Authorization", "Bearer " + tokenFor(admin)))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(1)))
+                .andExpect(jsonPath("$.data[0].judgeUserId", is(judge.getId().toString())));
     }
 
     @Test
