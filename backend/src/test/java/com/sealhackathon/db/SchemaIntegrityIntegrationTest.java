@@ -3,15 +3,24 @@ package com.sealhackathon.db;
 import com.sealhackathon.BaseIntegrationTest;
 import com.sealhackathon.common.enums.AccountStatus;
 import com.sealhackathon.common.enums.UserType;
+import org.flywaydb.core.Flyway;
+import org.flywaydb.core.api.MigrationInfo;
+import org.flywaydb.core.api.MigrationState;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Map;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
@@ -19,26 +28,42 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
 /**
- * Proves Flyway V0–V5 + Hibernate validate actually ran on SQL Server
+ * Proves Flyway classpath migrations + Hibernate validate actually ran on SQL Server
  * (not a silent JPA create-drop / skipped Testcontainers class).
  */
 class SchemaIntegrityIntegrationTest extends BaseIntegrationTest {
 
+    private static final Pattern MIGRATION_VERSION =
+            Pattern.compile("^V([0-9]+)__.*\\.sql$", Pattern.CASE_INSENSITIVE);
+
     @Autowired private JdbcTemplate jdbcTemplate;
+    @Autowired private Flyway flyway;
 
     @Test
-    void flyway_appliedVersions0Through5_successfully() {
-        List<Map<String, Object>> applied = jdbcTemplate.queryForList(
-                "SELECT version, success FROM flyway_schema_history "
-                        + "WHERE version IS NOT NULL ORDER BY installed_rank");
+    void flyway_allClasspathMigrationsAppliedSuccessfully() throws IOException {
+        MigrationInfo[] pending = flyway.info().pending();
+        assertThat(pending)
+                .as("Flyway must have no pending migrations")
+                .isEmpty();
 
-        assertThat(applied)
-                .extracting(row -> String.valueOf(row.get("version")))
-                .containsExactly("0", "1", "2", "3", "4", "5");
-        assertThat(applied).allSatisfy(row -> {
-            Object success = row.get("success");
-            assertThat(success).isIn(true, Boolean.TRUE, 1, (byte) 1);
-        });
+        MigrationInfo[] applied = Arrays.stream(flyway.info().applied())
+                .filter(info -> info.getVersion() != null)
+                .toArray(MigrationInfo[]::new);
+
+        assertThat(applied).isNotEmpty();
+        assertThat(applied).allSatisfy(info ->
+                assertThat(info.getState())
+                        .as("migration V%s must not be failed", info.getVersion())
+                        .isEqualTo(MigrationState.SUCCESS));
+
+        Set<String> appliedVersions = Arrays.stream(applied)
+                .map(info -> info.getVersion().toString())
+                .collect(Collectors.toSet());
+
+        Set<String> classpathVersions = classpathMigrationVersions();
+        assertThat(appliedVersions)
+                .as("applied Flyway versions must match classpath db/migration scripts")
+                .isEqualTo(classpathVersions);
     }
 
     @Test
@@ -93,6 +118,21 @@ class SchemaIntegrityIntegrationTest extends BaseIntegrationTest {
                 .isInstanceOf(DataIntegrityViolationException.class)
                 .satisfies(ex -> assertThat(ex.getMessage() + " / " + ex.getCause())
                         .containsIgnoringCase("CK_notifications_type"));
+    }
+
+    private Set<String> classpathMigrationVersions() throws IOException {
+        Resource[] resources = new PathMatchingResourcePatternResolver()
+                .getResources("classpath:db/migration/V*__*.sql");
+        return Arrays.stream(resources)
+                .map(Resource::getFilename)
+                .map(filename -> {
+                    Matcher matcher = MIGRATION_VERSION.matcher(filename);
+                    assertThat(matcher.matches())
+                            .as("unexpected migration filename: %s", filename)
+                            .isTrue();
+                    return String.valueOf(Integer.parseInt(matcher.group(1)));
+                })
+                .collect(Collectors.toSet());
     }
 
     private UUID insertFormingTeam() {
