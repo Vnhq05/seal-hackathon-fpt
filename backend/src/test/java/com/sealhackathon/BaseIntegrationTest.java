@@ -1,6 +1,9 @@
 package com.sealhackathon;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.icegreen.greenmail.store.FolderException;
+import com.icegreen.greenmail.util.GreenMail;
+import com.icegreen.greenmail.util.ServerSetup;
 import com.sealhackathon.auth.security.JwtProvider;
 import com.sealhackathon.common.enums.AccountStatus;
 import com.sealhackathon.common.enums.UserType;
@@ -11,6 +14,7 @@ import com.sealhackathon.team.domain.enums.EnrollmentStatus;
 import com.sealhackathon.team.repository.EventEnrollmentRepository;
 import com.sealhackathon.user.domain.User;
 import com.sealhackathon.user.repository.UserRepository;
+import jakarta.mail.internet.MimeMessage;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,12 +41,18 @@ public abstract class BaseIntegrationTest {
 
     @SuppressWarnings("resource")
     static final MSSQLServerContainer<?> mssql;
+    static final GreenMail greenMail;
 
     static {
         mssql = new MSSQLServerContainer<>("mcr.microsoft.com/mssql/server:2022-latest")
                 .acceptLicense()
                 .withPassword("Seal_Test_Password_123");
         mssql.start();
+        // Singleton, giống MSSQLServerContainer: một server cho cả Spring context,
+        // không start/stop theo từng test class. Cổng 3025 khớp spring.mail.port
+        // đã có sẵn trong application-test.yml.
+        greenMail = new GreenMail(new ServerSetup(3025, "127.0.0.1", ServerSetup.PROTOCOL_SMTP));
+        greenMail.start();
     }
 
     @DynamicPropertySource
@@ -134,6 +144,15 @@ public abstract class BaseIntegrationTest {
             jdbcTemplate.update(sql);
         }
         entityManager.clear();
+        try {
+            greenMail.purgeEmailFromAllMailboxes();
+        } catch (FolderException e) {
+            throw new IllegalStateException("Failed to purge GreenMail mailboxes", e);
+        }
+    }
+
+    protected MimeMessage[] receivedMails() {
+        return greenMail.getReceivedMessages();
     }
 
     /**
