@@ -5,8 +5,8 @@
 -- Vietnamese character written to it is transcoded to the database codepage and lost. The audit
 -- payloads carry team names, event names and rejection reasons: free text, routinely Vietnamese.
 --
--- db/archive/seal_spring_2026_encoding_fix.sql fixed the same class of mojibake on other tables
--- but never touched audit_logs.
+-- db/archive/seal_spring_2026_encoding_fix.sql (under src/main/resources) fixed this same class of
+-- mojibake on users, hackathon_events, tracks, rounds and criteria, but never touched audit_logs.
 --
 -- This is a forward fix only. Rows already written through `text` lost their bytes at INSERT time
 -- and cannot be recovered by widening the column.
