@@ -40,6 +40,8 @@ import com.sealhackathon.user.event.ProfileUpdatedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.util.UUID;
@@ -58,12 +60,14 @@ public class AuditEventListener {
     // ═══════════════════════════════════════
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onUserLoggedIn(UserLoggedInEvent e) {
         auditService.log(e.userId(), "USER_LOGGED_IN", e.userId(), "User",
                 null, null, e.ipAddress());
     }
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onLoginFailed(LoginFailedEvent e) {
         auditService.log(SYSTEM_ACTOR, "LOGIN_FAILED", null, "User",
                 null, "{\"email\":\"" + e.email() + "\",\"attempt\":" + e.attemptCount() + "}",
@@ -71,6 +75,7 @@ public class AuditEventListener {
     }
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onPasswordReset(PasswordResetEvent e) {
         auditService.log(e.userId(), "PASSWORD_RESET", e.userId(), "User",
                 null, null, null);
@@ -81,12 +86,14 @@ public class AuditEventListener {
     // ═══════════════════════════════════════
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onAccountApproved(AccountApprovedEvent e) {
         auditService.log(SYSTEM_ACTOR, "ACCOUNT_APPROVED", e.userId(), "User",
                 "{\"status\":\"PENDING\"}", "{\"status\":\"ACTIVE\"}", null);
     }
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onAccountRejected(AccountRejectedEvent e) {
         auditService.log(SYSTEM_ACTOR, "ACCOUNT_REJECTED", e.userId(), "User",
                 "{\"status\":\"PENDING\"}",
@@ -94,12 +101,14 @@ public class AuditEventListener {
     }
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onInternalAccountCreated(InternalAccountCreatedEvent e) {
         auditService.log(SYSTEM_ACTOR, "INTERNAL_ACCOUNT_CREATED", e.userId(), "User",
                 null, "{\"role\":\"" + e.role() + "\"}", null);
     }
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onProfileUpdated(ProfileUpdatedEvent e) {
         auditService.log(e.userId(), "PROFILE_UPDATED", e.userId(), "User",
                 null, "{\"changedFields\":" + e.changedFields() + "}", null);
@@ -110,18 +119,21 @@ public class AuditEventListener {
     // ═══════════════════════════════════════
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onEventCreated(EventCreatedEvent e) {
         auditService.log(SYSTEM_ACTOR, "EVENT_CREATED", e.eventId(), "HackathonEvent",
                 null, "{\"name\":\"" + e.name() + "\"}", null);
     }
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onEventActivated(EventActivatedEvent e) {
         auditService.log(SYSTEM_ACTOR, "EVENT_ACTIVATED", e.eventId(), "HackathonEvent",
                 "{\"status\":\"DRAFT\"}", "{\"status\":\"ACTIVE\"}", null);
     }
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onEventConfigChanged(EventConfigChangedEvent e) {
         auditService.log(SYSTEM_ACTOR, "EVENT_CONFIG_CHANGED", e.eventId(), "HackathonEvent",
                 "{\"" + e.field() + "\":\"" + e.oldValue() + "\"}",
@@ -129,18 +141,21 @@ public class AuditEventListener {
     }
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onJudgeAssigned(JudgeAssignedEvent e) {
         auditService.log(SYSTEM_ACTOR, "JUDGE_ASSIGNED", e.assignmentId(), "JudgeAssignment",
                 null, "{\"judgeId\":\"" + e.judgeId() + "\",\"roundId\":\"" + e.roundId() + "\"}", null);
     }
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onMentorAssigned(MentorAssignedEvent e) {
         auditService.log(SYSTEM_ACTOR, "MENTOR_ASSIGNED", e.assignmentId(), "MentorAssignment",
                 null, "{\"mentorId\":\"" + e.mentorId() + "\",\"eventId\":\"" + e.eventId() + "\"}", null);
     }
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onScoringWindowReopened(ScoringWindowReopenedEvent e) {
         auditService.log(SYSTEM_ACTOR, "SCORING_WINDOW_REOPENED", e.roundId(), "Round",
                 null, "{\"newDeadline\":\"" + e.newDeadline() + "\"}", null);
@@ -151,12 +166,14 @@ public class AuditEventListener {
     // ═══════════════════════════════════════
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onTeamCreated(TeamCreatedEvent e) {
         auditService.log(e.leaderId(), "TEAM_CREATED", e.teamId(), "Team",
                 null, "{\"name\":\"" + e.teamName() + "\"}", null);
     }
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onTeamConfirmed(TeamConfirmedEvent e) {
         auditService.log(SYSTEM_ACTOR, "TEAM_CONFIRMED", e.teamId(), "Team",
                 "{\"status\":\"FORMING\"}",
@@ -164,30 +181,35 @@ public class AuditEventListener {
     }
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onMemberJoined(MemberJoinedEvent e) {
         auditService.log(e.userId(), "MEMBER_JOINED", e.teamId(), "Team",
                 null, "{\"role\":\"" + e.role() + "\"}", null);
     }
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onMemberLeft(MemberLeftEvent e) {
         auditService.log(e.userId(), "MEMBER_LEFT", e.teamId(), "Team",
                 null, null, null);
     }
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onInvitationSent(InvitationSentEvent e) {
         auditService.log(SYSTEM_ACTOR, "INVITATION_SENT", e.invitationId(), "Invitation",
                 null, "{\"inviteeEmail\":\"" + e.inviteeEmail() + "\"}", null);
     }
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onJoinRequestCreated(JoinRequestCreatedEvent e) {
         safeLog(e.requesterId(), "JOIN_REQUEST_CREATED", e.joinRequestId(), "TeamJoinRequest",
                 null, "{\"teamId\":\"" + e.teamId() + "\"}", null);
     }
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onJoinRequestResolved(JoinRequestResolvedEvent e) {
         safeLog(SYSTEM_ACTOR, e.accepted() ? "JOIN_REQUEST_ACCEPTED" : "JOIN_REQUEST_REJECTED",
                 e.joinRequestId(), "TeamJoinRequest",
@@ -195,12 +217,14 @@ public class AuditEventListener {
     }
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onLeaveRequestCreated(LeaveRequestCreatedEvent e) {
         auditService.log(e.userId(), "LEAVE_REQUEST_CREATED", e.leaveRequestId(), "TeamLeaveRequest",
                 null, "{\"teamId\":\"" + e.teamId() + "\"}", null);
     }
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onLeaveRequestResolved(LeaveRequestResolvedEvent e) {
         auditService.log(SYSTEM_ACTOR, e.approved() ? "LEAVE_REQUEST_APPROVED" : "LEAVE_REQUEST_REJECTED",
                 e.leaveRequestId(), "TeamLeaveRequest",
@@ -208,6 +232,7 @@ public class AuditEventListener {
     }
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onMentorTeamAssigned(MentorTeamAssignedEvent e) {
         auditService.log(SYSTEM_ACTOR, "MENTOR_TEAM_ASSIGNED", e.teamId(), "MentorTeam",
                 null, "{\"mentorId\":\"" + e.mentorId() + "\"}", null);
@@ -218,12 +243,14 @@ public class AuditEventListener {
     // ═══════════════════════════════════════
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onSubmissionCreated(SubmissionCreatedEvent e) {
         auditService.log(SYSTEM_ACTOR, "SUBMISSION_CREATED", e.submissionId(), "Submission",
                 null, "{\"version\":" + e.versionNumber() + "}", null);
     }
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onSubmissionUpdated(SubmissionUpdatedEvent e) {
         auditService.log(SYSTEM_ACTOR, "SUBMISSION_UPDATED", e.submissionId(), "Submission",
                 null, "{\"newVersion\":" + e.newVersionNumber() + "}", null);
@@ -234,6 +261,7 @@ public class AuditEventListener {
     // ═══════════════════════════════════════
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onScoreCreated(ScoreCreatedEvent e) {
         String payload = String.format(
                 "{\"judgeId\":\"%s\",\"teamId\":\"%s\",\"roundId\":\"%s\",\"submissionId\":\"%s\",\"timestamp\":\"%s\"}",
@@ -243,6 +271,7 @@ public class AuditEventListener {
     }
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onScoreUpdated(ScoreUpdatedEvent e) {
         for (var change : e.changes()) {
             String oldVal = change.oldScore() != null ? change.oldScore().toString() : "null";
@@ -256,12 +285,14 @@ public class AuditEventListener {
     }
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onScoreDeleted(ScoreDeletedEvent e) {
         auditService.log(e.judgeId(), "SCORE_DELETED", e.judgeScoreId(), "JudgeScore",
                 null, null, null);
     }
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onConflictDetected(ConflictDetectedEvent e) {
         auditService.log(e.judgeId(), "CONFLICT_DETECTED", e.submissionId(), "JudgeScore",
                 null, "{\"teamId\":\"" + e.teamId() + "\"}", null);
@@ -272,30 +303,35 @@ public class AuditEventListener {
     // ═══════════════════════════════════════
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onRankingRecalculated(RankingRecalculatedEvent e) {
         auditService.log(SYSTEM_ACTOR, "RANKING_RECALCULATED", e.roundId(), "Ranking",
                 null, "{\"version\":" + e.version() + ",\"teamCount\":" + e.teamCount() + "}", null);
     }
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onResultsPublished(ResultsPublishedEvent e) {
         auditService.log(e.publishedBy(), "RESULTS_PUBLISHED", e.roundId(), "PublishedResult",
                 null, "{\"disputeDeadline\":\"" + e.disputeDeadline() + "\"}", null);
     }
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onDisputeFiled(DisputeFiledEvent e) {
         auditService.log(e.filedBy(), "DISPUTE_FILED", e.disputeId(), "Dispute",
                 null, "{\"teamId\":\"" + e.teamId() + "\"}", null);
     }
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onDisputeResolved(DisputeResolvedEvent e) {
         auditService.log(e.resolvedBy(), "DISPUTE_RESOLVED", e.disputeId(), "Dispute",
                 null, "{\"resolution\":\"" + e.resolution() + "\"}", null);
     }
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onScoreReviewCreated(ScoreReviewCreatedEvent e) {
         auditService.log(SYSTEM_ACTOR, "SCORE_REVIEW_CREATED", e.reviewId(), "ScoreReviewRequest",
                 null, "{\"submissionId\":\"" + e.submissionId()
@@ -303,12 +339,14 @@ public class AuditEventListener {
     }
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onScoreReviewResolved(ScoreReviewResolvedEvent e) {
         auditService.log(e.resolvedBy(), "SCORE_REVIEW_RESOLVED", e.reviewId(), "ScoreReviewRequest",
                 null, "{\"status\":\"" + e.status() + "\"}", null);
     }
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onParticipantFeedbackSubmitted(ParticipantFeedbackSubmittedEvent e) {
         auditService.log(e.userId(), "PARTICIPANT_FEEDBACK_SUBMITTED", e.feedbackId(), "ParticipantFeedback",
                 null, "{\"eventId\":\"" + e.eventId()

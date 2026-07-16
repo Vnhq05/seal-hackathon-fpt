@@ -32,6 +32,8 @@ import com.sealhackathon.user.service.UserPublicService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.util.ArrayList;
@@ -55,6 +57,7 @@ public class NotificationEventListener {
     // ── User Module Events ──
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onAccountApproved(AccountApprovedEvent event) {
         notify(NotificationType.ACCOUNT_APPROVED,
                 "Account Approved",
@@ -64,6 +67,7 @@ public class NotificationEventListener {
     }
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onAccountRejected(AccountRejectedEvent event) {
         notify(NotificationType.ACCOUNT_REJECTED,
                 "Account Rejected",
@@ -73,6 +77,7 @@ public class NotificationEventListener {
     }
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onInternalAccountCreated(InternalAccountCreatedEvent event) {
         notify(NotificationType.INTERNAL_ACCOUNT_CREATED,
                 "Account Created",
@@ -85,6 +90,7 @@ public class NotificationEventListener {
     // ── Team Module Events ──
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onTeamCreated(TeamCreatedEvent event) {
         notify(NotificationType.TEAM_REGISTERED,
                 "Team Created",
@@ -94,6 +100,7 @@ public class NotificationEventListener {
     }
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onTeamConfirmed(TeamConfirmedEvent event) {
         notify(NotificationType.TEAM_CONFIRMED,
                 "Team Confirmed",
@@ -103,6 +110,7 @@ public class NotificationEventListener {
     }
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onInvitationSent(InvitationSentEvent event) {
         userPublicService.findByEmail(event.inviteeEmail()).ifPresent(invitee ->
                 notify(NotificationType.INVITATION_RECEIVED,
@@ -113,6 +121,7 @@ public class NotificationEventListener {
     }
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onInvitationAccepted(InvitationAcceptedEvent event) {
         notify(NotificationType.INVITATION_ACCEPTED,
                 "Invitation Accepted",
@@ -122,6 +131,7 @@ public class NotificationEventListener {
     }
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onJoinRequestCreated(JoinRequestCreatedEvent event) {
         notify(NotificationType.JOIN_REQUEST_RECEIVED,
                 "Join Request",
@@ -131,6 +141,7 @@ public class NotificationEventListener {
     }
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onJoinRequestResolved(JoinRequestResolvedEvent event) {
         if (event.accepted()) {
             notify(NotificationType.JOIN_REQUEST_ACCEPTED,
@@ -148,6 +159,7 @@ public class NotificationEventListener {
     }
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onLeaveRequestCreated(LeaveRequestCreatedEvent event) {
         notify(NotificationType.LEAVE_REQUEST_CREATED,
                 "Leave Request",
@@ -157,6 +169,7 @@ public class NotificationEventListener {
     }
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onLeaveRequestResolved(LeaveRequestResolvedEvent event) {
         NotificationType type = event.approved()
                 ? NotificationType.LEAVE_REQUEST_APPROVED
@@ -170,6 +183,7 @@ public class NotificationEventListener {
     }
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onMemberKicked(MemberKickedEvent event) {
         notify(NotificationType.MEMBER_KICKED,
                 "Removed from Team",
@@ -179,6 +193,7 @@ public class NotificationEventListener {
     }
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onMentorTeamAssigned(MentorTeamAssignedEvent event) {
         notify(NotificationType.MENTOR_TEAM_ASSIGNED,
                 "Mentor Assigned to Team",
@@ -190,6 +205,7 @@ public class NotificationEventListener {
     // ── Submission Module Events ──
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onSubmissionCreated(SubmissionCreatedEvent event) {
         List<UUID> recipients = new ArrayList<>();
         teamPublicService.getTeamMemberUserIds(event.teamId(), true)
@@ -205,6 +221,7 @@ public class NotificationEventListener {
     }
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onTeamProgressAlert(TeamProgressAlertEvent event) {
         List<UUID> recipients = new ArrayList<>();
         mentorTeamRepository.findByTeamId(event.teamId())
@@ -222,6 +239,7 @@ public class NotificationEventListener {
     // ── Event Module Events ──
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onJudgeAssigned(JudgeAssignedEvent event) {
         notify(NotificationType.JUDGE_ASSIGNED,
                 "Judge Assignment",
@@ -231,6 +249,7 @@ public class NotificationEventListener {
     }
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onMentorAssigned(MentorAssignedEvent event) {
         notify(NotificationType.MENTOR_ASSIGNED,
                 "Mentor Assignment",
@@ -240,6 +259,7 @@ public class NotificationEventListener {
     }
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onScoringWindowReopened(ScoringWindowReopenedEvent event) {
         notify(NotificationType.SCORING_REOPENED,
                 "Scoring Window Re-opened",
@@ -251,6 +271,7 @@ public class NotificationEventListener {
     // ── Ranking Module Events ──
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onResultsPublished(ResultsPublishedEvent event) {
         notify(NotificationType.RESULTS_PUBLISHED,
                 "Results Published",
@@ -261,6 +282,7 @@ public class NotificationEventListener {
     }
 
     @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onDisputeFiled(DisputeFiledEvent event) {
         notify(NotificationType.DISPUTE_FILED,
                 "Dispute Filed",
