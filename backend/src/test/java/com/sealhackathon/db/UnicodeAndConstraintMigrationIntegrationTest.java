@@ -93,4 +93,23 @@ class UnicodeAndConstraintMigrationIntegrationTest extends BaseIntegrationTest {
         assertThat(constraintCount("uq_draw_queue_session_team")).isEqualTo(1);
         assertThat(constraintCount("uq_draw_queue_session_order")).isEqualTo(1);
     }
+
+    @Test
+    void v13_teamAwardsDuplicateUniqueIsGone_originalRemains() {
+        assertThat(constraintCount("UKpjyb6tp2bup52n3kdss4mg94a")).isZero();
+        assertThat(constraintCount("uq_team_award_event_team")).isEqualTo(1);
+    }
+
+    @Test
+    void v14_hotPathIndexesExist() {
+        assertThat(indexExists("idx_mentor_chat_team_sent")).isTrue();
+        assertThat(indexExists("idx_ranking_round_version_rank")).isTrue();
+        assertThat(indexExists("idx_notif_recipient_user_channel_read")).isTrue();
+    }
+
+    private boolean indexExists(String name) {
+        Integer n = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM sys.indexes WHERE name = ?", Integer.class, name);
+        return n != null && n > 0;
+    }
 }
