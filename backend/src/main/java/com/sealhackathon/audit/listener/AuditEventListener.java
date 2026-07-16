@@ -42,6 +42,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.util.UUID;
@@ -66,7 +67,11 @@ public class AuditEventListener {
                 null, null, e.ipAddress());
     }
 
-    @TransactionalEventListener
+    // AFTER_COMPLETION, not the default AFTER_COMMIT: login() throws on bad credentials, so its
+    // transaction always rolls back and an AFTER_COMMIT handler would never run -- brute force would
+    // stay invisible in the audit trail even though the lockout counter engages. The failure is the
+    // thing being audited here, so it must be recorded whichever way the transaction resolves.
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMPLETION)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onLoginFailed(LoginFailedEvent e) {
         auditService.log(SYSTEM_ACTOR, "LOGIN_FAILED", null, "User",

@@ -7,8 +7,11 @@ import com.sealhackathon.user.domain.User;
 import com.icegreen.greenmail.util.GreenMailUtil;
 import jakarta.mail.internet.MimeMessage;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -22,6 +25,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class AuthControllerIntegrationTest extends BaseIntegrationTest {
 
     private static final Pattern OTP_IN_HTML = Pattern.compile(">(\\d{6})<");
+
+    @Autowired private JdbcTemplate jdbcTemplate;
 
     // ── BR-01: Registration → OTP ──
 
@@ -202,6 +207,28 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
         User reloaded = userRepository.findById(user.getId()).orElseThrow();
         assertThat(reloaded.getFailedLoginAttempts()).isEqualTo(1);
         assertThat(reloaded.getLockedUntil()).isNull();
+    }
+
+    @Test
+    void login_shouldAuditFailure_afterWrongPassword() throws Exception {
+        createUser("audit-fail@test.com", UserType.FPT_STUDENT, AccountStatus.ACTIVE);
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"audit-fail@test.com","password":"wrong"}
+                                """))
+                .andExpect(status().isUnauthorized());
+
+        // Read outside any transaction: login() rolls back on bad credentials, so this passes only
+        // if the audit write survived that rollback rather than riding on it.
+        entityManager.clear();
+        List<String> payloads = jdbcTemplate.queryForList(
+                "SELECT new_value FROM audit_logs WHERE action = 'LOGIN_FAILED'", String.class);
+        assertThat(payloads).hasSize(1);
+        assertThat(payloads.get(0))
+                .contains("audit-fail@test.com")
+                .contains("\"attempt\":1");
     }
 
     @Test
