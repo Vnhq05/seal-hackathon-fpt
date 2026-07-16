@@ -164,7 +164,6 @@ class EmailOtpServiceTest {
         expired.setId(UUID.randomUUID());
         when(emailOtpTokenRepository.findTopByUserIdAndUsedFalseOrderByCreatedAtDesc(userId))
                 .thenReturn(Optional.of(expired));
-        when(emailOtpTokenRepository.save(any())).thenReturn(expired);
 
         assertThatThrownBy(() -> emailOtpService.validate(userId, code))
                 .isInstanceOf(BusinessException.class)
@@ -172,6 +171,8 @@ class EmailOtpServiceTest {
                         .isEqualTo(HttpStatus.GONE));
 
         verify(emailOtpAttemptService, never()).recordFailedAttempt(any(), anyInt());
+        // Burning has to happen off this transaction: the GONE throw above rolls it back.
+        verify(emailOtpAttemptService).burnExpired(expired.getId());
     }
 
     @Test

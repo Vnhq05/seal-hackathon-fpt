@@ -19,6 +19,7 @@ import java.util.UUID;
 public class TokenService {
 
     private final RefreshTokenRepository refreshTokenRepository;
+    private final RefreshTokenRevocationService refreshTokenRevocationService;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
 
     @Value("${app.jwt.refresh-token-expiration-days:7}")
@@ -46,8 +47,8 @@ public class TokenService {
                 .orElseThrow(InvalidTokenException::new);
 
         if (refreshToken.getExpiresAt().isBefore(LocalDateTime.now())) {
-            refreshToken.setRevoked(true);
-            refreshTokenRepository.save(refreshToken);
+            // REQUIRES_NEW — must survive the rollback the throw below causes
+            refreshTokenRevocationService.revokeExpired(refreshToken.getId());
             throw new InvalidTokenException();
         }
 

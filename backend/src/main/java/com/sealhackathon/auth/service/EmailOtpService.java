@@ -63,8 +63,8 @@ public class EmailOtpService {
         }
 
         if (token.getExpiresAt().isBefore(LocalDateTime.now())) {
-            token.setUsed(true);
-            emailOtpTokenRepository.save(token);
+            // REQUIRES_NEW — must survive the rollback the throw below causes
+            emailOtpAttemptService.burnExpired(token.getId());
             throw new BusinessException(
                     "This verification code has expired. Please request a new one.",
                     HttpStatus.GONE) {};

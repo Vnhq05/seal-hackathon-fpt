@@ -37,4 +37,17 @@ public class EmailOtpAttemptService {
         emailOtpTokenRepository.save(token);
         return next;
     }
+
+    /**
+     * Burns an expired token. Not a security fix -- {@code expiresAt} already rejects it either way
+     * -- but the caller marks it used and then throws, so the rollback took the flag back and the
+     * row stayed {@code used=false} forever, kept alive by
+     * {@code findTopByUserIdAndUsedFalseOrderByCreatedAtDesc} on every retry.
+     *
+     * <p>Callers must not write the row on the outer transaction first, or its lock would block this one.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void burnExpired(UUID tokenId) {
+        emailOtpTokenRepository.findById(tokenId).ifPresent(token -> token.setUsed(true));
+    }
 }

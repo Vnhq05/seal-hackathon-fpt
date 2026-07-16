@@ -27,6 +27,7 @@ import static org.mockito.Mockito.when;
 class TokenServiceTest {
 
     @Mock private RefreshTokenRepository refreshTokenRepository;
+    @Mock private RefreshTokenRevocationService refreshTokenRevocationService;
     @Mock private PasswordResetTokenRepository passwordResetTokenRepository;
 
     @InjectMocks private TokenService tokenService;
@@ -65,12 +66,15 @@ class TokenServiceTest {
                 .userId(UUID.randomUUID())
                 .expiresAt(LocalDateTime.now().minusHours(1))
                 .build();
+        expired.setId(UUID.randomUUID());
         when(refreshTokenRepository.findByTokenAndRevokedFalse(TokenHasher.hash(plaintext)))
                 .thenReturn(Optional.of(expired));
-        when(refreshTokenRepository.save(any())).thenReturn(expired);
 
         assertThatThrownBy(() -> tokenService.validateRefreshToken(plaintext))
                 .isInstanceOf(InvalidTokenException.class);
+
+        // Revocation has to happen off this transaction: the throw above rolls it back.
+        verify(refreshTokenRevocationService).revokeExpired(expired.getId());
     }
 
     @Test
