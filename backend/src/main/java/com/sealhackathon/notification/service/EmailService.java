@@ -10,7 +10,6 @@ import com.sealhackathon.user.service.UserPublicService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -24,7 +23,18 @@ public class EmailService {
     private final UserPublicService userPublicService;
     private final NotificationRecipientRepository recipientRepository;
 
-    @Transactional
+    /**
+     * Deliberately NOT @Transactional. Its only caller, NotificationEventListener.notify(), persists
+     * the in-app notification in the same transaction and then swallows whatever this throws. A
+     * @Transactional boundary here would catch an SMTP failure and mark that shared transaction
+     * rollback-only, so an unreachable mail relay would destroy the notification the outage has
+     * nothing to do with (proven by NotificationMailFailureIntegrationTest). Without the boundary the
+     * mail exception propagates as an ordinary exception to notify()'s catch and the notification
+     * commits. recipientRepository.save() still joins the caller's transaction via REQUIRED.
+     *
+     * REQUIRES_NEW is not the fix here: the recipient rows are written but uncommitted in the
+     * caller's transaction, and a suspended-outer / new-inner pair would deadlock on their locks.
+     */
     public void sendEmailsForNotification(Notification notification) {
         List<NotificationRecipient> emailRecipients = notification.getRecipients().stream()
                 .filter(r -> r.getChannel() == NotificationChannel.EMAIL)

@@ -35,15 +35,24 @@ class EventControllerIntegrationTest extends BaseIntegrationTest {
     void createEvent_shouldReturn201_asCoordinator() throws Exception {
         User coord = createCoordinator();
 
+        // Dates are relative to now so registration is open today: resolveStatus returns OPEN only
+        // while today is in [registrationOpenDate, startDate). Hardcoded 2026 dates made this test
+        // silently expire once the wall clock passed them.
+        LocalDate today = LocalDate.now();
+        String body = String.format("""
+                {"name":"Hackathon Summer","season":"Summer","year":%d,
+                 "startDate":"%s","endDate":"%s",
+                 "registrationOpenDate":"%s",
+                 "registrationDeadline":"%s"}
+                """,
+                today.getYear(),
+                today.plusDays(20), today.plusDays(60),
+                today.minusDays(1), today.plusDays(10));
+
         mockMvc.perform(post("/api/events")
                         .header("Authorization", "Bearer " + tokenFor(coord))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"name":"Hackathon Summer","season":"Summer","year":2026,
-                                 "startDate":"2026-07-01","endDate":"2026-08-31",
-                                 "registrationOpenDate":"2026-06-01",
-                                 "registrationDeadline":"2026-06-30"}
-                                """))
+                        .content(body))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.name", is("Hackathon Summer")))
                 .andExpect(jsonPath("$.data.status", is("OPEN")));
