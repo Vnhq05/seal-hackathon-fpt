@@ -46,6 +46,12 @@ import java.util.UUID;
 @Builder
 public class HackathonEvent extends BaseEntity {
 
+    // ── Business owner. Distinct from BaseEntity.createdBy, which is audit only:
+    //    AuditorAware owns that column and overwrites it on insert.
+    //    See docs/adr-event-owner-vs-created-by.md. Null = no attributable owner (admin-only). ──
+    @Column(name = "owner_user_id")
+    private UUID ownerUserId;
+
     // ── BR-10: unique event name ──
     @NotBlank
     @Size(max = 255)

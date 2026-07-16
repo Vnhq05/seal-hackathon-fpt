@@ -293,10 +293,10 @@ public class NotificationEventListener {
 
     // ═══ Helper ═══
 
+    /** Empty when the event has no attributable owner; callers simply skip that recipient. */
     private Optional<UUID> resolveCoordinatorId(UUID eventId) {
         return hackathonEventRepository.findById(eventId)
-                .flatMap(event -> userPublicService.findByEmail(event.getCreatedBy()))
-                .map(user -> user.getId());
+                .map(event -> event.getOwnerUserId());
     }
 
     private String buildProgressAlertMessage(List<ProgressRiskReason> reasons) {

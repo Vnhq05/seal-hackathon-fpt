@@ -114,7 +114,7 @@ class TeamProgressControllerIntegrationTest extends BaseIntegrationTest {
                 .assignedAt(LocalDateTime.now())
                 .build());
 
-        assignEventOwner(eventId, coordinator.getEmail());
+        assignEventOwner(eventId, coordinator.getId());
     }
 
     @Test

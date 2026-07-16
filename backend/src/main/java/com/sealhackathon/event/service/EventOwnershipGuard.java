@@ -22,9 +22,11 @@ public class EventOwnershipGuard {
         if (role == UserType.SYSTEM_ADMIN) {
             return;
         }
-        String currentEmail = authPublicService.getCurrentUserEmail();
-        if (!currentEmail.equals(event.getCreatedBy())) {
-            throw new BusinessException("You can only manage events you created", HttpStatus.FORBIDDEN) {};
+        // Compare owner-first so a null owner rejects rather than matching a null caller:
+        // an unattributable event is admin-only, never open.
+        UUID ownerUserId = event.getOwnerUserId();
+        if (ownerUserId == null || !ownerUserId.equals(authPublicService.getCurrentUserId())) {
+            throw new BusinessException("You can only manage events you own", HttpStatus.FORBIDDEN) {};
         }
     }
 

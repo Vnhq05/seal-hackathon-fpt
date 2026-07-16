@@ -199,10 +199,10 @@ class EventControllerIntegrationTest extends BaseIntegrationTest {
         User otherCoordinator = createUser("other-coord@test.com", UserType.EVENT_COORDINATOR, AccountStatus.ACTIVE);
 
         HackathonEvent owned = createEvent("Owned Event");
-        assignEventOwner(owned.getId(), coordinator.getEmail());
+        assignEventOwner(owned.getId(), coordinator.getId());
 
         HackathonEvent foreign = createEvent("Foreign Event");
-        assignEventOwner(foreign.getId(), otherCoordinator.getEmail());
+        assignEventOwner(foreign.getId(), otherCoordinator.getId());
 
         mockMvc.perform(get("/api/events")
                         .header("Authorization", "Bearer " + tokenFor(coordinator)))

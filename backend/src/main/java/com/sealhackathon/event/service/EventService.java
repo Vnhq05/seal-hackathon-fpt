@@ -538,8 +538,8 @@ public class EventService {
         Page<HackathonEvent> page;
 
         if (role == UserType.EVENT_COORDINATOR) {
-            String email = authPublicService.getCurrentUserEmail();
-            page = eventRepository.findByCreatedByAndFilters(email, null, season, year, pageable);
+            page = eventRepository.findByOwnerUserIdAndFilters(
+                    authPublicService.getCurrentUserId(), null, season, year, pageable);
         } else {
             page = eventRepository.findByFilters(null, season, year, pageable);
         }
@@ -553,8 +553,8 @@ public class EventService {
         Page<HackathonEvent> page;
 
         if (role == UserType.EVENT_COORDINATOR) {
-            String email = authPublicService.getCurrentUserEmail();
-            page = eventRepository.findByCreatedByAndFilters(email, null, season, year, Pageable.unpaged());
+            page = eventRepository.findByOwnerUserIdAndFilters(
+                    authPublicService.getCurrentUserId(), null, season, year, Pageable.unpaged());
         } else {
             page = eventRepository.findByFilters(null, season, year, Pageable.unpaged());
         }
@@ -589,6 +589,12 @@ public class EventService {
 
     private void applyCoordinatorOwner(HackathonEvent event, String coordinatorEmail) {
         if (coordinatorEmail == null || coordinatorEmail.isBlank()) {
+            // A coordinator owns what they create. Admin-created events without an explicit
+            // coordinator stay unowned: admins bypass EventOwnershipGuard, and inventing an
+            // owner would hand a coordinator an event nobody assigned them.
+            if (authPublicService.getCurrentUserRole() == UserType.EVENT_COORDINATOR) {
+                event.setOwnerUserId(authPublicService.getCurrentUserId());
+            }
             return;
         }
         if (authPublicService.getCurrentUserRole() != UserType.SYSTEM_ADMIN) {
@@ -603,7 +609,7 @@ public class EventService {
                     "Assigned owner must be an EVENT_COORDINATOR",
                     HttpStatus.BAD_REQUEST) {};
         }
-        event.setCreatedBy(owner.getEmail());
+        event.setOwnerUserId(owner.getId());
     }
 
     public void enforceEventOwnership(UUID eventId) {

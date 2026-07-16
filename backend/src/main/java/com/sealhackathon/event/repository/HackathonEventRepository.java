@@ -41,11 +41,11 @@ public interface HackathonEventRepository extends JpaRepository<HackathonEvent, 
             + "AND (:year IS NULL OR e.year = :year)")
     Page<HackathonEvent> findByFilters(EventStatus status, String season, Integer year, Pageable pageable);
 
-    @Query("SELECT e FROM HackathonEvent e WHERE e.createdBy = :createdBy "
+    @Query("SELECT e FROM HackathonEvent e WHERE e.ownerUserId = :ownerUserId "
             + "AND (:status IS NULL OR e.status = :status) "
             + "AND (:season IS NULL OR UPPER(e.season) = UPPER(:season)) "
             + "AND (:year IS NULL OR e.year = :year)")
-    Page<HackathonEvent> findByCreatedByAndFilters(String createdBy, EventStatus status, String season, Integer year, Pageable pageable);
+    Page<HackathonEvent> findByOwnerUserIdAndFilters(UUID ownerUserId, EventStatus status, String season, Integer year, Pageable pageable);
 
     @Query("SELECT e FROM HackathonEvent e WHERE e.startDate = :date "
             + "AND e.minTeam IS NOT NULL "
@@ -58,6 +58,6 @@ public interface HackathonEventRepository extends JpaRepository<HackathonEvent, 
     Optional<HackathonEvent> findByIdForUpdate(@Param("id") UUID id);
 
     @Modifying
-    @Query("UPDATE HackathonEvent e SET e.createdBy = :ownerEmail WHERE e.id IN :eventIds")
-    int reassignOwnership(@Param("eventIds") Collection<UUID> eventIds, @Param("ownerEmail") String ownerEmail);
+    @Query("UPDATE HackathonEvent e SET e.ownerUserId = :ownerUserId WHERE e.id IN :eventIds")
+    int reassignOwnership(@Param("eventIds") Collection<UUID> eventIds, @Param("ownerUserId") UUID ownerUserId);
 }

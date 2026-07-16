@@ -48,9 +48,9 @@ class ParticipantFeedbackIntegrationTest extends BaseIntegrationTest {
         formingStudent = createUser("forming@fpt.edu.vn", UserType.FPT_STUDENT, AccountStatus.ACTIVE);
 
         completedEventId = seedEvent("Completed Event", LocalDate.of(2026, 4, 10), LocalDate.of(2026, 4, 12),
-                EventStatus.ACTIVE, coordinator.getEmail());
+                EventStatus.ACTIVE, coordinator.getId());
         activeEventId = seedEvent("Active Event", LocalDate.of(2026, 6, 1), LocalDate.of(2026, 12, 31),
-                EventStatus.ACTIVE, coordinator.getEmail());
+                EventStatus.ACTIVE, coordinator.getId());
 
         confirmedTeamId = seedConfirmedTeam(completedEventId, "Team Alpha", student);
         seedFormingTeam(activeEventId, "Team Forming", formingStudent);
@@ -149,7 +149,7 @@ class ParticipantFeedbackIntegrationTest extends BaseIntegrationTest {
                 .andExpect(status().isCreated());
     }
 
-    private UUID seedEvent(String name, LocalDate start, LocalDate end, EventStatus status, String ownerEmail) {
+    private UUID seedEvent(String name, LocalDate start, LocalDate end, EventStatus status, UUID ownerUserId) {
         HackathonEvent event = eventRepository.save(HackathonEvent.builder()
                 .name(name)
                 .season("SPRING")
@@ -159,7 +159,7 @@ class ParticipantFeedbackIntegrationTest extends BaseIntegrationTest {
                 .registrationDeadline(start.minusDays(2))
                 .status(status)
                 .build());
-        assignEventOwner(event.getId(), ownerEmail);
+        assignEventOwner(event.getId(), ownerUserId);
         return event.getId();
     }
 

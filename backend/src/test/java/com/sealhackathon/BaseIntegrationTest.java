@@ -160,13 +160,10 @@ public abstract class BaseIntegrationTest {
         return greenMail.getReceivedMessages();
     }
 
-    /**
-     * Sets business event owner via JPQL UPDATE (bypasses {@code created_by} {@code updatable=false}
-     * and AuditorAware overwrite on insert). See adr-event-owner-vs-created-by.md.
-     */
-    protected void assignEventOwner(UUID eventId, String ownerEmail) {
+    /** Sets the business owner of an event. See adr-event-owner-vs-created-by.md. */
+    protected void assignEventOwner(UUID eventId, UUID ownerUserId) {
         transactionTemplate.executeWithoutResult(status ->
-                eventRepository.reassignOwnership(List.of(eventId), ownerEmail));
+                eventRepository.reassignOwnership(List.of(eventId), ownerUserId));
         entityManager.clear();
     }
 
