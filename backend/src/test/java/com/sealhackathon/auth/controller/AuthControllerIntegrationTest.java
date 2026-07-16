@@ -1,13 +1,16 @@
 package com.sealhackathon.auth.controller;
 
 import com.sealhackathon.BaseIntegrationTest;
-import com.sealhackathon.auth.repository.EmailOtpTokenRepository;
 import com.sealhackathon.common.enums.AccountStatus;
 import com.sealhackathon.common.enums.UserType;
 import com.sealhackathon.user.domain.User;
+import com.icegreen.greenmail.util.GreenMailUtil;
+import jakarta.mail.internet.MimeMessage;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -18,7 +21,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 class AuthControllerIntegrationTest extends BaseIntegrationTest {
 
-    @Autowired private EmailOtpTokenRepository emailOtpTokenRepository;
+    private static final Pattern OTP_IN_HTML = Pattern.compile(">(\\d{6})<");
 
     // ── BR-01: Registration → OTP ──
 
@@ -46,10 +49,7 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
                                 """))
                 .andExpect(status().isCreated());
 
-        String otp = emailOtpTokenRepository.findTopByUserIdOrderByCreatedAtDesc(
-                        userRepository.findByEmail("verify@fpt.edu.vn").orElseThrow().getId())
-                .orElseThrow()
-                .getCode();
+        String otp = otpFromLastMail();
 
         mockMvc.perform(post("/api/auth/verify-otp")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -67,6 +67,15 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.accessToken", notNullValue()));
+    }
+
+    private String otpFromLastMail() {
+        MimeMessage[] mails = receivedMails();
+        assertThat(mails).as("OTP email should arrive via GreenMail").isNotEmpty();
+        String body = GreenMailUtil.getBody(mails[mails.length - 1]);
+        Matcher matcher = OTP_IN_HTML.matcher(body);
+        assertThat(matcher.find()).as("6-digit OTP in HTML body").isTrue();
+        return matcher.group(1);
     }
 
     // ── BR-02: Internal roles cannot self-register ──
