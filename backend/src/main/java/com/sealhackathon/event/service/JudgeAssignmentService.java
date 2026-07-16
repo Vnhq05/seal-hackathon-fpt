@@ -557,6 +557,12 @@ public class JudgeAssignmentService {
     }
 
     private ResolvedScope resolveScope(Round round, AssignJudgeRequest request) {
+        if (round.getRoundType() == RoundType.FINAL
+                && (request.getTrackId() != null || request.getGroupId() != null)) {
+            throw new BusinessException(
+                    "Final rounds are scored across the whole round; trackId and groupId must not be sent",
+                    HttpStatus.BAD_REQUEST) {};
+        }
         AssignmentScope scope = request.getScope();
         if (scope == null) {
             if (round.getRoundType() == RoundType.FINAL) {
