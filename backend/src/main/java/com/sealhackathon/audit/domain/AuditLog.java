@@ -64,12 +64,13 @@ public class AuditLog {
     @Column(name = "target_type")
     private String targetType;
 
-    // ── JSON string of previous state ──
-    @Column(name = "old_value", columnDefinition = "TEXT")
+    // ── JSON string of previous state. NVARCHAR(MAX), not TEXT: payloads carry Vietnamese
+    //    free text (team/event names), and TEXT is non-Unicode. See V8. ──
+    @Column(name = "old_value", columnDefinition = "NVARCHAR(MAX)")
     private String oldValue;
 
     // ── JSON string of new state ──
-    @Column(name = "new_value", columnDefinition = "TEXT")
+    @Column(name = "new_value", columnDefinition = "NVARCHAR(MAX)")
     private String newValue;
 
     @NotNull
