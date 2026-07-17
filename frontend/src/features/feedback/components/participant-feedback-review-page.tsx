@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { eventApi } from "@/lib/api/event.api";
 import {
@@ -86,6 +87,8 @@ function truncateComment(comment: string | null, maxLen = 120): string {
 }
 
 export function ParticipantFeedbackReviewPage() {
+  const searchParams = useSearchParams();
+  const urlEventId = searchParams.get("eventId") ?? "";
   const { data: events = [] } = useQuery({
     queryKey: ["coordinator-events"],
     queryFn: () => eventApi.list({ page: 0, size: 50 }).then((p) => p.content),
@@ -95,7 +98,7 @@ export function ParticipantFeedbackReviewPage() {
   const [page, setPage] = useState(1);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const selectedEventId = eventId || events[0]?.id || "";
+  const selectedEventId = eventId || urlEventId || events[0]?.id || "";
 
   const { data: summary, isLoading: summaryLoading } = useParticipantFeedbackSummary(selectedEventId);
   const { data: feedbackList = [], isLoading: listLoading } = useParticipantFeedbackList(selectedEventId);

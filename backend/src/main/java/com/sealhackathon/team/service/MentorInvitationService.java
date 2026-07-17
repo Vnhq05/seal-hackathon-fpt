@@ -6,7 +6,6 @@ import com.sealhackathon.common.exception.DuplicateResourceException;
 import com.sealhackathon.common.exception.ResourceNotFoundException;
 import com.sealhackathon.event.repository.MentorAssignmentRepository;
 import com.sealhackathon.event.service.EventPublicService;
-import com.sealhackathon.judging.service.ConflictDetectionService;
 import com.sealhackathon.team.domain.MentorInvitation;
 import com.sealhackathon.team.domain.MentorTeam;
 import com.sealhackathon.team.domain.Team;
@@ -41,7 +40,6 @@ public class MentorInvitationService {
     private final MentorAssignmentRepository mentorAssignmentRepository;
     private final EventPublicService eventPublicService;
     private final UserPublicService userPublicService;
-    private final ConflictDetectionService conflictDetectionService;
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
@@ -130,8 +128,6 @@ public class MentorInvitationService {
                         pending.setStatus(MentorInvitationStatus.DENIED);
                         invitationRepository.save(pending);
                     });
-
-            conflictDetectionService.assertNotJudgeOfTeam(mentorId, team.getId());
 
             MentorTeam mentorTeam = MentorTeam.builder()
                     .mentorUserId(mentorId)

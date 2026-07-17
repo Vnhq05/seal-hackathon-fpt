@@ -30,6 +30,7 @@ import com.sealhackathon.notification.service.NotificationService;
 import com.sealhackathon.ranking.repository.PublishedResultRepository;
 import com.sealhackathon.submission.repository.SubmissionRepository;
 import com.sealhackathon.team.domain.Team;
+import com.sealhackathon.team.domain.enums.TeamStatus;
 import com.sealhackathon.team.repository.TeamMemberRepository;
 import com.sealhackathon.team.repository.TeamRepository;
 import com.sealhackathon.team.service.TeamPublicService;
@@ -74,6 +75,8 @@ public class JudgeAssignmentService {
     private final NotificationService notificationService;
     private final ApplicationEventPublisher eventPublisher;
 
+    private static final String GROUP_DELETED_REASON = "Competition group deleted";
+
     @Transactional
     public JudgeAssignmentResponse assignJudge(UUID eventId, UUID roundId, AssignJudgeRequest request, String ipAddress) {
         Round round = roundService.getRound(roundId);
@@ -99,6 +102,7 @@ public class JudgeAssignmentService {
         }
 
         validateScopeHierarchy(resolvedEventId, round, scope);
+        validateTeamsAssignedToGroups(resolvedEventId, scope);
         validateScopeOverlap(roundId, request.getJudgeUserId(), scope, null);
         validateNoConflictInScope(resolvedEventId, scope, request.getJudgeUserId());
 
@@ -189,6 +193,46 @@ public class JudgeAssignmentService {
         return judgeIds.stream().toList();
     }
 
+    /**
+     * Judges from the pool that actually count for a team: pool membership minus
+     * conflict of interest. A judge mentoring the team is excluded (BR-29), so a
+     * conflicted judge can never stall the team's scoring-complete count.
+     */
+    @Transactional(readOnly = true)
+    public List<UUID> getEffectiveJudgeUserIdsForTeam(UUID roundId, UUID teamId,
+                                                      UUID teamTrackId, UUID teamGroupId) {
+        UUID eventId = teamTrackId == null
+                ? null
+                : teamRepository.findById(teamId).map(Team::getEventId).orElse(null);
+        return getEligibleJudgeUserIds(roundId, teamTrackId, teamGroupId).stream()
+                .filter(judgeUserId -> !hasConflictForTeam(
+                        judgeUserId, teamId, eventId, teamTrackId))
+                .toList();
+    }
+
+    /**
+     * Batch form of {@link #getEffectiveJudgeUserIdsForTeam} keyed by team id, loading the
+     * round's assignments once instead of per team.
+     */
+    @Transactional(readOnly = true)
+    public Map<UUID, Long> countEffectiveJudgesByTeam(UUID roundId, List<Team> teams) {
+        List<JudgeAssignment> assignments = judgeAssignmentRepository.findByRoundIdAndActiveTrue(roundId);
+        Map<UUID, Long> counts = new LinkedHashMap<>();
+        for (Team team : teams) {
+            Set<UUID> judgeIds = new HashSet<>();
+            for (JudgeAssignment assignment : assignments) {
+                if (coversTeam(assignment, team.getTrackId(), team.getGroupId())
+                        && !hasConflictForTeam(
+                                assignment.getJudgeUserId(), team.getId(),
+                                team.getEventId(), team.getTrackId())) {
+                    judgeIds.add(assignment.getJudgeUserId());
+                }
+            }
+            counts.put(team.getId(), (long) judgeIds.size());
+        }
+        return counts;
+    }
+
     @Transactional
     public void removeJudgeAssignment(UUID assignmentId, String ipAddress) {
         JudgeAssignment assignment = getAssignment(assignmentId);
@@ -234,6 +278,33 @@ public class JudgeAssignmentService {
         return toResponse(assignment, judge, resolvedEventId, null, computeIncompleteScopes(assignment.getRound()));
     }
 
+    /**
+     * Retires the judge assignments of a group that is being deleted: their scope stops existing,
+     * and left active they show up as judges of a dead group and skew coverage warnings.
+     *
+     * <p>Deactivates instead of deleting, because a judge may already have scored under the
+     * assignment — the same reason {@link #removeJudgeAssignment} refuses to delete scored ones.
+     * Unlike {@link #deactivateAssignment} this skips the published/mutable guards: the caller has
+     * already decided the group goes, so these rows cannot be left behind pointing at nothing.
+     */
+    @Transactional
+    public void deactivateAssignmentsForDeletedGroup(UUID groupId, String ipAddress) {
+        for (JudgeAssignment assignment : judgeAssignmentRepository.findByGroupIdAndActiveTrue(groupId)) {
+            UUID eventId = assignment.getRound().getHackathonEvent().getId();
+            String oldValue = toAuditJson(assignment, eventId, null);
+
+            assignment.setActive(false);
+            assignment.setDeactivatedAt(LocalDateTime.now());
+            assignment.setDeactivationReason(GROUP_DELETED_REASON);
+            judgeAssignmentRepository.save(assignment);
+
+            auditService.log(authPublicService.getCurrentUserId(), "JUDGE_ASSIGNMENT_DEACTIVATED",
+                    assignment.getId(), "JudgeAssignment", oldValue,
+                    toAuditJson(assignment, eventId, GROUP_DELETED_REASON), ipAddress);
+            notifyJudgeRemoved(assignment, eventId);
+        }
+    }
+
     @Transactional
     public JudgeAssignmentResponse activateAssignment(UUID assignmentId, String ipAddress) {
         JudgeAssignment assignment = getAssignment(assignmentId);
@@ -243,6 +314,7 @@ public class JudgeAssignmentService {
         UUID eventId = assignment.getRound().getHackathonEvent().getId();
         ResolvedScope scope = new ResolvedScope(assignment.getScope(), assignment.getTrackId(), assignment.getGroupId());
         validateScopeHierarchy(eventId, assignment.getRound(), scope);
+        validateTeamsAssignedToGroups(eventId, scope);
         validateScopeOverlap(assignment.getRound().getId(), assignment.getJudgeUserId(), scope, assignment.getId());
         validateNoConflictInScope(eventId, scope, assignment.getJudgeUserId());
 
@@ -316,6 +388,8 @@ public class JudgeAssignmentService {
 
     @Transactional(readOnly = true)
     public void assertEventReadyForScoring(UUID eventId) {
+        validateTeamsAssignedToGroups(
+                eventId, new ResolvedScope(AssignmentScope.ROUND, null, null));
         List<Round> rounds = roundRepository.findByHackathonEventIdOrderByRoundNumberAsc(eventId);
         for (Round round : rounds) {
             List<IncompleteAssignmentScopeResponse> incomplete = computeIncompleteScopes(round);
@@ -343,7 +417,8 @@ public class JudgeAssignmentService {
         CompetitionGroup group = competitionGroupRepository.findById(groupId)
                 .orElseThrow(() -> new ResourceNotFoundException("CompetitionGroup", "id", groupId));
         int minJudges = round.getMinJudgesPerRound() != null ? round.getMinJudgesPerRound() : 2;
-        int count = countJudgesCoveringScope(roundId, AssignmentScope.GROUP, group.getTrackId(), groupId);
+        int count = countEffectiveJudgesCoveringScope(
+                eventId, roundId, AssignmentScope.GROUP, group.getTrackId(), groupId);
         if (count >= minJudges) {
             return List.of();
         }
@@ -398,7 +473,8 @@ public class JudgeAssignmentService {
             Map<String, IncompleteAssignmentScopeResponse> scopes,
             UUID roundId, UUID eventId, AssignmentScope scope,
             UUID trackId, String trackName, UUID groupId, String groupName, int minJudges) {
-        int count = countJudgesCoveringScope(roundId, scope, trackId, groupId);
+        int count = countEffectiveJudgesCoveringScope(
+                eventId, roundId, scope, trackId, groupId);
         String key = scope + ":" + trackId + ":" + groupId;
         scopes.put(key, IncompleteAssignmentScopeResponse.builder()
                 .scope(scope)
@@ -420,6 +496,25 @@ public class JudgeAssignmentService {
             }
         }
         return judges.size();
+    }
+
+    private int countEffectiveJudgesCoveringScope(
+            UUID eventId, UUID roundId, AssignmentScope scope, UUID trackId, UUID groupId) {
+        List<Team> teams = switch (scope) {
+            case ROUND -> teamRepository.findByEventId(eventId);
+            case TRACK -> teamRepository.findByEventIdAndTrackId(eventId, trackId);
+            case GROUP -> teamRepository.findByEventIdAndGroupId(eventId, groupId);
+        };
+        teams = teams.stream()
+                .filter(team -> team.getStatus() != TeamStatus.DISBANDED)
+                .toList();
+        if (teams.isEmpty()) {
+            return countJudgesCoveringScope(roundId, scope, trackId, groupId);
+        }
+        return countEffectiveJudgesByTeam(roundId, teams).values().stream()
+                .mapToInt(Long::intValue)
+                .min()
+                .orElse(0);
     }
 
     private boolean coversScopeUnit(JudgeAssignment assignment, AssignmentScope unitScope, UUID trackId, UUID groupId) {
@@ -524,11 +619,6 @@ public class JudgeAssignmentService {
 
     private void validateNoConflictInScope(UUID eventId, ResolvedScope scope, UUID judgeUserId) {
         for (Team team : teamsInScope(eventId, scope)) {
-            if (teamPublicService.isMentorOfTeam(judgeUserId, team.getId())) {
-                throw new BusinessException(
-                        "Cannot assign judge who is mentor of team " + team.getName() + " (conflict of interest)",
-                        HttpStatus.CONFLICT) {};
-            }
             if (team.getTrackId() != null && mentorAssignmentRepository.existsByHackathonEventIdAndTrackIdAndMentorUserId(
                     eventId, team.getTrackId(), judgeUserId)) {
                 throw new BusinessException(
@@ -541,6 +631,45 @@ public class JudgeAssignmentService {
                         HttpStatus.CONFLICT) {};
             }
         }
+    }
+
+    private boolean hasConflictForTeam(
+            UUID judgeUserId, UUID teamId, UUID eventId, UUID trackId) {
+        if (teamPublicService.isMentorOfTeam(judgeUserId, teamId)
+                || teamMemberRepository.existsByTeamIdAndUserId(teamId, judgeUserId)) {
+            return true;
+        }
+        if (eventId == null || trackId == null) {
+            return false;
+        }
+        return mentorAssignmentRepository
+                .existsByHackathonEventIdAndTrackIdAndMentorUserId(
+                        eventId, trackId, judgeUserId);
+    }
+
+    private void validateTeamsAssignedToGroups(UUID eventId, ResolvedScope scope) {
+        List<Team> candidateTeams = switch (scope.scope()) {
+            case ROUND -> teamRepository.findByEventId(eventId);
+            case TRACK, GROUP -> teamRepository.findByEventIdAndTrackId(eventId, scope.trackId());
+        };
+        List<Team> missingGroups = candidateTeams.stream()
+                .filter(team -> team.getStatus() != TeamStatus.DISBANDED)
+                .filter(team -> team.getGroupId() == null)
+                .toList();
+        if (missingGroups.isEmpty()) {
+            return;
+        }
+        String teamNames = missingGroups.stream()
+                .map(Team::getName)
+                .limit(5)
+                .collect(Collectors.joining(", "));
+        if (missingGroups.size() > 5) {
+            teamNames += " (+" + (missingGroups.size() - 5) + " more)";
+        }
+        throw new BusinessException(
+                "Assign every team to a competition group before assigning judges. Missing: "
+                        + teamNames,
+                HttpStatus.CONFLICT) {};
     }
 
     private boolean hasScoresInScope(JudgeAssignment assignment) {

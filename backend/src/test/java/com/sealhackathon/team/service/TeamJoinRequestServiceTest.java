@@ -58,7 +58,7 @@ class TeamJoinRequestServiceTest {
         doNothing().when(teamService).validateTeamFormationAllowed(eventId);
         doNothing().when(teamService).validateRegistrationOpen(eventId);
         doNothing().when(enrollmentService).requireApprovedEnrollment(userId, eventId);
-        when(teamMemberRepository.existsByUserIdAndEventId(userId, eventId)).thenReturn(true);
+        when(teamMemberRepository.existsActiveByUserIdAndEventId(userId, eventId)).thenReturn(true);
 
         assertThatThrownBy(() -> joinRequestService.createJoinRequest(
                 userId, eventId, teamId, new CreateJoinRequestRequest()))
@@ -80,7 +80,7 @@ class TeamJoinRequestServiceTest {
         doNothing().when(teamService).validateTeamFormationAllowed(eventId);
         doNothing().when(teamService).validateRegistrationOpen(eventId);
         doNothing().when(enrollmentService).requireApprovedEnrollment(userId, eventId);
-        when(teamMemberRepository.existsByUserIdAndEventId(userId, eventId)).thenReturn(false);
+        when(teamMemberRepository.existsActiveByUserIdAndEventId(userId, eventId)).thenReturn(false);
         when(joinRequestRepository.existsByRequesterIdAndEventIdAndStatus(
                 userId, eventId, JoinRequestStatus.PENDING)).thenReturn(true);
         when(systemConfigService.getConfig()).thenReturn(SystemConfigResponse.builder()

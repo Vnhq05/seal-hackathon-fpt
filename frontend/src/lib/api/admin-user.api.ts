@@ -21,6 +21,19 @@ export interface UserListParams extends PageParams {
   search?: string;
 }
 
+export interface UserAchievement {
+  id: string;
+  type: "TEAM_AWARD" | "PARTICIPATION_CERTIFICATE";
+  eventId: string;
+  eventName: string | null;
+  teamId: string;
+  teamName: string | null;
+  prizeRank: "FIRST" | "SECOND" | "THIRD" | "CONSOLATION" | null;
+  title: string;
+  description: string | null;
+  achievedAt: string;
+}
+
 export interface ApprovalRequest {
   userId: string;
   action: "APPROVE" | "REJECT";
@@ -52,6 +65,10 @@ export const adminUserApi = {
 
   getUserById(userId: string): Promise<UserProfile> {
     return api.get<UserProfile>(`/admin/users/${userId}`);
+  },
+
+  getUserAchievements(userId: string): Promise<UserAchievement[]> {
+    return api.get<UserAchievement[]>(`/admin/users/${userId}/achievements`);
   },
 
   approveUser(userId: string): Promise<UserProfile> {

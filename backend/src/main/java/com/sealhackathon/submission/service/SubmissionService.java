@@ -10,7 +10,6 @@ import com.sealhackathon.event.service.EventPublicService;
 import com.sealhackathon.event.service.FormatRuleEngine;
 import com.sealhackathon.event.service.JudgeAssignmentService;
 import com.sealhackathon.ranking.service.FinalistSelectionService;
-import com.sealhackathon.judging.repository.TeamJudgeAssignmentRepository;
 import com.sealhackathon.submission.domain.Submission;
 import com.sealhackathon.submission.domain.SubmissionAttachment;
 import com.sealhackathon.submission.domain.SubmissionVersion;
@@ -56,7 +55,6 @@ public class SubmissionService {
     private final PdfValidator pdfValidator;
     private final FinalistSelectionService finalistSelectionService;
     private final FileStorageService fileStorageService;
-    private final TeamJudgeAssignmentRepository teamJudgeAssignmentRepository;
     private final JudgeAssignmentService judgeAssignmentService;
     private final ApplicationEventPublisher eventPublisher;
     private final FormatRuleEngine formatRuleEngine;
@@ -283,10 +281,6 @@ public class SubmissionService {
     }
 
     private boolean canLecturerViewSubmission(UUID requesterId, UUID roundId, UUID teamId) {
-        if (teamJudgeAssignmentRepository.existsByTeamIdAndRoundIdAndJudgeUserId(
-                teamId, roundId, requesterId)) {
-            return true;
-        }
         if (teamPublicService.isMentorOfTeam(requesterId, teamId)) {
             return true;
         }

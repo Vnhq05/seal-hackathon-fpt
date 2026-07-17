@@ -365,51 +365,13 @@ Lấy judge pool eligible cho team trong vòng preliminary.
 
 ---
 
-### Assign team judges
+### Gán judge theo team — ĐÃ GỠ
 
-#### `POST /api/assignments`
+`POST /api/assignments` và `DELETE /api/assignments/{assignmentId}` **không còn tồn tại** (gỡ 2026-07-16, bảng `team_judge_assignments` drop ở `V15`).
 
-**Request body:**
-```json
-{
-  "eventId": "uuid",
-  "roundId": "uuid",
-  "teamId": "uuid",
-  "judgeUserIds": ["uuid", "uuid", "uuid"]
-}
-```
+Theo **BR-04**, hệ thống không gán judge cho từng team. Danh sách judge của mỗi team được **suy ra tự động từ Judge Pool** theo scope (ROUND / TRACK / GROUP) — xem `GET /api/events/{eventId}/assignments`, cột `judges` của mỗi team row chính là pool phủ team đó.
 
-(`judgeUserIds` — đúng 3 phần tử, unique)
-
-**Response `201` `data`:** `TeamJudgeAssignmentResponse[]`
-```json
-[
-  {
-    "id": "uuid",
-    "teamId": "uuid",
-    "roundId": "uuid",
-    "judgeUserId": "uuid",
-    "judgeFullName": "Dr. Tran Van B",
-    "assignedAt": "2026-06-29T10:00:00"
-  }
-]
-```
-
-**Hook:** `assignmentApi.assignTeamJudges` (mutation trong modal)
-
-**Errors:**
-- `400` — thiếu judge, judge không trong pool, judge là mentor của team
-- `409` — conflict mentor/judge (COI)
-
----
-
-### Optional (hook có sẵn, chưa dùng trên overview table)
-
-#### `DELETE /api/assignments/{assignmentId}`
-
-Gỡ một liên kết team–judge.
-
-**Hook:** `useRemoveTeamJudgeAssignment` → `assignmentApi.removeTeamJudgeAssignment`
+Muốn đổi judge của một team → sửa **pool** của round/track/group tương ứng qua `POST /api/events/{eventId}/rounds/{roundId}/judges`.
 
 ---
 
@@ -429,8 +391,6 @@ Gỡ một liên kết team–judge.
 | POST | `/api/events/{eventId}/rounds/{roundId}/judges` | Judge pool |
 | DELETE | `/api/events/{eventId}/rounds/{roundId}/judges/{assignmentId}` | Judge pool |
 | GET | `/api/events/{eventId}/assignments` | Team × Judge |
-| POST | `/api/assignments` | Team × Judge |
-| DELETE | `/api/assignments/{assignmentId}` | *(hook only)* |
 
 ---
 

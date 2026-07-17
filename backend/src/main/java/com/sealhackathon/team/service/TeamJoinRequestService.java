@@ -64,7 +64,7 @@ public class TeamJoinRequestService {
             UUID eventId, UUID currentUserId, boolean recruitingOnly) {
         enrollmentService.requireApprovedEnrollment(currentUserId, eventId);
 
-        if (teamMemberRepository.existsByUserIdAndEventId(currentUserId, eventId)) {
+        if (teamMemberRepository.existsActiveByUserIdAndEventId(currentUserId, eventId)) {
             return List.of();
         }
 
@@ -124,7 +124,7 @@ public class TeamJoinRequestService {
         teamService.validateRegistrationOpen(eventId);
         enrollmentService.requireApprovedEnrollment(requesterId, eventId);
 
-        if (teamMemberRepository.existsByUserIdAndEventId(requesterId, eventId)) {
+        if (teamMemberRepository.existsActiveByUserIdAndEventId(requesterId, eventId)) {
             throw new BusinessException(
                     "You are already a member of a team in this event",
                     HttpStatus.CONFLICT) {};
@@ -187,12 +187,16 @@ public class TeamJoinRequestService {
 
         UUID requesterId = joinRequest.getRequesterId();
 
-        if (teamMemberRepository.existsByUserIdAndEventId(requesterId, eventId)) {
+        if (teamMemberRepository.existsActiveByUserIdAndEventId(requesterId, eventId)) {
             // Own transaction: the throw below would otherwise roll the rejection back, leaving a
             // request that can never be accepted sitting PENDING in the leader's queue forever.
             joinRequestStatusService.retire(joinRequest.getId(), JoinRequestStatus.REJECTED);
             throw new BusinessException("User is already in a team for this event", HttpStatus.CONFLICT) {};
         }
+        // Leftover membership on a disbanded team blocks the unique (event_id, user_id) row — clear it
+        teamMemberRepository.findByUserIdAndEventId(requesterId, eventId)
+                .ifPresent(teamMemberRepository::delete);
+        teamMemberRepository.flush();
 
         int currentSize = teamMemberRepository.countByTeamId(team.getId());
         if (currentSize >= getMaxTeamSize()) {

@@ -5,7 +5,10 @@ import com.sealhackathon.common.exception.BusinessException;
 import com.sealhackathon.common.exception.DuplicateResourceException;
 import com.sealhackathon.common.dto.SystemConfigResponse;
 import com.sealhackathon.common.service.SystemConfigService;
+import com.sealhackathon.event.domain.CompetitionGroup;
 import com.sealhackathon.event.domain.HackathonEvent;
+import com.sealhackathon.event.domain.Track;
+import com.sealhackathon.event.repository.CompetitionGroupRepository;
 import com.sealhackathon.event.repository.HackathonEventRepository;
 import com.sealhackathon.event.repository.TrackRepository;
 import com.sealhackathon.event.domain.enums.EventStatus;
@@ -18,6 +21,7 @@ import com.sealhackathon.team.domain.enums.HackathonSkillRole;
 import com.sealhackathon.team.domain.enums.TeamMemberRole;
 import com.sealhackathon.team.domain.enums.TeamStatus;
 import com.sealhackathon.team.dto.request.CreateTeamRequest;
+import com.sealhackathon.team.dto.request.SelectTrackRequest;
 import com.sealhackathon.team.dto.request.UpdateTeamRecruitmentRequest;
 import com.sealhackathon.team.dto.response.TeamResponse;
 import com.sealhackathon.team.repository.TeamMemberRepository;
@@ -48,6 +52,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -65,6 +70,8 @@ class TeamServiceTest {
     @Mock private HackathonEventRepository eventRepository;
     @Mock private TrackRepository trackRepository;
     @Mock private FormatRuleEngine formatRuleEngine;
+    @Mock private CompetitionGroupRepository competitionGroupRepository;
+    @Mock private GroupAssignmentService groupAssignmentService;
 
     @InjectMocks private TeamService teamService;
 
@@ -111,8 +118,8 @@ class TeamServiceTest {
         stubTeamSizeConfig();
         stubEventCapacity(eventId);
         stubEnrollment(userId, eventId);
-        when(teamRepository.existsByEventIdAndName(eventId, "Alpha")).thenReturn(false);
-        when(teamMemberRepository.existsByUserIdAndEventId(userId, eventId)).thenReturn(false);
+        when(teamRepository.existsByEventIdAndNameAndStatusNot(eventId, "Alpha", TeamStatus.DISBANDED)).thenReturn(false);
+        when(teamMemberRepository.existsActiveByUserIdAndEventId(userId, eventId)).thenReturn(false);
         when(teamRepository.save(any(Team.class))).thenAnswer(i -> {
             Team t = i.getArgument(0);
             t.setId(UUID.randomUUID());
@@ -145,7 +152,7 @@ class TeamServiceTest {
                 .thenReturn(LocalDateTime.now().plusDays(7));
         stubEventCapacity(eventId);
         stubEnrollment(userId, eventId);
-        when(teamRepository.existsByEventIdAndName(eventId, "Taken")).thenReturn(true);
+        when(teamRepository.existsByEventIdAndNameAndStatusNot(eventId, "Taken", TeamStatus.DISBANDED)).thenReturn(true);
 
         CreateTeamRequest request = CreateTeamRequest.builder().name("Taken").eventId(eventId).build();
 
@@ -165,8 +172,8 @@ class TeamServiceTest {
                 .thenReturn(LocalDateTime.now().plusDays(7));
         stubEventCapacity(eventId);
         stubEnrollment(userId, eventId);
-        when(teamRepository.existsByEventIdAndName(eventId, "Beta")).thenReturn(false);
-        when(teamMemberRepository.existsByUserIdAndEventId(userId, eventId)).thenReturn(true);
+        when(teamRepository.existsByEventIdAndNameAndStatusNot(eventId, "Beta", TeamStatus.DISBANDED)).thenReturn(false);
+        when(teamMemberRepository.existsActiveByUserIdAndEventId(userId, eventId)).thenReturn(true);
 
         CreateTeamRequest request = CreateTeamRequest.builder().name("Beta").eventId(eventId).build();
 
@@ -239,8 +246,8 @@ class TeamServiceTest {
         stubTeamSizeConfig();
         stubEventCapacity(eventId);
         stubEnrollment(userId, eventId);
-        when(teamRepository.existsByEventIdAndName(eventId, "OnTime")).thenReturn(false);
-        when(teamMemberRepository.existsByUserIdAndEventId(userId, eventId)).thenReturn(false);
+        when(teamRepository.existsByEventIdAndNameAndStatusNot(eventId, "OnTime", TeamStatus.DISBANDED)).thenReturn(false);
+        when(teamMemberRepository.existsActiveByUserIdAndEventId(userId, eventId)).thenReturn(false);
         when(teamRepository.save(any(Team.class))).thenAnswer(i -> {
             Team t = i.getArgument(0);
             t.setId(UUID.randomUUID());
@@ -438,7 +445,47 @@ class TeamServiceTest {
     }
 
     @Test
-    void disbandUndersizedTeams_shouldForceLeaveMembers() {
+    void leaveTeam_shouldCleanupMembership_whenTeamDisbanded() {
+        UUID teamId = UUID.randomUUID();
+        UUID leaderId = UUID.randomUUID();
+        UUID memberId = UUID.randomUUID();
+
+        Team team = buildTeam(teamId, UUID.randomUUID());
+        team.setLeaderId(leaderId);
+        team.setStatus(TeamStatus.DISBANDED);
+        TeamMember leftover = TeamMember.builder().userId(memberId).role(TeamMemberRole.MEMBER).build();
+
+        when(teamRepository.findById(teamId)).thenReturn(Optional.of(team));
+        when(teamMemberRepository.findByTeamIdAndUserId(teamId, memberId)).thenReturn(Optional.of(leftover));
+
+        teamService.leaveTeam(memberId, teamId);
+
+        verify(teamMemberRepository).delete(leftover);
+        verify(eventPublisher).publishEvent(any(com.sealhackathon.team.event.MemberLeftEvent.class));
+        verify(formatRuleEngine, org.mockito.Mockito.never()).assertCanModifyTeamMembers(any());
+    }
+
+    @Test
+    void leaveTeam_shouldCleanupLeaderMembership_whenTeamDisbanded() {
+        UUID teamId = UUID.randomUUID();
+        UUID leaderId = UUID.randomUUID();
+
+        Team team = buildTeam(teamId, UUID.randomUUID());
+        team.setLeaderId(leaderId);
+        team.setStatus(TeamStatus.DISBANDED);
+        TeamMember leftover = TeamMember.builder().userId(leaderId).role(TeamMemberRole.LEADER).build();
+
+        when(teamRepository.findById(teamId)).thenReturn(Optional.of(team));
+        when(teamMemberRepository.findByTeamIdAndUserId(teamId, leaderId)).thenReturn(Optional.of(leftover));
+
+        teamService.leaveTeam(leaderId, teamId);
+
+        verify(teamMemberRepository).delete(leftover);
+        verify(eventPublisher).publishEvent(any(com.sealhackathon.team.event.MemberLeftEvent.class));
+    }
+
+    @Test
+    void disbandUndersizedTeams_shouldReturnMembersToWaitingList() {
         UUID eventId = UUID.randomUUID();
         UUID teamId = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
@@ -452,7 +499,6 @@ class TeamServiceTest {
         when(teamMemberRepository.countByTeamId(teamId)).thenReturn(1);
         when(teamMemberRepository.findByTeamId(teamId)).thenReturn(List.of(member));
         when(teamRepository.save(any(Team.class))).thenAnswer(i -> i.getArgument(0));
-        doNothing().when(enrollmentService).forceWithdrawEnrollment(userId, eventId);
 
         int count = teamService.disbandUndersizedTeams(eventId);
 
@@ -460,7 +506,7 @@ class TeamServiceTest {
         assertThat(team.getStatus()).isEqualTo(TeamStatus.DISBANDED);
         verify(teamMemberRepository).delete(member);
         verify(eventPublisher).publishEvent(any(com.sealhackathon.team.event.MemberLeftEvent.class));
-        verify(enrollmentService).forceWithdrawEnrollment(userId, eventId);
+        verify(enrollmentService, org.mockito.Mockito.never()).forceWithdrawEnrollment(any(), any());
     }
 
     @Test
@@ -480,6 +526,92 @@ class TeamServiceTest {
         assertThat(count).isZero();
         assertThat(team.getStatus()).isEqualTo(TeamStatus.CONFIRMED);
         verify(teamMemberRepository, org.mockito.Mockito.never()).delete(any());
+    }
+
+    // ── Track is chosen once: selecting again must not silently move the team ──
+
+    @Test
+    void selectTrack_shouldThrowConflict_whenTeamAlreadyHasTrack() {
+        UUID leaderId = UUID.randomUUID();
+        UUID teamId = UUID.randomUUID();
+        UUID eventId = UUID.randomUUID();
+
+        Team team = buildTeam(teamId, eventId);
+        team.setLeaderId(leaderId);
+        team.setTrackId(UUID.randomUUID());
+        when(teamRepository.findById(teamId)).thenReturn(Optional.of(team));
+
+        assertThatThrownBy(() -> teamService.selectTrack(leaderId, teamId, new SelectTrackRequest(UUID.randomUUID())))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("Team already has a track assigned")
+                .extracting(e -> ((BusinessException) e).getHttpStatus())
+                .isEqualTo(HttpStatus.CONFLICT);
+
+        verify(teamRepository, never()).save(any());
+        verify(groupAssignmentService, never()).autoAssignGroup(any());
+    }
+
+    @Test
+    void selectTrack_shouldAutoAssignGroup_whenNoTrackYet() {
+        UUID leaderId = UUID.randomUUID();
+        UUID teamId = UUID.randomUUID();
+        UUID eventId = UUID.randomUUID();
+        UUID trackId = UUID.randomUUID();
+
+        Team team = buildTeam(teamId, eventId);
+        team.setLeaderId(leaderId);
+        when(teamRepository.findById(teamId)).thenReturn(Optional.of(team));
+        when(teamMemberRepository.countByTeamId(teamId)).thenReturn(3);
+        when(teamMemberRepository.findByTeamId(teamId)).thenReturn(List.of());
+        stubTeamSizeConfig();
+
+        HackathonEvent event = HackathonEvent.builder().build();
+        event.setId(eventId);
+        Track track = Track.builder().hackathonEvent(event).name("AI").maxTeams(20).build();
+        track.setId(trackId);
+        when(trackRepository.findById(trackId)).thenReturn(Optional.of(track));
+
+        teamService.selectTrack(leaderId, teamId, new SelectTrackRequest(trackId));
+
+        ArgumentCaptor<Team> captor = ArgumentCaptor.forClass(Team.class);
+        verify(teamRepository).save(captor.capture());
+        assertThat(captor.getValue().getTrackId()).isEqualTo(trackId);
+        verify(groupAssignmentService).autoAssignGroup(team);
+    }
+
+    @Test
+    void getTeamById_shouldIncludeGroupName_whenTeamHasGroup() {
+        UUID teamId = UUID.randomUUID();
+        UUID groupId = UUID.randomUUID();
+
+        Team team = buildTeam(teamId, UUID.randomUUID());
+        team.setGroupId(groupId);
+        when(teamRepository.findById(teamId)).thenReturn(Optional.of(team));
+        when(teamMemberRepository.findByTeamId(teamId)).thenReturn(List.of());
+        stubTeamSizeConfig();
+
+        CompetitionGroup group = CompetitionGroup.builder().name("GA1").build();
+        group.setId(groupId);
+        when(competitionGroupRepository.findById(groupId)).thenReturn(Optional.of(group));
+
+        TeamResponse response = teamService.getTeamById(teamId, null, null);
+
+        assertThat(response.getGroupName()).isEqualTo("GA1");
+    }
+
+    @Test
+    void getTeamById_shouldReturnNullGroupName_whenTeamHasNoGroup() {
+        UUID teamId = UUID.randomUUID();
+
+        Team team = buildTeam(teamId, UUID.randomUUID());
+        when(teamRepository.findById(teamId)).thenReturn(Optional.of(team));
+        when(teamMemberRepository.findByTeamId(teamId)).thenReturn(List.of());
+        stubTeamSizeConfig();
+
+        TeamResponse response = teamService.getTeamById(teamId, null, null);
+
+        assertThat(response.getGroupName()).isNull();
+        verify(competitionGroupRepository, never()).findById(any());
     }
 
     private Team buildTeam(UUID teamId, UUID eventId) {

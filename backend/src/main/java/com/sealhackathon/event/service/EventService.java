@@ -372,7 +372,7 @@ public class EventService {
         event.setStatus(target);
         EventResponse response = toResponse(eventRepository.save(event));
 
-        // Undersized teams cannot compete — force members out when registration locks or competition starts
+        // Undersized teams cannot compete — return members to waiting list when registration locks or competition starts
         if (target == EventStatus.CLOSED_REGISTRATION || target == EventStatus.ACTIVE) {
             teamService.disbandUndersizedTeams(eventId);
         }

@@ -5,7 +5,6 @@ import com.sealhackathon.event.repository.EventMentorAssignmentRepository;
 import com.sealhackathon.event.repository.JudgeAssignmentRepository;
 import com.sealhackathon.event.repository.MentorAssignmentRepository;
 import com.sealhackathon.judging.repository.JudgeScoreRepository;
-import com.sealhackathon.judging.repository.TeamJudgeAssignmentRepository;
 import com.sealhackathon.team.repository.EventEnrollmentRepository;
 import com.sealhackathon.team.repository.MentorInvitationRepository;
 import com.sealhackathon.team.repository.MentorTeamRepository;
@@ -28,7 +27,6 @@ public class UserReferenceService {
     private final EventJudgeAssignmentRepository eventJudgeAssignmentRepository;
     private final JudgeAssignmentRepository judgeAssignmentRepository;
     private final JudgeScoreRepository judgeScoreRepository;
-    private final TeamJudgeAssignmentRepository teamJudgeAssignmentRepository;
     private final MentorTeamRepository mentorTeamRepository;
     private final MentorInvitationRepository mentorInvitationRepository;
     private final TeamMemberRepository teamMemberRepository;
@@ -59,11 +57,6 @@ public class UserReferenceService {
         long roundJudgeAssignments = judgeAssignmentRepository.countByJudgeUserId(userId);
         if (roundJudgeAssignments > 0) {
             refs.add(roundJudgeAssignments + " round judge assignment(s)");
-        }
-
-        long teamJudgeAssignments = teamJudgeAssignmentRepository.countByJudgeUserId(userId);
-        if (teamJudgeAssignments > 0) {
-            refs.add(teamJudgeAssignments + " team judge assignment(s)");
         }
 
         long judgeScores = judgeScoreRepository.countByJudgeUserId(userId);

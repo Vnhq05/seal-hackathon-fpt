@@ -5,9 +5,11 @@ Discription:
 
 SEAL Hackathon Management System is a modern web-based platform developed to streamline the organization and management of hackathon competitions. The system supports multi-role management, team registration, mentor assignment, project submission, judge calibration, weighted scoring, automated ranking, audit logging, and result publication in a secure and transparent workflow.
 
+Local DB ops scripts (manual `sqlcmd`, not Flyway): see `backend/src/main/resources/db/archive/` — notably `bootstrap_admin.sql`, `reset_and_seed_template.sql`, and `seed_demo_events.sql`.
+
 Team Member:
 
- Phạm Mạnh Quỳnh - Frontend Developer - HTML, CSS, JS
+    Phạm Mạnh Quỳnh - Frontend Developer - HTML, CSS, JS
  
  Nguyễn Trường Vinh - Frontend Developer - HTML, CSS, JS
  

@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
 import java.util.UUID;
 
 @Getter
@@ -21,4 +22,5 @@ public class CompetitionHistoryItem {
     private String teamName;
     private Integer finalRank;
     private CompetitionOutcome outcome;
+    private LocalDate achievedAt;
 }

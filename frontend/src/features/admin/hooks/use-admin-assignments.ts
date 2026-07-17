@@ -140,6 +140,8 @@ export function useDeleteCompetitionGroup(eventId: string, trackId: string) {
       assignmentApi.deleteCompetitionGroup(eventId, trackId, groupId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["competition-groups", eventId, trackId] });
+      // Deleting a group clears group_id on its teams, so the overview is stale too.
+      qc.invalidateQueries({ queryKey: [TEAM_ASSIGNMENTS_OVERVIEW_KEY] });
     },
   });
 }
@@ -234,17 +236,6 @@ export function useTeamAssignmentsOverview(
     queryKey: [TEAM_ASSIGNMENTS_OVERVIEW_KEY, eventId, params.roundId, params.trackId, params.season, params.year],
     queryFn: () => assignmentApi.getTeamAssignments(eventId, params),
     enabled: !!eventId && !!params.roundId,
-  });
-}
-
-/** Remove a single team-judge link. */
-export function useRemoveTeamJudgeAssignment() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (assignmentId: string) => assignmentApi.removeTeamJudgeAssignment(assignmentId),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: [TEAM_ASSIGNMENTS_OVERVIEW_KEY] });
-    },
   });
 }
 

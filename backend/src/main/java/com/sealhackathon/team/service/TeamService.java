@@ -75,6 +75,7 @@ public class TeamService {
     private final JudgeAssignmentService judgeAssignmentService;
     private final AuditService auditService;
     private final AuthPublicService authPublicService;
+    private final GroupAssignmentService groupAssignmentService;
 
     @Value("${app.hackathon.team.max-skill-roles:5}")
     private int maxSkillRoles;
@@ -95,17 +96,22 @@ public class TeamService {
         validateTeamCapacity(request.getEventId());
         enrollmentService.requireApprovedEnrollment(currentUserId, request.getEventId());
 
-        // BR-19: team name unique per event
-        if (teamRepository.existsByEventIdAndName(request.getEventId(), request.getName())) {
+        // BR-19: team name unique per event — disbanded teams release their name
+        if (teamRepository.existsByEventIdAndNameAndStatusNot(
+                request.getEventId(), request.getName(), TeamStatus.DISBANDED)) {
             throw new DuplicateResourceException("Team", "name", request.getName());
         }
 
-        // BR-18: participant can only be in one team per event
-        if (teamMemberRepository.existsByUserIdAndEventId(currentUserId, request.getEventId())) {
+        // BR-18: participant can only be in one team per event — disbanded teams don't count
+        if (teamMemberRepository.existsActiveByUserIdAndEventId(currentUserId, request.getEventId())) {
             throw new BusinessException(
                     "You are already a member of a team in this event",
                     HttpStatus.CONFLICT) {};
         }
+        // Leftover membership on a disbanded team blocks the unique (event_id, user_id) row — clear it
+        teamMemberRepository.findByUserIdAndEventId(currentUserId, request.getEventId())
+                .ifPresent(teamMemberRepository::delete);
+        teamMemberRepository.flush();
 
         Team team = Team.builder()
                 .eventId(request.getEventId())
@@ -186,6 +192,9 @@ public class TeamService {
         Team team = getTeam(teamId);
         formatRuleEngine.validateLeaderCannotSelectTrack(team.getEventId());
         guardLeader(team, leaderId);
+        if (team.getTrackId() != null) {
+            throw new BusinessException("Team already has a track assigned", HttpStatus.CONFLICT) {};
+        }
 
         int size = teamMemberRepository.countByTeamId(teamId);
         int minSize = getMinTeamSize();
@@ -204,6 +213,7 @@ public class TeamService {
         formatRuleEngine.validateTrackCapacity(team.getEventId(), request.getTrackId());
 
         team.setTrackId(request.getTrackId());
+        groupAssignmentService.autoAssignGroup(team);
         teamRepository.save(team);
         return toResponse(team, leaderId, null);
     }
@@ -290,13 +300,23 @@ public class TeamService {
     /**
      * Voluntary leave — allowed only before the competition starts
      * (OPEN / UPCOMING via {@link FormatRuleEngine#assertCanModifyTeamMembers}).
+     * Disbanded teams are an exception: leftover membership is cleaned up so the
+     * student returns to the waiting list (approved enrollment, no team).
      */
     @Transactional
     public void leaveTeam(UUID currentUserId, UUID teamId) {
         Team team = getTeam(teamId);
+
+        // Already disbanded — just clear leftover membership → waiting list
         if (team.getStatus() == TeamStatus.DISBANDED) {
-            throw new BusinessException("Team is disbanded", HttpStatus.BAD_REQUEST) {};
+            TeamMember leftover = teamMemberRepository.findByTeamIdAndUserId(teamId, currentUserId)
+                    .orElseThrow(() -> new BusinessException(
+                            "You are not a member of this team", HttpStatus.BAD_REQUEST) {});
+            teamMemberRepository.delete(leftover);
+            eventPublisher.publishEvent(new MemberLeftEvent(teamId, currentUserId));
+            return;
         }
+
         formatRuleEngine.assertCanModifyTeamMembers(team.getEventId());
 
         if (currentUserId.equals(team.getLeaderId())) {
@@ -317,7 +337,8 @@ public class TeamService {
     }
 
     /**
-     * Force-remove undersized teams and withdraw those students from the event.
+     * Force-remove undersized teams and return those students to the waiting list
+     * (approved enrollment, no team membership).
      * Called when registration closes or the competition becomes ACTIVE.
      *
      * @return number of teams disbanded
@@ -341,7 +362,6 @@ public class TeamService {
                 UUID userId = member.getUserId();
                 teamMemberRepository.delete(member);
                 eventPublisher.publishEvent(new MemberLeftEvent(team.getId(), userId));
-                enrollmentService.forceWithdrawEnrollment(userId, eventId);
             }
 
             team.setStatus(TeamStatus.DISBANDED);
@@ -388,7 +408,8 @@ public class TeamService {
         }
 
         if (!trimmedName.equals(team.getName())
-                && teamRepository.existsByEventIdAndName(team.getEventId(), trimmedName)) {
+                && teamRepository.existsByEventIdAndNameAndStatusNot(
+                        team.getEventId(), trimmedName, TeamStatus.DISBANDED)) {
             throw new DuplicateResourceException("Team", "name", trimmedName);
         }
 
@@ -404,7 +425,8 @@ public class TeamService {
 
     @Transactional(readOnly = true)
     public TeamResponse getMyTeam(UUID userId, UUID eventId) {
-        UUID teamId = teamMemberRepository.findTeamIdByUserIdAndEventId(userId, eventId)
+        // Disbanded teams are invisible here — the student is back on the waiting list
+        UUID teamId = teamMemberRepository.findActiveTeamIdByUserIdAndEventId(userId, eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Team", "userId+eventId",
                         userId + " in event " + eventId));
         return toResponse(getTeam(teamId), userId, null, false);
@@ -413,8 +435,10 @@ public class TeamService {
     @Transactional(readOnly = true)
     public Page<TeamResponse> getTeamsByEvent(
             UUID eventId, UUID viewerId, UserType viewerRole, Pageable pageable) {
-        return teamRepository.findByEventId(eventId, pageable)
-                .map(team -> toResponse(team, viewerId, viewerRole, true));
+        Page<Team> teams = teamRepository.findByEventId(eventId, pageable);
+        Map<UUID, String> groupNames = resolveGroupNames(teams.getContent());
+        return teams.map(team -> toResponse(team, viewerId, viewerRole, true,
+                team.getGroupId() == null ? null : groupNames.get(team.getGroupId())));
     }
 
     // ═══ Helpers ═══
@@ -503,6 +527,31 @@ public class TeamService {
     }
 
     TeamResponse toResponse(Team team, UUID viewerId, UserType viewerRole, boolean listSummaryOnly) {
+        return toResponse(team, viewerId, viewerRole, listSummaryOnly, resolveGroupName(team.getGroupId()));
+    }
+
+    private String resolveGroupName(UUID groupId) {
+        return groupId == null ? null
+                : competitionGroupRepository.findById(groupId)
+                        .map(CompetitionGroup::getName)
+                        .orElse(null);
+    }
+
+    /** One lookup for a whole page, so listing teams does not fan out into a query per team. */
+    private Map<UUID, String> resolveGroupNames(List<Team> teams) {
+        Set<UUID> groupIds = teams.stream()
+                .map(Team::getGroupId)
+                .filter(id -> id != null)
+                .collect(Collectors.toSet());
+        if (groupIds.isEmpty()) {
+            return Map.of();
+        }
+        return competitionGroupRepository.findAllById(groupIds).stream()
+                .collect(Collectors.toMap(CompetitionGroup::getId, CompetitionGroup::getName));
+    }
+
+    private TeamResponse toResponse(
+            Team team, UUID viewerId, UserType viewerRole, boolean listSummaryOnly, String groupName) {
         List<TeamMember> members = teamMemberRepository.findByTeamId(team.getId());
         List<UUID> userIds = members.stream().map(TeamMember::getUserId).toList();
         Map<UUID, UserSnapshot> userMap = userPublicService.findAllByIds(userIds).stream()
@@ -535,6 +584,7 @@ public class TeamService {
                 .status(team.getStatus())
                 .trackId(team.getTrackId())
                 .groupId(team.getGroupId())
+                .groupName(groupName)
                 .memberCount(memberCount)
                 .minTeamMembers(minTeamMembers)
                 .maxTeamMembers(maxTeamMembers)

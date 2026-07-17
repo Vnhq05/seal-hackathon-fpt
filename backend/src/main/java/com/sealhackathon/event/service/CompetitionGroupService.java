@@ -17,6 +17,8 @@ import com.sealhackathon.event.dto.response.CompetitionGroupResponse;
 import com.sealhackathon.event.repository.CompetitionGroupRepository;
 import com.sealhackathon.event.repository.TrackRepository;
 import com.sealhackathon.event.service.EventService;
+import com.sealhackathon.team.domain.Team;
+import com.sealhackathon.team.repository.TeamRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -32,6 +34,8 @@ public class CompetitionGroupService {
     private final CompetitionGroupRepository groupRepository;
     private final TrackRepository trackRepository;
     private final EventService eventService;
+    private final TeamRepository teamRepository;
+    private final JudgeAssignmentService judgeAssignmentService;
 
     @Transactional
     public CompetitionGroupResponse createGroup(UUID eventId, UUID trackId, CreateCompetitionGroupRequest request) {
@@ -59,12 +63,22 @@ public class CompetitionGroupService {
     }
 
     @Transactional
-    public void deleteGroup(UUID eventId, UUID trackId, UUID groupId) {
+    public void deleteGroup(UUID eventId, UUID trackId, UUID groupId, String ipAddress) {
         validateTrack(eventId, trackId);
         eventService.enforceEventOwnership(eventId);
 
         CompetitionGroup group = groupRepository.findByIdAndTrackId(groupId, trackId)
                 .orElseThrow(() -> new ResourceNotFoundException("CompetitionGroup", "id", groupId));
+
+        judgeAssignmentService.deactivateAssignmentsForDeletedGroup(groupId, ipAddress);
+
+        // teams.group_id has no FK to lean on (see docs/adr-fk-policy.md), and a team left pointing
+        // at a deleted group is worse than one with no group: it clears every != null guard yet
+        // matches no judge assignment, so the team silently goes unjudged.
+        List<Team> affectedTeams = teamRepository.findByGroupId(groupId);
+        affectedTeams.forEach(team -> team.setGroupId(null));
+        teamRepository.saveAll(affectedTeams);
+
         groupRepository.delete(group);
     }
 

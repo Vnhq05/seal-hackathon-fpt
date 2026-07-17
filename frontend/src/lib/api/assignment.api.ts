@@ -1,7 +1,12 @@
 import { api } from "./api-client";
-import type { TeamJudgeAssignmentResponse } from "./team-judge-assignment.api";
 
-export type { TeamJudgeAssignmentResponse };
+/** A judge covering a team, derived from the judge pool for the round's scope. */
+export interface TeamJudgeAssignmentResponse {
+  teamId: string;
+  roundId: string;
+  judgeUserId: string;
+  judgeFullName: string | null;
+}
 
 // ═══ Types ═══
 
@@ -229,13 +234,6 @@ export const assignmentApi = {
     return api.get<EventAssignmentsOverviewResponse>(`/events/${eventId}/assignments`, { params });
   },
 
-  assignTeamJudges(body: CreateTeamAssignmentsRequest): Promise<TeamJudgeAssignmentResponse[]> {
-    return api.post<TeamJudgeAssignmentResponse[]>("/assignments", body);
-  },
-
-  removeTeamJudgeAssignment(assignmentId: string): Promise<void> {
-    return api.delete<void>(`/assignments/${assignmentId}`);
-  },
 };
 
 interface EventJudgeApiResponse {
@@ -311,9 +309,3 @@ export interface EventAssignmentsOverviewResponse {
   teams: TeamAssignmentOverview[];
 }
 
-export interface CreateTeamAssignmentsRequest {
-  eventId: string;
-  roundId: string;
-  teamId: string;
-  judgeUserIds: string[];
-}

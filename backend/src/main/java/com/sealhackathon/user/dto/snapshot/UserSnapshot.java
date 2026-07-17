@@ -29,5 +29,7 @@ public class UserSnapshot {
     private AccountStatus status;
     private Integer semester;
     private StudentStanding studentStanding;
+    private boolean temporaryAccount;
+    private LocalDateTime createdAt;
     private LocalDateTime sessionsInvalidatedAt;
 }

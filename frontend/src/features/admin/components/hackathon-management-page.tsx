@@ -135,7 +135,7 @@ function ActionMenu({ event, onError }: { event: EventResponse; onError: (msg: s
     });
     actions.push({
       label: "View feedback",
-      onClick: () => { setOpen(false); router.push(`${portalBase}/feedback`); },
+      onClick: () => { setOpen(false); router.push(`${portalBase}/feedback?eventId=${event.id}`); },
     });
     actions.push({
       label: "View results",

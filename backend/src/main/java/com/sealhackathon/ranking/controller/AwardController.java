@@ -6,6 +6,7 @@ import com.sealhackathon.ranking.dto.response.AwardAssignmentResultResponse;
 import com.sealhackathon.ranking.dto.response.ParticipationCertificateResponse;
 import com.sealhackathon.ranking.dto.response.ParticipationCertificateSummaryResponse;
 import com.sealhackathon.ranking.dto.response.TeamAwardResponse;
+import com.sealhackathon.ranking.dto.response.UserAchievementResponse;
 import com.sealhackathon.ranking.service.AwardService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -59,6 +60,15 @@ public class AwardController {
     public ResponseEntity<ApiResponse<List<ParticipationCertificateResponse>>> getParticipationCertificates(
             @PathVariable UUID eventId) {
         return ResponseEntity.ok(ApiResponse.success(awardService.getParticipationCertificates(eventId)));
+    }
+
+    @GetMapping("/api/admin/users/{userId}/achievements")
+    @PreAuthorize("hasRole('SYSTEM_ADMIN')")
+    @Operation(summary = "List awards and participation achievements for a user")
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<ApiResponse<List<UserAchievementResponse>>> getUserAchievements(
+            @PathVariable UUID userId) {
+        return ResponseEntity.ok(ApiResponse.success(awardService.getUserAchievements(userId)));
     }
 
     @GetMapping("/api/events/{eventId}/awards/participation/me")

@@ -5,7 +5,6 @@ import com.sealhackathon.common.exception.BusinessException;
 import com.sealhackathon.common.exception.DuplicateResourceException;
 import com.sealhackathon.common.exception.ResourceNotFoundException;
 import com.sealhackathon.event.repository.MentorAssignmentRepository;
-import com.sealhackathon.judging.service.ConflictDetectionService;
 import com.sealhackathon.team.domain.MentorTeam;
 import com.sealhackathon.team.domain.Team;
 import com.sealhackathon.team.dto.request.AssignMentorTeamRequest;
@@ -32,7 +31,6 @@ public class MentorTeamService {
     private final MentorAssignmentRepository mentorAssignmentRepository;
     private final UserPublicService userPublicService;
     private final ApplicationEventPublisher eventPublisher;
-    private final ConflictDetectionService conflictDetectionService;
 
     @Transactional
     public void assignMentorToTeam(AssignMentorTeamRequest request) {
@@ -62,8 +60,6 @@ public class MentorTeamService {
             throw new DuplicateResourceException("MentorTeam", "mentor+team",
                     mentor.getEmail() + " + " + team.getName());
         }
-
-        conflictDetectionService.assertNotJudgeOfTeam(request.getMentorUserId(), request.getTeamId());
 
         MentorTeam mentorTeam = MentorTeam.builder()
                 .mentorUserId(request.getMentorUserId())

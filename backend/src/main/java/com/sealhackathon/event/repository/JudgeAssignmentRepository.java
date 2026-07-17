@@ -27,5 +27,7 @@ public interface JudgeAssignmentRepository extends JpaRepository<JudgeAssignment
 
     List<JudgeAssignment> findByJudgeUserId(UUID judgeUserId);
 
+    List<JudgeAssignment> findByGroupIdAndActiveTrue(UUID groupId);
+
     long countByJudgeUserId(UUID judgeUserId);
 }

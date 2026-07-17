@@ -115,7 +115,7 @@ function TeamGroupCell({
         disabled={isPending}
         className="border border-seal-border bg-white px-2 py-1 text-sm"
       >
-        <option value="">No group</option>
+        <option value="" disabled>Select group...</option>
         {groups.map((g) => (
           <option key={g.id} value={g.id}>{g.name}</option>
         ))}
@@ -196,6 +196,7 @@ function JudgePoolSection({
   selectedTrackId,
   minJudgesRequired,
   portalBase,
+  ungroupedTeamNames,
 }: {
   eventId: string;
   roundId: string;
@@ -203,6 +204,7 @@ function JudgePoolSection({
   selectedTrackId: string;
   minJudgesRequired: number;
   portalBase: string;
+  ungroupedTeamNames: string[];
 }) {
   const isFinal = roundType === "FINAL";
   const isPreliminary = roundType === "PRELIMINARY";
@@ -243,6 +245,7 @@ function JudgePoolSection({
 
   const canAssign =
     !!judgeUserId &&
+    ungroupedTeamNames.length === 0 &&
     (scope === "ROUND" || (!!selectedTrackId && (scope !== "GROUP" || !!selectedGroupId)));
 
   const handleAdd = () => {
@@ -284,6 +287,12 @@ function JudgePoolSection({
       <p className="mt-1 text-xs text-seal-text-muted">
         Assign judges by scope — they automatically score all teams in that scope.
       </p>
+      {ungroupedTeamNames.length > 0 && (
+        <div className="mt-3 border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          Assign every team to a competition group before adding judges. Missing:{" "}
+          <span className="font-semibold">{ungroupedTeamNames.join(", ")}</span>
+        </div>
+      )}
 
       <div className="mt-4 flex flex-wrap items-end gap-3">
         <div>
@@ -324,7 +333,7 @@ function JudgePoolSection({
             value={judgeUserId}
             onChange={(e) => setJudgeUserId(e.target.value)}
             className="border-2 border-navy bg-white px-3 py-2 text-sm"
-            disabled={eventJudges.length === 0}
+            disabled={eventJudges.length === 0 || ungroupedTeamNames.length > 0}
           >
             <option value="">Select judge...</option>
             {availableJudges.map((j) => (
@@ -432,6 +441,9 @@ function EventAssignmentPanel({
   const isPreliminary = roundType === "PRELIMINARY";
   const showPool = !!selectedRoundId;
   const needsTrackForPool = !!selectedRoundId && isPreliminary && !selectedTrackId;
+  const ungroupedTeamNames = (overview?.teams ?? [])
+    .filter((team) => team.groupId == null)
+    .map((team) => team.teamName);
 
   return (
     <div className="flex flex-col gap-4">
@@ -478,6 +490,7 @@ function EventAssignmentPanel({
           selectedTrackId={selectedTrackId}
           minJudgesRequired={selectedRound?.minJudgesPerRound ?? MIN_JUDGES_PER_SCOPE}
           portalBase={portalBase}
+          ungroupedTeamNames={ungroupedTeamNames}
         />
       )}
 

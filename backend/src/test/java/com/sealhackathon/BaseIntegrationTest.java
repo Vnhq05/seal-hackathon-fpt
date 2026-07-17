@@ -79,7 +79,6 @@ public abstract class BaseIntegrationTest {
             "DELETE FROM judge_scores",
             "DELETE FROM score_review_requests",
             "DELETE FROM submissions",
-            "DELETE FROM team_judge_assignments",
             "DELETE FROM team_progress_alerts",
             "DELETE FROM mentor_chat_messages",
             "DELETE FROM mentor_feedbacks",

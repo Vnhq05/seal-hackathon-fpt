@@ -33,6 +33,7 @@ public class TrackAssignmentService {
     private final TrackRepository trackRepository;
     private final HackathonEventRepository eventRepository;
     private final FormatRuleEngine formatRuleEngine;
+    private final GroupAssignmentService groupAssignmentService;
 
     @Transactional
     public List<TrackAssignmentResponse> assignTracks(UUID eventId, UUID assignedBy, TrackAssignRequest request) {
@@ -108,6 +109,9 @@ public class TrackAssignmentService {
         if (!team.getEventId().equals(eventId)) {
             throw new BusinessException("Team does not belong to this event", HttpStatus.BAD_REQUEST);
         }
+        if (team.getTrackId() != null) {
+            throw new BusinessException("Team already has a track assigned", HttpStatus.CONFLICT);
+        }
 
         Track track = trackRepository.findById(trackId)
                 .orElseThrow(() -> new ResourceNotFoundException("Track", "id", trackId));
@@ -124,6 +128,7 @@ public class TrackAssignmentService {
         team.setTrackAssignedAt(LocalDateTime.now());
         team.setTrackAssignmentMethod(method);
         team.setTrackAssignedBy(assignedBy);
+        groupAssignmentService.autoAssignGroup(team);
         teamRepository.save(team);
 
         return TrackAssignmentResponse.builder()

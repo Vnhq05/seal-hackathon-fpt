@@ -15,6 +15,8 @@ public interface ParticipationCertificateRepository extends JpaRepository<Partic
 
     Optional<ParticipationCertificate> findByEventIdAndUserId(UUID eventId, UUID userId);
 
+    List<ParticipationCertificate> findByUserIdOrderByIssuedAtDesc(UUID userId);
+
     long countByEventId(UUID eventId);
 
     void deleteByEventId(UUID eventId);

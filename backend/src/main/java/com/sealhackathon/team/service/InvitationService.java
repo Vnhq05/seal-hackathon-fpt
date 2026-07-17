@@ -150,11 +150,15 @@ public class InvitationService {
             throw new BusinessException("Team is already full", HttpStatus.BAD_REQUEST) {};
         }
 
-        // BR-18
-        if (teamMemberRepository.existsByUserIdAndEventId(userId, team.getEventId())) {
+        // BR-18 — disbanded teams don't count
+        if (teamMemberRepository.existsActiveByUserIdAndEventId(userId, team.getEventId())) {
             throw new BusinessException("You are already in a team for this event",
                     HttpStatus.CONFLICT) {};
         }
+        // Leftover membership on a disbanded team blocks the unique (event_id, user_id) row — clear it
+        teamMemberRepository.findByUserIdAndEventId(userId, team.getEventId())
+                .ifPresent(teamMemberRepository::delete);
+        teamMemberRepository.flush();
 
         invitation.setStatus(InvitationStatus.ACCEPTED);
         invitationRepository.save(invitation);

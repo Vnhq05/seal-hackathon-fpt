@@ -67,7 +67,7 @@ class TeamProgressEvaluationServiceTest {
     @Test
     void evaluate_slideOnlyPastGate_forSealPreliminary() {
         LocalDateTime slideDeadline = LocalDateTime.of(2026, 7, 10, 10, 0);
-        Clock clock = fixedAt(slideDeadline.plusHours(1));
+        Clock clock = fixedAt(DEADLINE.minusHours(3));
         service = new TeamProgressEvaluationService(properties, clock);
 
         RoundSnapshot round = RoundSnapshot.builder()
@@ -97,6 +97,26 @@ class TeamProgressEvaluationServiceTest {
     }
 
     @Test
+    void evaluate_ok_whenOutsideAlertLeadWindowEvenIfRisky() {
+        Clock clock = fixedAt(DEADLINE.minusDays(2));
+        service = new TeamProgressEvaluationService(properties, clock);
+
+        RoundSnapshot round = preliminaryRound(DEADLINE);
+        Submission submission = Submission.builder().status(SubmissionStatus.SUBMITTED).build();
+        SubmissionVersion latest = SubmissionVersion.builder()
+                .githubUrl("https://github.com/org/repo")
+                .submittedAt(DEADLINE.minusDays(3))
+                .attachments(Collections.emptyList())
+                .build();
+
+        TeamProgressEvaluationService.EvaluationResult result =
+                service.evaluate(submission, latest, 1, round, false);
+
+        assertThat(result.riskLevel()).isEqualTo(ProgressRiskLevel.OK);
+        assertThat(result.reasons()).isEmpty();
+    }
+
+    @Test
     void evaluate_singleVersionLastMinute() {
         Clock clock = fixedAt(DEADLINE.minusHours(3));
         service = new TeamProgressEvaluationService(properties, clock);
@@ -119,7 +139,7 @@ class TeamProgressEvaluationServiceTest {
 
     @Test
     void evaluate_stalled_whenNoRecentVersionWithin48hOfDeadline() {
-        Clock clock = fixedAt(DEADLINE.minusHours(30));
+        Clock clock = fixedAt(DEADLINE.minusHours(3));
         service = new TeamProgressEvaluationService(properties, clock);
 
         RoundSnapshot round = preliminaryRound(DEADLINE);
@@ -139,19 +159,20 @@ class TeamProgressEvaluationServiceTest {
 
     @Test
     void evaluate_missingAttachment_whenSubmittedWithEmptyAttachments() {
-        Clock clock = fixedAt(DEADLINE.minusDays(2));
+        Clock clock = fixedAt(DEADLINE.minusHours(3));
         service = new TeamProgressEvaluationService(properties, clock);
 
         RoundSnapshot round = preliminaryRound(DEADLINE);
         Submission submission = Submission.builder().status(SubmissionStatus.SUBMITTED).build();
         SubmissionVersion latest = SubmissionVersion.builder()
                 .githubUrl("https://github.com/org/repo")
-                .submittedAt(DEADLINE.minusDays(3))
+                .demoUrl("https://youtube.com/watch?v=abc")
+                .submittedAt(DEADLINE.minusHours(4))
                 .attachments(Collections.emptyList())
                 .build();
 
         TeamProgressEvaluationService.EvaluationResult result =
-                service.evaluate(submission, latest, 1, round, false);
+                service.evaluate(submission, latest, 2, round, false);
 
         assertThat(result.riskLevel()).isEqualTo(ProgressRiskLevel.AT_RISK);
         assertThat(result.reasons()).contains(ProgressRiskReason.MISSING_ATTACHMENT);

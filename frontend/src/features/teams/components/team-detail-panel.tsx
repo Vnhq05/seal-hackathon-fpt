@@ -244,6 +244,18 @@ export function TeamDetailPanel({ event, team }: TeamDetailPanelProps) {
             </span>
           )}
         </div>
+        {team.trackId && (
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <span className="text-xs text-seal-text-muted">Group:</span>
+            {team.groupName ? (
+              <span className="rounded-md bg-seal-cyan/10 px-2.5 py-1 text-xs font-medium text-seal-cyan">
+                {team.groupName}
+              </span>
+            ) : (
+              <span className="text-xs text-seal-text-muted">Not assigned</span>
+            )}
+          </div>
+        )}
         {showTrackPicker && (
           <div className="mb-4 flex flex-wrap gap-2">
             {event.tracks.map((track) => (

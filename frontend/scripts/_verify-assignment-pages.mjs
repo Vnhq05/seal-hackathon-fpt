@@ -87,7 +87,7 @@ async function main() {
     if (roundOpts.length > 1) {
       await roundSelect.selectOption({ index: 1 });
       await page.waitForTimeout(1500);
-      console.log("INTERACTION team-judges: selected Spring event + round");
+      console.log("INTERACTION judge-pool: selected Spring event + round");
     }
   }
 

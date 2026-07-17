@@ -4,6 +4,7 @@ import com.sealhackathon.ranking.domain.TeamAward;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -11,6 +12,8 @@ import java.util.UUID;
 public interface TeamAwardRepository extends JpaRepository<TeamAward, UUID> {
 
     List<TeamAward> findByEventIdOrderByAwardedAtAsc(UUID eventId);
+
+    List<TeamAward> findByTeamIdInOrderByAwardedAtDesc(Collection<UUID> teamIds);
 
     void deleteByEventId(UUID eventId);
 }

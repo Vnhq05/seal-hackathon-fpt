@@ -6,7 +6,6 @@ import com.sealhackathon.event.dto.snapshot.RoundSnapshot;
 import com.sealhackathon.event.service.EventPublicService;
 import com.sealhackathon.event.service.FormatRuleEngine;
 import com.sealhackathon.event.service.JudgeAssignmentService;
-import com.sealhackathon.judging.repository.TeamJudgeAssignmentRepository;
 import com.sealhackathon.ranking.service.FinalistSelectionService;
 import com.sealhackathon.submission.domain.Submission;
 import com.sealhackathon.submission.domain.SubmissionVersion;
@@ -59,7 +58,6 @@ class SubmissionServiceTest {
     @Mock private ApplicationEventPublisher eventPublisher;
     @Mock private FormatRuleEngine formatRuleEngine;
     @Mock private FinalistSelectionService finalistSelectionService;
-    @Mock private TeamJudgeAssignmentRepository teamJudgeAssignmentRepository;
     @Mock private JudgeAssignmentService judgeAssignmentService;
 
     @InjectMocks private SubmissionService submissionService;

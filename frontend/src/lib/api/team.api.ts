@@ -21,6 +21,7 @@ export interface TeamResponse {
   status: TeamStatus;
   trackId: string | null;
   groupId?: string | null;
+  groupName?: string | null;
   memberCount: number;
   minTeamMembers: number;
   maxTeamMembers: number;

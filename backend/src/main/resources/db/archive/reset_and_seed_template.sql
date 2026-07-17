@@ -11,12 +11,20 @@ SET XACT_ABORT ON;
 BEGIN TRANSACTION;
 
 -- Owner of the seeded event. Must match an EVENT_COORDINATOR or SYSTEM_ADMIN in `users`:
--- coordinators list and manage events by `created_by`.
+-- ownership is enforced via owner_user_id (V7); created_by is audit-only.
 DECLARE @ownerEmail NVARCHAR(255) = N'sinhvienfpt1908@gmail.com';
+DECLARE @ownerUserId UNIQUEIDENTIFIER = (SELECT id FROM users WHERE email = @ownerEmail);
 
 DECLARE @now DATETIME2 = SYSUTCDATETIME();
 DECLARE @today DATE = CAST(@now AS DATE);
 DECLARE @templateId UNIQUEIDENTIFIER = (SELECT TOP 1 id FROM scoring_templates ORDER BY created_at);
+
+IF @ownerUserId IS NULL
+BEGIN
+    RAISERROR('Owner %s not found in users — run bootstrap_admin.sql first.', 16, 1, @ownerEmail);
+    ROLLBACK TRANSACTION;
+    RETURN;
+END
 
 DECLARE @eventId UNIQUEIDENTIFIER = '77F2A5A3-6538-4FCF-B85A-666066465E68';
 DECLARE @prelimId UNIQUEIDENTIFIER = 'A1000001-0001-0001-0001-000000000001';
@@ -84,7 +92,6 @@ WHERE sv.submission_id IN (SELECT id FROM @submissionIds);
 DELETE FROM submission_versions WHERE submission_id IN (SELECT id FROM @submissionIds);
 DELETE FROM submissions WHERE id IN (SELECT id FROM @submissionIds);
 
-DELETE FROM team_judge_assignments WHERE team_id IN (SELECT id FROM @teamIds);
 DELETE FROM mentor_teams WHERE team_id IN (SELECT id FROM @teamIds);
 DELETE FROM invitations WHERE team_id IN (SELECT id FROM @teamIds);
 DELETE FROM mentor_invitations WHERE team_id IN (SELECT id FROM @teamIds);
@@ -152,7 +159,7 @@ INSERT INTO hackathon_events (
     description, location, format, competition_format,
     min_team, max_team, semester_min, semester_max,
     scoring_template_id, status, leaderboard_public,
-    created_by, created_at, updated_at
+    owner_user_id, created_by, created_at, updated_at
 ) VALUES (
     @eventId,
     N'SEAL Hackathon Spring 2026',
@@ -163,7 +170,7 @@ INSERT INTO hackathon_events (
     N'FPT University HCM', 'OFFLINE', 'SEAL_RAG_2026',
     3, 5, 4, 8,
     @templateId, 'UPCOMING', 0,
-    @ownerEmail, @now, @now
+    @ownerUserId, @ownerEmail, @now, @now
 );
 
 INSERT INTO tracks (id, event_id, name, description, max_teams, status, created_at, updated_at) VALUES
@@ -231,6 +238,41 @@ INSERT INTO allowed_email_domains (id, event_id, domain, university_label, creat
     (NEWID(), @eventId, 'student.ueh.edu.vn', N'University of Economics Ho Chi Minh City', @now, @now),
     (NEWID(), @eventId, 'student.iuh.edu.vn', N'Industrial University of Ho Chi Minh City', @now, @now);
 
+-- Prefer demo mentors from seed_demo_events; else any LECTURER pool.
+DECLARE @mentor1 UNIQUEIDENTIFIER = (SELECT id FROM users WHERE email = N'pham.quoc.bao@fpt.edu.vn');
+DECLARE @mentor2 UNIQUEIDENTIFIER = (SELECT id FROM users WHERE email = N'tran.minh.khang@fpt.edu.vn');
+DECLARE @mentor3 UNIQUEIDENTIFIER = (SELECT id FROM users WHERE email = N'nguyen.thi.lan@fpt.edu.vn');
+
+IF @mentor1 IS NULL
+    SET @mentor1 = (SELECT TOP 1 id FROM users WHERE user_type = N'LECTURER' ORDER BY created_at);
+IF @mentor2 IS NULL
+    SET @mentor2 = (SELECT TOP 1 id FROM users WHERE user_type = N'LECTURER' AND id <> @mentor1 ORDER BY created_at);
+IF @mentor3 IS NULL
+    SET @mentor3 = (SELECT TOP 1 id FROM users WHERE user_type = N'LECTURER' AND id NOT IN (@mentor1, @mentor2) ORDER BY created_at);
+
+IF @mentor1 IS NOT NULL
+BEGIN
+    INSERT INTO event_mentor_assignments (id, event_id, mentor_user_id, assigned_at, created_at)
+    VALUES (NEWID(), @eventId, @mentor1, @now, @now);
+    INSERT INTO mentor_assignments (id, created_at, assigned_at, mentor_user_id, event_id, track_id)
+    VALUES (NEWID(), @now, @now, @mentor1, @eventId, @trackA);
+END
+IF @mentor2 IS NOT NULL
+BEGIN
+    INSERT INTO event_mentor_assignments (id, event_id, mentor_user_id, assigned_at, created_at)
+    VALUES (NEWID(), @eventId, @mentor2, @now, @now);
+    INSERT INTO mentor_assignments (id, created_at, assigned_at, mentor_user_id, event_id, track_id)
+    VALUES (NEWID(), @now, @now, @mentor2, @eventId, @trackB);
+END
+IF @mentor3 IS NOT NULL
+BEGIN
+    INSERT INTO event_mentor_assignments (id, event_id, mentor_user_id, assigned_at, created_at)
+    VALUES (NEWID(), @eventId, @mentor3, @now, @now);
+    INSERT INTO mentor_assignments (id, created_at, assigned_at, mentor_user_id, event_id, track_id)
+    VALUES (NEWID(), @now, @now, @mentor3, @eventId, @trackC);
+END
+
 COMMIT TRANSACTION;
 PRINT 'Done: reset all events and restored SEAL Hackathon Spring 2026 (' + CAST(@eventId AS NVARCHAR(36)) + ').';
 PRINT 'Resolved status: OPEN (registration open until ' + CONVERT(NVARCHAR(10), @regDeadline, 120) + ').';
+PRINT 'Mentors: up to 3 lecturers (1 per track) when accounts exist — run seed_demo_events.sql for full staff.';

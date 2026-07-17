@@ -3,7 +3,6 @@ package com.sealhackathon.judging.service;
 import com.sealhackathon.common.exception.BusinessException;
 import com.sealhackathon.event.repository.MentorAssignmentRepository;
 import com.sealhackathon.judging.event.ConflictDetectedEvent;
-import com.sealhackathon.judging.repository.TeamJudgeAssignmentRepository;
 import com.sealhackathon.submission.dto.snapshot.SubmissionSnapshot;
 import com.sealhackathon.submission.service.SubmissionPublicService;
 import com.sealhackathon.team.domain.Team;
@@ -27,7 +26,6 @@ public class ConflictDetectionService {
     private final TeamPublicService teamPublicService;
     private final SubmissionPublicService submissionPublicService;
     private final ApplicationEventPublisher eventPublisher;
-    private final TeamJudgeAssignmentRepository teamJudgeAssignmentRepository;
     private final MentorAssignmentRepository mentorAssignmentRepository;
     private final TeamRepository teamRepository;
 
@@ -73,23 +71,6 @@ public class ConflictDetectionService {
                     "Conflict of interest: you are a mentor of this team and cannot score their submission",
                     HttpStatus.FORBIDDEN) {};
         }
-    }
-
-    public void assertNotJudgeOfTeam(UUID userId, UUID teamId) {
-        if (isJudgeOfTeam(userId, teamId)) {
-            throw new BusinessException(
-                    "Conflict of interest: this user is assigned as a judge for this team",
-                    HttpStatus.CONFLICT) {};
-        }
-    }
-
-    public boolean hasConflict(UUID userId, UUID teamId) {
-        return teamPublicService.isMentorOfTeam(userId, teamId) || isJudgeOfTeam(userId, teamId);
-    }
-
-    public boolean isJudgeOfTeam(UUID userId, UUID teamId) {
-        return teamJudgeAssignmentRepository.findByJudgeUserId(userId).stream()
-                .anyMatch(a -> a.getTeamId().equals(teamId));
     }
 
     private BusinessException conflictException(String reason) {

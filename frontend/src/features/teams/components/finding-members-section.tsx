@@ -103,19 +103,21 @@ export function FindingMembersSection({ eventId, teamId }: FindingMembersSection
                 className="border-2 border-navy bg-white p-3 shadow-[2px_2px_0_0_#0c1228]"
               >
                 <div className="flex items-center justify-between gap-3">
-                  <div className="min-w-0 font-medium text-sm text-seal-text truncate">
-                    {candidate.fullName}
-                  </div>
+                  {candidate.isProfilePublic ? (
+                    <button
+                      type="button"
+                      onClick={() => setProfileUserId(candidate.userId)}
+                      className="min-w-0 cursor-pointer truncate border-0 bg-transparent p-0 text-left text-sm font-medium text-seal-text underline decoration-sky-200 decoration-1 underline-offset-[3px] hover:text-sky-700"
+                      title="View public profile and achievements"
+                    >
+                      {candidate.fullName}
+                    </button>
+                  ) : (
+                    <div className="min-w-0 truncate text-sm font-medium text-seal-text">
+                      {candidate.fullName}
+                    </div>
+                  )}
                   <div className="flex flex-shrink-0 items-center gap-2">
-                    {candidate.isProfilePublic && (
-                      <button
-                        type="button"
-                        onClick={() => setProfileUserId(candidate.userId)}
-                        className="border-2 border-navy bg-white px-3 py-1 text-[11px] font-semibold text-seal-text shadow-[2px_2px_0_0_#0c1228] hover:bg-seal-surface-sunken"
-                      >
-                        View Profile
-                      </button>
-                    )}
                     <button
                       type="button"
                       onClick={() => invite(candidate.userId)}
@@ -146,9 +148,16 @@ export function FindingMembersSection({ eventId, teamId }: FindingMembersSection
             profile ?? {
               userId: profileUserId,
               fullName: selectedCandidate?.fullName ?? "Participant",
+              email: null,
+              phone: null,
+              avatarUrl: null,
+              studentId: null,
               userType: selectedCandidate?.userType ?? "FPT_STUDENT",
               universityName: selectedCandidate?.universityName ?? null,
+              studentStanding: null,
               semester: selectedCandidate?.semester ?? null,
+              temporaryAccount: false,
+              createdAt: null,
               competitions: [],
             }
           }

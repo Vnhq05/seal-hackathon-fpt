@@ -12,6 +12,22 @@ export function useAdminUsers(params?: UserListParams) {
   });
 }
 
+export function useAdminUserDetails(userId: string | null) {
+  return useQuery({
+    queryKey: [ADMIN_USERS_KEY, "details", userId],
+    queryFn: () => adminUserApi.getUserById(userId!),
+    enabled: Boolean(userId),
+  });
+}
+
+export function useAdminUserAchievements(userId: string | null) {
+  return useQuery({
+    queryKey: [ADMIN_USERS_KEY, "achievements", userId],
+    queryFn: () => adminUserApi.getUserAchievements(userId!),
+    enabled: Boolean(userId),
+  });
+}
+
 export function useApproveOrReject() {
   const qc = useQueryClient();
   return useMutation({

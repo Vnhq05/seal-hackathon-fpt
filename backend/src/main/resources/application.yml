@@ -70,7 +70,6 @@ app:
       max-size-bytes: ${APP_SUBMISSION_PDF_MAX_SIZE_BYTES:5242880}
   hackathon:
     judging:
-      max-judges-per-team: 3
       judge-trim-threshold: 5
       deviation-threshold: 25
       percent-scale: 20

@@ -36,12 +36,14 @@ public interface EventEnrollmentRepository extends JpaRepository<EventEnrollment
     long countByUserIdAndStatusIn(@Param("userId") UUID userId, @Param("statuses") List<EnrollmentStatus> statuses);
 
     @Query("SELECT e FROM EventEnrollment e WHERE e.eventId = :eventId AND e.status = 'APPROVED' " +
-            "AND e.userId NOT IN (SELECT tm.userId FROM TeamMember tm JOIN tm.team t WHERE t.eventId = :eventId)")
+            "AND e.userId NOT IN (SELECT tm.userId FROM TeamMember tm JOIN tm.team t WHERE t.eventId = :eventId " +
+            "AND t.status <> com.sealhackathon.team.domain.enums.TeamStatus.DISBANDED)")
     List<EventEnrollment> findWaitingList(@Param("eventId") UUID eventId);
 
     @Query("SELECT e FROM EventEnrollment e WHERE e.eventId = :eventId AND e.status = 'APPROVED' " +
             "AND e.isLookingForTeam = true AND e.userId <> :excludeUserId " +
-            "AND e.userId NOT IN (SELECT tm.userId FROM TeamMember tm JOIN tm.team t WHERE t.eventId = :eventId)")
+            "AND e.userId NOT IN (SELECT tm.userId FROM TeamMember tm JOIN tm.team t WHERE t.eventId = :eventId " +
+            "AND t.status <> com.sealhackathon.team.domain.enums.TeamStatus.DISBANDED)")
     List<EventEnrollment> findFindingMembersCandidates(
             @Param("eventId") UUID eventId,
             @Param("excludeUserId") UUID excludeUserId);

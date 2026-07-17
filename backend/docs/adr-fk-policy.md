@@ -49,7 +49,7 @@ shape are already a known fact of the database.
 
 ### (b) Cross-module, no FK — deliberate
 
-`event_enrollments` (team → event), `team_judge_assignments` (judging → team/round),
+`event_enrollments` (team → event),
 `finalist_selections` and `advancements` (ranking → team/round), `judge_scores` (judging →
 user/submission/round), `submissions` (submission → team/round), `rankings` (ranking → team/round),
 `team_awards`, `participation_certificates`, `participant_feedbacks`, `mentor_feedbacks`,

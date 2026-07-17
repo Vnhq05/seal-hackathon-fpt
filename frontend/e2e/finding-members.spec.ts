@@ -51,15 +51,15 @@ test.describe("Finding Members API integration", () => {
       await expect(inviteButton).toBeEnabled();
     }
 
-    const viewProfileButton = page.getByRole("button", { name: "View Profile" });
-    if (await viewProfileButton.count()) {
+    const publicProfileName = page.locator('button[title="View public profile and achievements"]');
+    if (await publicProfileName.count()) {
       const profileRequest = page.waitForResponse(
         (response) =>
           response.url().includes("/matching/candidates/") &&
           response.url().includes("/profile") &&
           response.request().method() === "GET",
       );
-      await viewProfileButton.first().click();
+      await publicProfileName.first().click();
       const profileResponse = await profileRequest;
       expect(profileResponse.status()).toBe(200);
       await expect(page.getByRole("button", { name: "Close" })).toBeVisible();
@@ -77,6 +77,7 @@ test.describe("Finding Members API integration", () => {
 
     const lookingCheckbox = page.getByRole("checkbox", { name: /looking for a team/i });
     await lookingCheckbox.check();
+    await page.getByRole("checkbox", { name: /publish profile/i }).check();
 
     const saveRequest = page.waitForResponse(
       (response) =>

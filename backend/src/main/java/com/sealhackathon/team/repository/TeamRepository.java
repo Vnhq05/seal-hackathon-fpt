@@ -20,6 +20,9 @@ public interface TeamRepository extends JpaRepository<Team, UUID> {
 
     boolean existsByEventIdAndName(UUID eventId, String name);
 
+    /** Name uniqueness among live teams only — a disbanded team's name can be reused. */
+    boolean existsByEventIdAndNameAndStatusNot(UUID eventId, String name, TeamStatus status);
+
     List<Team> findByEventId(UUID eventId);
 
     Page<Team> findByEventId(UUID eventId, Pageable pageable);
@@ -43,4 +46,9 @@ public interface TeamRepository extends JpaRepository<Team, UUID> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT t FROM Team t WHERE t.id = :id")
     Optional<Team> findByIdForUpdate(@Param("id") UUID id);
+
+    /** Groups with no teams yield no row — callers must default them to zero. */
+    @Query("SELECT t.groupId, COUNT(t) FROM Team t "
+            + "WHERE t.trackId = :trackId AND t.groupId IS NOT NULL GROUP BY t.groupId")
+    List<Object[]> countByTrackIdGroupByGroup(@Param("trackId") UUID trackId);
 }

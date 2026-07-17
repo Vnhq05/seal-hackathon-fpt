@@ -8,8 +8,8 @@ UPDATE es
 SET es.title = CASE
         WHEN es.type = 'OPENING'                          THEN N'Opening & track draw'
         WHEN es.type = 'TRACK_DRAW'                       THEN N'Track selection draw'
-        WHEN es.type = 'MILESTONE' AND es.sort_order = 3  THEN N'Milestone 1 — Idea & architecture completion'
-        WHEN es.type = 'MILESTONE' AND es.sort_order = 4  THEN N'Milestone 2 — Pitching & product completion'
+        WHEN es.type = 'MILESTONE' AND es.sort_order = 3  THEN N'Milestone 1 - Idea & architecture completion'
+        WHEN es.type = 'MILESTONE' AND es.sort_order = 4  THEN N'Milestone 2 - Pitching & product completion'
         WHEN es.type = 'SCORING'                          THEN N'Preliminary scoring'
         WHEN es.type = 'FINAL'                            THEN N'Finals'
         WHEN es.type = 'CEREMONY'                         THEN N'Awards & closing ceremony'
@@ -20,7 +20,7 @@ SET es.title = CASE
         WHEN es.type = 'MILESTONE' AND es.sort_order = 3  THEN N'Design Agentic RAG architecture'
         WHEN es.type = 'MILESTONE' AND es.sort_order = 4  THEN N'Parallel pitching and coding'
         WHEN es.type = 'SCORING'                          THEN N'5-minute presentation + 3-minute Q&A'
-        WHEN es.type = 'FINAL'                            THEN N'7-minute presentation + 3-minute Q&A — Top 6 teams'
+        WHEN es.type = 'FINAL'                            THEN N'7-minute presentation + 3-minute Q&A - Top 6 teams'
         ELSE es.description
     END,
     es.updated_at = SYSUTCDATETIME()

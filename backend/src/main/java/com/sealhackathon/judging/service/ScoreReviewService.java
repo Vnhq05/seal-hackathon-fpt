@@ -7,6 +7,7 @@ import com.sealhackathon.event.domain.enums.RoundType;
 import com.sealhackathon.event.dto.snapshot.CriteriaSnapshot;
 import com.sealhackathon.event.dto.snapshot.RoundSnapshot;
 import com.sealhackathon.event.service.EventPublicService;
+import com.sealhackathon.event.service.JudgeAssignmentService;
 import com.sealhackathon.judging.domain.JudgeScore;
 import com.sealhackathon.judging.domain.ScoreReviewRequest;
 import com.sealhackathon.judging.domain.enums.ScoreAdjustmentType;
@@ -22,7 +23,6 @@ import com.sealhackathon.judging.event.ScoreReviewCreatedEvent;
 import com.sealhackathon.judging.event.ScoreReviewResolvedEvent;
 import com.sealhackathon.judging.repository.JudgeScoreRepository;
 import com.sealhackathon.judging.repository.ScoreReviewRequestRepository;
-import com.sealhackathon.judging.repository.TeamJudgeAssignmentRepository;
 import com.sealhackathon.notification.domain.enums.NotificationType;
 import com.sealhackathon.notification.service.NotificationService;
 import com.sealhackathon.ranking.repository.PublishedResultRepository;
@@ -84,7 +84,7 @@ public class ScoreReviewService {
     private final ScoreReviewRequestRepository scoreReviewRequestRepository;
     private final SubmissionRepository submissionRepository;
     private final JudgeScoreRepository judgeScoreRepository;
-    private final TeamJudgeAssignmentRepository teamJudgeAssignmentRepository;
+    private final JudgeAssignmentService judgeAssignmentService;
     private final TeamRepository teamRepository;
     private final PublishedResultRepository publishedResultRepository;
     private final EventPublicService eventPublicService;
@@ -125,8 +125,7 @@ public class ScoreReviewService {
 
         assertNotPublished(submission.getRoundId());
 
-        if (!teamJudgeAssignmentRepository.existsByTeamIdAndRoundIdAndJudgeUserId(
-                submission.getTeamId(), submission.getRoundId(), judgeId)) {
+        if (!isJudgeInPoolForTeam(submission.getTeamId(), submission.getRoundId(), judgeId)) {
             throw new BusinessException(
                     "You are not assigned to this team's scoring for this round",
                     HttpStatus.FORBIDDEN) {};
@@ -267,8 +266,7 @@ public class ScoreReviewService {
         }
 
         if (requesterRole == UserType.LECTURER
-                && !teamJudgeAssignmentRepository.existsByTeamIdAndRoundIdAndJudgeUserId(
-                submission.getTeamId(), submission.getRoundId(), requesterId)) {
+                && !isJudgeInPoolForTeam(submission.getTeamId(), submission.getRoundId(), requesterId)) {
             throw new BusinessException(
                     "You are not assigned to this team's scoring for this round",
                     HttpStatus.FORBIDDEN) {};
@@ -488,8 +486,7 @@ public class ScoreReviewService {
             return;
         }
         if (requesterRole == UserType.LECTURER) {
-            if (!teamJudgeAssignmentRepository.existsByTeamIdAndRoundIdAndJudgeUserId(
-                    review.getTeamId(), review.getRoundId(), requesterId)) {
+            if (!isJudgeInPoolForTeam(review.getTeamId(), review.getRoundId(), requesterId)) {
                 throw new BusinessException(
                         "You are not assigned to this team's scoring for this round",
                         HttpStatus.FORBIDDEN) {};
@@ -497,6 +494,20 @@ public class ScoreReviewService {
             return;
         }
         throw new BusinessException("Access denied", HttpStatus.FORBIDDEN) {};
+    }
+
+    private boolean isJudgeInPoolForTeam(UUID teamId, UUID roundId, UUID judgeUserId) {
+        return teamRepository.findById(teamId)
+                .map(team -> judgeAssignmentService.isJudgeAssignedToSubmissionScope(
+                        roundId, judgeUserId, team.getTrackId(), team.getGroupId()))
+                .orElse(false);
+    }
+
+    private List<UUID> effectiveJudgePoolForTeam(UUID teamId, UUID roundId) {
+        return teamRepository.findById(teamId)
+                .map(team -> judgeAssignmentService.getEffectiveJudgeUserIdsForTeam(
+                        roundId, teamId, team.getTrackId(), team.getGroupId()))
+                .orElseGet(List::of);
     }
 
     private ScoreReviewRequest getReviewForEvent(UUID eventId, UUID reviewId) {
@@ -509,17 +520,19 @@ public class ScoreReviewService {
     }
 
     private Optional<DeviationStats> computeDeviationStats(Submission submission) {
-        long assignedJudges = teamJudgeAssignmentRepository.countByTeamIdAndRoundId(
-                submission.getTeamId(), submission.getRoundId());
-        if (assignedJudges == 0) {
+        List<UUID> pool = effectiveJudgePoolForTeam(submission.getTeamId(), submission.getRoundId());
+        if (pool.isEmpty()) {
             return Optional.empty();
         }
 
+        // Deviation only counts scores from judges still in the pool, so a score left behind by a
+        // removed or newly-conflicted judge cannot satisfy the completeness gate on its own.
         List<JudgeScore> finishedScores = judgeScoreRepository.findBySubmissionId(submission.getId()).stream()
                 .filter(s -> s.getStatus() == ScoreStatus.COMPLETED || s.getStatus() == ScoreStatus.LOCKED)
+                .filter(s -> pool.contains(s.getJudgeUserId()))
                 .toList();
 
-        if (finishedScores.size() < assignedJudges) {
+        if (finishedScores.size() < pool.size()) {
             return Optional.empty();
         }
 

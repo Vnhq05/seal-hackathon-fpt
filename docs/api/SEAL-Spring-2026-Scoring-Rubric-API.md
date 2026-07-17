@@ -540,7 +540,7 @@ SEAL events created with `competitionFormat: SEAL_RAG_2026` receive distinct pre
 
 ### Orphan judging data cleanup
 
-Removes `team_judge_assignments` / `judge_scores` whose `round_id` or `team_id` no longer exists (e.g. placeholder `aaaaaaaa-…` UUIDs from manual dev SQL). Deletes child `judge_comments` and `judge_score_details` first.
+Removes `judge_scores` whose `round_id` or `team_id` no longer exists (e.g. placeholder `aaaaaaaa-…` UUIDs from manual dev SQL). Deletes child `judge_comments` and `judge_score_details` first. (`team_judge_assignments` dropped in `V15`.)
 
 ### Legacy score rescale (0–10 / 0–100 → 1–5)
 

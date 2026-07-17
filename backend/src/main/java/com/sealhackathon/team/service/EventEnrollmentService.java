@@ -82,7 +82,10 @@ public class EventEnrollmentService {
 
     @Transactional
     public EnrollmentResponse enroll(UUID userId, UUID eventId) {
-        if (enrollmentRepository.existsByUserIdAndEventId(userId, eventId)) {
+        // A WITHDRAWN row is kept for history; re-enrolling reactivates it instead of failing
+        // on the (user_id, event_id) unique constraint.
+        Optional<EventEnrollment> existing = enrollmentRepository.findByUserIdAndEventId(userId, eventId);
+        if (existing.isPresent() && existing.get().getStatus() != EnrollmentStatus.WITHDRAWN) {
             throw new DuplicateResourceException("Enrollment", "userId+eventId", userId + "+" + eventId);
         }
 
@@ -114,12 +117,14 @@ public class EventEnrollmentService {
                 ? EnrollmentStatus.PENDING
                 : EnrollmentStatus.APPROVED;
 
-        EventEnrollment enrollment = EventEnrollment.builder()
+        EventEnrollment enrollment = existing.orElseGet(() -> EventEnrollment.builder()
                 .userId(userId)
                 .eventId(eventId)
-                .status(status)
-                .enrolledAt(LocalDateTime.now())
-                .build();
+                .build());
+        enrollment.setStatus(status);
+        enrollment.setEnrolledAt(LocalDateTime.now());
+        enrollment.setLookingForTeam(false);
+        enrollment.setProfilePublic(false);
 
         enrollment = enrollmentRepository.save(enrollment);
         return toResponse(enrollment, user);
@@ -185,7 +190,9 @@ public class EventEnrollmentService {
                     HttpStatus.BAD_REQUEST) {};
         }
 
-        if (enrollmentRepository.existsByUserIdAndEventId(user.getId(), eventId)) {
+        Optional<EventEnrollment> existing =
+                enrollmentRepository.findByUserIdAndEventId(user.getId(), eventId);
+        if (existing.isPresent() && existing.get().getStatus() != EnrollmentStatus.WITHDRAWN) {
             throw new DuplicateResourceException("Enrollment", "userId+eventId", user.getId() + "+" + eventId);
         }
 
@@ -195,12 +202,15 @@ public class EventEnrollmentService {
                     HttpStatus.CONFLICT) {};
         }
 
-        EventEnrollment enrollment = EventEnrollment.builder()
-                .userId(user.getId())
+        UUID enrollUserId = user.getId();
+        EventEnrollment enrollment = existing.orElseGet(() -> EventEnrollment.builder()
+                .userId(enrollUserId)
                 .eventId(eventId)
-                .status(EnrollmentStatus.PENDING)
-                .enrolledAt(LocalDateTime.now())
-                .build();
+                .build());
+        enrollment.setStatus(EnrollmentStatus.PENDING);
+        enrollment.setEnrolledAt(LocalDateTime.now());
+        enrollment.setLookingForTeam(false);
+        enrollment.setProfilePublic(false);
 
         enrollment = enrollmentRepository.save(enrollment);
         return toResponse(enrollment, user);
@@ -221,7 +231,7 @@ public class EventEnrollmentService {
 
     public void requireOnWaitingList(UUID userId, UUID eventId) {
         requireApprovedEnrollment(userId, eventId);
-        if (teamMemberRepository.existsByUserIdAndEventId(userId, eventId)) {
+        if (teamMemberRepository.existsActiveByUserIdAndEventId(userId, eventId)) {
             throw new BusinessException("User is already in a team for this event",
                     HttpStatus.CONFLICT) {};
         }
@@ -424,7 +434,7 @@ public class EventEnrollmentService {
                     HttpStatus.BAD_REQUEST) {};
         }
 
-        boolean onTeam = teamMemberRepository.existsByUserIdAndEventId(userId, eventId);
+        boolean onTeam = teamMemberRepository.existsActiveByUserIdAndEventId(userId, eventId);
         if (onTeam) {
             if (request.isLookingForTeam()) {
                 throw new BusinessException(
@@ -520,7 +530,7 @@ public class EventEnrollmentService {
         if (!enrollment.isLookingForTeam()) {
             throw new BusinessException("Candidate is not looking for a team", HttpStatus.BAD_REQUEST) {};
         }
-        if (teamMemberRepository.existsByUserIdAndEventId(targetUserId, eventId)) {
+        if (teamMemberRepository.existsActiveByUserIdAndEventId(targetUserId, eventId)) {
             throw new BusinessException("Candidate is already on a team", HttpStatus.CONFLICT) {};
         }
         if (!enrollment.isProfilePublic()) {
@@ -547,6 +557,7 @@ public class EventEnrollmentService {
                             .teamName(team.getName())
                             .finalRank(rankResult.finalRank())
                             .outcome(rankResult.outcome())
+                            .achievedAt(event.getEndDate())
                             .build();
                 })
                 .filter(item -> item != null)
@@ -558,10 +569,17 @@ public class EventEnrollmentService {
         return PublicMatchingProfileResponse.builder()
                 .userId(targetUserId)
                 .fullName(user.getFullName())
+                .email(user.getEmail())
+                .phone(user.getPhone())
+                .avatarUrl(user.getAvatarUrl())
+                .studentId(user.getStudentId())
                 .userType(user.getUserType())
                 .universityName(UniversityUtils.resolveUniversityName(
                         user.getUserType(), user.getUniversityName()))
+                .studentStanding(user.getStudentStanding())
                 .semester(user.getSemester())
+                .temporaryAccount(user.isTemporaryAccount())
+                .createdAt(user.getCreatedAt())
                 .competitions(competitions)
                 .build();
     }

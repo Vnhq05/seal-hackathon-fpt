@@ -4,8 +4,11 @@ import com.sealhackathon.judging.domain.JudgeScore;
 import com.sealhackathon.judging.domain.enums.ScoreStatus;
 import com.sealhackathon.judging.dto.snapshot.JudgeScoreSnapshot;
 import com.sealhackathon.judging.dto.snapshot.ScoreDetailSnapshot;
+import com.sealhackathon.event.repository.RoundRepository;
+import com.sealhackathon.event.service.JudgeAssignmentService;
 import com.sealhackathon.judging.repository.JudgeScoreRepository;
-import com.sealhackathon.judging.repository.TeamJudgeAssignmentRepository;
+import com.sealhackathon.team.domain.Team;
+import com.sealhackathon.team.repository.TeamRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,7 +23,9 @@ import java.util.stream.Collectors;
 public class JudgingPublicServiceImpl implements JudgingPublicService {
 
     private final JudgeScoreRepository judgeScoreRepository;
-    private final TeamJudgeAssignmentRepository teamJudgeAssignmentRepository;
+    private final JudgeAssignmentService judgeAssignmentService;
+    private final RoundRepository roundRepository;
+    private final TeamRepository teamRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -74,7 +79,10 @@ public class JudgingPublicServiceImpl implements JudgingPublicService {
     @Override
     @Transactional(readOnly = true)
     public long countAssignedJudges(UUID teamId, UUID roundId) {
-        return teamJudgeAssignmentRepository.countByTeamIdAndRoundId(teamId, roundId);
+        return teamRepository.findById(teamId)
+                .map(team -> (long) judgeAssignmentService.getEffectiveJudgeUserIdsForTeam(
+                        roundId, teamId, team.getTrackId(), team.getGroupId()).size())
+                .orElse(0L);
     }
 
     @Override
@@ -97,10 +105,12 @@ public class JudgingPublicServiceImpl implements JudgingPublicService {
     @Override
     @Transactional(readOnly = true)
     public Map<UUID, Long> countAssignedJudgesByRound(UUID roundId) {
-        return teamJudgeAssignmentRepository.countByRoundIdGroupByTeam(roundId).stream()
-                .collect(Collectors.toMap(
-                        row -> (UUID) row[0],
-                        row -> ((Number) row[1]).longValue()));
+        return roundRepository.findById(roundId)
+                .map(round -> {
+                    List<Team> teams = teamRepository.findByEventId(round.getHackathonEvent().getId());
+                    return judgeAssignmentService.countEffectiveJudgesByTeam(roundId, teams);
+                })
+                .orElseGet(Map::of);
     }
 
     private JudgeScoreSnapshot toSnapshot(JudgeScore score) {

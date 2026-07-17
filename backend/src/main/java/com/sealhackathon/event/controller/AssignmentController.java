@@ -156,8 +156,9 @@ public class AssignmentController {
     public ResponseEntity<ApiResponse<Void>> deleteGroup(
             @PathVariable UUID eventId,
             @PathVariable UUID trackId,
-            @PathVariable UUID groupId) {
-        competitionGroupService.deleteGroup(eventId, trackId, groupId);
+            @PathVariable UUID groupId,
+            HttpServletRequest httpRequest) {
+        competitionGroupService.deleteGroup(eventId, trackId, groupId, httpRequest.getRemoteAddr());
         return ResponseEntity.ok(ApiResponse.success("Group deleted", null));
     }
 

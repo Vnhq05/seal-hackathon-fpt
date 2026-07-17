@@ -240,39 +240,23 @@
 - When `trackId` omitted on preliminary → union of judges across tracks of visible teams
 - When final round → judges with `trackId = null` for that round
 
-**Team judge assign (`POST /api/assignments`) — added validation:**
-- Each judge must be in round+track pool (`JudgeAssignment`)
-- Judge must not mentor the team (BR-34, unchanged)
-
-**Request (unchanged):**
-```json
-{
-  "eventId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-  "roundId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-  "teamId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-  "judgeUserIds": [
-    "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "3fa85f64-5717-4562-b3fc-2c963f66afa6"
-  ]
-}
-```
-
-**New error:**
-- `400` — `"Judge is not assigned to this round and track"`
+**Team judge assign — ĐÃ GỠ (2026-07-16):**
+`POST /api/assignments` không còn tồn tại. Theo **BR-04**, judge của mỗi team suy ra tự động từ Judge Pool theo scope; không gán theo từng team nữa.
 
 ---
 
-## 5. Conflict rules (unchanged, BR-34)
+## 5. Conflict rules (cập nhật 2026-07-16)
 
 | Action | Rule |
 |--------|------|
-| Assign judge to team | Reject if judge mentors that team |
-| Assign mentor to team | Reject if user is judge of that team |
-| Submit score | Reject if judge mentors that team |
-| Mentor assigned after judge | Auto-remove team-judge link if no scores yet |
+| Assign judge to pool | Reject `409` nếu judge đang mentor team nào trong scope (`validateNoConflictInScope`) |
+| Assign mentor to team | **Không chặn** — `assertNotJudgeOfTeam` đã gỡ cùng lớp per-team |
+| Submit score | Reject `403` nếu judge mentor team đó (`assertNotMentorOfTeamForScoring`) |
+| Đếm judge cho deviation / fully-scored | Loại judge đang mentor team khỏi mẫu số (**BR-29**) |
 
-Conflict is enforced at **team** level via `MentorTeam` + `TeamJudgeAssignment`, in addition to track-scoped pools above.
+Conflict giờ enforce ở **scoring time** (BR-19) chứ không chặn lúc gán mentor. `MentorTeamConflictListener` (tự gỡ link team-judge) đã xoá cùng bảng.
+
+> **Lệch BR-28 đã biết:** BR-16/BR-28 muốn Mentor và Judge assignment độc lập hoàn toàn, nhưng `validateNoConflictInScope` vẫn chặn cứng chiều "mentor → judge". Bất đối xứng có chủ ý, chưa xử lý.
 
 ---
 
@@ -282,9 +266,6 @@ These endpoints are not modified but remain part of the assignment flow:
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| POST | `/api/assignments` | Bulk assign 3 judges to a team |
-| DELETE | `/api/assignments/{assignmentId}` | Remove one team-judge link |
-| POST | `/api/events/{eventId}/rounds/{roundId}/teams/{teamId}/judges` | Add one judge to team |
 | POST | `/api/events/{eventId}/teams/mentor-team` | Admin assign mentor to team |
 | POST | `/api/events/{eventId}/mentor-invitations` | Team leader invites mentor |
 

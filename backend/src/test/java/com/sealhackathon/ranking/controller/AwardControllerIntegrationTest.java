@@ -132,6 +132,25 @@ class AwardControllerIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
+    void getUserAchievements_shouldReturnAwardAndParticipationCertificateForAdmin() throws Exception {
+        assignAwards();
+
+        mockMvc.perform(get("/api/admin/users/" + leader1.getId() + "/achievements")
+                        .header("Authorization", "Bearer " + tokenFor(admin)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()", is(2)))
+                .andExpect(jsonPath("$.data[0].type", is("TEAM_AWARD")))
+                .andExpect(jsonPath("$.data[0].eventName", is("Awards Event")))
+                .andExpect(jsonPath("$.data[0].teamName", is("Team Alpha")))
+                .andExpect(jsonPath("$.data[0].prizeRank", is("FIRST")))
+                .andExpect(jsonPath("$.data[1].type", is("PARTICIPATION_CERTIFICATE")));
+
+        mockMvc.perform(get("/api/admin/users/" + leader1.getId() + "/achievements")
+                        .header("Authorization", "Bearer " + tokenFor(leader1)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void assignAwards_shouldReturn400_whenNoFinalRankings() throws Exception {
         rankingRepository.deleteAll();
 

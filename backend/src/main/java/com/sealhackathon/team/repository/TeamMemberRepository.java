@@ -28,8 +28,19 @@ public interface TeamMemberRepository extends JpaRepository<TeamMember, UUID> {
 
     boolean existsByUserIdAndEventId(UUID userId, UUID eventId);
 
+    /** Membership on a non-disbanded team — disbanded teams must not block re-joining. */
+    @Query("SELECT COUNT(tm) > 0 FROM TeamMember tm JOIN tm.team t "
+            + "WHERE tm.userId = :userId AND tm.eventId = :eventId "
+            + "AND t.status <> com.sealhackathon.team.domain.enums.TeamStatus.DISBANDED")
+    boolean existsActiveByUserIdAndEventId(@Param("userId") UUID userId, @Param("eventId") UUID eventId);
+
     @Query("SELECT tm.team.id FROM TeamMember tm WHERE tm.userId = :userId AND tm.eventId = :eventId")
     Optional<UUID> findTeamIdByUserIdAndEventId(@Param("userId") UUID userId, @Param("eventId") UUID eventId);
+
+    @Query("SELECT tm.team.id FROM TeamMember tm JOIN tm.team t "
+            + "WHERE tm.userId = :userId AND tm.eventId = :eventId "
+            + "AND t.status <> com.sealhackathon.team.domain.enums.TeamStatus.DISBANDED")
+    Optional<UUID> findActiveTeamIdByUserIdAndEventId(@Param("userId") UUID userId, @Param("eventId") UUID eventId);
 
     @Query("SELECT tm FROM TeamMember tm JOIN tm.team t "
             + "WHERE tm.eventId = :eventId AND t.status = :status")

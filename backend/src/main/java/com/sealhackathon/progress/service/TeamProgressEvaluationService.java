@@ -46,14 +46,20 @@ public class TeamProgressEvaluationService {
                     ProgressRiskLevel.OK, List.of(), totalVersions, lastSubmittedAt, hoursUntilDeadline);
         }
 
+        // And only inside the lead-time window before the deadline (default 6h).
+        LocalDateTime leadThreshold = submissionDeadline != null
+                ? submissionDeadline.minusHours(progressProperties.getAlertLeadTimeHours())
+                : null;
+        if (leadThreshold != null && now.isBefore(leadThreshold)) {
+            return new EvaluationResult(
+                    ProgressRiskLevel.OK, List.of(), totalVersions, lastSubmittedAt, hoursUntilDeadline);
+        }
+
         List<ProgressRiskReason> reasons = new ArrayList<>();
 
         boolean notStarted = submission == null
                 || (submission.getStatus() == SubmissionStatus.DRAFT && totalVersions == 0);
-        LocalDateTime leadThreshold = submissionDeadline != null
-                ? submissionDeadline.minusHours(progressProperties.getAlertLeadTimeHours())
-                : null;
-        if (notStarted && leadThreshold != null && !now.isBefore(leadThreshold)) {
+        if (notStarted) {
             reasons.add(ProgressRiskReason.NOT_STARTED);
         }
 

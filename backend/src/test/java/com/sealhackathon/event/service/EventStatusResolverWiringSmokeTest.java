@@ -16,6 +16,7 @@ import com.sealhackathon.event.repository.TrackRepository;
 import com.sealhackathon.team.repository.TeamMemberRepository;
 import com.sealhackathon.team.repository.TeamRepository;
 import com.sealhackathon.team.service.EventEnrollmentService;
+import com.sealhackathon.team.service.GroupAssignmentService;
 import com.sealhackathon.team.service.TeamService;
 import com.sealhackathon.user.service.UserPublicService;
 import org.junit.jupiter.api.AfterEach;
@@ -123,5 +124,6 @@ class EventStatusResolverWiringSmokeTest {
         @Bean EventEnrollmentService eventEnrollmentService() { return mock(EventEnrollmentService.class); }
         @Bean SystemConfigService systemConfigService() { return mock(SystemConfigService.class); }
         @Bean CompetitionGroupRepository competitionGroupRepository() { return mock(CompetitionGroupRepository.class); }
+        @Bean GroupAssignmentService groupAssignmentService() { return mock(GroupAssignmentService.class); }
     }
 }

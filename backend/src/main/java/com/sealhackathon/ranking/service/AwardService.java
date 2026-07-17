@@ -2,6 +2,7 @@ package com.sealhackathon.ranking.service;
 
 import com.sealhackathon.common.exception.BusinessException;
 import com.sealhackathon.common.exception.ResourceNotFoundException;
+import com.sealhackathon.event.domain.HackathonEvent;
 import com.sealhackathon.event.domain.Prize;
 import com.sealhackathon.event.domain.Round;
 import com.sealhackathon.event.domain.enums.PrizeRank;
@@ -16,6 +17,7 @@ import com.sealhackathon.ranking.dto.response.AwardAssignmentResultResponse;
 import com.sealhackathon.ranking.dto.response.ParticipationCertificateResponse;
 import com.sealhackathon.ranking.dto.response.ParticipationCertificateSummaryResponse;
 import com.sealhackathon.ranking.dto.response.TeamAwardResponse;
+import com.sealhackathon.ranking.dto.response.UserAchievementResponse;
 import com.sealhackathon.ranking.repository.ParticipationCertificateRepository;
 import com.sealhackathon.ranking.repository.RankingRepository;
 import com.sealhackathon.ranking.repository.TeamAwardRepository;
@@ -34,6 +36,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -144,6 +147,68 @@ public class AwardService {
     }
 
     @Transactional(readOnly = true)
+    public List<UserAchievementResponse> getUserAchievements(UUID userId) {
+        List<TeamMember> memberships = teamMemberRepository.findByUserId(userId);
+        Map<UUID, String> teamNames = memberships.stream()
+                .collect(Collectors.toMap(
+                        member -> member.getTeam().getId(),
+                        member -> member.getTeam().getName(),
+                        (first, ignored) -> first));
+
+        List<TeamAward> awards = teamNames.isEmpty()
+                ? List.of()
+                : teamAwardRepository.findByTeamIdInOrderByAwardedAtDesc(teamNames.keySet());
+        List<ParticipationCertificate> certificates =
+                participationCertificateRepository.findByUserIdOrderByIssuedAtDesc(userId);
+
+        List<UUID> eventIds = new ArrayList<>();
+        awards.forEach(award -> eventIds.add(award.getEventId()));
+        certificates.forEach(certificate -> eventIds.add(certificate.getEventId()));
+        Map<UUID, String> eventNames = eventRepository.findAllById(eventIds).stream()
+                .collect(Collectors.toMap(HackathonEvent::getId, HackathonEvent::getName));
+
+        Map<UUID, Prize> prizes = new HashMap<>();
+        prizeRepository.findAllById(awards.stream().map(TeamAward::getPrizeId).toList())
+                .forEach(prize -> prizes.put(prize.getId(), prize));
+
+        List<UserAchievementResponse> achievements = new ArrayList<>();
+        for (TeamAward award : awards) {
+            Prize prize = prizes.get(award.getPrizeId());
+            achievements.add(UserAchievementResponse.builder()
+                    .id(award.getId())
+                    .type("TEAM_AWARD")
+                    .eventId(award.getEventId())
+                    .eventName(eventNames.get(award.getEventId()))
+                    .teamId(award.getTeamId())
+                    .teamName(teamNames.get(award.getTeamId()))
+                    .prizeRank(prize != null ? prize.getRank() : null)
+                    .title(prizeTitle(prize))
+                    .description(prize != null ? prize.getValue() : null)
+                    .achievedAt(award.getAwardedAt())
+                    .build());
+        }
+        for (ParticipationCertificate certificate : certificates) {
+            achievements.add(UserAchievementResponse.builder()
+                    .id(certificate.getId())
+                    .type("PARTICIPATION_CERTIFICATE")
+                    .eventId(certificate.getEventId())
+                    .eventName(eventNames.get(certificate.getEventId()))
+                    .teamId(certificate.getTeamId())
+                    .teamName(teamNames.get(certificate.getTeamId()))
+                    .title("Participation Certificate")
+                    .description("Completed the hackathon")
+                    .achievedAt(certificate.getIssuedAt())
+                    .build());
+        }
+
+        return achievements.stream()
+                .sorted(Comparator.comparing(
+                        UserAchievementResponse::getAchievedAt,
+                        Comparator.nullsLast(Comparator.reverseOrder())))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public ParticipationCertificateResponse getMyParticipationCertificate(UUID eventId, UUID userId) {
         eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Event", "id", eventId));
@@ -193,6 +258,18 @@ public class AwardService {
         if (rank == null) return 99;
         int idx = AWARD_ORDER.indexOf(rank);
         return idx >= 0 ? idx : 99;
+    }
+
+    private String prizeTitle(Prize prize) {
+        if (prize == null) return "Team Award";
+        if (prize.getLabel() != null && !prize.getLabel().isBlank()) return prize.getLabel();
+        if (prize.getRank() == null) return "Team Award";
+        return switch (prize.getRank()) {
+            case FIRST -> "First Prize";
+            case SECOND -> "Second Prize";
+            case THIRD -> "Third Prize";
+            case CONSOLATION -> "Consolation Prize";
+        };
     }
 
     private TeamAwardResponse toTeamAwardResponse(TeamAward award, Prize prize) {

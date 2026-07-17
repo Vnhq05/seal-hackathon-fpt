@@ -1,14 +1,20 @@
 package com.sealhackathon.team.service;
 
 import com.sealhackathon.common.dto.SystemConfigResponse;
+import com.sealhackathon.common.enums.StudentStanding;
 import com.sealhackathon.common.exception.BusinessException;
 import com.sealhackathon.common.service.SystemConfigService;
+import com.sealhackathon.event.dto.snapshot.EventSnapshot;
 import com.sealhackathon.event.service.EventPublicService;
 import com.sealhackathon.event.service.FormatRuleEngine;
+import com.sealhackathon.ranking.dto.FinalRankResult;
 import com.sealhackathon.ranking.service.RankingService;
 import com.sealhackathon.team.domain.EventEnrollment;
 import com.sealhackathon.team.domain.Team;
+import com.sealhackathon.team.domain.TeamMember;
+import com.sealhackathon.team.domain.enums.CompetitionOutcome;
 import com.sealhackathon.team.domain.enums.EnrollmentStatus;
+import com.sealhackathon.team.domain.enums.TeamMemberRole;
 import com.sealhackathon.team.domain.enums.TeamStatus;
 import com.sealhackathon.team.repository.EventEnrollmentRepository;
 import com.sealhackathon.team.repository.InvitationRepository;
@@ -22,6 +28,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -67,7 +75,7 @@ class EventEnrollmentMatchingServiceTest {
 
         when(enrollmentRepository.findByUserIdAndEventId(targetUserId, eventId))
                 .thenReturn(Optional.of(enrollment));
-        when(teamMemberRepository.existsByUserIdAndEventId(targetUserId, eventId)).thenReturn(false);
+        when(teamMemberRepository.existsActiveByUserIdAndEventId(targetUserId, eventId)).thenReturn(false);
 
         assertThatThrownBy(() -> enrollmentService.getPublicMatchingProfile(
                 targetUserId, leaderId, eventId, teamId))
@@ -110,6 +118,81 @@ class EventEnrollmentMatchingServiceTest {
         assertThat(candidates.get(0).getUserId()).isEqualTo(candidateId);
         assertThat(candidates.get(0).isProfilePublic()).isTrue();
         assertThat(candidates.get(0).getPreferredRole()).isEqualTo("Backend developer");
+    }
+
+    @Test
+    void getPublicMatchingProfile_shouldIncludeAvatarAndAchievementDate() {
+        UUID eventId = UUID.randomUUID();
+        UUID pastEventId = UUID.randomUUID();
+        UUID teamId = UUID.randomUUID();
+        UUID pastTeamId = UUID.randomUUID();
+        UUID leaderId = UUID.randomUUID();
+        UUID candidateId = UUID.randomUUID();
+        LocalDate achievedAt = LocalDate.of(2026, 4, 12);
+        LocalDateTime joinedAt = LocalDateTime.of(2025, 9, 1, 8, 0);
+
+        stubLeaderTeam(eventId, teamId, leaderId);
+
+        EventEnrollment enrollment = EventEnrollment.builder()
+                .userId(candidateId)
+                .eventId(eventId)
+                .status(EnrollmentStatus.APPROVED)
+                .isLookingForTeam(true)
+                .isProfilePublic(true)
+                .build();
+        Team pastTeam = Team.builder()
+                .eventId(pastEventId)
+                .leaderId(candidateId)
+                .name("Past Team")
+                .status(TeamStatus.CONFIRMED)
+                .build();
+        pastTeam.setId(pastTeamId);
+        TeamMember membership = TeamMember.builder()
+                .team(pastTeam)
+                .eventId(pastEventId)
+                .userId(candidateId)
+                .role(TeamMemberRole.LEADER)
+                .joinedAt(LocalDateTime.now())
+                .build();
+
+        when(enrollmentRepository.findByUserIdAndEventId(candidateId, eventId))
+                .thenReturn(Optional.of(enrollment));
+        when(teamMemberRepository.existsActiveByUserIdAndEventId(candidateId, eventId)).thenReturn(false);
+        when(userPublicService.findById(candidateId)).thenReturn(Optional.of(UserSnapshot.builder()
+                .id(candidateId)
+                .fullName("Published Candidate")
+                .email("candidate@fpt.edu.vn")
+                .phone("0901234567")
+                .avatarUrl("/api/public/files/users/avatar.webp")
+                .studentId("SE123456")
+                .studentStanding(StudentStanding.ENROLLED)
+                .semester(6)
+                .temporaryAccount(false)
+                .createdAt(joinedAt)
+                .build()));
+        when(teamMemberRepository.findByUserId(candidateId)).thenReturn(List.of(membership));
+        when(eventPublicService.getEvent(pastEventId)).thenReturn(Optional.of(EventSnapshot.builder()
+                .id(pastEventId)
+                .name("Past Hackathon")
+                .season("SPRING")
+                .year(2026)
+                .endDate(achievedAt)
+                .build()));
+        when(rankingService.getFinalRankForTeam(pastTeamId, pastEventId))
+                .thenReturn(new FinalRankResult(2, CompetitionOutcome.FINALIST));
+
+        var profile = enrollmentService.getPublicMatchingProfile(candidateId, leaderId, eventId, teamId);
+
+        assertThat(profile.getAvatarUrl()).isEqualTo("/api/public/files/users/avatar.webp");
+        assertThat(profile.getEmail()).isEqualTo("candidate@fpt.edu.vn");
+        assertThat(profile.getStudentId()).isEqualTo("SE123456");
+        assertThat(profile.getStudentStanding()).isEqualTo(StudentStanding.ENROLLED);
+        assertThat(profile.getCreatedAt()).isEqualTo(joinedAt);
+        assertThat(profile.getCompetitions()).singleElement().satisfies(achievement -> {
+            assertThat(achievement.getTeamName()).isEqualTo("Past Team");
+            assertThat(achievement.getFinalRank()).isEqualTo(2);
+            assertThat(achievement.getAchievedAt()).isEqualTo(achievedAt);
+        });
     }
 
     private void stubLeaderTeam(UUID eventId, UUID teamId, UUID leaderId) {

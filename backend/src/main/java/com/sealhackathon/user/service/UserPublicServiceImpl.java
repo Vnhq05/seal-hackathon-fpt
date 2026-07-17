@@ -214,6 +214,8 @@ public class UserPublicServiceImpl implements UserPublicService {
                 .status(user.getStatus())
                 .semester(user.getSemester())
                 .studentStanding(user.getStudentStanding())
+                .temporaryAccount(user.isTemporaryAccount())
+                .createdAt(user.getCreatedAt())
                 .sessionsInvalidatedAt(user.getSessionsInvalidatedAt())
                 .build();
     }

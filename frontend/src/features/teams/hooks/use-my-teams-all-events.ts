@@ -15,6 +15,7 @@ async function fetchMyTeamsAllEvents(): Promise<MyEventTeam[]> {
 
   const event = await eventApi.getById(enrollment.eventId);
   try {
+    // Backend hides disbanded teams here (404) — the student is back on the waiting list.
     const team = await teamApi.getMyTeam(event.id);
     return [{ event, team }];
   } catch {

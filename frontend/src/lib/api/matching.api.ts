@@ -1,5 +1,5 @@
 import { api } from "./api-client";
-import type { UserType } from "./types";
+import type { StudentStanding, UserType } from "./types";
 
 export type CompetitionOutcome = "CHAMPION" | "FINALIST" | "ELIMINATED" | "UNRANKED";
 
@@ -22,14 +22,22 @@ export interface CompetitionHistoryItem {
   teamName: string;
   finalRank: number | null;
   outcome: CompetitionOutcome;
+  achievedAt: string | null;
 }
 
 export interface PublicMatchingProfileResponse {
   userId: string;
   fullName: string;
+  email: string | null;
+  phone: string | null;
+  avatarUrl: string | null;
+  studentId: string | null;
   userType: UserType | null;
   universityName: string | null;
+  studentStanding: StudentStanding | null;
   semester: number | null;
+  temporaryAccount: boolean;
+  createdAt: string | null;
   competitions: CompetitionHistoryItem[];
 }
 
@@ -55,6 +63,7 @@ function normalizeCompetition(raw: Record<string, unknown>): CompetitionHistoryI
     teamName: String(raw.teamName ?? ""),
     finalRank: raw.finalRank != null ? Number(raw.finalRank) : null,
     outcome: String(raw.outcome) as CompetitionOutcome,
+    achievedAt: raw.achievedAt != null ? String(raw.achievedAt) : null,
   };
 }
 
@@ -66,9 +75,16 @@ function normalizePublicProfile(raw: Record<string, unknown>): PublicMatchingPro
   return {
     userId: String(raw.userId),
     fullName: String(raw.fullName ?? ""),
+    email: raw.email != null ? String(raw.email) : null,
+    phone: raw.phone != null ? String(raw.phone) : null,
+    avatarUrl: raw.avatarUrl != null ? String(raw.avatarUrl) : null,
+    studentId: raw.studentId != null ? String(raw.studentId) : null,
     userType: raw.userType != null ? (String(raw.userType) as UserType) : null,
     universityName: raw.universityName != null ? String(raw.universityName) : null,
+    studentStanding: raw.studentStanding != null ? (String(raw.studentStanding) as StudentStanding) : null,
     semester: raw.semester != null ? Number(raw.semester) : null,
+    temporaryAccount: Boolean(raw.temporaryAccount),
+    createdAt: raw.createdAt != null ? String(raw.createdAt) : null,
     competitions,
   };
 }

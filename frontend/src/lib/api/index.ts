@@ -29,7 +29,7 @@ export { userApi } from "./user.api";
 export type { UserProfile, UpdateProfileRequest, ChangePasswordRequest, UserSearchResult } from "./user.api";
 
 export { adminUserApi } from "./admin-user.api";
-export type { UserListItem, UserListParams, ApprovalRequest, CreateInternalAccountRequest } from "./admin-user.api";
+export type { UserListItem, UserListParams, UserAchievement, ApprovalRequest, CreateInternalAccountRequest } from "./admin-user.api";
 
 export { eventApi } from "./event.api";
 export type {
@@ -72,7 +72,7 @@ export type {
   EventAssignmentsOverviewResponse,
   TeamAssignmentOverview,
   EventJudgeOption,
-  CreateTeamAssignmentsRequest,
+  TeamJudgeAssignmentResponse,
 } from "./assignment.api";
 
 export { teamApi } from "./team.api";
@@ -128,9 +128,6 @@ export type { ChatMessageResponse, ChatMessageRequest } from "./mentor-chat.api"
 
 export { mentorInvitationApi } from "./mentor-invitation.api";
 export type { MentorInvitationResponse, MentorInvitationStatus, SendMentorInvitationRequest, RespondMentorInvitationRequest, MentorRoomResponse } from "./mentor-invitation.api";
-
-export { teamJudgeAssignmentApi } from "./team-judge-assignment.api";
-export type { TeamJudgeAssignmentResponse, AssignJudgeToTeamRequest } from "./team-judge-assignment.api";
 
 export { joinRequestApi } from "./join-request.api";
 export type { JoinableTeamResponse, TeamJoinRequestResponse, JoinRequestStatus, CreateJoinRequestRequest } from "./join-request.api";

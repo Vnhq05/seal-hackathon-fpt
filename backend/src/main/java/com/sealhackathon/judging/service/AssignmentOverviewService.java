@@ -11,15 +11,11 @@ import com.sealhackathon.event.repository.CompetitionGroupRepository;
 import com.sealhackathon.event.repository.HackathonEventRepository;
 import com.sealhackathon.event.repository.RoundRepository;
 import com.sealhackathon.event.repository.TrackRepository;
-import com.sealhackathon.event.service.EventJudgeService;
 import com.sealhackathon.event.service.EventOwnershipGuard;
 import com.sealhackathon.event.service.JudgeAssignmentService;
-import com.sealhackathon.judging.domain.TeamJudgeAssignment;
-import com.sealhackathon.judging.dto.request.CreateTeamAssignmentsRequest;
 import com.sealhackathon.judging.dto.response.EventAssignmentsOverviewResponse;
 import com.sealhackathon.judging.dto.response.TeamAssignmentOverviewResponse;
 import com.sealhackathon.judging.dto.response.TeamJudgeAssignmentResponse;
-import com.sealhackathon.judging.repository.TeamJudgeAssignmentRepository;
 import com.sealhackathon.submission.domain.Submission;
 import com.sealhackathon.submission.repository.SubmissionRepository;
 import com.sealhackathon.team.domain.MentorTeam;
@@ -31,15 +27,12 @@ import com.sealhackathon.team.service.TeamPublicService;
 import com.sealhackathon.user.dto.snapshot.UserSnapshot;
 import com.sealhackathon.user.service.UserPublicService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -54,17 +47,11 @@ public class AssignmentOverviewService {
     private final TeamRepository teamRepository;
     private final MentorTeamRepository mentorTeamRepository;
     private final SubmissionRepository submissionRepository;
-    private final TeamJudgeAssignmentRepository assignmentRepository;
-    private final EventJudgeService eventJudgeService;
     private final JudgeAssignmentService judgeAssignmentService;
-    private final TeamJudgeAssignmentService teamJudgeAssignmentService;
     private final TeamPublicService teamPublicService;
     private final TeamMemberRepository teamMemberRepository;
     private final UserPublicService userPublicService;
     private final EventOwnershipGuard eventOwnershipGuard;
-
-    @Value("${app.hackathon.judging.max-judges-per-team:3}")
-    private int maxJudgesPerTeam;
 
     @Transactional(readOnly = true)
     public EventAssignmentsOverviewResponse getEventAssignments(
@@ -115,85 +102,6 @@ public class AssignmentOverviewService {
                 .eligibleJudges(eligibleJudges)
                 .teams(teamRows)
                 .build();
-    }
-
-    @Transactional
-    public List<TeamJudgeAssignmentResponse> assignJudges(CreateTeamAssignmentsRequest request) {
-        HackathonEvent event = eventRepository.findById(request.getEventId())
-                .orElseThrow(() -> new ResourceNotFoundException("Event", "id", request.getEventId()));
-        eventOwnershipGuard.enforceEventOwnership(request.getEventId());
-
-        Round round = roundRepository.findById(request.getRoundId())
-                .orElseThrow(() -> new ResourceNotFoundException("Round", "id", request.getRoundId()));
-        if (!round.getHackathonEvent().getId().equals(request.getEventId())) {
-            throw new BusinessException("Round does not belong to this event", HttpStatus.BAD_REQUEST) {};
-        }
-
-        Team team = teamRepository.findById(request.getTeamId())
-                .orElseThrow(() -> new ResourceNotFoundException("Team", "id", request.getTeamId()));
-        if (!team.getEventId().equals(request.getEventId())) {
-            throw new BusinessException("Team does not belong to this event", HttpStatus.BAD_REQUEST) {};
-        }
-
-        List<UUID> judgeIds = request.getJudgeUserIds();
-        if (judgeIds.size() != maxJudgesPerTeam) {
-            throw new BusinessException(
-                    "Exactly " + maxJudgesPerTeam + " judges must be assigned",
-                    HttpStatus.BAD_REQUEST) {};
-        }
-
-        Set<UUID> unique = new HashSet<>(judgeIds);
-        if (unique.size() != maxJudgesPerTeam) {
-            throw new BusinessException("Judge assignments must be unique", HttpStatus.BAD_REQUEST) {};
-        }
-
-        for (UUID judgeId : judgeIds) {
-            validateJudgeCandidate(request.getEventId(), request.getRoundId(), request.getTeamId(), judgeId);
-        }
-
-        assignmentRepository.findByTeamIdAndRoundId(request.getTeamId(), request.getRoundId())
-                .forEach(a -> assignmentRepository.delete(a));
-
-        return judgeIds.stream()
-                .map(judgeId -> teamJudgeAssignmentService.createAssignment(
-                        request.getRoundId(), request.getTeamId(), judgeId))
-                .toList();
-    }
-
-    @Transactional
-    public void deleteAssignment(UUID assignmentId) {
-        TeamJudgeAssignment assignment = assignmentRepository.findById(assignmentId)
-                .orElseThrow(() -> new ResourceNotFoundException("TeamJudgeAssignment", "id", assignmentId));
-
-        Team team = teamRepository.findById(assignment.getTeamId())
-                .orElseThrow(() -> new ResourceNotFoundException("Team", "id", assignment.getTeamId()));
-        eventOwnershipGuard.enforceEventOwnership(team.getEventId());
-
-        assignmentRepository.delete(assignment);
-    }
-
-    private void validateJudgeCandidate(UUID eventId, UUID roundId, UUID teamId, UUID judgeUserId) {
-        if (!eventJudgeService.isEventJudge(eventId, judgeUserId)) {
-            throw new BusinessException(
-                    "Judge must be assigned to the event with role JUDGE or BOTH",
-                    HttpStatus.BAD_REQUEST) {};
-        }
-
-        Team team = teamRepository.findById(teamId)
-                .orElseThrow(() -> new ResourceNotFoundException("Team", "id", teamId));
-
-        if (!judgeAssignmentService.isJudgeAssignedToSubmissionScope(
-                roundId, judgeUserId, team.getTrackId(), team.getGroupId())) {
-            throw new BusinessException(
-                    "Judge is not assigned to this round and track",
-                    HttpStatus.BAD_REQUEST) {};
-        }
-
-        if (teamPublicService.isMentorOfTeam(judgeUserId, teamId)) {
-            throw new BusinessException(
-                    "Cannot assign judge who is the mentor of this team (conflict of interest)",
-                    HttpStatus.CONFLICT) {};
-        }
     }
 
     private List<EventJudgeResponse> resolveEligibleJudges(
@@ -249,8 +157,8 @@ public class AssignmentOverviewService {
                     .orElse(null);
         }
 
-        List<UUID> poolJudgeIds = judgeAssignmentService.getEligibleJudgeUserIds(
-                round.getId(), team.getTrackId(), team.getGroupId());
+        List<UUID> poolJudgeIds = judgeAssignmentService.getEffectiveJudgeUserIdsForTeam(
+                round.getId(), team.getId(), team.getTrackId(), team.getGroupId());
         List<TeamJudgeAssignmentResponse> judgeResponses = poolJudgeIds.stream()
                 .map(judgeUserId -> TeamJudgeAssignmentResponse.builder()
                         .teamId(team.getId())
