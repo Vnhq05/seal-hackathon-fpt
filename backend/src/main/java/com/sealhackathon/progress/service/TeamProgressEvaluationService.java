@@ -32,7 +32,8 @@ public class TeamProgressEvaluationService {
                                      SubmissionVersion latestVersion,
                                      int totalVersions,
                                      RoundSnapshot round,
-                                     boolean sealFormat) {
+                                     boolean sealFormat,
+                                     int submittedParts) {
         LocalDateTime now = LocalDateTime.now(clock);
         LocalDateTime submissionDeadline = round.getSubmissionDeadline();
         long hoursUntilDeadline = submissionDeadline != null
@@ -40,10 +41,17 @@ public class TeamProgressEvaluationService {
                 : Long.MAX_VALUE;
         LocalDateTime lastSubmittedAt = latestVersion != null ? latestVersion.getSubmittedAt() : null;
 
+        if (submittedParts >= SubmissionProgressCalculator.REQUIRED_PARTS) {
+            return new EvaluationResult(
+                    ProgressRiskLevel.OK, List.of(), totalVersions, lastSubmittedAt, hoursUntilDeadline,
+                    submittedParts);
+        }
+
         // Alerts only apply while the submission window is still open.
         if (submissionDeadline != null && !now.isBefore(submissionDeadline)) {
             return new EvaluationResult(
-                    ProgressRiskLevel.OK, List.of(), totalVersions, lastSubmittedAt, hoursUntilDeadline);
+                    ProgressRiskLevel.OK, List.of(), totalVersions, lastSubmittedAt, hoursUntilDeadline,
+                    submittedParts);
         }
 
         // And only inside the lead-time window before the deadline (default 6h).
@@ -52,14 +60,13 @@ public class TeamProgressEvaluationService {
                 : null;
         if (leadThreshold != null && now.isBefore(leadThreshold)) {
             return new EvaluationResult(
-                    ProgressRiskLevel.OK, List.of(), totalVersions, lastSubmittedAt, hoursUntilDeadline);
+                    ProgressRiskLevel.OK, List.of(), totalVersions, lastSubmittedAt, hoursUntilDeadline,
+                    submittedParts);
         }
 
         List<ProgressRiskReason> reasons = new ArrayList<>();
 
-        boolean notStarted = submission == null
-                || (submission.getStatus() == SubmissionStatus.DRAFT && totalVersions == 0);
-        if (notStarted) {
+        if (submittedParts == 0) {
             reasons.add(ProgressRiskReason.NOT_STARTED);
         }
 
@@ -100,7 +107,8 @@ public class TeamProgressEvaluationService {
 
         ProgressRiskLevel riskLevel = resolveRiskLevel(reasons);
 
-        return new EvaluationResult(riskLevel, reasons, totalVersions, lastSubmittedAt, hoursUntilDeadline);
+        return new EvaluationResult(
+                riskLevel, reasons, totalVersions, lastSubmittedAt, hoursUntilDeadline, submittedParts);
     }
 
     private ProgressRiskLevel resolveRiskLevel(List<ProgressRiskReason> reasons) {
@@ -121,5 +129,6 @@ public class TeamProgressEvaluationService {
             List<ProgressRiskReason> reasons,
             int totalVersions,
             LocalDateTime lastSubmittedAt,
-            long hoursUntilDeadline) {}
+            long hoursUntilDeadline,
+            int submittedParts) {}
 }

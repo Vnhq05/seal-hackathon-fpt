@@ -43,6 +43,7 @@ public class TeamProgressQueryService {
     private final TeamPublicService teamPublicService;
     private final TeamProgressEvaluationService evaluationService;
     private final TeamProgressScanService teamProgressScanService;
+    private final SubmissionProgressCalculator progressCalculator;
     private final FormatRuleEngine formatRuleEngine;
     private final EventOwnershipGuard eventOwnershipGuard;
 
@@ -74,7 +75,6 @@ public class TeamProgressQueryService {
 
         return buildProgressForRound(currentRound).stream()
                 .filter(p -> mentorTeamIds.contains(p.getTeamId()))
-                .filter(p -> p.getRiskLevel() != ProgressRiskLevel.OK)
                 .filter(p -> p.getHoursUntilDeadline() >= 0)
                 .toList();
     }
@@ -93,6 +93,10 @@ public class TeamProgressQueryService {
                 .findLatestVersionsByRoundId(roundId).stream()
                 .collect(Collectors.toMap(v -> v.getSubmission().getId(), Function.identity()));
 
+        Map<UUID, List<SubmissionVersion>> versionsBySubmissionId = submissionVersionRepository
+                .findAllByRoundIdWithAttachments(roundId).stream()
+                .collect(Collectors.groupingBy(v -> v.getSubmission().getId()));
+
         Round previousRound = teamProgressScanService.findPreviousRound(eventId, round.getRoundNumber());
 
         List<TeamProgressResponse> results = new ArrayList<>();
@@ -106,9 +110,15 @@ public class TeamProgressQueryService {
                     ? latestBySubmissionId.get(submission.getId())
                     : null;
             int totalVersions = latest != null ? latest.getVersionNumber() : 0;
+            List<SubmissionVersion> allVersions = submission != null
+                    ? versionsBySubmissionId.getOrDefault(submission.getId(), List.of())
+                    : List.of();
+            SubmissionProgressCalculator.ProgressParts progressParts =
+                    progressCalculator.calculate(allVersions);
 
             TeamProgressEvaluationService.EvaluationResult evaluation = evaluationService.evaluate(
-                    submission, latest, totalVersions, roundSnapshot, sealFormat);
+                    submission, latest, totalVersions, roundSnapshot, sealFormat,
+                    progressParts.submittedParts());
 
             results.add(TeamProgressResponse.builder()
                     .teamId(team.getId())
@@ -119,6 +129,9 @@ public class TeamProgressQueryService {
                     .lastSubmittedAt(evaluation.lastSubmittedAt())
                     .totalVersions(evaluation.totalVersions())
                     .hoursUntilDeadline(evaluation.hoursUntilDeadline())
+                    .submissionProgressPercent(progressParts.submissionProgressPercent())
+                    .submittedParts(progressParts.submittedParts())
+                    .requiredParts(SubmissionProgressCalculator.REQUIRED_PARTS)
                     .build());
         }
         return results;

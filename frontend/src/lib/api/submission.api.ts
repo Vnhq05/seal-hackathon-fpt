@@ -78,10 +78,12 @@ export const submissionApi = {
       formData.append("pdf", pdfFile);
     }
 
+    // Omit Content-Type so the browser sets multipart boundary.
+    // (apiClient defaults to application/json; `false` tells axios to drop it.)
     const { data: wrapper } = await apiClient.post<ApiResponse<SubmissionResponse>>(
       `/rounds/${roundId}/submissions`,
       formData,
-      { headers: { "Content-Type": "multipart/form-data" } },
+      { headers: { "Content-Type": false } },
     );
     if (!wrapper.success) {
       throw new Error(wrapper.message);

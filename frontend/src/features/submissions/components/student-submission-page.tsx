@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useMyTeamsAllEvents } from "@/features/teams/hooks/use-my-teams-all-events";
 import { useAuthStore } from "@/features/auth/store/auth.store";
@@ -17,7 +17,6 @@ import {
   validatePdfFile,
 } from "@/features/submissions/utils/round.utils";
 import {
-  canSubmitInSealPhase,
   formatCountdown,
   isSealPreliminaryRound,
   isValidHttpUrl,
@@ -27,6 +26,13 @@ import {
   sealPhaseLabel,
 } from "@/features/submissions/utils/seal-submission.utils";
 import { validateSourceCodeUrl } from "@/features/submissions/utils/source-code-url.utils";
+import {
+  countSubmissionParts,
+  submissionPartsFromVersion,
+  SubmissionProgressBar,
+} from "@/features/progress/components/submission-progress-bar";
+
+type SubmitPart = "slide" | "source" | "demo" | "pdf";
 
 export function StudentSubmissionPage() {
   const { user } = useAuthStore();
@@ -61,6 +67,7 @@ export function StudentSubmissionPage() {
   const [pdfError, setPdfError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [savingPart, setSavingPart] = useState<SubmitPart | null>(null);
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -80,8 +87,7 @@ export function StudentSubmissionPage() {
   }, [existing?.id, existing?.currentVersion, existing?.latestVersion]);
 
   const roundOpen = currentRound ? isRoundOpen(currentRound) : false;
-  const sealGateOpen = sealPhase ? canSubmitInSealPhase(sealPhase) : true;
-  const locked = !roundOpen || !isLeader || (isSealPrelim && !sealGateOpen);
+  const locked = !roundOpen || !isLeader;
 
   const lockReason = !team
     ? "You don't have a team yet. Join a team before submitting."
@@ -89,15 +95,9 @@ export function StudentSubmissionPage() {
       ? "No round is currently active."
       : !isLeader
         ? "Only the team leader can submit."
-        : isSealPrelim && sealPhase === "DEMO_CLOSED"
-          ? sealPhaseDescription("DEMO_CLOSED")
-          : !roundOpen && currentRound
-              ? roundLockMessage(currentRound)
-              : "";
-
-  const showSlideOnly = isSealPrelim && sealPhase === "SLIDE_ONLY";
-  const showFullFields = !isSealPrelim || sealPhase === "FULL";
-  const requirePdf = !isSealPrelim;
+        : !roundOpen && currentRound
+          ? roundLockMessage(currentRound)
+          : "";
 
   const slideCountdown =
     isSealPrelim && currentRound?.slideDeadline
@@ -110,46 +110,114 @@ export function StudentSubmissionPage() {
 
   const activeMilestone = findActiveMilestone(schedule, now);
 
+  const partStatus = useMemo(
+    () => submissionPartsFromVersion(existing?.latestVersion),
+    [existing?.latestVersion],
+  );
+  const submittedParts = countSubmissionParts(partStatus);
+  const progressPercent = submittedParts * 25;
+
   const { mutate: submit, isPending } = useSubmitSubmission();
 
-  const handleSubmitMutation = () => {
+  const handleSavePart = (part: SubmitPart) => {
+    setFormError(null);
+    setSuccess(null);
+
+    if (locked) {
+      setFormError(lockReason);
+      return;
+    }
     if (!currentRound || !team) return;
 
-    if (showSlideOnly) {
+    if (part === "slide") {
+      if (!slide.trim() || !isValidHttpUrl(slide)) {
+        setFormError("Invalid slide URL");
+        return;
+      }
+      setSavingPart("slide");
       submit(
-        {
-          roundId: currentRound.id,
-          teamId: team.id,
-          request: { slideUrl: slide.trim() },
-        },
+        { roundId: currentRound.id, teamId: team.id, request: { slideUrl: slide.trim() } },
         {
           onSuccess: (res) => {
-            setSuccess(`Submission saved as v${res.currentVersion} (${res.status})`);
-            setPdfFile(null);
+            setSuccess(`Slide saved as v${res.currentVersion}`);
+            setSavingPart(null);
           },
-          onError: (err: Error) => setFormError(err.message),
+          onError: (err: Error) => {
+            setFormError(err.message);
+            setSavingPart(null);
+          },
         },
       );
       return;
     }
 
-    submit(
-      {
-        roundId: currentRound.id,
-        teamId: team.id,
-        request: {
-          sourceCodeUrl: source.trim() || undefined,
-          slideUrl: slide.trim() || undefined,
-          demoUrl: demo.trim() || undefined,
+    if (part === "source") {
+      const sourceError = validateSourceCodeUrl(source);
+      if (sourceError) {
+        setFormError(sourceError);
+        return;
+      }
+      setSavingPart("source");
+      submit(
+        { roundId: currentRound.id, teamId: team.id, request: { sourceCodeUrl: source.trim() } },
+        {
+          onSuccess: (res) => {
+            setSuccess(`Source code saved as v${res.currentVersion}`);
+            setSavingPart(null);
+          },
+          onError: (err: Error) => {
+            setFormError(err.message);
+            setSavingPart(null);
+          },
         },
-        pdfFile: requirePdf ? pdfFile : null,
-      },
+      );
+      return;
+    }
+
+    if (part === "demo") {
+      if (!demo.trim() || !isValidHttpUrl(demo)) {
+        setFormError("Invalid demo video URL");
+        return;
+      }
+      setSavingPart("demo");
+      submit(
+        { roundId: currentRound.id, teamId: team.id, request: { demoUrl: demo.trim() } },
+        {
+          onSuccess: (res) => {
+            setSuccess(`Demo saved as v${res.currentVersion}`);
+            setSavingPart(null);
+          },
+          onError: (err: Error) => {
+            setFormError(err.message);
+            setSavingPart(null);
+          },
+        },
+      );
+      return;
+    }
+
+    if (!pdfFile) {
+      setFormError("Please select a PDF file");
+      return;
+    }
+    const pdfErr = validatePdfFile(pdfFile);
+    if (pdfErr) {
+      setFormError(pdfErr);
+      return;
+    }
+    setSavingPart("pdf");
+    submit(
+      { roundId: currentRound.id, teamId: team.id, request: {}, pdfFile },
       {
         onSuccess: (res) => {
-          setSuccess(`Submission saved as v${res.currentVersion} (${res.status})`);
+          setSuccess(`PDF saved as v${res.currentVersion}`);
           setPdfFile(null);
+          setSavingPart(null);
         },
-        onError: (err: Error) => setFormError(err.message),
+        onError: (err: Error) => {
+          setFormError(err.message);
+          setSavingPart(null);
+        },
       },
     );
   };
@@ -169,46 +237,6 @@ export function StudentSubmissionPage() {
     setPdfFile(file);
   };
 
-  const handleSubmit = () => {
-    setFormError(null);
-    setSuccess(null);
-
-    if (locked) {
-      setFormError(lockReason);
-      return;
-    }
-
-    if (showSlideOnly) {
-      if (!slide.trim() || !isValidHttpUrl(slide)) {
-        setFormError("Invalid slide URL");
-        return;
-      }
-      handleSubmitMutation();
-      return;
-    }
-
-    if (showFullFields) {
-      const sourceError = validateSourceCodeUrl(source);
-      if (sourceError) {
-        setFormError(sourceError);
-        return;
-      }
-      if (!slide.trim() || !isValidHttpUrl(slide)) {
-        setFormError("Invalid slide URL");
-        return;
-      }
-      if (!demo.trim() || !isValidHttpUrl(demo)) {
-        setFormError("Invalid demo video URL");
-        return;
-      }
-      if (requirePdf && !existing && !pdfFile) {
-        setFormError("Please upload a PDF file");
-        return;
-      }
-      handleSubmitMutation();
-    }
-  };
-
   if (teamsLoading || roundsLoading) {
     return (
       <div className="flex justify-center p-12">
@@ -222,45 +250,44 @@ export function StudentSubmissionPage() {
       <div>
         <h1 className="text-[28px] font-bold tracking-tight text-seal-text">Submit</h1>
         <p className="mt-1 text-sm text-seal-text-secondary">
-          {isSealPrelim
-            ? "SEAL Spring 2026 milestone gates — slides before 10:00, full submission before 14:00."
-            : "Slides, source code, and demo for the current round."}
+          Submit each part separately — Slide, GitHub, Demo, and PDF (25% each).
         </p>
       </div>
 
+      <div className="border-2 border-navy bg-white p-4 shadow-[4px_4px_0_0_#0c1228]">
+        <p className="text-xs font-medium uppercase tracking-wider text-seal-text-muted">
+          Submission progress
+        </p>
+        <div className="mt-2">
+          <SubmissionProgressBar
+            percent={progressPercent}
+            submittedParts={submittedParts}
+            requiredParts={4}
+            partStatus={partStatus}
+            showPartLabels
+          />
+        </div>
+      </div>
+
       {isSealPrelim && sealPhase && (
-        <div
-          className={`rounded-lg border p-4 text-sm ${
-            sealGateOpen
-              ? "border-blue-200 bg-blue-50 text-blue-900"
-              : "border-amber-200 bg-amber-50 text-amber-900"
-          }`}
-        >
+        <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
           <p className="font-semibold">{sealPhaseLabel(sealPhase)}</p>
           <p className="mt-1 text-xs opacity-90">{sealPhaseDescription(sealPhase)}</p>
-          {activeMilestone && (
-            <p className="mt-2 text-xs font-medium">{activeMilestone.title}</p>
-          )}
+          {activeMilestone && <p className="mt-2 text-xs font-medium">{activeMilestone.title}</p>}
           <div className="mt-3 flex flex-wrap gap-4 font-mono text-xs">
-            {slideCountdown !== null && sealPhase === "SLIDE_ONLY" && slideCountdown > 0 && (
-              <span>{formatCountdown(slideCountdown)} until slide deadline (10:00)</span>
+            {slideCountdown !== null && slideCountdown > 0 && (
+              <span>{formatCountdown(slideCountdown)} until slide deadline</span>
             )}
-            {demoCountdown !== null && sealPhase === "FULL" && demoCountdown > 0 && (
-              <span>{formatCountdown(demoCountdown)} until demo deadline (14:00)</span>
+            {demoCountdown !== null && demoCountdown > 0 && (
+              <span>{formatCountdown(demoCountdown)} until submission deadline</span>
             )}
           </div>
-          <p className="mt-2 text-[10px] text-seal-text-muted">
-            Server time is authoritative.
-          </p>
         </div>
       )}
 
       {isSealPrelim && schedule && schedule.length > 0 && (
         <div className="border-2 border-navy bg-white p-5 shadow-[4px_4px_0_0_#0c1228]">
           <h2 className="font-mono text-base font-bold text-navy">Milestone timeline</h2>
-          <p className="mt-1 mb-4 text-xs text-seal-text-secondary">
-            Milestone 1 (slides) and Milestone 2 (full demo submission) per the SEAL Spring 2026 schedule.
-          </p>
           <EventScheduleTimeline
             schedules={schedule}
             rounds={rounds}
@@ -279,7 +306,6 @@ export function StudentSubmissionPage() {
             <>
               <div className="mt-1 font-semibold text-seal-text">{team.name}</div>
               <div className="text-xs text-seal-text-muted">{event.name}</div>
-              <div className="mt-1 text-xs text-seal-text-secondary">{team.memberCount} members</div>
             </>
           ) : (
             <p className="mt-1 text-sm text-seal-text-muted">No team</p>
@@ -290,24 +316,12 @@ export function StudentSubmissionPage() {
           {currentRound ? (
             <>
               <div className="mt-1 font-semibold text-seal-text">{currentRound.name}</div>
-              <div className="text-xs text-seal-text-muted">
-                {currentRound.startDate.slice(0, 16).replace("T", " ")} —{" "}
-                {currentRound.endDate.slice(0, 16).replace("T", " ")}
-              </div>
-              {isSealPrelim && currentRound.slideDeadline && (
-                <div className="mt-1 text-[10px] text-seal-text-muted">
-                  Slide: {currentRound.slideDeadline.slice(11, 16)} · Demo:{" "}
-                  {currentRound.submissionDeadline.slice(11, 16)}
-                </div>
-              )}
               <span
                 className={`mt-2 inline-block rounded-md px-2 py-0.5 text-[10px] font-medium ${
-                  roundOpen && sealGateOpen
-                    ? "bg-emerald-50 text-emerald-700"
-                    : "bg-amber-50 text-amber-700"
+                  roundOpen ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"
                 }`}
               >
-                {roundOpen && sealGateOpen ? "Open for submission" : "Closed"}
+                {roundOpen ? "Open for submission" : "Closed"}
               </span>
             </>
           ) : (
@@ -318,13 +332,7 @@ export function StudentSubmissionPage() {
 
       {existing && (
         <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
-          <span className="font-semibold">Submitted:</span> v{existing.currentVersion} — {existing.status}
-          {existing.latestVersion?.submittedAt && (
-            <span className="text-emerald-700">
-              {" "}
-              · {new Date(existing.latestVersion.submittedAt).toLocaleString()}
-            </span>
-          )}
+          <span className="font-semibold">Latest version:</span> v{existing.currentVersion} — {existing.status}
         </div>
       )}
 
@@ -335,51 +343,81 @@ export function StudentSubmissionPage() {
       )}
 
       <div
-        className={`border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-6 flex flex-col gap-4 ${locked ? "pointer-events-none opacity-60" : ""}`}
+        className={`border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-6 flex flex-col gap-5 ${locked ? "pointer-events-none opacity-60" : ""}`}
       >
-        <div>
-          <label className="text-xs font-medium text-seal-text-secondary">
-            Slide URL {showSlideOnly || showFullFields ? "*" : ""}
-          </label>
-          <input
-            value={slide}
-            onChange={(e) => setSlide(e.target.value)}
-            disabled={locked}
-            placeholder="https://docs.google.com/presentation/..."
-            className="mt-1.5 w-full border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] px-3 py-2 text-sm outline-none focus:border-royal/40"
-          />
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+          <div className="flex-1">
+            <label className="text-xs font-medium text-seal-text-secondary">
+              Slide URL {partStatus.slide ? "✓" : ""}
+            </label>
+            <input
+              value={slide}
+              onChange={(e) => setSlide(e.target.value)}
+              disabled={locked}
+              placeholder="https://docs.google.com/presentation/..."
+              className="mt-1.5 w-full border-2 border-navy bg-white px-3 py-2 text-sm shadow-[4px_4px_0_0_#0c1228] outline-none focus:border-royal/40"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => handleSavePart("slide")}
+            disabled={locked || isPending}
+            className="shrink-0 border-2 border-navy bg-seal-yellow px-4 py-2 font-mono text-xs font-bold text-navy disabled:opacity-50"
+          >
+            {savingPart === "slide" ? "Saving..." : "Save slide"}
+          </button>
         </div>
 
-        {showFullFields && (
-          <>
-            <div>
-              <label className="text-xs font-medium text-seal-text-secondary">Source Code URL *</label>
-              <input
-                value={source}
-                onChange={(e) => setSource(e.target.value)}
-                disabled={locked}
-                placeholder="https://github.com/team/project"
-                className="mt-1.5 w-full border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] px-3 py-2 text-sm outline-none focus:border-royal/40"
-              />
-            </div>
-
-            <div>
-              <label className="text-xs font-medium text-seal-text-secondary">Demo URL *</label>
-              <input
-                value={demo}
-                onChange={(e) => setDemo(e.target.value)}
-                disabled={locked}
-                placeholder="https://youtube.com/watch?v=..."
-                className="mt-1.5 w-full border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] px-3 py-2 text-sm outline-none focus:border-royal/40"
-              />
-            </div>
-          </>
-        )}
-
-        {requirePdf && (
-          <div>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+          <div className="flex-1">
             <label className="text-xs font-medium text-seal-text-secondary">
-              PDF {existing ? "(optional when updating)" : "*"}
+              GitHub / Source URL {partStatus.source ? "✓" : ""}
+            </label>
+            <input
+              value={source}
+              onChange={(e) => setSource(e.target.value)}
+              disabled={locked}
+              placeholder="https://github.com/team/project"
+              className="mt-1.5 w-full border-2 border-navy bg-white px-3 py-2 text-sm shadow-[4px_4px_0_0_#0c1228] outline-none focus:border-royal/40"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => handleSavePart("source")}
+            disabled={locked || isPending}
+            className="shrink-0 border-2 border-navy bg-seal-yellow px-4 py-2 font-mono text-xs font-bold text-navy disabled:opacity-50"
+          >
+            {savingPart === "source" ? "Saving..." : "Save source"}
+          </button>
+        </div>
+
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+          <div className="flex-1">
+            <label className="text-xs font-medium text-seal-text-secondary">
+              Demo URL {partStatus.demo ? "✓" : ""}
+            </label>
+            <input
+              value={demo}
+              onChange={(e) => setDemo(e.target.value)}
+              disabled={locked}
+              placeholder="https://youtube.com/watch?v=..."
+              className="mt-1.5 w-full border-2 border-navy bg-white px-3 py-2 text-sm shadow-[4px_4px_0_0_#0c1228] outline-none focus:border-royal/40"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => handleSavePart("demo")}
+            disabled={locked || isPending}
+            className="shrink-0 border-2 border-navy bg-seal-yellow px-4 py-2 font-mono text-xs font-bold text-navy disabled:opacity-50"
+          >
+            {savingPart === "demo" ? "Saving..." : "Save demo"}
+          </button>
+        </div>
+
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+          <div className="flex-1">
+            <label className="text-xs font-medium text-seal-text-secondary">
+              PDF file {partStatus.pdf ? "✓" : ""}
             </label>
             <input
               type="file"
@@ -392,31 +430,22 @@ export function StudentSubmissionPage() {
             {pdfFile && <p className="mt-1 text-xs text-seal-text-muted">Selected: {pdfFile.name}</p>}
             {!pdfFile && existing?.latestVersion?.attachments?.[0] && (
               <p className="mt-1 text-xs text-seal-text-muted">
-                Current file: {existing.latestVersion.attachments[0].fileName}
+                Current: {existing.latestVersion.attachments[0].fileName}
               </p>
             )}
           </div>
-        )}
+          <button
+            type="button"
+            onClick={() => handleSavePart("pdf")}
+            disabled={locked || isPending}
+            className="shrink-0 border-2 border-navy bg-seal-yellow px-4 py-2 font-mono text-xs font-bold text-navy disabled:opacity-50"
+          >
+            {savingPart === "pdf" ? "Saving..." : "Save PDF"}
+          </button>
+        </div>
 
         {formError && <div className="rounded-lg bg-red-50 p-3 text-xs text-red-700">{formError}</div>}
         {success && <div className="rounded-lg bg-emerald-50 p-3 text-xs text-emerald-700">{success}</div>}
-
-        <button
-          type="button"
-          onClick={handleSubmit}
-          disabled={locked || isPending}
-          className="border-2 border-navy bg-seal-yellow py-2.5 font-mono font-bold text-navy shadow-[4px_4px_0_0_#0c1228] disabled:opacity-50"
-        >
-          {isPending
-            ? "Submitting..."
-            : showSlideOnly
-              ? existing
-                ? "Update slides"
-                : "Submit slides (Milestone 1)"
-              : existing
-                ? "Update submission"
-                : "Submit"}
-        </button>
       </div>
     </div>
   );

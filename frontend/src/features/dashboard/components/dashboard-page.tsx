@@ -27,6 +27,7 @@ import { useMyTeamProgress } from "@/features/dashboard/hooks/use-my-team-progre
 import { progressReasonLabel, formatRealtimeDeadlineDetail } from "@/features/progress/lib/progress.utils";
 import { useRealtimeCountdown } from "@/features/progress/hooks/use-realtime-countdown";
 import { StudentParticipationCountdownCard } from "@/features/progress/components/student-participation-countdown-card";
+import { SubmissionProgressBar } from "@/features/progress/components/submission-progress-bar";
 import type { TeamProgressResponse } from "@/lib/api/progress.api";
 
 function ArrowRightIcon() {
@@ -93,30 +94,62 @@ function ProgressAlertBanner({
   eventName?: string | null;
   submissionDeadline?: string | null;
 }) {
-  const reasons = progress.reasons.map(progressReasonLabel).join(" · ");
+  const isComplete = (progress.submissionProgressPercent ?? 0) >= 100;
+  const statusText = isComplete
+    ? "Submission complete"
+    : progress.reasons.length > 0
+      ? progress.reasons.map(progressReasonLabel).join(" · ")
+      : "In progress";
   const msLeft = useRealtimeCountdown(submissionDeadline);
   const deadlineText = formatRealtimeDeadlineDetail(msLeft);
 
   return (
-    <div className="border-2 border-amber-500 bg-amber-50 px-4 py-3 text-sm text-amber-900 shadow-[2px_2px_0_0_#0c1228]">
+    <div
+      className={`border-2 px-4 py-3 text-sm shadow-[2px_2px_0_0_#0c1228] ${
+        isComplete
+          ? "border-emerald-500 bg-emerald-50 text-emerald-900"
+          : "border-amber-500 bg-amber-50 text-amber-900"
+      }`}
+    >
       {eventName && (
-        <p className="font-mono text-[10px] font-bold uppercase tracking-wide text-amber-800/70">
+        <p
+          className={`font-mono text-[10px] font-bold uppercase tracking-wide ${
+            isComplete ? "text-emerald-800/70" : "text-amber-800/70"
+          }`}
+        >
           {eventName}
         </p>
       )}
       <p className="font-semibold">
-        {progress.riskLevel === "CRITICAL" ? "Critical alert" : "Progress alert"} — {progress.teamName}
+        {isComplete
+          ? "All parts submitted"
+          : progress.riskLevel === "CRITICAL"
+            ? "Critical alert"
+            : progress.riskLevel === "AT_RISK"
+              ? "Progress alert"
+              : "Submission progress"}{" "}
+        — {progress.teamName}
       </p>
       <p className="mt-1">
-        {reasons} · {deadlineText}
+        {statusText} · {deadlineText}
       </p>
-      <Link
-        href="/student/submissions"
-        className="mt-2 inline-flex items-center gap-1 font-mono text-xs font-bold text-navy underline"
-      >
-        Submit now
-        <ArrowRightIcon />
-      </Link>
+      <div className="mt-3 max-w-md">
+        <SubmissionProgressBar
+          percent={progress.submissionProgressPercent ?? 0}
+          submittedParts={progress.submittedParts}
+          requiredParts={progress.requiredParts ?? 4}
+          size="sm"
+        />
+      </div>
+      {!isComplete && (
+        <Link
+          href="/student/submissions"
+          className="mt-2 inline-flex items-center gap-1 font-mono text-xs font-bold text-navy underline"
+        >
+          Submit now
+          <ArrowRightIcon />
+        </Link>
+      )}
     </div>
   );
 }
@@ -743,8 +776,7 @@ export function DashboardPage() {
   const myTeamProgress = myTeamProgressData?.progress ?? null;
   const msUntilDeadline = useRealtimeCountdown(myTeamProgressData?.submissionDeadline);
   const deadlineStillOpen = msUntilDeadline === null || msUntilDeadline > 0;
-  const showProgressAlert =
-    myTeamProgress != null && myTeamProgress.riskLevel !== "OK" && deadlineStillOpen;
+  const showProgressCard = myTeamProgress != null && deadlineStillOpen;
 
   if (summaryLoading && teamLoading) {
     return (
@@ -761,7 +793,7 @@ export function DashboardPage() {
   return (
     <div className="flex flex-col gap-6">
       <WelcomeBanner userName={firstName} />
-      {showProgressAlert ? (
+      {showProgressCard ? (
         <ProgressAlertBanner
           progress={myTeamProgress!}
           eventName={myTeamProgressData?.eventName}
@@ -787,7 +819,7 @@ export function DashboardPage() {
       <div className="grid gap-6" style={{ gridTemplateColumns: "2fr 1fr" }}>
         <RecentUpdates
           notifications={notifications}
-          teamProgress={showProgressAlert ? myTeamProgress : null}
+          teamProgress={showProgressCard ? myTeamProgress : null}
           submissionDeadline={myTeamProgressData?.submissionDeadline}
         />
         <TeamQuickCard team={team} />

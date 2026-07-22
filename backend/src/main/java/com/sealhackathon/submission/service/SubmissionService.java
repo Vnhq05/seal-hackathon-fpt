@@ -7,7 +7,6 @@ import com.sealhackathon.common.storage.FileStorageService;
 import com.sealhackathon.event.domain.enums.RoundType;
 import com.sealhackathon.event.dto.snapshot.RoundSnapshot;
 import com.sealhackathon.event.service.EventPublicService;
-import com.sealhackathon.event.service.FormatRuleEngine;
 import com.sealhackathon.event.service.JudgeAssignmentService;
 import com.sealhackathon.ranking.service.FinalistSelectionService;
 import com.sealhackathon.submission.domain.Submission;
@@ -57,7 +56,6 @@ public class SubmissionService {
     private final FileStorageService fileStorageService;
     private final JudgeAssignmentService judgeAssignmentService;
     private final ApplicationEventPublisher eventPublisher;
-    private final FormatRuleEngine formatRuleEngine;
 
     // ── BR-25, BR-31, BR-32: Create or re-submit ──
     @Transactional
@@ -66,11 +64,11 @@ public class SubmissionService {
         RoundSnapshot roundSnapshot = eventPublicService.getRound(roundId)
                 .orElseThrow(() -> new ResourceNotFoundException("Round", "id", roundId));
 
-        validateSealSubmission(roundSnapshot, request);
+        validatePartialSubmission(roundSnapshot, request, pdfFile);
 
-        String sourceUrl = resolveSourceUrl(request, roundSnapshot);
-        if (sourceUrl != null) {
-            sourceCodeUrlValidator.validate(sourceUrl);
+        String requestSourceUrl = resolveSourceUrlOptional(request);
+        if (requestSourceUrl != null) {
+            sourceCodeUrlValidator.validate(requestSourceUrl);
         }
 
         if (request.getDemoUrl() != null && !request.getDemoUrl().isBlank()) {
@@ -106,8 +104,7 @@ public class SubmissionService {
         boolean isNew = (submission == null);
         boolean hasPdf = pdfFile != null && !pdfFile.isEmpty();
 
-        boolean pdfRequired = isNew && isPdfRequiredForSubmit(roundSnapshot);
-        pdfValidator.validate(pdfFile, request.getPdfPageCount(), pdfRequired);
+        pdfValidator.validate(pdfFile, request.getPdfPageCount(), false);
 
         if (isNew) {
             submission = Submission.builder()
@@ -119,15 +116,23 @@ public class SubmissionService {
             submission = submissionRepository.save(submission);
         }
 
-        // BR-30: create new version (append-only)
+        // BR-30: create new version (append-only), merging artifacts from previous version
         int nextVersion = versionRepository.findMaxVersionNumber(submission.getId()) + 1;
+        SubmissionVersion previousVersion = resolvePreviousVersion(submission);
+
+        String slideUrl = coalesceNonBlank(
+                trimToNull(request.getSlideUrl()), previousVersion != null ? previousVersion.getSlideUrl() : null);
+        String sourceUrl = coalesceNonBlank(requestSourceUrl,
+                previousVersion != null ? previousVersion.getGithubUrl() : null);
+        String demoUrl = coalesceNonBlank(
+                trimToNull(request.getDemoUrl()), previousVersion != null ? previousVersion.getDemoUrl() : null);
 
         SubmissionVersion version = SubmissionVersion.builder()
                 .submission(submission)
                 .versionNumber(nextVersion)
                 .githubUrl(sourceUrl)
-                .slideUrl(request.getSlideUrl() != null ? request.getSlideUrl().trim() : null)
-                .demoUrl(request.getDemoUrl() != null ? request.getDemoUrl().trim() : null)
+                .slideUrl(slideUrl)
+                .demoUrl(demoUrl)
                 .submittedAt(LocalDateTime.now())
                 .build();
         final SubmissionVersion savedVersion = versionRepository.save(version);
@@ -362,84 +367,49 @@ public class SubmissionService {
                 .build();
     }
 
-    /**
-     * PDF required on first submit for non-SEAL events only (SEAL uses slide instead).
-     */
-    private boolean isPdfRequiredForSubmit(RoundSnapshot round) {
-        return !formatRuleEngine.isSealFormat(round.getEventId());
-    }
-
-    private String resolveSourceUrl(CreateSubmissionRequest request, RoundSnapshot round) {
-        String url = null;
-        if (request.getSourceCodeUrl() != null && !request.getSourceCodeUrl().isBlank()) {
-            url = request.getSourceCodeUrl().trim();
-        } else if (request.getGithubUrl() != null && !request.getGithubUrl().isBlank()) {
-            url = request.getGithubUrl().trim();
-        }
-        if (url == null && isFullSubmissionPhase(round)) {
-            throw new BusinessException("Source code URL is required", HttpStatus.BAD_REQUEST);
-        }
-        return url;
-    }
-
-    private void validateSealSubmission(RoundSnapshot round, CreateSubmissionRequest request) {
-        if (!formatRuleEngine.isSealFormat(round.getEventId())) {
-            if (request.getDemoUrl() == null || request.getDemoUrl().isBlank()) {
-                throw new BusinessException("Demo URL is required", HttpStatus.BAD_REQUEST);
-            }
-            if (resolveSourceUrlOptional(request) == null) {
-                throw new BusinessException("Source code URL is required", HttpStatus.BAD_REQUEST);
-            }
-            return;
-        }
-
-        if (round.getRoundType() != RoundType.PRELIMINARY) {
-            if (request.getDemoUrl() == null || request.getDemoUrl().isBlank()) {
-                throw new BusinessException("Demo URL is required", HttpStatus.BAD_REQUEST);
-            }
-            if (resolveSourceUrlOptional(request) == null) {
-                throw new BusinessException("Source code URL is required", HttpStatus.BAD_REQUEST);
-            }
-            return;
-        }
-
-        LocalDateTime now = LocalDateTime.now();
+    private void validatePartialSubmission(RoundSnapshot round,
+                                           CreateSubmissionRequest request,
+                                           MultipartFile pdfFile) {
         boolean hasSlide = request.getSlideUrl() != null && !request.getSlideUrl().isBlank();
         boolean hasDemo = request.getDemoUrl() != null && !request.getDemoUrl().isBlank();
         boolean hasSource = resolveSourceUrlOptional(request) != null;
+        boolean hasPdf = pdfFile != null && !pdfFile.isEmpty();
 
-        if (round.getSlideDeadline() != null && now.isBefore(round.getSlideDeadline())) {
-            if (hasSlide && !hasDemo && !hasSource) {
-                return;
-            }
-        } else if (round.getSlideDeadline() != null && now.isAfter(round.getSlideDeadline())
-                && hasSlide && !hasDemo && !hasSource) {
+        if (!hasSlide && !hasDemo && !hasSource && !hasPdf) {
             throw new BusinessException(
-                    "Slide submission gate closed at " + round.getSlideDeadline(),
-                    HttpStatus.BAD_REQUEST);
+                    "At least one submission part is required (slide, source, demo, or PDF)",
+                    HttpStatus.BAD_REQUEST) {};
         }
 
-        if (round.getSubmissionDeadline() != null && now.isAfter(round.getSubmissionDeadline())) {
+        if (round.getSubmissionDeadline() != null
+                && LocalDateTime.now().isAfter(round.getSubmissionDeadline())) {
             throw new BusinessException(
-                    "Demo submission deadline passed at " + round.getSubmissionDeadline(),
-                    HttpStatus.BAD_REQUEST);
-        }
-        if (!hasDemo) {
-            throw new BusinessException("Demo URL is required for " + round.getName(), HttpStatus.BAD_REQUEST);
-        }
-        if (!hasSource) {
-            throw new BusinessException("Source code URL is required for " + round.getName(), HttpStatus.BAD_REQUEST);
+                    "Submission deadline passed at " + round.getSubmissionDeadline(),
+                    HttpStatus.BAD_REQUEST) {};
         }
     }
 
-    private boolean isFullSubmissionPhase(RoundSnapshot round) {
-        if (formatRuleEngine.isSealFormat(round.getEventId())
-                && round.getRoundType() == RoundType.PRELIMINARY
-                && round.getSlideDeadline() != null
-                && LocalDateTime.now().isBefore(round.getSlideDeadline())) {
-            return false;
+    private SubmissionVersion resolvePreviousVersion(Submission submission) {
+        if (submission.getCurrentVersionId() != null) {
+            return versionRepository.findById(submission.getCurrentVersionId()).orElse(null);
         }
-        return true;
+        return versionRepository.findBySubmissionIdOrderByVersionNumberDesc(submission.getId()).stream()
+                .findFirst()
+                .orElse(null);
+    }
+
+    private static String coalesceNonBlank(String preferred, String fallback) {
+        if (preferred != null && !preferred.isBlank()) {
+            return preferred.trim();
+        }
+        return fallback;
+    }
+
+    private static String trimToNull(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.trim();
     }
 
     private String resolveSourceUrlOptional(CreateSubmissionRequest request) {

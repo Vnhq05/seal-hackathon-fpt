@@ -92,7 +92,8 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleMaxUploadSize(MaxUploadSizeExceededException ex) {
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.error("Uploaded file is too large."));
+                .body(ApiResponse.error(
+                        "Uploaded file is too large. PDF must be 5 MB or smaller."));
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)

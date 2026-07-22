@@ -10,7 +10,7 @@ import { SealCard } from "@/shared/ui/seal-card";
 export function LiveScoreListPage({ portalBase = "/admin" }: { portalBase?: string }) {
   const { data, isLoading } = useQuery<Page<EventResponse>>({
     queryKey: ["admin-events-livescore"],
-    queryFn: () => eventApi.list({ status: "ACTIVE" }),
+    queryFn: () => eventApi.list({ status: "ACTIVE,SCORING" }),
   });
 
   const events = data?.content ?? [];
@@ -32,9 +32,9 @@ export function LiveScoreListPage({ portalBase = "/admin" }: { portalBase?: stri
         </div>
       ) : events.length === 0 ? (
         <SealCard className="flex flex-col items-center justify-center px-6 py-16 text-center">
-          <p className="text-base font-semibold text-navy">No active events</p>
+          <p className="text-base font-semibold text-navy">No events in progress</p>
           <p className="mt-1 text-sm text-seal-text-muted">
-            LiveScore is available for active events only.
+            LiveScore is available for active or scoring events.
           </p>
         </SealCard>
       ) : (

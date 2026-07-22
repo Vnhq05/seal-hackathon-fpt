@@ -25,4 +25,8 @@ public interface SubmissionVersionRepository extends JpaRepository<SubmissionVer
             "AND v.versionNumber = (SELECT MAX(v2.versionNumber) FROM SubmissionVersion v2 " +
             "WHERE v2.submission = v.submission)")
     List<SubmissionVersion> findLatestVersionsByRoundId(@Param("roundId") UUID roundId);
+
+    @Query("SELECT v FROM SubmissionVersion v LEFT JOIN FETCH v.attachments " +
+            "WHERE v.submission.roundId = :roundId")
+    List<SubmissionVersion> findAllByRoundIdWithAttachments(@Param("roundId") UUID roundId);
 }
