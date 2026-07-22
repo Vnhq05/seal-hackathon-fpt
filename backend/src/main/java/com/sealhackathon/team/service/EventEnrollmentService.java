@@ -400,6 +400,14 @@ public class EventEnrollmentService {
     }
 
     @Transactional(readOnly = true)
+    public List<EnrollmentResponse> getMyEnrollments(UUID userId) {
+        return enrollmentRepository.findAllByUserIdAndStatusIn(userId, ACTIVE_STATUSES)
+                .stream()
+                .map(e -> toResponse(e, null))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public EnrollmentResponse getMyEnrollment(UUID userId, UUID eventId) {
         EventEnrollment enrollment = enrollmentRepository.findByUserIdAndEventId(userId, eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Enrollment", "userId+eventId", userId + "+" + eventId));

@@ -11,7 +11,10 @@ import {
   participantFeedbackSchema,
   type ParticipantFeedbackFormValues,
 } from "@/features/feedback/schemas/participant-feedback.schema";
-import { useMyTeamsAllEvents } from "@/features/teams/hooks/use-my-teams-all-events";
+import {
+  useMyTeamsAllEvents,
+  type MyEventTeam,
+} from "@/features/teams/hooks/use-my-teams-all-events";
 import type { ParticipantFeedbackResponse } from "@/lib/api/participant-feedback.api";
 
 const RATING_LABELS: Record<number, string> = {
@@ -225,12 +228,24 @@ export function ParticipantFeedbackPage() {
 
   const activeMembership = useMemo(() => {
     if (!memberships?.length) return null;
-    const sealCompleted = memberships.find(
-      (m) => m.event.competitionFormat === "SEAL_RAG_2026" && m.event.status === "COMPLETED",
-    );
+
+    const byMostRecentEnd = (a: MyEventTeam, b: MyEventTeam) =>
+      new Date(b.event.endDate).getTime() - new Date(a.event.endDate).getTime();
+
+    // Prefer the most recently ended SEAL event so post-event feedback targets
+    // the competition that just finished (not an older completed season).
+    const sealCompleted = memberships
+      .filter(
+        (m) => m.event.competitionFormat === "SEAL_RAG_2026" && m.event.status === "COMPLETED",
+      )
+      .sort(byMostRecentEnd)[0];
     if (sealCompleted) return sealCompleted;
-    const completed = memberships.find((m) => m.event.status === "COMPLETED");
+
+    const completed = [...memberships]
+      .filter((m) => m.event.status === "COMPLETED")
+      .sort(byMostRecentEnd)[0];
     if (completed) return completed;
+
     return (
       memberships.find((m) => m.event.competitionFormat === "SEAL_RAG_2026") ?? memberships[0]
     );

@@ -30,4 +30,17 @@ class EmailDomainValidatorTest {
     void shouldNormalizeRuleWithAtPrefix() {
         assertThat(EmailDomainValidator.normalizeRuleDomain("@uit.edu.vn")).isEqualTo("uit.edu.vn");
     }
+
+    @Test
+    void shouldAcceptEduVnEmail() {
+        assertThat(EmailDomainValidator.isEduVnEmail("student@hcmut.edu.vn")).isTrue();
+        assertThat(EmailDomainValidator.isEduVnEmail("alice@student.hcmus.edu.vn")).isTrue();
+    }
+
+    @Test
+    void shouldRejectNonEduVnEmail() {
+        assertThat(EmailDomainValidator.isEduVnEmail("user@gmail.com")).isFalse();
+        assertThat(EmailDomainValidator.isEduVnEmail("user@edu.com")).isFalse();
+        assertThat(EmailDomainValidator.isEduVnEmail("not-an-email")).isFalse();
+    }
 }

@@ -22,8 +22,8 @@ function RiskBadge({ level }: { level: AtRiskTeamEntry["riskLevel"] }) {
     <span
       className="shrink-0 rounded px-2 py-1 text-xs font-bold"
       style={{
-        color: isCritical ? "#93000a" : "#b45309",
-        backgroundColor: isCritical ? "rgba(186,26,26,0.12)" : "rgba(245,158,11,0.2)",
+        color: isCritical ? "#854d0e" : "#b45309",
+        backgroundColor: isCritical ? "rgba(234,179,8,0.28)" : "rgba(245,158,11,0.2)",
       }}
     >
       {isCritical ? "Critical" : "At risk"}
@@ -39,10 +39,10 @@ function TeamProgressRow({ team }: { team: AtRiskTeamEntry }) {
   }
 
   return (
-    <li className="flex items-center justify-between gap-4 border-t border-[#f5c2bc] bg-[#ffdad6]/70 px-5 py-3">
+    <li className="flex items-center justify-between gap-4 border-t border-amber-200 bg-amber-50/70 px-5 py-3">
       <div>
         <p className="font-semibold text-navy">{team.teamName}</p>
-        <p className="text-xs text-[#93000a]/70">
+        <p className="text-xs text-amber-800/70">
           {team.reasons.map(progressReasonLabel).join(" · ")} · {formatRealtimeDeadlineDetail(msLeft)}
         </p>
       </div>
@@ -69,16 +69,16 @@ function EventSupportCard({ group }: { group: EventAtRiskGroup }) {
   const hiddenCount = Math.max(0, teamCount - DEFAULT_TEAMS_VISIBLE);
 
   return (
-    <div className="border-2 border-[#ba1a1a] bg-[#ffdad6] shadow-[4px_4px_0_0_#0c1228]">
-      <div className="border-b-2 border-[#ba1a1a] bg-[#f5c2bc] px-5 py-2.5">
-        <h2 className="font-mono text-sm font-bold text-[#93000a]">{group.eventName}</h2>
+    <div className="border-2 border-amber-500 bg-amber-50 shadow-[4px_4px_0_0_#0c1228]">
+      <div className="border-b-2 border-amber-500 bg-seal-yellow/40 px-5 py-2.5">
+        <h2 className="font-mono text-sm font-bold text-amber-900">{group.eventName}</h2>
       </div>
 
       <div className="px-5 py-3">
-        <h3 className="font-mono text-lg font-bold text-[#93000a]">
+        <h3 className="font-mono text-lg font-bold text-amber-900">
           Teams needing support ({teamCount})
         </h3>
-        <p className="text-sm text-[#93000a]/80">
+        <p className="text-sm text-amber-800/80">
           Teams with slow submission progress before the round deadline.
         </p>
       </div>
@@ -93,7 +93,7 @@ function EventSupportCard({ group }: { group: EventAtRiskGroup }) {
         <button
           type="button"
           onClick={() => setExpanded(true)}
-          className="w-full border-t-2 border-[#ba1a1a] bg-[#f5c2bc] px-5 py-3 text-center font-mono text-sm font-bold text-[#93000a] transition-colors hover:bg-[#f0b0a8]"
+          className="w-full border-t-2 border-amber-500 bg-seal-yellow/40 px-5 py-3 text-center font-mono text-sm font-bold text-amber-900 transition-colors hover:bg-seal-yellow/60"
         >
           Show more (+{hiddenCount} team{hiddenCount === 1 ? "" : "s"})
         </button>
@@ -103,7 +103,7 @@ function EventSupportCard({ group }: { group: EventAtRiskGroup }) {
         <button
           type="button"
           onClick={() => setExpanded(false)}
-          className="w-full border-t-2 border-[#ba1a1a] bg-[#f5c2bc] px-5 py-3 text-center font-mono text-sm font-bold text-[#93000a] transition-colors hover:bg-[#f0b0a8]"
+          className="w-full border-t-2 border-amber-500 bg-seal-yellow/40 px-5 py-3 text-center font-mono text-sm font-bold text-amber-900 transition-colors hover:bg-seal-yellow/60"
         >
           Show less
         </button>
@@ -118,8 +118,8 @@ export function TeamsNeedingSupportPanel({ scope }: { scope: TeamsNeedingSupport
 
   if (isLoading) {
     return (
-      <div className="mb-6 border-2 border-[#ba1a1a] bg-[#ffdad6] p-5 shadow-[4px_4px_0_0_#0c1228]">
-        <div className="h-24 animate-pulse rounded bg-[#f5c2bc]/80" />
+      <div className="mb-6 border-2 border-amber-500 bg-amber-50 p-5 shadow-[4px_4px_0_0_#0c1228]">
+        <div className="h-24 animate-pulse rounded bg-seal-yellow/40" />
       </div>
     );
   }
@@ -142,7 +142,7 @@ export function TeamsNeedingSupportPanel({ scope }: { scope: TeamsNeedingSupport
         <button
           type="button"
           onClick={() => setShowAllEvents(true)}
-          className="w-full border-2 border-[#ba1a1a] bg-[#f5c2bc] px-5 py-3 text-center font-mono text-sm font-bold text-[#93000a] shadow-[4px_4px_0_0_#0c1228] transition-colors hover:bg-[#f0b0a8]"
+          className="w-full border-2 border-amber-500 bg-seal-yellow/40 px-5 py-3 text-center font-mono text-sm font-bold text-amber-900 shadow-[4px_4px_0_0_#0c1228] transition-colors hover:bg-seal-yellow/60"
         >
           Show more competitions (+{hiddenEvents})
         </button>
@@ -152,7 +152,7 @@ export function TeamsNeedingSupportPanel({ scope }: { scope: TeamsNeedingSupport
         <button
           type="button"
           onClick={() => setShowAllEvents(false)}
-          className="w-full border-2 border-[#ba1a1a] bg-[#f5c2bc] px-5 py-3 text-center font-mono text-sm font-bold text-[#93000a] shadow-[4px_4px_0_0_#0c1228] transition-colors hover:bg-[#f0b0a8]"
+          className="w-full border-2 border-amber-500 bg-seal-yellow/40 px-5 py-3 text-center font-mono text-sm font-bold text-amber-900 shadow-[4px_4px_0_0_#0c1228] transition-colors hover:bg-seal-yellow/60"
         >
           Show fewer competitions
         </button>

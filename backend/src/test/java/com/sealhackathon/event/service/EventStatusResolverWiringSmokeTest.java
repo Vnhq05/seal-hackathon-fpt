@@ -121,6 +121,9 @@ class EventStatusResolverWiringSmokeTest {
         @Bean CriteriaRepository criteriaRepository() { return mock(CriteriaRepository.class); }
         @Bean JudgeAssignmentRepository judgeAssignmentRepository() { return mock(JudgeAssignmentRepository.class); }
         @Bean MentorAssignmentRepository mentorAssignmentRepository() { return mock(MentorAssignmentRepository.class); }
+        @Bean com.sealhackathon.event.repository.EventMentorAssignmentRepository eventMentorAssignmentRepository() {
+            return mock(com.sealhackathon.event.repository.EventMentorAssignmentRepository.class);
+        }
         @Bean EventEnrollmentService eventEnrollmentService() { return mock(EventEnrollmentService.class); }
         @Bean SystemConfigService systemConfigService() { return mock(SystemConfigService.class); }
         @Bean CompetitionGroupRepository competitionGroupRepository() { return mock(CompetitionGroupRepository.class); }

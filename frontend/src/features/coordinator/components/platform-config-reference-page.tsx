@@ -1,7 +1,6 @@
 "use client";
 
 import { useSystemTeamConfig } from "@/features/teams/hooks/use-system-team-config";
-import { useRegistrationAllowedDomains } from "@/features/events/hooks/use-allowed-email-domains";
 import { SealCard } from "@/shared/ui/seal-card";
 
 const labelClass = "mb-1.5 block text-sm font-semibold text-seal-text-muted";
@@ -21,7 +20,6 @@ function Field({ label, value }: { label: string; value: string | number }) {
 
 export function PlatformConfigReferencePage() {
   const { data: config, isLoading, isError, error } = useSystemTeamConfig();
-  const { data: allowedDomains = [], isLoading: domainsLoading } = useRegistrationAllowedDomains();
 
   return (
     <div className="mx-auto w-full max-w-4xl px-2 py-2 sm:px-4">
@@ -68,21 +66,11 @@ export function PlatformConfigReferencePage() {
             )}
 
             <div>
-              <label className={labelClass}>Allowed Email Domains (External Students)</label>
-              {domainsLoading ? (
-                <p className="text-[13px] text-seal-text-muted">Loading domains...</p>
-              ) : allowedDomains.length === 0 ? (
-                <p className="text-[13px] text-seal-text-muted">No domains configured.</p>
-              ) : (
-                <div className={sectionBoxClass}>
-                  {allowedDomains.map((domain) => (
-                    <div key={domain.id ?? domain.domain} className="mb-1.5 last:mb-0">
-                      <span className="font-mono">@{domain.domain}</span>
-                      {domain.universityLabel ? ` — ${domain.universityLabel}` : ""}
-                    </div>
-                  ))}
-                </div>
-              )}
+              <label className={labelClass}>External Student Email Rule</label>
+              <div className={sectionBoxClass}>
+                University emails must end with <span className="font-mono">.edu.vn</span>{" "}
+                (e.g. student@hcmut.edu.vn).
+              </div>
             </div>
           </>
         ) : null}

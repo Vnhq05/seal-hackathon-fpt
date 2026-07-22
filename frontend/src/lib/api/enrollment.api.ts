@@ -60,6 +60,11 @@ export const enrollmentApi = {
       .then((data) => data ?? null);
   },
 
+  /** All PENDING/APPROVED enrollments including COMPLETED events. */
+  getMyEnrollments(): Promise<EnrollmentResponse[]> {
+    return api.get<EnrollmentResponse[]>(`/enrollments/my`).then((data) => data ?? []);
+  },
+
   list(eventId: string, params?: { status?: EnrollmentStatus }): Promise<EnrollmentResponse[]> {
     return api.get<EnrollmentResponse[]>(`/events/${eventId}/enrollments`, { params });
   },

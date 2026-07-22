@@ -442,7 +442,8 @@ public class JudgingService {
 
         UUID eventId = team.getEventId();
         formatRuleEngine.assertCanScore(eventId);
-        assertScoringWindowOpen(roundId);
+        boolean adjustmentApproved = scoreReviewService.isAdjustmentApproved(submissionId);
+        assertScoringWindowOpen(roundId, adjustmentApproved);
         assertScoringNotLocked(roundId, eventId);
 
         if (!judgeAssignmentService.isJudgeAssignedToSubmissionScope(
@@ -559,14 +560,14 @@ public class JudgingService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    private void assertScoringWindowOpen(UUID roundId) {
+    private void assertScoringWindowOpen(UUID roundId, boolean adjustmentApproved) {
         Round round = roundRepository.findById(roundId)
                 .orElseThrow(() -> new ResourceNotFoundException("Round", "id", roundId));
         LocalDateTime now = LocalDateTime.now();
         if (now.isBefore(round.getStartDate())) {
             throw new BusinessException("Round scoring has not opened yet", HttpStatus.BAD_REQUEST) {};
         }
-        if (now.isAfter(round.getScoringDeadline())) {
+        if (now.isAfter(round.getScoringDeadline()) && !adjustmentApproved) {
             throw new BusinessException("Scoring deadline has passed", HttpStatus.BAD_REQUEST) {};
         }
     }

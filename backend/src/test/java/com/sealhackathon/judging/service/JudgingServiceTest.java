@@ -175,12 +175,70 @@ class JudgingServiceTest {
         team.setId(TEAM_ID);
         when(teamRepository.findById(TEAM_ID)).thenReturn(Optional.of(team));
         doNothing().when(formatRuleEngine).assertCanScore(EVENT_ID);
+        when(scoreReviewService.isAdjustmentApproved(SUBMISSION_ID)).thenReturn(false);
 
         ScoreSubmissionRequest request = buildRequest(7, 8, null, null);
 
         assertThatThrownBy(() -> judgingService.submitScore(JUDGE_ID, ROUND_ID, request))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("deadline");
+    }
+
+    @Test
+    void submitScore_shouldSucceed_whenDeadlinePassedButAdjustmentApproved() {
+        Round round = Round.builder()
+                .startDate(LocalDateTime.now().minusDays(2))
+                .scoringDeadline(LocalDateTime.now().minusDays(1))
+                .roundType(RoundType.PRELIMINARY)
+                .build();
+        round.setId(ROUND_ID);
+        when(roundRepository.findById(ROUND_ID)).thenReturn(Optional.of(round));
+
+        Submission submission = Submission.builder()
+                .teamId(TEAM_ID)
+                .roundId(ROUND_ID)
+                .status(SubmissionStatus.SUBMITTED)
+                .build();
+        submission.setId(SUBMISSION_ID);
+        when(submissionRepository.findById(SUBMISSION_ID)).thenReturn(Optional.of(submission));
+        when(submissionPublicService.getSubmission(SUBMISSION_ID))
+                .thenReturn(Optional.of(SubmissionSnapshot.builder().id(SUBMISSION_ID).teamId(TEAM_ID).build()));
+
+        Team team = Team.builder().eventId(EVENT_ID).trackId(TRACK_ID).build();
+        team.setId(TEAM_ID);
+        when(teamRepository.findById(TEAM_ID)).thenReturn(Optional.of(team));
+
+        doNothing().when(formatRuleEngine).assertCanScore(EVENT_ID);
+        when(scoreReviewService.isAdjustmentApproved(SUBMISSION_ID)).thenReturn(true);
+        when(publishedResultRepository.existsByRoundId(ROUND_ID)).thenReturn(false);
+        when(finalistSelectionRepository.findByEventIdOrderByPreliminaryRankAsc(EVENT_ID))
+                .thenReturn(List.of());
+        when(judgeAssignmentService.isJudgeAssignedToSubmissionScope(
+                ROUND_ID, JUDGE_ID, TRACK_ID, null)).thenReturn(true);
+        doNothing().when(conflictDetectionService).checkConflict(JUDGE_ID, SUBMISSION_ID);
+
+        when(eventPublicService.getCriteriaByRound(ROUND_ID)).thenReturn(List.of(
+                CriteriaSnapshot.builder().id(CRITERIA_1).name("C1").weight(50)
+                        .minScore(0).maxScore(10).build(),
+                CriteriaSnapshot.builder().id(CRITERIA_2).name("C2").weight(50)
+                        .minScore(0).maxScore(10).build()
+        ));
+
+        when(judgeScoreRepository.findByJudgeUserIdAndSubmissionId(JUDGE_ID, SUBMISSION_ID))
+                .thenReturn(Optional.empty());
+        when(judgeScoreRepository.save(any(JudgeScore.class))).thenAnswer(i -> {
+            JudgeScore s = i.getArgument(0);
+            s.setId(UUID.randomUUID());
+            return s;
+        });
+        when(userPublicService.findById(JUDGE_ID))
+                .thenReturn(Optional.of(UserSnapshot.builder().fullName("Judge").build()));
+
+        ScoreSubmissionRequest request = buildRequest(7, 8, null, null);
+
+        JudgeScoreResponse result = judgingService.submitScore(JUDGE_ID, ROUND_ID, request);
+
+        assertThat(result.getStatus()).isEqualTo(ScoreStatus.COMPLETED);
     }
 
     @Test

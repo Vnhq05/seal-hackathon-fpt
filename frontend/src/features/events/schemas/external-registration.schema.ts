@@ -1,9 +1,5 @@
 import { z } from "zod";
-import type { AllowedEmailDomainResponse } from "@/lib/api/event.api";
-import {
-  matchesAllowedDomain,
-  universityMatchesEmail,
-} from "@/lib/email-domain";
+import { isEduVnEmail } from "@/lib/email-domain";
 
 const baseExternalRegistrationSchema = z.object({
   fullName: z.string().min(1, "Full name is required.").max(100),
@@ -24,36 +20,13 @@ export interface SemesterRange {
   max: number;
 }
 
-export function createExternalRegistrationSchema(
-  allowedDomains: AllowedEmailDomainResponse[] = [],
-  semesterRange?: SemesterRange | null,
-) {
+export function createExternalRegistrationSchema(semesterRange?: SemesterRange | null) {
   return baseExternalRegistrationSchema.superRefine((data, ctx) => {
-    if (allowedDomains.length === 0) {
+    if (!isEduVnEmail(data.email)) {
       ctx.addIssue({
         code: "custom",
-        message: "No allowed email domains configured for this event. Contact the organizer.",
+        message: "Email must use a university domain ending in .edu.vn (e.g. student@hcmut.edu.vn).",
         path: ["email"],
-      });
-      return;
-    }
-    const universityName = data.universityName.trim();
-    const domainRules = allowedDomains.map((d) => d.domain);
-    if (domainRules.length > 0 && !matchesAllowedDomain(data.email, domainRules)) {
-      ctx.addIssue({
-        code: "custom",
-        message: "Email must use an approved university domain.",
-        path: ["email"],
-      });
-    }
-    if (
-      domainRules.length > 0 &&
-      !universityMatchesEmail(data.email, universityName, allowedDomains)
-    ) {
-      ctx.addIssue({
-        code: "custom",
-        message: "Selected university does not match your email domain.",
-        path: ["universityName"],
       });
     }
     if (semesterRange) {

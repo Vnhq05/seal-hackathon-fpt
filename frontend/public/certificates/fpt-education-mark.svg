@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 72" fill="none">
+  <!-- FPT Education wordmark -->
+  <g font-family="Arial Black, Arial, Helvetica, sans-serif" font-style="italic" font-weight="900">
+    <text x="0" y="34" font-size="34" fill="#0066B3" letter-spacing="-1">F</text>
+    <text x="22" y="34" font-size="34" fill="#F37021" letter-spacing="-1">P</text>
+    <text x="48" y="34" font-size="34" fill="#7AC143" letter-spacing="-1">T</text>
+  </g>
+  <text
+    x="82"
+    y="32"
+    font-family="Arial, Helvetica, sans-serif"
+    font-size="22"
+    font-weight="600"
+    fill="#0066B3"
+  >Education</text>
+  <text
+    x="0"
+    y="62"
+    font-family="Georgia, 'Times New Roman', serif"
+    font-size="16"
+    font-weight="700"
+    fill="#F37021"
+    letter-spacing="1.5"
+  >FPT UNIVERSITY</text>
+</svg>

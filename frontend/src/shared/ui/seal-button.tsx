@@ -57,18 +57,23 @@ function LoadingSpinner() {
 }
 
 export function SealButton(props: SealButtonProps) {
-  const {
-    children,
-    variant = "primary",
-    size = "md",
-    className = "",
-    isLoading = false,
-  } = props;
-
-  const classes = `inline-flex items-center justify-center transition-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-royal/40 focus-visible:ring-offset-2 ${variantClasses[variant]} ${sizeClasses[size]} ${className}`;
+  const classesFor = (
+    variant: SealButtonVariant,
+    size: SealButtonSize,
+    className: string,
+  ) =>
+    `inline-flex items-center justify-center transition-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-royal/40 focus-visible:ring-offset-2 ${variantClasses[variant]} ${sizeClasses[size]} ${className}`;
 
   if ("href" in props && props.href) {
-    const { href, external } = props;
+    const {
+      href,
+      external,
+      children,
+      variant = "primary",
+      size = "md",
+      className = "",
+    } = props;
+    const classes = classesFor(variant, size, className);
     if (external || href.startsWith("#") || href.startsWith("mailto:")) {
       return (
         <a href={href} className={classes}>
@@ -83,13 +88,22 @@ export function SealButton(props: SealButtonProps) {
     );
   }
 
-  const { disabled, type = "button", ...rest } = props as SealButtonAsButton;
+  const {
+    children,
+    variant = "primary",
+    size = "md",
+    className = "",
+    isLoading = false,
+    disabled,
+    type = "button",
+    ...rest
+  } = props;
 
   return (
     <button
       type={type}
       disabled={disabled || isLoading}
-      className={`w-full ${classes}`}
+      className={`w-full ${classesFor(variant, size, className)}`}
       {...rest}
     >
       {isLoading ? <LoadingSpinner /> : null}

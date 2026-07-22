@@ -28,6 +28,11 @@ export interface HonoredGuestResponse {
   title: string | null;
 }
 
+export interface EventStaffPublicResponse {
+  id: string;
+  fullName: string;
+}
+
 export interface EventResponse {
   id: string;
   name: string;
@@ -53,10 +58,14 @@ export interface EventResponse {
   tiebreakerCriterionIds?: string[] | null;
   roundCount: number;
   mentorCount: number;
+  judgeCount?: number;
+  teamCount?: number;
   trackCount: number;
   tracks: TrackResponse[];
   prizes: PrizeResponse[];
   honoredGuests: HonoredGuestResponse[];
+  judges?: EventStaffPublicResponse[];
+  mentors?: EventStaffPublicResponse[];
   createdAt: string;
 }
 

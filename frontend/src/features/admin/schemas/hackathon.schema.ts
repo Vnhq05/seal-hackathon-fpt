@@ -46,7 +46,11 @@ export const createHackathonSchema = z
         "Event name must contain only letters and spaces",
       ),
     startDate: z.string().min(1, "Start date is required"),
-    duration: z.number().int().min(1).max(3, "Duration must be 1-3 days"),
+    duration: z
+      .number({ error: "Duration is required" })
+      .int("Duration must be a whole number")
+      .min(1, "Duration must be at least 1 day")
+      .max(30, "Duration cannot exceed 30 days"),
     registrationOpenDate: z.string().min(1, "Registration open date is required"),
     registrationDeadline: z.string().min(1, "Registration close date is required"),
   })

@@ -12,6 +12,7 @@ import com.sealhackathon.event.repository.HackathonEventRepository;
 import com.sealhackathon.event.repository.JudgeAssignmentRepository;
 import com.sealhackathon.event.repository.RoundRepository;
 import com.sealhackathon.judging.domain.ScoreReviewRequest;
+import com.sealhackathon.judging.domain.enums.ScoreAdjustmentType;
 import com.sealhackathon.judging.domain.enums.ScoreReviewStatus;
 import com.sealhackathon.judging.repository.JudgeScoreRepository;
 import com.sealhackathon.judging.repository.ScoreReviewRequestRepository;
@@ -171,7 +172,7 @@ class ScoreReviewIntegrationTest extends BaseIntegrationTest {
 
         UUID reviewId = scoreReviewRequestRepository.findBySubmissionId(submissionId)
                 .orElseThrow().getId();
-        User coordinator = createCoordinator();
+        User coordinator = createOwnedCoordinator();
 
         mockMvc.perform(get("/api/events/" + eventId + "/score-reviews/" + reviewId)
                         .header("Authorization", "Bearer " + tokenFor(coordinator)))
@@ -217,7 +218,7 @@ class ScoreReviewIntegrationTest extends BaseIntegrationTest {
 
         UUID reviewId = scoreReviewRequestRepository.findBySubmissionId(submissionId)
                 .orElseThrow().getId();
-        User coordinator = createCoordinator();
+        User coordinator = createOwnedCoordinator();
 
         mockMvc.perform(patch("/api/events/" + eventId + "/score-reviews/" + reviewId)
                         .header("Authorization", "Bearer " + tokenFor(coordinator))
@@ -241,7 +242,7 @@ class ScoreReviewIntegrationTest extends BaseIntegrationTest {
 
         UUID reviewId = scoreReviewRequestRepository.findBySubmissionId(submissionId)
                 .orElseThrow().getId();
-        User coordinator = createCoordinator();
+        User coordinator = createOwnedCoordinator();
 
         mockMvc.perform(post("/api/events/" + eventId + "/score-reviews/" + reviewId + "/approve")
                         .header("Authorization", "Bearer " + tokenFor(coordinator))
@@ -299,10 +300,15 @@ class ScoreReviewIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
-    void judgeRequest_shouldCreateOpenReview_whenDeviationHigh() throws Exception {
+    void judgeRequest_shouldMergeOntoAutoOpenReview_whenDeviationHigh() throws Exception {
         submitScore(judge1, 5, "Excellent");
         submitScore(judge2, 5, "Top marks");
         submitScore(judge3, 1, "Poor fit");
+
+        UUID reviewId = scoreReviewRequestRepository.findBySubmissionId(submissionId)
+                .orElseThrow().getId();
+        assertThat(scoreReviewRequestRepository.findById(reviewId).orElseThrow().getAdjustmentType())
+                .isEqualTo(ScoreAdjustmentType.AUTO_DEVIATION);
 
         mockMvc.perform(post("/api/events/" + eventId + "/score-reviews/judge-request")
                         .header("Authorization", "Bearer " + tokenFor(judge1))
@@ -310,7 +316,17 @@ class ScoreReviewIntegrationTest extends BaseIntegrationTest {
                         .content(String.format("""
                                 {"submissionId":"%s","note":"Please re-examine the scoring spread for this team."}
                                 """, submissionId)))
-                .andExpect(status().isConflict());
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.status").value("OPEN"))
+                .andExpect(jsonPath("$.data.adjustmentType").value("JUDGE_REQUESTED"))
+                .andExpect(jsonPath("$.data.requestNote")
+                        .value("Please re-examine the scoring spread for this team."));
+
+        ScoreReviewRequest merged = scoreReviewRequestRepository.findById(reviewId).orElseThrow();
+        assertThat(merged.getAdjustmentType()).isEqualTo(ScoreAdjustmentType.JUDGE_REQUESTED);
+        assertThat(merged.getRequestedBy()).isEqualTo(judge1.getId());
+        assertThat(merged.getRequestNote())
+                .isEqualTo("Please re-examine the scoring spread for this team.");
     }
 
     @Test
@@ -335,7 +351,7 @@ class ScoreReviewIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
-    void judgeRequest_shouldReturn409_whenOpenReviewExists() throws Exception {
+    void judgeRequest_shouldReturn409_whenJudgeRequestedAlreadyActive() throws Exception {
         submitScore(judge1, 5, "Excellent");
         submitScore(judge2, 5, "Top marks");
         submitScore(judge3, 1, "Poor fit");
@@ -345,6 +361,14 @@ class ScoreReviewIntegrationTest extends BaseIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(String.format("""
                                 {"submissionId":"%s","note":"Please re-examine the scoring spread for this team."}
+                                """, submissionId)))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(post("/api/events/" + eventId + "/score-reviews/judge-request")
+                        .header("Authorization", "Bearer " + tokenFor(judge2))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(String.format("""
+                                {"submissionId":"%s","note":"Second judge also wants a review for this team."}
                                 """, submissionId)))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message")
@@ -403,7 +427,7 @@ class ScoreReviewIntegrationTest extends BaseIntegrationTest {
 
         UUID reviewId = scoreReviewRequestRepository.findBySubmissionId(submissionId)
                 .orElseThrow().getId();
-        User coordinator = createCoordinator();
+        User coordinator = createOwnedCoordinator();
 
         mockMvc.perform(post("/api/events/" + eventId + "/score-reviews/" + reviewId + "/approve")
                         .header("Authorization", "Bearer " + tokenFor(coordinator))
@@ -424,6 +448,92 @@ class ScoreReviewIntegrationTest extends BaseIntegrationTest {
                                 ]}
                                 """, submissionId, criteriaId)))
                 .andExpect(status().isCreated());
+    }
+
+    @Test
+    void approveAdjustment_shouldAllowScoreUpdate_afterScoringDeadline() throws Exception {
+        submitScore(judge1, 5, "Excellent");
+        submitScore(judge2, 5, "Top marks");
+        submitScore(judge3, 1, "Poor fit");
+
+        UUID reviewId = scoreReviewRequestRepository.findBySubmissionId(submissionId)
+                .orElseThrow().getId();
+        User coordinator = createOwnedCoordinator();
+
+        Round round = roundRepository.findById(roundId).orElseThrow();
+        round.setScoringDeadline(LocalDateTime.now().minusHours(1));
+        roundRepository.save(round);
+
+        mockMvc.perform(post("/api/rounds/" + roundId + "/scoring")
+                        .header("Authorization", "Bearer " + tokenFor(judge3))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(String.format("""
+                                {"submissionId":"%s","complete":true,"scores":[
+                                  {"criteriaId":"%s","score":4,"comment":"Blocked without approval"}
+                                ]}
+                                """, submissionId, criteriaId)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Scoring deadline has passed"));
+
+        mockMvc.perform(post("/api/events/" + eventId + "/score-reviews/" + reviewId + "/approve")
+                        .header("Authorization", "Bearer " + tokenFor(coordinator))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("APPROVED"));
+
+        mockMvc.perform(post("/api/rounds/" + roundId + "/scoring")
+                        .header("Authorization", "Bearer " + tokenFor(judge3))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(String.format("""
+                                {"submissionId":"%s","complete":true,"scores":[
+                                  {"criteriaId":"%s","score":4,"comment":"Revised after deadline with approval"}
+                                ]}
+                                """, submissionId, criteriaId)))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    void listReviews_shouldReturn403_forCoordinatorWhoDoesNotOwnEvent() throws Exception {
+        submitScore(judge1, 5, "Excellent");
+        submitScore(judge2, 5, "Top marks");
+        submitScore(judge3, 1, "Poor fit");
+
+        User owner = createOwnedCoordinator();
+        User otherCoordinator = createUser("other-coord@test.com",
+                com.sealhackathon.common.enums.UserType.EVENT_COORDINATOR,
+                com.sealhackathon.common.enums.AccountStatus.ACTIVE);
+
+        mockMvc.perform(get("/api/events/" + eventId + "/score-reviews")
+                        .header("Authorization", "Bearer " + tokenFor(otherCoordinator)))
+                .andExpect(status().isForbidden());
+
+        UUID reviewId = scoreReviewRequestRepository.findBySubmissionId(submissionId)
+                .orElseThrow().getId();
+
+        mockMvc.perform(post("/api/events/" + eventId + "/score-reviews/" + reviewId + "/approve")
+                        .header("Authorization", "Bearer " + tokenFor(otherCoordinator))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(patch("/api/events/" + eventId + "/score-reviews/" + reviewId)
+                        .header("Authorization", "Bearer " + tokenFor(otherCoordinator))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"IGNORED\"}"))
+                .andExpect(status().isForbidden());
+
+        // Owner can still list
+        mockMvc.perform(get("/api/events/" + eventId + "/score-reviews")
+                        .header("Authorization", "Bearer " + tokenFor(owner)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(1)));
+    }
+
+    private User createOwnedCoordinator() {
+        User coordinator = createCoordinator();
+        assignEventOwner(eventId, coordinator.getId());
+        return coordinator;
     }
 
     private void submitScore(User judge, int score, String comment) throws Exception {

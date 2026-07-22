@@ -6,6 +6,7 @@ import com.sealhackathon.common.exception.ResourceNotFoundException;
 import com.sealhackathon.event.domain.enums.RoundType;
 import com.sealhackathon.event.dto.snapshot.CriteriaSnapshot;
 import com.sealhackathon.event.dto.snapshot.RoundSnapshot;
+import com.sealhackathon.event.service.EventOwnershipGuard;
 import com.sealhackathon.event.service.EventPublicService;
 import com.sealhackathon.event.service.JudgeAssignmentService;
 import com.sealhackathon.judging.domain.JudgeScore;
@@ -88,6 +89,7 @@ public class ScoreReviewService {
     private final TeamRepository teamRepository;
     private final PublishedResultRepository publishedResultRepository;
     private final EventPublicService eventPublicService;
+    private final EventOwnershipGuard eventOwnershipGuard;
     private final AggregationService aggregationService;
     private final UserPublicService userPublicService;
     private final NotificationService notificationService;
@@ -144,10 +146,6 @@ public class ScoreReviewService {
                     HttpStatus.BAD_REQUEST) {};
         }
 
-        if (hasActiveReview(request.getSubmissionId())) {
-            throw new BusinessException(ACTIVE_REVIEW_CONFLICT_MESSAGE, HttpStatus.CONFLICT) {};
-        }
-
         DeviationStats deviationStats = computeDeviationStats(submission)
                 .orElseThrow(() -> new BusinessException(
                         "Not enough completed judge scores to request a review.",
@@ -155,6 +153,20 @@ public class ScoreReviewService {
 
         if (deviationStats.deviation().compareTo(deviationThreshold) < 0) {
             throw new BusinessException(DEVIATION_TOO_LOW_MESSAGE, HttpStatus.BAD_REQUEST) {};
+        }
+
+        Optional<ScoreReviewRequest> existingOpt =
+                scoreReviewRequestRepository.findBySubmissionId(request.getSubmissionId());
+        if (existingOpt.isPresent()) {
+            ScoreReviewRequest existing = existingOpt.get();
+            if (existing.getStatus() == ScoreReviewStatus.OPEN
+                    && existing.getAdjustmentType() == ScoreAdjustmentType.AUTO_DEVIATION) {
+                return toDetailResponse(mergeJudgeRequestOntoAutoReview(
+                        existing, deviationStats, judgeId, request.getNote()));
+            }
+            if (ACTIVE_STATUSES.contains(existing.getStatus())) {
+                throw new BusinessException(ACTIVE_REVIEW_CONFLICT_MESSAGE, HttpStatus.CONFLICT) {};
+            }
         }
 
         ScoreReviewRequest review = createOrReopenReview(
@@ -167,6 +179,7 @@ public class ScoreReviewService {
     @Transactional
     public ScoreReviewResponse approveAdjustment(UUID eventId, UUID reviewId, UUID approverId,
                                                  String resolutionNote) {
+        eventOwnershipGuard.enforceEventOwnership(eventId);
         ScoreReviewRequest review = getReviewForEvent(eventId, reviewId);
         if (review.getStatus() != ScoreReviewStatus.OPEN) {
             throw new BusinessException("Only open adjustment requests can be approved",
@@ -191,6 +204,7 @@ public class ScoreReviewService {
     @Transactional
     public ScoreReviewResponse resolveReview(UUID eventId, UUID reviewId, UUID resolverId,
                                              ResolveScoreReviewRequest request) {
+        eventOwnershipGuard.enforceEventOwnership(eventId);
         ScoreReviewRequest review = getReviewForEvent(eventId, reviewId);
         ScoreReviewStatus targetStatus = request.getStatus();
 
@@ -256,6 +270,9 @@ public class ScoreReviewService {
     @Transactional(readOnly = true)
     public ScoreReviewContextResponse getSubmissionContext(UUID eventId, UUID submissionId,
                                                            UUID requesterId, UserType requesterRole) {
+        if (requesterRole == UserType.EVENT_COORDINATOR) {
+            eventOwnershipGuard.enforceEventOwnership(eventId);
+        }
         Submission submission = submissionRepository.findById(submissionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Submission", "id", submissionId));
 
@@ -280,7 +297,6 @@ public class ScoreReviewService {
 
         ScoreReviewRequest review = reviewOpt.orElse(null);
         ScoreReviewStatus status = review != null ? review.getStatus() : null;
-        boolean active = review != null && ACTIVE_STATUSES.contains(status);
         boolean approved = review != null && status == ScoreReviewStatus.APPROVED;
 
         boolean judgeCompleted = requesterRole == UserType.LECTURER
@@ -291,8 +307,11 @@ public class ScoreReviewService {
         boolean canRequest = requesterRole == UserType.LECTURER
                 && judgeCompleted
                 && deviationHigh
-                && !active
-                && !publishedResultRepository.existsByRoundId(submission.getRoundId());
+                && !publishedResultRepository.existsByRoundId(submission.getRoundId())
+                && (review == null
+                        || !ACTIVE_STATUSES.contains(status)
+                        || (status == ScoreReviewStatus.OPEN
+                                && review.getAdjustmentType() == ScoreAdjustmentType.AUTO_DEVIATION));
 
         UUID noteAuthorId = review == null ? null
                 : review.getResolvedBy() != null
@@ -322,6 +341,7 @@ public class ScoreReviewService {
 
     @Transactional(readOnly = true)
     public List<ScoreReviewResponse> listReviews(UUID eventId, UUID roundId, ScoreReviewStatus status) {
+        eventOwnershipGuard.enforceEventOwnership(eventId);
         return scoreReviewRequestRepository.findByEventFilters(eventId, roundId, status).stream()
                 .map(this::toSummaryResponse)
                 .toList();
@@ -330,6 +350,9 @@ public class ScoreReviewService {
     @Transactional(readOnly = true)
     public ScoreReviewResponse getReview(UUID eventId, UUID reviewId,
                                          UUID requesterId, UserType requesterRole) {
+        if (requesterRole == UserType.EVENT_COORDINATOR) {
+            eventOwnershipGuard.enforceEventOwnership(eventId);
+        }
         ScoreReviewRequest review = getReviewForEvent(eventId, reviewId);
         assertReviewReadAccess(review, requesterId, requesterRole);
         return toDetailResponse(review);
@@ -426,6 +449,20 @@ public class ScoreReviewService {
                 submission.getTeamId(), deviationStats.deviation()));
 
         return review;
+    }
+
+    private ScoreReviewRequest mergeJudgeRequestOntoAutoReview(
+            ScoreReviewRequest review,
+            DeviationStats deviationStats,
+            UUID judgeId,
+            String requestNote) {
+        review.setDeviationValue(deviationStats.deviation());
+        review.setMinJudgeScore(deviationStats.min());
+        review.setMaxJudgeScore(deviationStats.max());
+        review.setAdjustmentType(ScoreAdjustmentType.JUDGE_REQUESTED);
+        review.setRequestedBy(judgeId);
+        review.setRequestNote(requestNote);
+        return scoreReviewRequestRepository.save(review);
     }
 
     private ScoreReviewResponse closeReview(ScoreReviewRequest review, UUID resolverId,

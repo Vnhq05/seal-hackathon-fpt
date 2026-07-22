@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -30,6 +31,14 @@ public class MyEnrollmentController {
     public ResponseEntity<ApiResponse<EnrollmentResponse>> getMyActiveEnrollment() {
         UUID userId = authPublicService.getCurrentUserId();
         EnrollmentResponse response = enrollmentService.getMyActiveEnrollment(userId);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @GetMapping("/my")
+    @Operation(summary = "Get all my enrollments including completed events")
+    public ResponseEntity<ApiResponse<List<EnrollmentResponse>>> getMyEnrollments() {
+        UUID userId = authPublicService.getCurrentUserId();
+        List<EnrollmentResponse> response = enrollmentService.getMyEnrollments(userId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 }

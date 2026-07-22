@@ -22,14 +22,19 @@ import com.sealhackathon.event.dto.request.CreateEventRequest;
 import com.sealhackathon.event.dto.request.PrizeRequest;
 import com.sealhackathon.event.dto.request.UpdateEventRequest;
 import com.sealhackathon.event.dto.request.UpdateEventStatusRequest;
+import com.sealhackathon.event.domain.EventJudgeAssignment;
+import com.sealhackathon.event.domain.EventMentorAssignment;
 import com.sealhackathon.event.dto.response.EventResponse;
+import com.sealhackathon.event.dto.response.EventStaffPublicResponse;
 import com.sealhackathon.event.dto.response.HonoredGuestResponse;
 import com.sealhackathon.event.dto.response.PrizeResponse;
 import com.sealhackathon.event.dto.response.TrackResponse;
 import com.sealhackathon.event.event.EventCreatedEvent;
 import com.sealhackathon.event.template.SealSpring2026Template;
+import com.sealhackathon.event.repository.EventMentorAssignmentRepository;
 import com.sealhackathon.event.repository.HackathonEventRepository;
 import com.sealhackathon.event.repository.ScoringTemplateRepository;
+import com.sealhackathon.team.repository.TeamRepository;
 import com.sealhackathon.team.service.TeamService;
 import com.sealhackathon.user.dto.snapshot.UserSnapshot;
 import com.sealhackathon.user.service.UserPublicService;
@@ -84,6 +89,8 @@ public class EventService {
     private final JudgeAssignmentService judgeAssignmentService;
     private final FormatRuleEngine formatRuleEngine;
     private final TeamService teamService;
+    private final TeamRepository teamRepository;
+    private final EventMentorAssignmentRepository eventMentorAssignmentRepository;
     private final EventStatusResolver eventStatusResolver;
     private final EventFinder eventFinder;
     private final EventOwnershipGuard eventOwnershipGuard;
@@ -752,6 +759,37 @@ public class EventService {
     }
 
     EventResponse toResponse(HackathonEvent event) {
+        UUID eventId = event.getId();
+        List<EventJudgeAssignment> judgeAssignments = event.getEventJudgeAssignments() != null
+                ? event.getEventJudgeAssignments()
+                : List.of();
+        List<EventMentorAssignment> mentorAssignments = eventId == null
+                ? List.of()
+                : eventMentorAssignmentRepository.findByHackathonEventId(eventId);
+
+        List<UUID> staffUserIds = new java.util.ArrayList<>();
+        judgeAssignments.forEach(a -> staffUserIds.add(a.getJudgeUserId()));
+        mentorAssignments.forEach(a -> staffUserIds.add(a.getMentorUserId()));
+
+        Map<UUID, UserSnapshot> usersById = staffUserIds.isEmpty()
+                ? Map.of()
+                : userPublicService.findAllByIds(staffUserIds).stream()
+                        .collect(Collectors.toMap(UserSnapshot::getId, u -> u, (a, b) -> a));
+
+        List<EventStaffPublicResponse> judges = judgeAssignments.stream()
+                .map(a -> toStaffPublic(a.getId(), usersById.get(a.getJudgeUserId())))
+                .toList();
+        List<EventStaffPublicResponse> mentors = mentorAssignments.stream()
+                .map(a -> toStaffPublic(a.getId(), usersById.get(a.getMentorUserId())))
+                .toList();
+
+        int eventMentorCount = mentors.size();
+        int trackMentorCount = event.getMentorAssignments() != null ? event.getMentorAssignments().size() : 0;
+        int teamCount = eventId == null
+                ? 0
+                : (int) teamRepository.countByEventIdAndStatusNot(
+                        eventId, com.sealhackathon.team.domain.enums.TeamStatus.DISBANDED);
+
         return EventResponse.builder()
                 .id(event.getId())
                 .name(event.getName())
@@ -775,7 +813,9 @@ public class EventService {
                 .tiebreakerCriteria(event.getTiebreakerCriteria())
                 .tiebreakerCriterionIds(List.copyOf(event.getTiebreakerCriterionIds()))
                 .roundCount(event.getRounds().size())
-                .mentorCount(event.getMentorAssignments().size())
+                .mentorCount(eventMentorCount > 0 ? eventMentorCount : trackMentorCount)
+                .judgeCount(judges.size())
+                .teamCount(teamCount)
                 .trackCount(event.getTracks().size())
                 .tracks(event.getTracks().stream()
                         .map(t -> TrackResponse.builder()
@@ -806,7 +846,18 @@ public class EventService {
                                 .title(g.getTitle())
                                 .build())
                         .toList())
+                .judges(judges)
+                .mentors(mentors)
                 .createdAt(event.getCreatedAt())
+                .build();
+    }
+
+    private static EventStaffPublicResponse toStaffPublic(UUID assignmentId, UserSnapshot user) {
+        return EventStaffPublicResponse.builder()
+                .id(assignmentId)
+                .fullName(user != null && user.getFullName() != null && !user.getFullName().isBlank()
+                        ? user.getFullName()
+                        : "Staff member")
                 .build();
     }
 

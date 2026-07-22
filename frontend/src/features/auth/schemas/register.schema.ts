@@ -1,9 +1,5 @@
 import { z } from "zod";
-import type { AllowedEmailDomainResponse } from "@/lib/api/event.api";
-import {
-  matchesAllowedDomain,
-  universityMatchesEmail,
-} from "@/lib/email-domain";
+import { isEduVnEmail } from "@/lib/email-domain";
 import {
   PASSWORD_MAX_LENGTH,
   PASSWORD_MIN_LENGTH,
@@ -41,7 +37,6 @@ const baseRegisterSchema = z.object({
 function applyParticipantRules(
   data: z.infer<typeof baseRegisterSchema>,
   ctx: z.RefinementCtx,
-  allowedDomains: AllowedEmailDomainResponse[],
 ) {
   if (data.password !== data.confirmPassword) {
     ctx.addIssue({
@@ -70,46 +65,26 @@ function applyParticipantRules(
   }
   if (data.userType === "EXTERNAL_STUDENT") {
     const universityName = data.universityName?.trim();
-    if (allowedDomains.length === 0) {
-      ctx.addIssue({
-        code: "custom",
-        message: "No allowed email domains available. Please try again later.",
-        path: ["email"],
-      });
-      return;
-    }
     if (!universityName) {
       ctx.addIssue({
         code: "custom",
-        message: "Please select a university",
+        message: "University name is required",
         path: ["universityName"],
       });
-      return;
     }
-    const domainRules = allowedDomains.map((d) => d.domain);
-    if (domainRules.length > 0 && !matchesAllowedDomain(data.email, domainRules)) {
+    if (!isEduVnEmail(data.email)) {
       ctx.addIssue({
         code: "custom",
-        message: "Email must use an allowed university domain (e.g. @hcmut.edu.vn)",
+        message: "Email must use a university domain ending in .edu.vn (e.g. student@hcmut.edu.vn)",
         path: ["email"],
-      });
-    }
-    if (
-      domainRules.length > 0 &&
-      !universityMatchesEmail(data.email, universityName, allowedDomains)
-    ) {
-      ctx.addIssue({
-        code: "custom",
-        message: "Selected university does not match the email domain",
-        path: ["universityName"],
       });
     }
   }
 }
 
-export function createRegisterSchema(allowedDomains: AllowedEmailDomainResponse[] = []) {
+export function createRegisterSchema() {
   return baseRegisterSchema.superRefine((data, ctx) =>
-    applyParticipantRules(data, ctx, allowedDomains),
+    applyParticipantRules(data, ctx),
   );
 }
 

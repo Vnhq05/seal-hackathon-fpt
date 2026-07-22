@@ -34,6 +34,7 @@ export type { UserListItem, UserListParams, UserAchievement, ApprovalRequest, Cr
 export { eventApi } from "./event.api";
 export type {
   EventResponse,
+  EventStaffPublicResponse,
   CreateEventRequest,
   UpdateEventRequest,
   PublishEventRequest,

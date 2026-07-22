@@ -98,9 +98,9 @@ function ProgressAlertBanner({
   const deadlineText = formatRealtimeDeadlineDetail(msLeft);
 
   return (
-    <div className="border-2 border-[#ba1a1a] bg-[#ffdad6] px-4 py-3 text-sm text-[#93000a] shadow-[2px_2px_0_0_#0c1228]">
+    <div className="border-2 border-amber-500 bg-amber-50 px-4 py-3 text-sm text-amber-900 shadow-[2px_2px_0_0_#0c1228]">
       {eventName && (
-        <p className="font-mono text-[10px] font-bold uppercase tracking-wide text-[#93000a]/70">
+        <p className="font-mono text-[10px] font-bold uppercase tracking-wide text-amber-800/70">
           {eventName}
         </p>
       )}
@@ -139,7 +139,7 @@ function ProgressUpdateItem({
     >
       <div className="flex flex-col items-start pt-2" style={{ width: 8, flexShrink: 0 }}>
         <span
-          className={`block h-2 w-2 rounded-full ${isCritical ? "bg-rose-500" : "bg-amber-500"}`}
+          className={`block h-2 w-2 rounded-full ${isCritical ? "bg-amber-600" : "bg-amber-500"}`}
         />
       </div>
       <div>
@@ -315,7 +315,11 @@ function DashboardEventCard({
     <div className="flex w-full flex-col gap-3 border-2 border-navy bg-white p-5 shadow-[4px_4px_0_0_#0c1228]">
       <div className="flex w-full items-center justify-between gap-4">
         <div className="min-w-0 flex-1">
-          <h3 className="font-mono text-base font-bold text-navy">{event.name}</h3>
+          <h3 className="font-mono text-base font-bold text-navy">
+            <Link href={`/hackathons/${event.id}`} className="hover:text-royal hover:underline">
+              {event.name}
+            </Link>
+          </h3>
           <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-seal-text-secondary">
             <span>{event.season} {event.year}</span>
             <span>{event.trackCount} track{event.trackCount !== 1 ? "s" : ""}</span>

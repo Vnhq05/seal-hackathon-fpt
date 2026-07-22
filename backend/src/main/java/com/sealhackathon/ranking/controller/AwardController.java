@@ -71,6 +71,14 @@ public class AwardController {
         return ResponseEntity.ok(ApiResponse.success(awardService.getUserAchievements(userId)));
     }
 
+    @GetMapping("/api/users/me/achievements")
+    @Operation(summary = "List my awards and participation achievements")
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<ApiResponse<List<UserAchievementResponse>>> getMyAchievements() {
+        UUID userId = authPublicService.getCurrentUserId();
+        return ResponseEntity.ok(ApiResponse.success(awardService.getUserAchievements(userId)));
+    }
+
     @GetMapping("/api/events/{eventId}/awards/participation/me")
     @Operation(summary = "Get the current user's participation certificate for an event")
     @SecurityRequirement(name = "bearerAuth")

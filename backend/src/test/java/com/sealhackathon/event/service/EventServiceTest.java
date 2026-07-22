@@ -56,6 +56,9 @@ class EventServiceTest {
     @Mock private EventJudgeService eventJudgeService;
     @Mock private RoundService roundService;
     @Mock private TeamService teamService;
+    @Mock private com.sealhackathon.team.repository.TeamRepository teamRepository;
+    @Mock private com.sealhackathon.event.repository.EventMentorAssignmentRepository eventMentorAssignmentRepository;
+    @Mock private com.sealhackathon.user.service.UserPublicService userPublicService;
     @Mock private FormatRuleEngine formatRuleEngine;
     @Mock private EventOwnershipGuard eventOwnershipGuard;
     @Mock private EventScheduleService eventScheduleService;
@@ -80,6 +83,9 @@ class EventServiceTest {
         when(authPublicService.getCurrentUserEmail()).thenReturn(ADMIN_EMAIL);
         ReflectionTestUtils.setField(eventService, "eventFinder", new EventFinder(eventRepository));
         when(teamService.disbandUndersizedTeams(any())).thenReturn(0);
+        when(teamRepository.countByEventId(any())).thenReturn(0L);
+        when(eventMentorAssignmentRepository.findByHackathonEventId(any())).thenReturn(List.of());
+        when(userPublicService.findAllByIds(any())).thenReturn(List.of());
     }
 
     private static final LocalDate REG_OPEN = LocalDate.now().minusDays(1);
@@ -458,6 +464,7 @@ class EventServiceTest {
         event.setPrizes(new java.util.ArrayList<>());
         event.setHonoredGuests(new java.util.ArrayList<>());
         event.setMentorAssignments(new java.util.ArrayList<>());
+        event.setEventJudgeAssignments(new java.util.ArrayList<>());
         event.setTiebreakerCriterionIds(new java.util.ArrayList<>());
 
         when(eventRepository.findByIdWithDetails(eventId)).thenReturn(Optional.of(event));

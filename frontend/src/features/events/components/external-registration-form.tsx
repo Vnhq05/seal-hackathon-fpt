@@ -9,11 +9,9 @@ import {
   type ExternalRegistrationFormValues,
 } from "@/features/events/schemas/external-registration.schema";
 import { useExternalEnrollment } from "@/features/events/hooks/use-external-enrollment";
-import { usePublicAllowedEmailDomains } from "@/features/events/hooks/use-allowed-email-domains";
 import { useEventParticipationGate } from "@/features/events/hooks/use-event-participation-gate";
 import { useSystemTeamConfig } from "@/features/teams/hooks/use-system-team-config";
 import { ParticipationBlockBanner } from "@/features/events/components/participation-block-banner";
-import { uniqueUniversityLabels } from "@/lib/email-domain";
 import { Button } from "@/shared/ui/button";
 import type { EventResponse } from "@/lib/api/event.api";
 
@@ -51,21 +49,14 @@ export function ExternalRegistrationForm({ event }: ExternalRegistrationFormProp
   const { isRegistrationOpen, registrationClosedReason } = useEventParticipationGate(event);
   const { data: systemConfig } = useSystemTeamConfig();
 
-  const { data: allowedDomains = [], isLoading: domainsLoading } = usePublicAllowedEmailDomains(eventId);
-
   const semesterRange =
     systemConfig?.semesterMin != null && systemConfig?.semesterMax != null
       ? { min: systemConfig.semesterMin, max: systemConfig.semesterMax }
       : null;
 
   const externalRegistrationSchema = useMemo(
-    () => createExternalRegistrationSchema(allowedDomains, semesterRange),
-    [allowedDomains, semesterRange],
-  );
-
-  const universityOptions = useMemo(
-    () => uniqueUniversityLabels(allowedDomains),
-    [allowedDomains],
+    () => createExternalRegistrationSchema(semesterRange),
+    [semesterRange],
   );
 
   const {
@@ -85,8 +76,7 @@ export function ExternalRegistrationForm({ event }: ExternalRegistrationFormProp
 
   const { submit, isPending, isError, error } = useExternalEnrollment(eventId, semesterRange != null);
 
-  const domainsBlocked = domainsLoading || allowedDomains.length === 0;
-  const canSubmit = isRegistrationOpen && !domainsBlocked;
+  const canSubmit = isRegistrationOpen;
 
   const onSubmit = async (values: ExternalRegistrationFormValues) => {
     await submit(values);
@@ -127,25 +117,12 @@ export function ExternalRegistrationForm({ event }: ExternalRegistrationFormProp
         </p>
       </div>
 
-      {domainsLoading ? (
-        <p className="text-sm text-seal-text-secondary">Loading approved university email domains...</p>
-      ) : allowedDomains.length === 0 ? (
-        <div className="rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-          No allowed email domains configured for this event. Contact the organizer.
-        </div>
-      ) : (
-        <div className="text-sm text-seal-text-secondary">
-          <p className="font-semibold text-seal-text">Approved university email domains</p>
-          <ul className="mt-2 list-disc pl-5">
-            {allowedDomains.map((d) => (
-              <li key={d.domain}>
-                @{d.domain}
-                {d.universityLabel ? ` — ${d.universityLabel}` : ""}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      <div className="text-sm text-seal-text-secondary">
+        <p className="font-semibold text-seal-text">University email requirement</p>
+        <p className="mt-1">
+          Use a university email ending in <strong>.edu.vn</strong> (e.g. student@hcmut.edu.vn).
+        </p>
+      </div>
 
       <div className="flex flex-col gap-4">
         <div>
@@ -168,18 +145,13 @@ export function ExternalRegistrationForm({ event }: ExternalRegistrationFormProp
 
         <div>
           <label style={labelStyle}>University</label>
-          <select
+          <input
+            type="text"
+            placeholder="Your university name"
             className="w-full rounded"
             style={inputStyle}
             {...register("universityName")}
-          >
-            <option value="">Select university</option>
-            {universityOptions.map((label) => (
-              <option key={label} value={label}>
-                {label}
-              </option>
-            ))}
-          </select>
+          />
           {errors.universityName && <span style={errorStyle}>{errors.universityName.message}</span>}
         </div>
 

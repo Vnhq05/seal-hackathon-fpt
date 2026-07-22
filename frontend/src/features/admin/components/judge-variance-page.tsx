@@ -219,6 +219,14 @@ function ReviewDetailModal({
                   <button
                     type="button"
                     disabled={isPending}
+                    onClick={() => handleReject("IGNORED")}
+                    className="border-2 border-navy bg-white px-4 py-2 text-sm font-medium text-seal-text-muted disabled:opacity-50"
+                  >
+                    Ignore
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isPending}
                     onClick={() => handleReject("REJECTED")}
                     className="border-2 border-navy bg-white px-4 py-2 text-sm font-medium disabled:opacity-50"
                   >

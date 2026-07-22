@@ -2,8 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { LandingNavbar } from "@/features/landing/components/landing-navbar";
-import { Footer } from "@/features/landing/components/footer";
 import { usePublicEvent, usePublicEventRounds, usePublicEventSchedule } from "@/features/events/hooks/use-public-event";
 import {
   calcTotalPrizePool,
@@ -32,8 +30,8 @@ const SECTION_LINKS = [
   { id: "about", label: "About" },
   { id: "tracks", label: "Tracks" },
   { id: "schedule", label: "Schedule" },
+  { id: "staff", label: "Judges & Mentors" },
   { id: "prizes", label: "Prizes" },
-  { id: "guests", label: "Guests" },
 ] as const;
 
 const TRACK_ACCENTS = [
@@ -70,7 +68,6 @@ function PageSkeleton() {
 function NotFoundState() {
   return (
     <div className="flex min-h-screen flex-col bg-seal-bg">
-      <LandingNavbar />
       <main className="flex flex-1 items-center justify-center px-4">
         <div className="max-w-md text-center">
           <p className="font-mono text-xs uppercase tracking-widest text-seal-cyan">404</p>
@@ -86,7 +83,6 @@ function NotFoundState() {
           </Link>
         </div>
       </main>
-      <Footer />
     </div>
   );
 }
@@ -124,7 +120,7 @@ function HeroSection({ event }: { event: EventResponse }) {
   const avatarSrc = resolveFileUrl(event.avatarUrl);
 
   return (
-    <section className="relative min-h-[88vh] overflow-hidden bg-seal-dark pt-16">
+    <section className="relative min-h-[88vh] overflow-hidden bg-seal-dark">
       <div
         className="pointer-events-none absolute inset-0 opacity-40"
         style={{
@@ -225,9 +221,9 @@ function HeroSection({ event }: { event: EventResponse }) {
         </div>
 
         <div className="mt-14 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:max-w-3xl">
-          <StatPill label="Rounds" value={event.roundCount} />
-          <StatPill label="Tracks" value={event.trackCount} />
-          <StatPill label="Mentors" value={event.mentorCount} />
+          <StatPill label="Teams" value={event.teamCount ?? 0} />
+          <StatPill label="Judges" value={event.judgeCount ?? event.judges?.length ?? 0} />
+          <StatPill label="Mentors" value={event.mentorCount ?? event.mentors?.length ?? 0} />
           <StatPill
             label="Prize Pool"
             value={prizePool > 0 ? `${Math.round(prizePool / 1_000_000)}M+` : "TBA"}
@@ -245,7 +241,7 @@ function HeroSection({ event }: { event: EventResponse }) {
 function SectionNav({ active, links }: { active: string; links: typeof SECTION_LINKS[number][] }) {
   return (
     <nav
-      className="sticky top-16 z-40 border-b border-seal-border bg-seal-bg/90 backdrop-blur-md"
+      className="sticky top-0 z-40 border-b border-seal-border bg-seal-bg/90 backdrop-blur-md"
       aria-label="Event sections"
     >
       <div className="mx-auto flex max-w-7xl gap-1 overflow-x-auto px-4 py-2 sm:px-6 lg:px-8">
@@ -308,6 +304,7 @@ function AboutSection({ event }: { event: EventResponse }) {
             </div>
           </div>
           <div className="flex flex-col gap-4">
+            <InfoCard label="Teams Registered" value={String(event.teamCount ?? 0)} />
             <InfoCard label="Team Size" value={formatTeamSize(event)} />
             <InfoCard label="Registration Deadline" value={formatEventDate(event.registrationDeadline)} />
             {event.registrationOpenDate && (
@@ -554,79 +551,70 @@ function PrizesSection({ event }: { event: EventResponse }) {
   );
 }
 
-function GuestsSection({ event }: { event: EventResponse }) {
-  if (event.honoredGuests.length === 0) return null;
+function StaffPersonCard({ fullName, role }: { fullName: string; role: string }) {
+  const initials = fullName
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 
   return (
-    <section id="guests" className="scroll-mt-32 bg-seal-surface py-20">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <SectionHeader title="Honored Guests" subtitle="Leaders and experts joining us for this edition." />
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {event.honoredGuests.map((guest) => {
-            const initials = guest.fullName
-              .split(" ")
-              .map((n) => n[0])
-              .join("")
-              .slice(0, 2)
-              .toUpperCase();
-            return (
-              <div
-                key={guest.id}
-                className="flex items-center gap-4 border-2 border-navy bg-white p-5 shadow-[4px_4px_0_0_#0c1228] transition-shadow hover:shadow-[6px_6px_0_0_#0c1228]"
-              >
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center bg-gradient-to-br from-seal-cyan/20 to-royal/20 font-mono text-lg font-bold text-seal-cyan">
-                  {initials}
-                </div>
-                <div>
-                  <p className="font-mono text-base font-bold text-seal-text">{guest.fullName}</p>
-                  {guest.title && <p className="mt-0.5 text-sm text-seal-text-secondary">{guest.title}</p>}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+    <div className="flex items-center gap-4 border-2 border-navy bg-white p-5 shadow-[4px_4px_0_0_#0c1228]">
+      <div className="flex h-14 w-14 shrink-0 items-center justify-center bg-gradient-to-br from-seal-cyan/20 to-royal/20 font-mono text-lg font-bold text-seal-cyan">
+        {initials || "?"}
       </div>
-    </section>
+      <div>
+        <p className="font-mono text-base font-bold text-seal-text">{fullName}</p>
+        <p className="mt-0.5 text-sm text-seal-text-secondary">{role}</p>
+      </div>
+    </div>
   );
 }
 
-function RegisterCta({ event }: { event: EventResponse }) {
-  const isOpen = event.status === "OPEN";
+function StaffSection({ event }: { event: EventResponse }) {
+  const judges = event.judges ?? [];
+  const mentors = event.mentors ?? [];
 
   return (
-    <section className="relative overflow-hidden bg-seal-bg py-20">
-      <div className="pointer-events-none absolute inset-0 flex items-center justify-center" aria-hidden="true">
-        <div className="absolute h-80 w-80 rounded-full border border-seal-cyan/10 seal-glow" />
-        <div className="absolute h-[420px] w-[420px] rounded-full border border-seal-mint/10 seal-glow" />
-      </div>
-      <div className="relative mx-auto max-w-3xl px-4 text-center sm:px-6">
-        <div
-          className="rounded-2xl border-2 border-seal-cyan/20 px-6 py-14 sm:px-12"
-          style={{ clipPath: "polygon(0 0, 95% 0, 100% 5%, 100% 100%, 5% 100%, 0 95%)" }}
-        >
-          <h2 className="font-mono text-3xl font-bold text-navy sm:text-4xl">
-            Ready to <span className="seal-gradient-text">compete</span>?
-          </h2>
-          <p className="mx-auto mt-4 max-w-lg text-seal-text-secondary">
-            {isOpen
-              ? `Secure your spot in ${event.name} before registration closes on ${formatEventDate(event.registrationDeadline)}.`
-              : "Registration is closed for this edition. Follow us for upcoming missions."}
-          </p>
-          <div className="mt-8 flex flex-wrap justify-center gap-3">
-            {isOpen ? (
-              <Link
-                href={`/hackathons/${event.id}/register`}
-                className="inline-flex h-12 items-center border-2 border-navy bg-seal-yellow px-8 text-sm font-mono font-bold text-navy shadow-[4px_4px_0_0_#0c1228]"
-              >
-                Register Now
-              </Link>
-            ) : null}
-            <Link
-              href="/#featured"
-              className="inline-flex h-12 items-center border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] px-8 text-sm font-semibold text-seal-text"
-            >
-              More Events
-            </Link>
+    <section id="staff" className="scroll-mt-32 bg-seal-surface py-20">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <SectionHeader
+          title="Judges & Mentors"
+          subtitle="The people guiding and evaluating this hackathon."
+        />
+        <div className="grid gap-10 lg:grid-cols-2">
+          <div>
+            <h3 className="mb-4 font-mono text-sm font-bold uppercase tracking-wider text-seal-cyan">
+              Judges ({judges.length})
+            </h3>
+            {judges.length === 0 ? (
+              <p className="text-sm text-seal-text-secondary">
+                No judges assigned yet. Add them in Edit Event → Add Lecture.
+              </p>
+            ) : (
+              <div className="flex flex-col gap-4">
+                {judges.map((judge) => (
+                  <StaffPersonCard key={judge.id} fullName={judge.fullName} role="Judge" />
+                ))}
+              </div>
+            )}
+          </div>
+          <div>
+            <h3 className="mb-4 font-mono text-sm font-bold uppercase tracking-wider text-seal-cyan">
+              Mentors ({mentors.length})
+            </h3>
+            {mentors.length === 0 ? (
+              <p className="text-sm text-seal-text-secondary">
+                No mentors assigned yet. Add them in Edit Event → Add Lecture.
+              </p>
+            ) : (
+              <div className="flex flex-col gap-4">
+                {mentors.map((mentor) => (
+                  <StaffPersonCard key={mentor.id} fullName={mentor.fullName} role="Mentor" />
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -690,7 +678,6 @@ export function EventLandingPage({ eventId }: EventLandingPageProps) {
       if (s.id === "tracks") return event.tracks.length > 0;
       if (s.id === "schedule") return rounds.length > 0 || schedules.length > 0;
       if (s.id === "prizes") return event.prizes.length > 0;
-      if (s.id === "guests") return event.honoredGuests.length > 0;
       return true;
     });
   }, [event, rounds, schedules]);
@@ -722,18 +709,15 @@ export function EventLandingPage({ eventId }: EventLandingPageProps) {
 
   return (
     <div className="min-h-full bg-seal-bg">
-      <LandingNavbar />
       <main>
         <HeroSection event={event} />
         <SectionNav active={activeSection} links={visibleSections} />
         <AboutSection event={event} />
         <TracksSection event={event} />
         <ScheduleSection rounds={rounds} schedules={schedules} competitionFormat={event.competitionFormat} />
+        <StaffSection event={event} />
         <PrizesSection event={event} />
-        <GuestsSection event={event} />
-        <RegisterCta event={event} />
       </main>
-      <Footer />
     </div>
   );
 }

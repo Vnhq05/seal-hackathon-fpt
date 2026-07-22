@@ -75,17 +75,17 @@ export function EnrollmentManagementPage({ eventId, embedded }: { eventId: strin
         </div>
       )}
 
-      <div className="overflow-hidden border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]">
-        <table className="w-full" style={{ borderCollapse: "collapse" }}>
+      <div className="overflow-x-auto border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]">
+        <table className="w-full" style={{ borderCollapse: "collapse", minWidth: 960 }}>
             <thead>
               <tr style={{ backgroundColor: "#eef0f6" }}>
-                <th style={headerCell}>Name</th>
-                <th style={headerCell}>Email</th>
-                <th style={headerCell}>Student ID</th>
-                <th style={headerCell}>University</th>
-                <th style={{ ...headerCell, width: 120 }}>Status</th>
-                <th style={{ ...headerCell, width: 160 }}>Enrolled At</th>
-                <th style={{ ...headerCell, width: 200 }}>Actions</th>
+                <th style={{ ...headerCell, minWidth: 140 }}>Name</th>
+                <th style={{ ...headerCell, minWidth: 200 }}>Email</th>
+                <th style={{ ...headerCell, minWidth: 110, whiteSpace: "nowrap" }}>Student ID</th>
+                <th style={{ ...headerCell, minWidth: 160 }}>University</th>
+                <th style={{ ...headerCell, width: 120, whiteSpace: "nowrap" }}>Status</th>
+                <th style={{ ...headerCell, width: 120, whiteSpace: "nowrap" }}>Enrolled At</th>
+                <th style={{ ...headerCell, width: 180, whiteSpace: "nowrap" }}>Actions</th>
               </tr>
             </thead>
           <tbody>
@@ -105,20 +105,20 @@ export function EnrollmentManagementPage({ eventId, embedded }: { eventId: strin
                 return (
                   <tr key={e.id} style={{ borderTop: "1px solid rgba(198,198,205,0.3)" }}>
                     <td style={{ ...bodyCell, fontWeight: 600 }}>{e.userFullName}</td>
-                    <td style={bodyCell}>{e.userEmail}</td>
-                    <td style={bodyCell}>{e.userStudentId ?? "—"}</td>
+                    <td style={{ ...bodyCell, wordBreak: "break-all" }}>{e.userEmail}</td>
+                    <td style={{ ...bodyCell, whiteSpace: "nowrap" }}>{e.userStudentId ?? "—"}</td>
                     <td style={bodyCell}>{e.userUniversityName ?? "—"}</td>
-                    <td style={bodyCell}>
+                    <td style={{ ...bodyCell, whiteSpace: "nowrap" }}>
                       <span style={{ fontSize: 12, fontWeight: 600, padding: "3px 8px", borderRadius: 4, backgroundColor: colors.bg, color: colors.text }}>
                         {e.status}
                       </span>
                     </td>
-                    <td style={{ ...bodyCell, color: "#8891a5" }}>
+                    <td style={{ ...bodyCell, color: "#8891a5", whiteSpace: "nowrap" }}>
                       {new Date(e.enrolledAt).toLocaleDateString()}
                     </td>
-                    <td style={bodyCell}>
+                    <td style={{ ...bodyCell, whiteSpace: "nowrap" }}>
                       {e.status === "PENDING" && (
-                        <div className="flex gap-2">
+                        <div className="flex flex-nowrap gap-3">
                           <button
                             onClick={() => approve(e.id, {
                               onSuccess: (result) => {
@@ -127,11 +127,11 @@ export function EnrollmentManagementPage({ eventId, embedded }: { eventId: strin
                               },
                               onError: (err) => showFeedback("error", err instanceof Error ? err.message : "Approve failed"),
                             })}
-                            style={{ fontSize: 12, fontWeight: 600, color: "#065f46", background: "none", border: "none", cursor: "pointer" }}
+                            style={{ fontSize: 12, fontWeight: 600, color: "#065f46", background: "none", border: "none", cursor: "pointer", whiteSpace: "nowrap" }}
                           >
                             Approve
                           </button>
-                          <button onClick={() => reject(e.id)} style={{ fontSize: 12, fontWeight: 600, color: "#991b1b", background: "none", border: "none", cursor: "pointer" }}>Reject</button>
+                          <button onClick={() => reject(e.id)} style={{ fontSize: 12, fontWeight: 600, color: "#991b1b", background: "none", border: "none", cursor: "pointer", whiteSpace: "nowrap" }}>Reject</button>
                         </div>
                       )}
                       {e.status === "APPROVED" && (
@@ -142,7 +142,7 @@ export function EnrollmentManagementPage({ eventId, embedded }: { eventId: strin
                             onSuccess: (result) => showFeedback("success", result.message),
                             onError: (err) => showFeedback("error", err instanceof Error ? err.message : "Failed to resend login link"),
                           })}
-                          style={{ fontSize: 12, fontWeight: 600, color: "#1d4ed8", background: "none", border: "none", cursor: "pointer" }}
+                          style={{ fontSize: 12, fontWeight: 600, color: "#1d4ed8", background: "none", border: "none", cursor: "pointer", whiteSpace: "nowrap" }}
                         >
                           Resend login link
                         </button>
