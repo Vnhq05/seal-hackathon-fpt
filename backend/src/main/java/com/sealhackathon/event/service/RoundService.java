@@ -2,8 +2,11 @@ package com.sealhackathon.event.service;
 
 import com.sealhackathon.common.exception.BusinessException;
 import com.sealhackathon.common.exception.ResourceNotFoundException;
+import com.sealhackathon.event.domain.Criteria;
 import com.sealhackathon.event.domain.HackathonEvent;
 import com.sealhackathon.event.domain.Round;
+import com.sealhackathon.event.domain.ScoringTemplate;
+import com.sealhackathon.event.domain.ScoringTemplateCriterion;
 import com.sealhackathon.event.domain.enums.AdvancementRule;
 import com.sealhackathon.event.domain.enums.EventStatus;
 import com.sealhackathon.event.domain.enums.RoundType;
@@ -13,6 +16,7 @@ import com.sealhackathon.event.dto.response.RoundResponse;
 import com.sealhackathon.event.event.ScoringWindowReopenedEvent;
 import com.sealhackathon.event.repository.HackathonEventRepository;
 import com.sealhackathon.event.repository.RoundRepository;
+import com.sealhackathon.event.repository.ScoringTemplateRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
@@ -20,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
@@ -29,6 +34,7 @@ public class RoundService {
 
     private final RoundRepository roundRepository;
     private final HackathonEventRepository eventRepository;
+    private final ScoringTemplateRepository scoringTemplateRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final FormatRuleEngine formatRuleEngine;
 
@@ -76,6 +82,7 @@ public class RoundService {
             rebalanceRoundWeights(eventId);
             round = roundRepository.findById(round.getId()).orElse(round);
         }
+        applyDefaultCriteria(round, event);
         return toResponse(round);
     }
 
@@ -286,6 +293,47 @@ public class RoundService {
                     "roundType is required for SEAL format rounds (PRELIMINARY or FINAL)",
                     HttpStatus.BAD_REQUEST) {};
         }
+    }
+
+    /**
+     * Copies criteria onto a newly created round from the event scoring template when set,
+     * otherwise from the system {@code Default} template (BR-44). Admin/coordinator can still
+     * replace criteria afterwards.
+     */
+    private void applyDefaultCriteria(Round round, HackathonEvent event) {
+        if (round.getCriteria() != null && !round.getCriteria().isEmpty()) {
+            return;
+        }
+
+        ScoringTemplate template = null;
+        if (event.getScoringTemplateId() != null) {
+            template = scoringTemplateRepository.findWithCriteriaById(event.getScoringTemplateId())
+                    .orElse(null);
+        }
+        if (template == null) {
+            template = scoringTemplateRepository
+                    .findWithCriteriaByNameIgnoreCase(ScoringTemplateService.DEFAULT_TEMPLATE_NAME)
+                    .orElse(null);
+        }
+        if (template == null || template.getCriteria() == null || template.getCriteria().isEmpty()) {
+            return;
+        }
+
+        List<ScoringTemplateCriterion> source = template.getCriteria().stream()
+                .sorted(Comparator.comparing(c -> c.getSortOrder() != null ? c.getSortOrder() : 0))
+                .toList();
+        for (ScoringTemplateCriterion tc : source) {
+            round.getCriteria().add(Criteria.builder()
+                    .round(round)
+                    .name(tc.getName())
+                    .description(tc.getDescription())
+                    .weight(tc.getWeight())
+                    .sortOrder(tc.getSortOrder() != null ? tc.getSortOrder() : 0)
+                    .minScore(tc.getMinScore() != null ? tc.getMinScore() : 1)
+                    .maxScore(tc.getMaxScore() != null ? tc.getMaxScore() : 5)
+                    .build());
+        }
+        roundRepository.save(round);
     }
 
     private void guardDraftOrActive(HackathonEvent event) {
