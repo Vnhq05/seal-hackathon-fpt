@@ -182,16 +182,16 @@ export function SubmissionDetailPage({
                 </a>
               </div>
             )}
-            {submission.latestVersion.demoUrl && (
+            {(submission.latestVersion.otherUrl ?? submission.latestVersion.demoUrl) && (
               <div className="flex items-center gap-2">
-                <span style={{ fontSize: 12, fontWeight: 600, color: "#8891a5" }}>Demo:</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: "#8891a5" }}>Other:</span>
                 <a
-                  href={submission.latestVersion.demoUrl}
+                  href={submission.latestVersion.otherUrl ?? submission.latestVersion.demoUrl ?? undefined}
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{ fontSize: 14, color: "#38bdf8" }}
                 >
-                  {submission.latestVersion.demoUrl}
+                  {submission.latestVersion.otherUrl ?? submission.latestVersion.demoUrl}
                 </a>
               </div>
             )}
@@ -283,14 +283,14 @@ export function SubmissionDetailPage({
                       Slide: {version.slideUrl}
                     </a>
                   )}
-                  {version.demoUrl && (
+                  {(version.otherUrl ?? version.demoUrl) && (
                     <a
-                      href={version.demoUrl}
+                      href={version.otherUrl ?? version.demoUrl ?? undefined}
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{ fontSize: 12, color: "#38bdf8" }}
                     >
-                      Demo: {version.demoUrl}
+                      Other: {version.otherUrl ?? version.demoUrl}
                     </a>
                   )}
                   {version.attachments?.map((attachment) => (

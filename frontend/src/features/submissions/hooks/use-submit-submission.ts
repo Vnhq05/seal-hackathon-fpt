@@ -10,7 +10,8 @@ import { SUBMISSION_DETAIL_KEY } from "@/features/submissions/hooks/use-submissi
 export interface SubmitSubmissionPayload {
   roundId: string;
   request: CreateSubmissionRequest;
-  pdfFile?: File | null;
+  /** Other-section file (any type, max 25MB) */
+  file?: File | null;
   teamId?: string;
 }
 
@@ -18,8 +19,8 @@ export function useSubmitSubmission() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ roundId, request, pdfFile }: SubmitSubmissionPayload) =>
-      submissionApi.submit(roundId, request, pdfFile),
+    mutationFn: ({ roundId, request, file }: SubmitSubmissionPayload) =>
+      submissionApi.submit(roundId, request, file),
     onSuccess: (res: SubmissionResponse, { roundId, teamId }) => {
       queryClient.invalidateQueries({ queryKey: [MY_SUBMISSIONS_KEY, roundId] });
       queryClient.invalidateQueries({ queryKey: [SUBMISSION_DETAIL_KEY, roundId, res.id] });

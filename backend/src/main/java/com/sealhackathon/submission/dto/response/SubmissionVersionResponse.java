@@ -20,6 +20,8 @@ public class SubmissionVersionResponse {
     private String githubUrl;
     private String sourceCodeUrl;
     private String slideUrl;
+    private String otherUrl;
+    /** @deprecated Prefer {@link #otherUrl}; retained for legacy clients. */
     private String demoUrl;
     private LocalDateTime submittedAt;
     private List<AttachmentResponse> attachments;

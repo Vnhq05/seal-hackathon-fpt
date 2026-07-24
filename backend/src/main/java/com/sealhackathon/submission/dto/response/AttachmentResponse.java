@@ -18,4 +18,5 @@ public class AttachmentResponse {
     private String fileUrl;
     private Long fileSize;
     private Integer pageCount;
+    private String contentType;
 }

@@ -7,7 +7,6 @@ import com.sealhackathon.progress.domain.enums.ProgressRiskLevel;
 import com.sealhackathon.progress.domain.enums.ProgressRiskReason;
 import com.sealhackathon.submission.domain.Submission;
 import com.sealhackathon.submission.domain.SubmissionVersion;
-import com.sealhackathon.submission.domain.enums.SubmissionStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -77,7 +76,7 @@ public class TeamProgressEvaluationService {
                 && latestVersion != null
                 && latestVersion.getSlideUrl() != null
                 && latestVersion.getGithubUrl() == null
-                && latestVersion.getDemoUrl() == null) {
+                && !hasOtherArtifact(latestVersion)) {
             reasons.add(ProgressRiskReason.SLIDE_ONLY_PAST_GATE);
         }
 
@@ -98,17 +97,22 @@ public class TeamProgressEvaluationService {
             reasons.add(ProgressRiskReason.STALLED);
         }
 
-        if (submission != null
-                && submission.getStatus() == SubmissionStatus.SUBMITTED
-                && latestVersion != null
-                && (latestVersion.getAttachments() == null || latestVersion.getAttachments().isEmpty())) {
-            reasons.add(ProgressRiskReason.MISSING_ATTACHMENT);
-        }
+        // MISSING_ATTACHMENT no longer applies: Other may be link-only (no file required).
 
         ProgressRiskLevel riskLevel = resolveRiskLevel(reasons);
 
         return new EvaluationResult(
                 riskLevel, reasons, totalVersions, lastSubmittedAt, hoursUntilDeadline, submittedParts);
+    }
+
+    private static boolean hasOtherArtifact(SubmissionVersion version) {
+        if (version.getOtherUrl() != null && !version.getOtherUrl().isBlank()) {
+            return true;
+        }
+        if (version.getDemoUrl() != null && !version.getDemoUrl().isBlank()) {
+            return true;
+        }
+        return version.getAttachments() != null && !version.getAttachments().isEmpty();
     }
 
     private ProgressRiskLevel resolveRiskLevel(List<ProgressRiskReason> reasons) {

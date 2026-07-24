@@ -5,11 +5,17 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { submissionApi } from "@/lib/api";
 import type { EventResponse, RoundResponse, SubmissionResponse } from "@/lib/api";
 import { openSubmissionAttachment } from "@/lib/files";
-import { isRoundOpen, roundLockMessage, validatePdfFile } from "@/features/submissions/utils/round.utils";
+import {
+  isRoundOpen,
+  roundLockMessage,
+  validateAnySubmissionFile,
+} from "@/features/submissions/utils/round.utils";
 import { isValidHttpUrl } from "@/features/submissions/utils/seal-submission.utils";
 import { validateSourceCodeUrl } from "@/features/submissions/utils/source-code-url.utils";
 import {
   countSubmissionParts,
+  percentForSubmittedParts,
+  REQUIRED_SUBMISSION_PARTS,
   submissionPartsFromVersion,
   SubmissionProgressBar,
 } from "@/features/progress/components/submission-progress-bar";
@@ -22,7 +28,7 @@ function CloseIcon() {
   );
 }
 
-type SubmitPart = "slide" | "source" | "demo" | "pdf";
+type SubmitPart = "slide" | "source" | "other";
 
 interface InlineSubmissionFormProps {
   event: EventResponse;
@@ -40,16 +46,18 @@ export function InlineSubmissionForm({ event, round, teamId, existing, onClose }
   const [sourceCodeUrl, setSourceCodeUrl] = useState(
     existing?.latestVersion?.sourceCodeUrl ?? existing?.latestVersion?.githubUrl ?? "",
   );
-  const [demo, setDemo] = useState(existing?.latestVersion?.demoUrl ?? "");
-  const [pdfFile, setPdfFile] = useState<File | null>(null);
-  const [viewingPdf, setViewingPdf] = useState(false);
+  const [otherUrl, setOtherUrl] = useState(
+    existing?.latestVersion?.otherUrl ?? existing?.latestVersion?.demoUrl ?? "",
+  );
+  const [otherFile, setOtherFile] = useState<File | null>(null);
+  const [viewingFile, setViewingFile] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [savingPart, setSavingPart] = useState<SubmitPart | null>(null);
 
   const roundOpen = isRoundOpen(round);
   const locked = !roundOpen;
-  const currentPdf = existing?.latestVersion?.attachments?.[0] ?? null;
+  const currentFile = existing?.latestVersion?.attachments?.[0] ?? null;
 
   const partStatus = useMemo(
     () => submissionPartsFromVersion(existing?.latestVersion),
@@ -64,27 +72,27 @@ export function InlineSubmissionForm({ event, round, teamId, existing, onClose }
   const { mutate: submit, isPending } = useMutation({
     mutationFn: ({
       request,
-      pdf,
+      file,
     }: {
-      request: { slideUrl?: string; sourceCodeUrl?: string; demoUrl?: string };
-      pdf?: File | null;
-    }) => submissionApi.submit(round.id, request, pdf ?? null),
+      request: { slideUrl?: string; sourceCodeUrl?: string; otherUrl?: string };
+      file?: File | null;
+    }) => submissionApi.submit(round.id, request, file ?? null),
     onSuccess: () => {
       invalidate();
     },
     onError: (err: Error) => setError(err.message),
   });
 
-  const handleViewPdf = async () => {
-    if (!currentPdf) return;
+  const handleViewFile = async () => {
+    if (!currentFile) return;
     setError(null);
-    setViewingPdf(true);
+    setViewingFile(true);
     try {
-      await openSubmissionAttachment(currentPdf.fileUrl);
+      await openSubmissionAttachment(currentFile.fileUrl);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not open PDF");
+      setError(err instanceof Error ? err.message : "Could not open file");
     } finally {
-      setViewingPdf(false);
+      setViewingFile(false);
     }
   };
 
@@ -98,6 +106,7 @@ export function InlineSubmissionForm({ event, round, teamId, existing, onClose }
 
     const latest = existing?.latestVersion;
     const existingSource = (latest?.sourceCodeUrl ?? latest?.githubUrl ?? "").trim();
+    const existingOther = (latest?.otherUrl ?? latest?.demoUrl ?? "").trim();
 
     if (part === "slide") {
       if (!slideUrl.trim() || !isValidHttpUrl(slideUrl)) {
@@ -146,45 +155,38 @@ export function InlineSubmissionForm({ event, round, teamId, existing, onClose }
       return;
     }
 
-    if (part === "demo") {
-      if (!demo.trim() || !isValidHttpUrl(demo)) {
-        setError("Invalid demo URL");
+    const hasUrl = Boolean(otherUrl.trim());
+    const hasFile = Boolean(otherFile);
+    if (!hasUrl && !hasFile) {
+      setError("Provide an Other URL and/or choose any file");
+      return;
+    }
+    if (hasUrl && !isValidHttpUrl(otherUrl)) {
+      setError("Invalid Other URL");
+      return;
+    }
+    if (otherFile) {
+      const fileErr = validateAnySubmissionFile(otherFile);
+      if (fileErr) {
+        setError(fileErr);
         return;
       }
-      if (demo.trim() === (latest?.demoUrl ?? "").trim()) {
-        setSuccess("No changes — version unchanged");
-        return;
-      }
-      setSavingPart("demo");
-      submit(
-        { request: { demoUrl: demo.trim() } },
-        {
-          onSuccess: () => {
-            setSuccess("Demo saved!");
-            setSavingPart(null);
-          },
-          onError: () => setSavingPart(null),
-        },
-      );
+    }
+    if (!hasFile && otherUrl.trim() === existingOther) {
+      setSuccess("No changes — version unchanged");
       return;
     }
 
-    if (!pdfFile) {
-      setError("Please select a PDF file");
-      return;
-    }
-    const pdfErr = validatePdfFile(pdfFile);
-    if (pdfErr) {
-      setError(pdfErr);
-      return;
-    }
-    setSavingPart("pdf");
+    setSavingPart("other");
     submit(
-      { request: {}, pdf: pdfFile },
+      {
+        request: hasUrl ? { otherUrl: otherUrl.trim() } : {},
+        file: otherFile,
+      },
       {
         onSuccess: () => {
-          setSuccess("PDF saved!");
-          setPdfFile(null);
+          setSuccess("Other saved!");
+          setOtherFile(null);
           setSavingPart(null);
         },
         onError: () => setSavingPart(null),
@@ -216,9 +218,9 @@ export function InlineSubmissionForm({ event, round, teamId, existing, onClose }
 
         <div className="border-b border-seal-border px-5 py-4">
           <SubmissionProgressBar
-            percent={submittedParts * 25}
+            percent={percentForSubmittedParts(submittedParts)}
             submittedParts={submittedParts}
-            requiredParts={4}
+            requiredParts={REQUIRED_SUBMISSION_PARTS}
             partStatus={partStatus}
             showPartLabels
             size="sm"
@@ -257,7 +259,7 @@ export function InlineSubmissionForm({ event, round, teamId, existing, onClose }
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
             <div className="flex-1">
               <label className="text-xs font-medium text-seal-text-secondary">
-                Source Code URL {partStatus.source ? "✓" : ""}
+                GitHub / Source URL {partStatus.source ? "✓" : ""}
               </label>
               <input
                 value={sourceCodeUrl}
@@ -276,78 +278,69 @@ export function InlineSubmissionForm({ event, round, teamId, existing, onClose }
             </button>
           </div>
 
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-            <div className="flex-1">
-              <label className="text-xs font-medium text-seal-text-secondary">
-                Demo URL {partStatus.demo ? "✓" : ""}
-              </label>
-              <input
-                value={demo}
-                onChange={(e) => setDemo(e.target.value)}
-                placeholder="https://youtube.com/watch?v=..."
-                className="mt-1.5 w-full border-2 border-navy bg-white px-3 py-2 text-sm shadow-[4px_4px_0_0_#0c1228] outline-none focus:border-royal/40"
-              />
+          <div className="rounded-lg border border-seal-border bg-seal-surface-elevated/40 p-3">
+            <p className="text-xs font-semibold text-seal-text">
+              Other {partStatus.other ? "✓" : ""}
+            </p>
+            <p className="mt-0.5 text-[11px] text-seal-text-muted">
+              Any link and/or any file (counts as one progress part). Max file size 25MB.
+            </p>
+            <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end">
+              <div className="flex-1">
+                <label className="text-xs font-medium text-seal-text-secondary">Other URL</label>
+                <input
+                  value={otherUrl}
+                  onChange={(e) => setOtherUrl(e.target.value)}
+                  placeholder="https://…"
+                  className="mt-1.5 w-full border-2 border-navy bg-white px-3 py-2 text-sm shadow-[4px_4px_0_0_#0c1228] outline-none focus:border-royal/40"
+                />
+              </div>
             </div>
-            <button
-              type="button"
-              onClick={() => handleSavePart("demo")}
-              disabled={isPending}
-              className="shrink-0 border-2 border-navy bg-seal-yellow px-3 py-2 font-mono text-xs font-bold"
-            >
-              {savingPart === "demo" ? "Saving..." : "Save"}
-            </button>
-          </div>
-
-          <div>
-            <label className="text-xs font-medium text-seal-text-secondary">
-              PDF {partStatus.pdf ? "✓" : ""}
-            </label>
-            {currentPdf && !pdfFile && (
-              <div className="mt-1.5 flex items-center justify-between gap-3 rounded-lg border border-seal-border bg-seal-surface-elevated px-3 py-2">
+            {currentFile && !otherFile && (
+              <div className="mt-2 flex items-center justify-between gap-3 rounded-lg border border-seal-border bg-white px-3 py-2">
                 <div className="min-w-0 text-xs text-seal-text-secondary">
-                  <span className="font-medium text-seal-text">Current PDF:</span>{" "}
-                  <span className="truncate">{currentPdf.fileName}</span>
+                  <span className="font-medium text-seal-text">Current file:</span>{" "}
+                  <span className="truncate">{currentFile.fileName}</span>
                 </div>
                 <button
                   type="button"
-                  onClick={() => void handleViewPdf()}
-                  disabled={viewingPdf}
+                  onClick={() => void handleViewFile()}
+                  disabled={viewingFile}
                   className="shrink-0 text-xs font-semibold text-royal underline disabled:opacity-50"
                 >
-                  {viewingPdf ? "Opening..." : "View PDF"}
+                  {viewingFile ? "Opening..." : "View"}
                 </button>
               </div>
             )}
             <div
               onClick={() => fileRef.current?.click()}
-              className="mt-1.5 flex cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-seal-border bg-seal-surface-sunken p-4 text-sm text-seal-text-muted"
+              className="mt-2 flex cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-seal-border bg-white p-4 text-sm text-seal-text-muted"
             >
-              {pdfFile ? pdfFile.name : "Click to select PDF (max 5MB)"}
+              {otherFile ? otherFile.name : "Click to select any file (optional)"}
             </div>
             <input
               ref={fileRef}
               type="file"
-              accept=".pdf,application/pdf"
               className="hidden"
               onChange={(e) => {
                 const f = e.target.files?.[0] ?? null;
                 if (f) {
-                  const err = validatePdfFile(f);
+                  const err = validateAnySubmissionFile(f);
                   if (err) {
                     setError(err);
                     return;
                   }
                 }
-                setPdfFile(f);
+                setOtherFile(f);
               }}
             />
             <button
               type="button"
-              onClick={() => handleSavePart("pdf")}
-              disabled={isPending || !pdfFile}
+              onClick={() => handleSavePart("other")}
+              disabled={isPending}
               className="mt-2 border-2 border-navy bg-seal-yellow px-3 py-2 font-mono text-xs font-bold disabled:opacity-50"
             >
-              {savingPart === "pdf" ? "Saving..." : "Save PDF"}
+              {savingPart === "other" ? "Saving..." : "Save Other"}
             </button>
           </div>
 

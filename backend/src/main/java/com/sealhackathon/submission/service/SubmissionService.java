@@ -23,10 +23,9 @@ import com.sealhackathon.submission.event.SubmissionUpdatedEvent;
 import com.sealhackathon.submission.repository.SubmissionAttachmentRepository;
 import com.sealhackathon.submission.repository.SubmissionRepository;
 import com.sealhackathon.submission.repository.SubmissionVersionRepository;
-import com.sealhackathon.submission.validation.DemoUrlWhitelistValidator;
-import com.sealhackathon.submission.validation.GitHubUrlValidator;
-import com.sealhackathon.submission.validation.PdfValidator;
+import com.sealhackathon.submission.validation.HttpUrlValidator;
 import com.sealhackathon.submission.validation.SourceCodeUrlValidator;
+import com.sealhackathon.submission.validation.SubmissionFileValidator;
 import com.sealhackathon.team.dto.snapshot.TeamSnapshot;
 import com.sealhackathon.team.service.TeamPublicService;
 import lombok.RequiredArgsConstructor;
@@ -53,10 +52,9 @@ public class SubmissionService {
     private final SubmissionAttachmentRepository attachmentRepository;
     private final TeamPublicService teamPublicService;
     private final EventPublicService eventPublicService;
-    private final GitHubUrlValidator gitHubUrlValidator;
     private final SourceCodeUrlValidator sourceCodeUrlValidator;
-    private final DemoUrlWhitelistValidator demoUrlValidator;
-    private final PdfValidator pdfValidator;
+    private final HttpUrlValidator httpUrlValidator;
+    private final SubmissionFileValidator submissionFileValidator;
     private final FinalistSelectionService finalistSelectionService;
     private final FileStorageService fileStorageService;
     private final JudgeAssignmentService judgeAssignmentService;
@@ -65,19 +63,20 @@ public class SubmissionService {
     // ── BR-25, BR-31, BR-32: Create or re-submit ──
     @Transactional
     public SubmissionResponse submit(UUID currentUserId, UUID roundId,
-                                     CreateSubmissionRequest request, MultipartFile pdfFile) {
+                                     CreateSubmissionRequest request, MultipartFile file) {
         RoundSnapshot roundSnapshot = eventPublicService.getRound(roundId)
                 .orElseThrow(() -> new ResourceNotFoundException("Round", "id", roundId));
 
-        validatePartialSubmission(roundSnapshot, request, pdfFile);
+        validatePartialSubmission(roundSnapshot, request, file);
 
         String requestSourceUrl = resolveSourceUrlOptional(request);
         if (requestSourceUrl != null) {
             sourceCodeUrlValidator.validate(requestSourceUrl);
         }
 
-        if (request.getDemoUrl() != null && !request.getDemoUrl().isBlank()) {
-            demoUrlValidator.validate(request.getDemoUrl());
+        String requestOtherUrl = resolveOtherUrlOptional(request);
+        if (requestOtherUrl != null) {
+            httpUrlValidator.validate(requestOtherUrl, "Other URL");
         }
 
         TeamSnapshot team = teamPublicService.getTeamByParticipantAndEvent(
@@ -107,9 +106,9 @@ public class SubmissionService {
                 .orElse(null);
 
         boolean isNew = (submission == null);
-        boolean hasPdf = pdfFile != null && !pdfFile.isEmpty();
+        boolean hasFile = file != null && !file.isEmpty();
 
-        pdfValidator.validate(pdfFile, request.getPdfPageCount(), false);
+        submissionFileValidator.validateOptional(file);
 
         if (isNew) {
             submission = Submission.builder()
@@ -128,11 +127,15 @@ public class SubmissionService {
                 trimToNull(request.getSlideUrl()), previousVersion != null ? previousVersion.getSlideUrl() : null);
         String sourceUrl = coalesceNonBlank(requestSourceUrl,
                 previousVersion != null ? previousVersion.getGithubUrl() : null);
-        String demoUrl = coalesceNonBlank(
-                trimToNull(request.getDemoUrl()), previousVersion != null ? previousVersion.getDemoUrl() : null);
+        String otherUrl = coalesceNonBlank(requestOtherUrl,
+                previousVersion != null
+                        ? coalesceNonBlank(previousVersion.getOtherUrl(), previousVersion.getDemoUrl())
+                        : null);
+        // Keep demoUrl in sync for legacy readers: prefer explicit other, else previous demo
+        String demoUrl = otherUrl;
 
-        if (!isNew && previousVersion != null && !hasPdf
-                && urlsUnchanged(previousVersion, slideUrl, sourceUrl, demoUrl)) {
+        if (!isNew && previousVersion != null && !hasFile
+                && urlsUnchanged(previousVersion, slideUrl, sourceUrl, otherUrl)) {
             return toResponse(submission);
         }
 
@@ -143,19 +146,22 @@ public class SubmissionService {
                 .versionNumber(nextVersion)
                 .githubUrl(sourceUrl)
                 .slideUrl(slideUrl)
+                .otherUrl(otherUrl)
                 .demoUrl(demoUrl)
                 .submittedAt(LocalDateTime.now())
                 .build();
         final SubmissionVersion savedVersion = versionRepository.save(version);
 
-        if (hasPdf) {
-            String fileUrl = fileStorageService.storeSubmissionPdf(pdfFile, submission.getId(), nextVersion);
+        if (hasFile) {
+            String fileUrl = fileStorageService.storeSubmissionFile(file, submission.getId(), nextVersion);
+            String originalName = file.getOriginalFilename();
             SubmissionAttachment attachment = SubmissionAttachment.builder()
                     .submissionVersion(savedVersion)
-                    .fileName(pdfFile.getOriginalFilename())
+                    .fileName(originalName != null && !originalName.isBlank() ? originalName : "attachment.bin")
                     .fileUrl(fileUrl)
-                    .fileSize(pdfFile.getSize())
-                    .pageCount(request.getPdfPageCount() != null ? request.getPdfPageCount() : 1)
+                    .fileSize(file.getSize())
+                    .pageCount(null)
+                    .contentType(file.getContentType())
                     .build();
             attachmentRepository.save(attachment);
         } else if (!isNew && submission.getCurrentVersionId() != null) {
@@ -167,6 +173,7 @@ public class SubmissionService {
                             .fileUrl(prev.getFileUrl())
                             .fileSize(prev.getFileSize())
                             .pageCount(prev.getPageCount())
+                            .contentType(prev.getContentType())
                             .build()));
         }
 
@@ -407,10 +414,12 @@ public class SubmissionService {
                         .fileUrl(a.getFileUrl())
                         .fileSize(a.getFileSize())
                         .pageCount(a.getPageCount())
+                        .contentType(a.getContentType())
                         .build())
                 .toList();
 
         String sourceCodeUrl = v.getGithubUrl();
+        String otherUrl = coalesceNonBlank(v.getOtherUrl(), v.getDemoUrl());
 
         return SubmissionVersionResponse.builder()
                 .id(v.getId())
@@ -418,6 +427,7 @@ public class SubmissionService {
                 .sourceCodeUrl(sourceCodeUrl)
                 .githubUrl(sourceCodeUrl)
                 .slideUrl(v.getSlideUrl())
+                .otherUrl(otherUrl)
                 .demoUrl(v.getDemoUrl())
                 .submittedAt(v.getSubmittedAt())
                 .attachments(attachments)
@@ -426,15 +436,15 @@ public class SubmissionService {
 
     private void validatePartialSubmission(RoundSnapshot round,
                                            CreateSubmissionRequest request,
-                                           MultipartFile pdfFile) {
+                                           MultipartFile file) {
         boolean hasSlide = request.getSlideUrl() != null && !request.getSlideUrl().isBlank();
-        boolean hasDemo = request.getDemoUrl() != null && !request.getDemoUrl().isBlank();
         boolean hasSource = resolveSourceUrlOptional(request) != null;
-        boolean hasPdf = pdfFile != null && !pdfFile.isEmpty();
+        boolean hasOtherUrl = resolveOtherUrlOptional(request) != null;
+        boolean hasFile = file != null && !file.isEmpty();
 
-        if (!hasSlide && !hasDemo && !hasSource && !hasPdf) {
+        if (!hasSlide && !hasSource && !hasOtherUrl && !hasFile) {
             throw new BusinessException(
-                    "At least one submission part is required (slide, source, demo, or PDF)",
+                    "At least one submission part is required (slide, GitHub, or other link/file)",
                     HttpStatus.BAD_REQUEST) {};
         }
 
@@ -463,10 +473,11 @@ public class SubmissionService {
     }
 
     private static boolean urlsUnchanged(SubmissionVersion previous,
-                                         String slideUrl, String sourceUrl, String demoUrl) {
+                                         String slideUrl, String sourceUrl, String otherUrl) {
+        String previousOther = coalesceNonBlank(previous.getOtherUrl(), previous.getDemoUrl());
         return Objects.equals(trimToNull(previous.getSlideUrl()), trimToNull(slideUrl))
                 && Objects.equals(trimToNull(previous.getGithubUrl()), trimToNull(sourceUrl))
-                && Objects.equals(trimToNull(previous.getDemoUrl()), trimToNull(demoUrl));
+                && Objects.equals(trimToNull(previousOther), trimToNull(otherUrl));
     }
 
     private static String trimToNull(String value) {
@@ -482,6 +493,16 @@ public class SubmissionService {
         }
         if (request.getGithubUrl() != null && !request.getGithubUrl().isBlank()) {
             return request.getGithubUrl().trim();
+        }
+        return null;
+    }
+
+    private String resolveOtherUrlOptional(CreateSubmissionRequest request) {
+        if (request.getOtherUrl() != null && !request.getOtherUrl().isBlank()) {
+            return request.getOtherUrl().trim();
+        }
+        if (request.getDemoUrl() != null && !request.getDemoUrl().isBlank()) {
+            return request.getDemoUrl().trim();
         }
         return null;
     }

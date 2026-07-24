@@ -88,7 +88,7 @@ class TeamProgressScanServiceTest {
     void shouldPublishAlert_whenReasonSetChanges() {
         var evaluation = new TeamProgressEvaluationService.EvaluationResult(
                 ProgressRiskLevel.AT_RISK,
-                List.of(ProgressRiskReason.MISSING_ATTACHMENT),
+                List.of(ProgressRiskReason.STALLED, ProgressRiskReason.SINGLE_VERSION_LAST_MINUTE),
                 1,
                 LocalDateTime.now(),
                 24,

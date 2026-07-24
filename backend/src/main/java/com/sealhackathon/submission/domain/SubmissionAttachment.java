@@ -19,12 +19,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 /**
- * Child entity of SubmissionVersion.
- *
- * BR-26  PDF file size ≤ 5 MB (5_242_880 bytes).
- * BR-27  PDF page count ≤ 2 pages.
- *
- * Validated by PdfValidator before persistence.
+ * Child entity of SubmissionVersion — arbitrary file under the Other submission part.
+ * Max size 25 MB; no MIME / page-count restriction.
  */
 @Entity
 @Table(name = "submission_attachments")
@@ -34,6 +30,8 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 public class SubmissionAttachment extends BaseEntity {
+
+    public static final long MAX_FILE_SIZE_BYTES = 26_214_400L;
 
     @NotNull
     @ManyToOne(fetch = FetchType.LAZY)
@@ -50,17 +48,17 @@ public class SubmissionAttachment extends BaseEntity {
     @Column(name = "file_url", nullable = false)
     private String fileUrl;
 
-    // ── BR-26: max 5 MB ──
     @NotNull
     @Min(1)
-    @Max(5_242_880)
+    @Max(MAX_FILE_SIZE_BYTES)
     @Column(name = "file_size", nullable = false)
     private Long fileSize;
 
-    // ── BR-27: max 2 pages ──
-    @NotNull
-    @Min(1)
-    @Max(2)
-    @Column(name = "page_count", nullable = false)
+    /** Optional; only meaningful for legacy PDF uploads. */
+    @Column(name = "page_count")
     private Integer pageCount;
+
+    @Size(max = 255)
+    @Column(name = "content_type")
+    private String contentType;
 }
