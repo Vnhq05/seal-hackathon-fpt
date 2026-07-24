@@ -226,7 +226,7 @@ export function TeamDetailPage({ eventId, teamId }: TeamDetailPageProps) {
           hackathonId: team.eventId,
           hackathonName: team.eventId,
           memberCount: team.memberCount,
-          maxMembers: 5,
+          maxMembers: team.maxTeamMembers,
           trackName: null,
           status: "open",
           members: team.members.map((m) => ({

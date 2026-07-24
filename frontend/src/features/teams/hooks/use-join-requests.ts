@@ -44,6 +44,7 @@ export function useJoinRequestMutations(eventId: string, teamId?: string) {
   const accept = useMutation({
     mutationFn: (joinRequestId: string) => joinRequestApi.accept(eventId, joinRequestId),
     onSuccess: invalidate,
+    onError: invalidate,
   });
 
   const reject = useMutation({

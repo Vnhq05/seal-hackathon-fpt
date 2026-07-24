@@ -26,6 +26,11 @@ export function PendingInvitationsBanner({ invitations, event }: PendingInvitati
       qc.invalidateQueries({ queryKey: [ENROLLMENT_KEY] });
       qc.invalidateQueries({ queryKey: [JOINABLE_TEAMS_KEY] });
     },
+    onError: () => {
+      // Team may have filled concurrently — pending invites are expired server-side.
+      qc.invalidateQueries({ queryKey: [TEAM_INVITATION_KEY] });
+      qc.invalidateQueries({ queryKey: [JOINABLE_TEAMS_KEY] });
+    },
   });
 
   const reject = useMutation({
@@ -37,11 +42,19 @@ export function PendingInvitationsBanner({ invitations, event }: PendingInvitati
 
   if (pending.length === 0) return null;
 
+  const actionError =
+    (accept.error instanceof Error && accept.error.message) ||
+    (reject.error instanceof Error && reject.error.message) ||
+    null;
+
   return (
     <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
       <p className="text-sm font-semibold text-blue-900">Pending team invitations</p>
       {!canModifyMembers && registrationClosedReason && (
         <p className="mt-1 text-xs text-amber-700">{registrationClosedReason}</p>
+      )}
+      {actionError && (
+        <p className="mt-1 text-xs text-red-600">{actionError}</p>
       )}
       <div className="mt-2 flex flex-col gap-2">
         {pending.map((inv) => (
@@ -51,14 +64,22 @@ export function PendingInvitationsBanner({ invitations, event }: PendingInvitati
             </span>
             <div className="flex gap-2">
               <button
-                onClick={() => accept.mutate(inv.id)}
+                onClick={() => {
+                  accept.reset();
+                  reject.reset();
+                  accept.mutate(inv.id);
+                }}
                 disabled={!canModifyMembers || accept.isPending || reject.isPending}
                 className="rounded-md bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
               >
                 Accept
               </button>
               <button
-                onClick={() => reject.mutate(inv.id)}
+                onClick={() => {
+                  accept.reset();
+                  reject.reset();
+                  reject.mutate(inv.id);
+                }}
                 disabled={accept.isPending || reject.isPending}
                 className="rounded-md border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50"
               >
