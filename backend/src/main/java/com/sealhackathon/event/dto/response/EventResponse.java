@@ -38,6 +38,8 @@ public class EventResponse {
     private Integer semesterMin;
     private Integer semesterMax;
     private UUID scoringTemplateId;
+    /** Per-criterion score ceiling (1–N). Allowed: 5, 10, 100. */
+    private Integer scoreScaleMax;
     private String tiebreakerCriteria;
     private List<UUID> tiebreakerCriterionIds;
     private int roundCount;

@@ -52,7 +52,7 @@ public class DefaultScoringTemplateInitializer implements ApplicationRunner {
                 .weight(weight)
                 .sortOrder(sortOrder)
                 .minScore(1)
-                .maxScore(5)
+                .maxScore(100)
                 .build();
     }
 }

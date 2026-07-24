@@ -20,7 +20,7 @@ import java.util.UUID;
 public class CriteriaService {
 
     private static final int DEFAULT_MIN_SCORE = 1;
-    private static final int DEFAULT_MAX_SCORE = 5;
+    private static final int DEFAULT_MAX_SCORE = 100;
 
     private final CriteriaRepository criteriaRepository;
     private final RoundService roundService;

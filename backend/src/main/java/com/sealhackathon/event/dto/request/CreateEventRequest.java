@@ -69,6 +69,9 @@ public class CreateEventRequest {
 
     private UUID scoringTemplateId;
 
+    /** Per-criterion score ceiling (1–N). Allowed: 5, 10, 100. Default 100. */
+    private Integer scoreScaleMax;
+
     @Size(max = 1000)
     private String tiebreakerCriteria;
 

@@ -129,6 +129,7 @@ public class EventService {
                 .semesterMin(request.getSemesterMin())
                 .semesterMax(request.getSemesterMax())
                 .scoringTemplateId(request.getScoringTemplateId())
+                .scoreScaleMax(resolveScoreScaleMax(request.getScoreScaleMax()))
                 .tiebreakerCriteria(request.getTiebreakerCriteria())
                 .status(EventStatus.UPCOMING)
                 .build();
@@ -233,6 +234,10 @@ public class EventService {
         event.setSemesterMin(request.getSemesterMin());
         event.setSemesterMax(request.getSemesterMax());
         event.setScoringTemplateId(request.getScoringTemplateId());
+        if (request.getScoreScaleMax() != null) {
+            event.setScoreScaleMax(resolveScoreScaleMax(request.getScoreScaleMax()));
+            applyScoreScaleToExistingRounds(event);
+        }
         event.setTiebreakerCriteria(request.getTiebreakerCriteria());
         if (request.getTiebreakerCriterionIds() != null) {
             applyTiebreakerCriterionIds(event, request.getTiebreakerCriterionIds());
@@ -810,6 +815,7 @@ public class EventService {
                 .semesterMin(event.getSemesterMin())
                 .semesterMax(event.getSemesterMax())
                 .scoringTemplateId(event.getScoringTemplateId())
+                .scoreScaleMax(event.getScoreScaleMax() != null ? event.getScoreScaleMax() : 100)
                 .tiebreakerCriteria(event.getTiebreakerCriteria())
                 .tiebreakerCriterionIds(List.copyOf(event.getTiebreakerCriterionIds()))
                 .roundCount(event.getRounds().size())
@@ -870,6 +876,37 @@ public class EventService {
         event.getTiebreakerCriterionIds().addAll(ids);
         if (event.getTiebreakerCriteria() == null || event.getTiebreakerCriteria().isBlank()) {
             event.setTiebreakerCriteria(buildTiebreakerDisplayLabel(event.getScoringTemplateId(), ids));
+        }
+    }
+
+    private static final Set<Integer> ALLOWED_SCORE_SCALE_MAX = Set.of(5, 10, 100);
+
+    private int resolveScoreScaleMax(Integer requested) {
+        if (requested == null) {
+            return 100;
+        }
+        if (!ALLOWED_SCORE_SCALE_MAX.contains(requested)) {
+            throw new BusinessException(
+                    "scoreScaleMax must be one of: 5, 10, 100",
+                    HttpStatus.BAD_REQUEST) {};
+        }
+        return requested;
+    }
+
+    /** Remap existing round criteria to the event score scale (min=1, max=scoreScaleMax). */
+    private void applyScoreScaleToExistingRounds(HackathonEvent event) {
+        int max = event.getScoreScaleMax() != null ? event.getScoreScaleMax() : 100;
+        if (event.getRounds() == null) {
+            return;
+        }
+        for (var round : event.getRounds()) {
+            if (round.getCriteria() == null) {
+                continue;
+            }
+            for (var criterion : round.getCriteria()) {
+                criterion.setMinScore(1);
+                criterion.setMaxScore(max);
+            }
         }
     }
 

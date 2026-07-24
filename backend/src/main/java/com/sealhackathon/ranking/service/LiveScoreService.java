@@ -40,7 +40,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class LiveScoreService {
 
-    private static final int DEFAULT_MAX_SCORE = 5;
+    private static final int DEFAULT_MAX_SCORE = 100;
 
     private final RankingRepository rankingRepository;
     private final PublishedResultRepository publishedResultRepository;

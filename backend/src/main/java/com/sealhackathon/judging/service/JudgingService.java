@@ -72,7 +72,7 @@ import java.util.stream.Collectors;
 public class JudgingService {
 
     private static final int DEFAULT_MIN_SCORE = 1;
-    private static final int DEFAULT_MAX_SCORE = 5;
+    private static final int DEFAULT_MAX_SCORE = 100;
 
     private final JudgeScoreRepository judgeScoreRepository;
     private final JudgeAssignmentRepository judgeAssignmentRepository;

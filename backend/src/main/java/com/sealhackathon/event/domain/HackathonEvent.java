@@ -119,6 +119,15 @@ public class HackathonEvent extends BaseEntity {
     @Column(name = "scoring_template_id")
     private UUID scoringTemplateId;
 
+    /**
+     * Per-criterion score ceiling for this event (min is always 1).
+     * Allowed values: 5, 10, 100. Default 100.
+     */
+    @Min(5)
+    @Column(name = "score_scale_max", nullable = false)
+    @Builder.Default
+    private Integer scoreScaleMax = 100;
+
     @Size(max = 1000)
     @Column(name = "tiebreaker_criteria", length = 1000)
     private String tiebreakerCriteria;

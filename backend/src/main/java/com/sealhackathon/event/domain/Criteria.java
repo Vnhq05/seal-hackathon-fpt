@@ -70,11 +70,11 @@ public class Criteria extends BaseEntity {
     @Builder.Default
     private Integer minScore = 1;
 
-    /** Per-criterion scoring scale maximum (SEAL Spring 2026: 5). */
+    /** Per-criterion scoring scale maximum (default 100; also supports 5 / 10). */
     @NotNull
     @Min(1)
     @Max(100)
     @Column(name = "max_score", nullable = false)
     @Builder.Default
-    private Integer maxScore = 5;
+    private Integer maxScore = 100;
 }

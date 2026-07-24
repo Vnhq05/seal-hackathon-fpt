@@ -45,6 +45,10 @@ export function mergeEventUpdate(
       patch.scoringTemplateId !== undefined
         ? patch.scoringTemplateId ?? undefined
         : existing.scoringTemplateId ?? undefined,
+    scoreScaleMax:
+      patch.scoreScaleMax !== undefined
+        ? patch.scoreScaleMax
+        : existing.scoreScaleMax ?? undefined,
     tiebreakerCriteria:
       patch.tiebreakerCriteria !== undefined
         ? patch.tiebreakerCriteria

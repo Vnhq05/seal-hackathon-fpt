@@ -329,11 +329,18 @@ public class RoundService {
                     .description(tc.getDescription())
                     .weight(tc.getWeight())
                     .sortOrder(tc.getSortOrder() != null ? tc.getSortOrder() : 0)
-                    .minScore(tc.getMinScore() != null ? tc.getMinScore() : 1)
-                    .maxScore(tc.getMaxScore() != null ? tc.getMaxScore() : 5)
+                    .minScore(1)
+                    .maxScore(resolveEventScoreScaleMax(event, tc))
                     .build());
         }
         roundRepository.save(round);
+    }
+
+    private static int resolveEventScoreScaleMax(HackathonEvent event, ScoringTemplateCriterion tc) {
+        if (event.getScoreScaleMax() != null) {
+            return event.getScoreScaleMax();
+        }
+        return tc.getMaxScore() != null ? tc.getMaxScore() : 100;
     }
 
     private void guardDraftOrActive(HackathonEvent event) {
