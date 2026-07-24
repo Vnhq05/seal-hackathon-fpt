@@ -54,6 +54,8 @@ export interface EventResponse {
   semesterMin: number | null;
   semesterMax: number | null;
   scoringTemplateId: string | null;
+  /** Per-criterion score ceiling (1–N). Allowed: 5, 10, 100. Default 100. */
+  scoreScaleMax?: number | null;
   tiebreakerCriteria: string | null;
   tiebreakerCriterionIds?: string[] | null;
   roundCount: number;
@@ -108,6 +110,8 @@ export interface CreateEventRequest {
   semesterMin?: number;
   semesterMax?: number;
   scoringTemplateId?: string;
+  /** Per-criterion score ceiling (1–N). Allowed: 5, 10, 100. Default 100. */
+  scoreScaleMax?: number;
   tiebreakerCriteria?: string;
   tiebreakerCriterionIds?: string[];
   tracks?: TrackRequest[];

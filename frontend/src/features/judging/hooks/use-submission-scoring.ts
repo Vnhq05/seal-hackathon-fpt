@@ -67,7 +67,7 @@ export function useSubmissionScoring(roundId: string, teamId: string) {
           weight: c.weight,
           description: c.description ?? "",
           minScore: c.minScore ?? 1,
-          maxScore: c.maxScore ?? 5,
+          maxScore: c.maxScore ?? 100,
         })),
         existingScores: score
           ? score.details.map((d) => ({

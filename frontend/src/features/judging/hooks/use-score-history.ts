@@ -47,7 +47,7 @@ export function useScoreHistory() {
             const criteria = criteriaByRound.get(s.roundId) ?? [];
             const weightById = new Map(criteria.map((c) => [c.id, c]));
             const maxWeighted = computeMaxWeightedScore(
-              criteria.map((c) => ({ maxScore: c.maxScore ?? 5, weight: c.weight })),
+              criteria.map((c) => ({ maxScore: c.maxScore ?? 100, weight: c.weight })),
             );
             const totalWeightedScore = s.details.reduce((sum, d) => {
               const c = weightById.get(d.criteriaId);
@@ -64,14 +64,14 @@ export function useScoreHistory() {
               roundId: s.roundId,
               roundName: assignment?.roundName ?? roundMeta?.roundName ?? s.roundId,
               totalWeightedScore,
-              maxScore: maxWeighted || 5,
+              maxScore: maxWeighted || 100,
               scoredAt: s.completedAt ?? s.startedAt,
               criteriaBreakdown: s.details.map((d) => {
                 const c = weightById.get(d.criteriaId);
                 return {
                   criterionName: d.criteriaName,
                   score: d.score,
-                  maxScore: c?.maxScore ?? 5,
+                  maxScore: c?.maxScore ?? 100,
                   weight: c?.weight ?? 0,
                 };
               }),

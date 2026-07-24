@@ -65,5 +65,5 @@ public class ScoringTemplateCriterion extends BaseEntity {
     @Max(100)
     @Column(name = "max_score", nullable = false)
     @Builder.Default
-    private Integer maxScore = 5;
+    private Integer maxScore = 100;
 }

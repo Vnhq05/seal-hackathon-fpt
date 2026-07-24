@@ -210,7 +210,7 @@ public class ScoringTemplateService {
     }
 
     private int resolveMaxScore(CreateScoringTemplateRequest.CriterionRequest c) {
-        return c.getMaxScore() != null ? c.getMaxScore() : 5;
+        return c.getMaxScore() != null ? c.getMaxScore() : 100;
     }
 
     private ScoringTemplateResponse toResponse(ScoringTemplate template) {

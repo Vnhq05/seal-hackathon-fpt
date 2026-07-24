@@ -22,6 +22,13 @@ import {
   toDateInput,
   warnBoxStyle,
 } from "@/features/admin/components/event-edit/event-edit.utils";
+import {
+  DEFAULT_MAX_SCORE,
+  DEFAULT_MIN_SCORE,
+  SCORE_SCALE_OPTIONS,
+  type ScoreScaleMax,
+  isScoreScaleMax,
+} from "@/features/judging/constants/scoring-scale";
 
 function toDateTimeLocalBounds(date: string, endOfDay = false): string | undefined {
   if (!date) return undefined;
@@ -39,7 +46,13 @@ function isDefaultTemplate(template: ScoringTemplateResponse): boolean {
   return template.isDefault === true || template.name.toLowerCase() === "default";
 }
 
-function TemplateCriteriaPreview({ template }: { template: ScoringTemplateResponse }) {
+function TemplateCriteriaPreview({
+  template,
+  scoreScaleMax,
+}: {
+  template: ScoringTemplateResponse;
+  scoreScaleMax: ScoreScaleMax;
+}) {
   const totalWeight = template.criteria.reduce((sum, c) => sum + c.weight, 0);
   const showDefault = isDefaultTemplate(template);
   return (
@@ -66,7 +79,7 @@ function TemplateCriteriaPreview({ template }: { template: ScoringTemplateRespon
           <p style={{ fontSize: 13, fontWeight: 600, color: "#0e1528" }}>{template.name}</p>
         </div>
         <p style={{ fontSize: 12, fontWeight: 700, color: totalWeight === 100 ? "#10b981" : "#ef4444" }}>
-          Total: {totalWeight}%
+          Total: {totalWeight}% · Scale {DEFAULT_MIN_SCORE}–{scoreScaleMax}
         </p>
       </div>
       {template.criteria.map((c) => (
@@ -76,7 +89,9 @@ function TemplateCriteriaPreview({ template }: { template: ScoringTemplateRespon
           style={{ padding: "4px 0", borderBottom: "1px solid rgba(223,226,236,0.3)" }}
         >
           <span style={{ fontSize: 12, color: "#0e1528" }}>{c.name}</span>
-          <span style={{ fontSize: 12, fontWeight: 600, color: "#4a5468" }}>{c.weight}%</span>
+          <span style={{ fontSize: 12, fontWeight: 600, color: "#4a5468" }}>
+            {c.weight}% · {DEFAULT_MIN_SCORE}–{scoreScaleMax}
+          </span>
         </div>
       ))}
     </div>
@@ -148,6 +163,10 @@ function ScoringSection({ event }: { event: EventResponse }) {
   );
 
   const [scoringTemplateId, setScoringTemplateId] = useState<string | null>(event.scoringTemplateId);
+  const [scoreScaleMax, setScoreScaleMax] = useState<ScoreScaleMax>(() => {
+    const fromEvent = event.scoreScaleMax;
+    return fromEvent != null && isScoreScaleMax(fromEvent) ? fromEvent : DEFAULT_MAX_SCORE;
+  });
   const [tiebreakerIds, setTiebreakerIds] = useState<string[]>(event.tiebreakerCriterionIds ?? []);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -195,6 +214,7 @@ function ScoringSection({ event }: { event: EventResponse }) {
         eventId,
         ...mergeEventUpdate(event, {
           scoringTemplateId,
+          scoreScaleMax,
           tiebreakerCriterionIds: tiebreakerIds,
           tiebreakerCriteria: names.join(", "),
         }),
@@ -256,7 +276,31 @@ function ScoringSection({ event }: { event: EventResponse }) {
           isLoading={isLoading}
           disabled={!editable}
         />
-        {selectedTemplate && <TemplateCriteriaPreview template={selectedTemplate} />}
+        {selectedTemplate && (
+          <TemplateCriteriaPreview template={selectedTemplate} scoreScaleMax={scoreScaleMax} />
+        )}
+      </div>
+
+      <div>
+        <label style={labelStyle}>Score scale</label>
+        <select
+          value={scoreScaleMax}
+          onChange={(e) => {
+            const next = Number(e.target.value);
+            if (isScoreScaleMax(next)) setScoreScaleMax(next);
+          }}
+          disabled={!editable}
+          style={inputStyle}
+        >
+          {SCORE_SCALE_OPTIONS.map((opt) => (
+            <option key={opt.max} value={opt.max}>
+              {opt.label} — {opt.description}
+            </option>
+          ))}
+        </select>
+        <p style={{ fontSize: 12, color: "#8891a5", marginTop: 6 }}>
+          Default is 1–100. Applies to criteria on new rounds and remaps existing round criteria when saved.
+        </p>
       </div>
 
       {selectedTemplate && tiebreakerIds.length > 0 && (

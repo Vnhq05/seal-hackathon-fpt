@@ -8,7 +8,14 @@ import {
   useDeleteCriteriaTemplate,
 } from "@/features/admin/hooks/use-admin-criteria";
 import type { ScoringTemplateResponse, ScoringTemplateCriterionResponse } from "@/lib/api";
-import { DEFAULT_MAX_SCORE, DEFAULT_MIN_SCORE } from "@/features/judging/constants/scoring-scale";
+import {
+  DEFAULT_MAX_SCORE,
+  DEFAULT_MIN_SCORE,
+  SCORE_SCALE_OPTIONS,
+  type ScoreScaleMax,
+  inferScoreScaleMax,
+  isScoreScaleMax,
+} from "@/features/judging/constants/scoring-scale";
 
 const headerCell: React.CSSProperties = {
   fontSize: 12, fontWeight: 600, color: "#8891a5",
@@ -161,6 +168,9 @@ function TemplateForm({
 
   const [name, setName] = useState(template?.name ?? "");
   const [description, setDescription] = useState(template?.description ?? "");
+  const [scoreScaleMax, setScoreScaleMax] = useState<ScoreScaleMax>(
+    template ? inferScoreScaleMax(template.criteria) : DEFAULT_MAX_SCORE,
+  );
   const [criteria, setCriteria] = useState<CriterionForm[]>(
     template ? criteriaFromTemplate(template) : [emptyCriterion()]
   );
@@ -172,7 +182,19 @@ function TemplateForm({
   const allWeightsPositive = criteria.every((c) => c.weight !== undefined && c.weight > 0);
   const isWeightValid = totalWeight === 100 && allWeightsPositive;
 
-  const addCriterion = () => setCriteria([...criteria, emptyCriterion()]);
+  const applyScoreScale = (max: ScoreScaleMax) => {
+    setScoreScaleMax(max);
+    setDeleteWarning(null);
+    setCriteria((prev) =>
+      prev.map((c) => ({ ...c, minScore: DEFAULT_MIN_SCORE, maxScore: max })),
+    );
+  };
+
+  const addCriterion = () =>
+    setCriteria([
+      ...criteria,
+      { ...emptyCriterion(), minScore: DEFAULT_MIN_SCORE, maxScore: scoreScaleMax },
+    ]);
 
   const updateCriterion = (idx: number, field: keyof CriterionForm, value: string | number | undefined) => {
     setDeleteWarning(null);
@@ -263,6 +285,29 @@ function TemplateForm({
         <input value={description} onChange={(e) => setDescription(e.target.value)} style={inputStyle} placeholder="Description" />
       </div>
 
+      <div className="flex flex-col">
+        <label style={{ fontSize: 14, fontWeight: 600, color: "#0e1528", marginBottom: 4 }}>
+          Score scale
+        </label>
+        <select
+          value={scoreScaleMax}
+          onChange={(e) => {
+            const next = Number(e.target.value);
+            if (isScoreScaleMax(next)) applyScoreScale(next);
+          }}
+          style={inputStyle}
+        >
+          {SCORE_SCALE_OPTIONS.map((opt) => (
+            <option key={opt.max} value={opt.max}>
+              {opt.label} — {opt.description}
+            </option>
+          ))}
+        </select>
+        <p style={{ fontSize: 12, color: "#8891a5", marginTop: 4 }}>
+          Applies min {DEFAULT_MIN_SCORE} and max {scoreScaleMax} to all criteria in this template.
+        </p>
+      </div>
+
       <div>
         <div className="flex items-center justify-between" style={{ marginBottom: 8 }}>
           <p style={{ fontSize: 14, fontWeight: 600, color: "#0e1528" }}>Criteria</p>
@@ -333,10 +378,11 @@ function TemplateForm({
                 type="number"
                 min={1}
                 value={c.minScore}
-                onChange={(e) => updateCriterion(idx, "minScore", Number(e.target.value))}
-                style={inputStyle}
+                readOnly
+                style={{ ...inputStyle, backgroundColor: "#f8f9fc", color: "#4a5468" }}
                 placeholder="Min"
                 aria-label="Minimum score"
+                title="Controlled by Score scale"
                 required
               />
             </div>
@@ -345,10 +391,11 @@ function TemplateForm({
                 type="number"
                 min={c.minScore + 1}
                 value={c.maxScore}
-                onChange={(e) => updateCriterion(idx, "maxScore", Number(e.target.value))}
-                style={inputStyle}
+                readOnly
+                style={{ ...inputStyle, backgroundColor: "#f8f9fc", color: "#4a5468" }}
                 placeholder="Max"
                 aria-label="Maximum score"
+                title="Controlled by Score scale"
                 required
               />
             </div>
