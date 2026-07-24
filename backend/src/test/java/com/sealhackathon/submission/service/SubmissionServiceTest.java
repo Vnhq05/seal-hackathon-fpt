@@ -11,6 +11,7 @@ import com.sealhackathon.submission.domain.SubmissionVersion;
 import com.sealhackathon.submission.domain.enums.SubmissionStatus;
 import com.sealhackathon.submission.dto.request.CreateSubmissionRequest;
 import com.sealhackathon.submission.dto.response.SubmissionResponse;
+import com.sealhackathon.submission.event.SubmissionUpdatedEvent;
 import com.sealhackathon.submission.repository.SubmissionAttachmentRepository;
 import com.sealhackathon.submission.repository.SubmissionRepository;
 import com.sealhackathon.submission.repository.SubmissionVersionRepository;
@@ -284,6 +285,139 @@ class SubmissionServiceTest {
 
         verify(versionRepository).findMaxVersionNumber(existing.getId());
         verify(pdfValidator).validate(pdf, 1, false);
+    }
+
+    @Test
+    void submit_shouldSkipVersionBump_whenUrlsUnchanged() {
+        setupValidSubmissionContext(false);
+
+        UUID submissionId = UUID.randomUUID();
+        UUID previousVersionId = UUID.randomUUID();
+        Submission existing = Submission.builder()
+                .teamId(TEAM_ID).roundId(ROUND_ID).submittedBy(USER_ID)
+                .status(SubmissionStatus.SUBMITTED)
+                .currentVersionId(previousVersionId)
+                .build();
+        existing.setId(submissionId);
+
+        SubmissionVersion previous = SubmissionVersion.builder()
+                .submission(existing)
+                .versionNumber(1)
+                .slideUrl("https://docs.google.com/presentation/d/abc")
+                .githubUrl("https://github.com/user/repo")
+                .demoUrl("https://youtube.com/watch?v=abc")
+                .submittedAt(LocalDateTime.now().minusHours(2))
+                .build();
+        previous.setId(previousVersionId);
+
+        when(submissionRepository.findByTeamIdAndRoundId(TEAM_ID, ROUND_ID))
+                .thenReturn(Optional.of(existing));
+        when(versionRepository.findById(previousVersionId)).thenReturn(Optional.of(previous));
+        when(versionRepository.findBySubmissionIdOrderByVersionNumberDesc(submissionId))
+                .thenReturn(List.of(previous));
+
+        CreateSubmissionRequest request = CreateSubmissionRequest.builder()
+                .sourceCodeUrl("https://github.com/user/repo")
+                .build();
+
+        SubmissionResponse result = submissionService.submit(USER_ID, ROUND_ID, request, null);
+
+        assertThat(result.getCurrentVersion()).isEqualTo(1);
+        verify(versionRepository, never()).save(any());
+        verify(versionRepository, never()).findMaxVersionNumber(any());
+        verify(eventPublisher, never()).publishEvent(any(SubmissionUpdatedEvent.class));
+    }
+
+    @Test
+    void submit_shouldCreateNewVersion_whenUrlChanged() {
+        setupValidSubmissionContext(false);
+
+        UUID submissionId = UUID.randomUUID();
+        UUID previousVersionId = UUID.randomUUID();
+        Submission existing = Submission.builder()
+                .teamId(TEAM_ID).roundId(ROUND_ID).submittedBy(USER_ID)
+                .status(SubmissionStatus.SUBMITTED)
+                .currentVersionId(previousVersionId)
+                .build();
+        existing.setId(submissionId);
+
+        SubmissionVersion previous = SubmissionVersion.builder()
+                .submission(existing)
+                .versionNumber(1)
+                .slideUrl("https://docs.google.com/presentation/d/abc")
+                .githubUrl("https://github.com/user/repo")
+                .demoUrl("https://youtube.com/watch?v=abc")
+                .submittedAt(LocalDateTime.now().minusHours(2))
+                .build();
+        previous.setId(previousVersionId);
+
+        when(submissionRepository.findByTeamIdAndRoundId(TEAM_ID, ROUND_ID))
+                .thenReturn(Optional.of(existing));
+        when(versionRepository.findById(previousVersionId)).thenReturn(Optional.of(previous));
+        when(versionRepository.findMaxVersionNumber(submissionId)).thenReturn(1);
+        when(versionRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+        when(submissionRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+        when(versionRepository.findBySubmissionIdOrderByVersionNumberDesc(submissionId))
+                .thenReturn(List.of());
+        when(attachmentRepository.findBySubmissionVersionId(previousVersionId))
+                .thenReturn(List.of());
+
+        CreateSubmissionRequest request = CreateSubmissionRequest.builder()
+                .sourceCodeUrl("https://github.com/user/repo-v2")
+                .build();
+
+        submissionService.submit(USER_ID, ROUND_ID, request, null);
+
+        verify(versionRepository).save(org.mockito.ArgumentMatchers.argThat(version ->
+                "https://github.com/user/repo-v2".equals(version.getGithubUrl())
+                        && version.getVersionNumber() == 2));
+        verify(eventPublisher).publishEvent(any(SubmissionUpdatedEvent.class));
+    }
+
+    @Test
+    void submit_shouldCreateNewVersion_whenSameUrlsButNewPdf() {
+        setupValidSubmissionContext(false);
+
+        UUID submissionId = UUID.randomUUID();
+        UUID previousVersionId = UUID.randomUUID();
+        Submission existing = Submission.builder()
+                .teamId(TEAM_ID).roundId(ROUND_ID).submittedBy(USER_ID)
+                .status(SubmissionStatus.SUBMITTED)
+                .currentVersionId(previousVersionId)
+                .build();
+        existing.setId(submissionId);
+
+        SubmissionVersion previous = SubmissionVersion.builder()
+                .submission(existing)
+                .versionNumber(1)
+                .slideUrl("https://docs.google.com/presentation/d/abc")
+                .githubUrl("https://github.com/user/repo")
+                .demoUrl("https://youtube.com/watch?v=abc")
+                .submittedAt(LocalDateTime.now().minusHours(2))
+                .build();
+        previous.setId(previousVersionId);
+
+        when(submissionRepository.findByTeamIdAndRoundId(TEAM_ID, ROUND_ID))
+                .thenReturn(Optional.of(existing));
+        when(versionRepository.findById(previousVersionId)).thenReturn(Optional.of(previous));
+        when(versionRepository.findMaxVersionNumber(submissionId)).thenReturn(1);
+        when(versionRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+        when(attachmentRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+        when(submissionRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+        when(versionRepository.findBySubmissionIdOrderByVersionNumberDesc(submissionId))
+                .thenReturn(List.of());
+
+        CreateSubmissionRequest request = CreateSubmissionRequest.builder()
+                .sourceCodeUrl("https://github.com/user/repo")
+                .pdfPageCount(1)
+                .build();
+        MockMultipartFile pdf = new MockMultipartFile("pdf", "v2.pdf", "application/pdf", new byte[100]);
+
+        submissionService.submit(USER_ID, ROUND_ID, request, pdf);
+
+        verify(versionRepository).save(any());
+        verify(versionRepository).findMaxVersionNumber(submissionId);
+        verify(eventPublisher).publishEvent(any(SubmissionUpdatedEvent.class));
     }
 
     @Test

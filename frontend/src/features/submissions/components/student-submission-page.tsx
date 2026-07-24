@@ -129,9 +129,22 @@ export function StudentSubmissionPage() {
     }
     if (!currentRound || !team) return;
 
+    const prevVersion = existing?.currentVersion;
+    const latest = existing?.latestVersion;
+    const existingSource = (latest?.sourceCodeUrl ?? latest?.githubUrl ?? "").trim();
+
+    const versionSavedMessage = (label: string, nextVersion: number) =>
+      prevVersion != null && nextVersion === prevVersion
+        ? `No changes — still v${nextVersion}`
+        : `${label} saved as v${nextVersion}`;
+
     if (part === "slide") {
       if (!slide.trim() || !isValidHttpUrl(slide)) {
         setFormError("Invalid slide URL");
+        return;
+      }
+      if (slide.trim() === (latest?.slideUrl ?? "").trim()) {
+        setSuccess("No changes — version unchanged");
         return;
       }
       setSavingPart("slide");
@@ -139,7 +152,7 @@ export function StudentSubmissionPage() {
         { roundId: currentRound.id, teamId: team.id, request: { slideUrl: slide.trim() } },
         {
           onSuccess: (res) => {
-            setSuccess(`Slide saved as v${res.currentVersion}`);
+            setSuccess(versionSavedMessage("Slide", res.currentVersion));
             setSavingPart(null);
           },
           onError: (err: Error) => {
@@ -157,12 +170,16 @@ export function StudentSubmissionPage() {
         setFormError(sourceError);
         return;
       }
+      if (source.trim() === existingSource) {
+        setSuccess("No changes — version unchanged");
+        return;
+      }
       setSavingPart("source");
       submit(
         { roundId: currentRound.id, teamId: team.id, request: { sourceCodeUrl: source.trim() } },
         {
           onSuccess: (res) => {
-            setSuccess(`Source code saved as v${res.currentVersion}`);
+            setSuccess(versionSavedMessage("Source code", res.currentVersion));
             setSavingPart(null);
           },
           onError: (err: Error) => {
@@ -179,12 +196,16 @@ export function StudentSubmissionPage() {
         setFormError("Invalid demo video URL");
         return;
       }
+      if (demo.trim() === (latest?.demoUrl ?? "").trim()) {
+        setSuccess("No changes — version unchanged");
+        return;
+      }
       setSavingPart("demo");
       submit(
         { roundId: currentRound.id, teamId: team.id, request: { demoUrl: demo.trim() } },
         {
           onSuccess: (res) => {
-            setSuccess(`Demo saved as v${res.currentVersion}`);
+            setSuccess(versionSavedMessage("Demo", res.currentVersion));
             setSavingPart(null);
           },
           onError: (err: Error) => {
@@ -210,7 +231,7 @@ export function StudentSubmissionPage() {
       { roundId: currentRound.id, teamId: team.id, request: {}, pdfFile },
       {
         onSuccess: (res) => {
-          setSuccess(`PDF saved as v${res.currentVersion}`);
+          setSuccess(versionSavedMessage("PDF", res.currentVersion));
           setPdfFile(null);
           setSavingPart(null);
         },

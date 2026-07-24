@@ -37,6 +37,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -117,7 +118,6 @@ public class SubmissionService {
         }
 
         // BR-30: create new version (append-only), merging artifacts from previous version
-        int nextVersion = versionRepository.findMaxVersionNumber(submission.getId()) + 1;
         SubmissionVersion previousVersion = resolvePreviousVersion(submission);
 
         String slideUrl = coalesceNonBlank(
@@ -126,6 +126,14 @@ public class SubmissionService {
                 previousVersion != null ? previousVersion.getGithubUrl() : null);
         String demoUrl = coalesceNonBlank(
                 trimToNull(request.getDemoUrl()), previousVersion != null ? previousVersion.getDemoUrl() : null);
+
+        // Skip version bump when resubmit has identical URLs and no new PDF
+        if (!isNew && previousVersion != null && !hasPdf
+                && urlsUnchanged(previousVersion, slideUrl, sourceUrl, demoUrl)) {
+            return toResponse(submission);
+        }
+
+        int nextVersion = versionRepository.findMaxVersionNumber(submission.getId()) + 1;
 
         SubmissionVersion version = SubmissionVersion.builder()
                 .submission(submission)
@@ -403,6 +411,13 @@ public class SubmissionService {
             return preferred.trim();
         }
         return fallback;
+    }
+
+    private static boolean urlsUnchanged(SubmissionVersion previous,
+                                         String slideUrl, String sourceUrl, String demoUrl) {
+        return Objects.equals(trimToNull(previous.getSlideUrl()), trimToNull(slideUrl))
+                && Objects.equals(trimToNull(previous.getGithubUrl()), trimToNull(sourceUrl))
+                && Objects.equals(trimToNull(previous.getDemoUrl()), trimToNull(demoUrl));
     }
 
     private static String trimToNull(String value) {

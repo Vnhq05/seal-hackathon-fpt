@@ -96,9 +96,16 @@ export function InlineSubmissionForm({ event, round, teamId, existing, onClose }
       return;
     }
 
+    const latest = existing?.latestVersion;
+    const existingSource = (latest?.sourceCodeUrl ?? latest?.githubUrl ?? "").trim();
+
     if (part === "slide") {
       if (!slideUrl.trim() || !isValidHttpUrl(slideUrl)) {
         setError("Invalid slide URL");
+        return;
+      }
+      if (slideUrl.trim() === (latest?.slideUrl ?? "").trim()) {
+        setSuccess("No changes — version unchanged");
         return;
       }
       setSavingPart("slide");
@@ -121,6 +128,10 @@ export function InlineSubmissionForm({ event, round, teamId, existing, onClose }
         setError(sourceError);
         return;
       }
+      if (sourceCodeUrl.trim() === existingSource) {
+        setSuccess("No changes — version unchanged");
+        return;
+      }
       setSavingPart("source");
       submit(
         { request: { sourceCodeUrl: sourceCodeUrl.trim() } },
@@ -138,6 +149,10 @@ export function InlineSubmissionForm({ event, round, teamId, existing, onClose }
     if (part === "demo") {
       if (!demo.trim() || !isValidHttpUrl(demo)) {
         setError("Invalid demo URL");
+        return;
+      }
+      if (demo.trim() === (latest?.demoUrl ?? "").trim()) {
+        setSuccess("No changes — version unchanged");
         return;
       }
       setSavingPart("demo");
