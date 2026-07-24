@@ -81,11 +81,12 @@ public class SubmissionController {
     @GetMapping
     @Operation(summary = "List all submissions for a round")
     public ResponseEntity<ApiResponse<List<SubmissionResponse>>> getSubmissions(
-            @PathVariable UUID roundId) {
+            @PathVariable UUID roundId,
+            @RequestParam(required = false) UUID trackId) {
         UUID userId = authPublicService.getCurrentUserId();
         var role = authPublicService.getCurrentUserRole();
         List<SubmissionResponse> submissions =
-                submissionService.getSubmissionsByRound(roundId, userId, role);
+                submissionService.getSubmissionsByRound(roundId, userId, role, trackId);
         return ResponseEntity.ok(ApiResponse.success(submissions));
     }
 
@@ -115,7 +116,10 @@ public class SubmissionController {
     @Operation(summary = "Get version history (BR-30)")
     public ResponseEntity<ApiResponse<List<SubmissionVersionResponse>>> getVersions(
             @PathVariable UUID roundId, @PathVariable UUID submissionId) {
-        List<SubmissionVersionResponse> versions = submissionService.getVersionHistory(roundId, submissionId);
+        UUID userId = authPublicService.getCurrentUserId();
+        var role = authPublicService.getCurrentUserRole();
+        List<SubmissionVersionResponse> versions =
+                submissionService.getVersionHistory(roundId, submissionId, userId, role);
         return ResponseEntity.ok(ApiResponse.success(versions));
     }
 

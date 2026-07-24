@@ -17,6 +17,9 @@ public class SubmissionResponse {
 
     private UUID id;
     private UUID teamId;
+    private String teamName;
+    private UUID trackId;
+    private String trackName;
     private UUID roundId;
     private SubmissionStatus status;
     private UUID submittedBy;

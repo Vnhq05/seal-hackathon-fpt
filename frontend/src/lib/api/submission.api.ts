@@ -41,6 +41,9 @@ export interface SubmissionVersionResponse {
 export interface SubmissionResponse {
   id: string;
   teamId: string;
+  teamName?: string | null;
+  trackId?: string | null;
+  trackName?: string | null;
   roundId: string;
   status: SubmissionStatus;
   submittedBy: string;
@@ -99,8 +102,10 @@ export const submissionApi = {
     }
   },
 
-  list(roundId: string): Promise<SubmissionResponse[]> {
-    return api.get<SubmissionResponse[]>(`/rounds/${roundId}/submissions`);
+  list(roundId: string, trackId?: string | null): Promise<SubmissionResponse[]> {
+    return api.get<SubmissionResponse[]>(`/rounds/${roundId}/submissions`, {
+      params: trackId ? { trackId } : undefined,
+    });
   },
 
   getById(roundId: string, submissionId: string): Promise<SubmissionResponse> {

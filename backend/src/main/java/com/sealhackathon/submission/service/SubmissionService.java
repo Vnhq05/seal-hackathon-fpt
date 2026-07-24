@@ -6,6 +6,7 @@ import com.sealhackathon.common.exception.ResourceNotFoundException;
 import com.sealhackathon.common.storage.FileStorageService;
 import com.sealhackathon.event.domain.enums.RoundType;
 import com.sealhackathon.event.dto.snapshot.RoundSnapshot;
+import com.sealhackathon.event.dto.snapshot.TrackSnapshot;
 import com.sealhackathon.event.service.EventPublicService;
 import com.sealhackathon.event.service.JudgeAssignmentService;
 import com.sealhackathon.ranking.service.FinalistSelectionService;
@@ -36,9 +37,12 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -127,7 +131,6 @@ public class SubmissionService {
         String demoUrl = coalesceNonBlank(
                 trimToNull(request.getDemoUrl()), previousVersion != null ? previousVersion.getDemoUrl() : null);
 
-        // Skip version bump when resubmit has identical URLs and no new PDF
         if (!isNew && previousVersion != null && !hasPdf
                 && urlsUnchanged(previousVersion, slideUrl, sourceUrl, demoUrl)) {
             return toResponse(submission);
@@ -206,15 +209,15 @@ public class SubmissionService {
 
     @Transactional(readOnly = true)
     public List<SubmissionResponse> getSubmissionsByRound(UUID roundId, UUID requesterId,
-                                                          UserType requesterRole) {
+                                                          UserType requesterRole, UUID trackId) {
         List<Submission> submissions = submissionRepository.findByRoundId(roundId);
-
-        if (requesterRole == UserType.SYSTEM_ADMIN || requesterRole == UserType.EVENT_COORDINATOR) {
-            return submissions.stream().map(this::toResponse).toList();
-        }
-
         RoundSnapshot round = eventPublicService.getRound(roundId)
                 .orElseThrow(() -> new ResourceNotFoundException("Round", "id", roundId));
+        Map<UUID, String> trackNames = trackNameMap(round.getEventId());
+
+        if (requesterRole == UserType.SYSTEM_ADMIN || requesterRole == UserType.EVENT_COORDINATOR) {
+            return filterAndMap(submissions, trackId, trackNames);
+        }
 
         if (requesterRole == UserType.FPT_STUDENT || requesterRole == UserType.EXTERNAL_STUDENT) {
             TeamSnapshot team = teamPublicService.getTeamByParticipantAndEvent(
@@ -224,14 +227,15 @@ public class SubmissionService {
                             HttpStatus.FORBIDDEN) {});
             return submissions.stream()
                     .filter(s -> s.getTeamId().equals(team.getId()))
-                    .map(this::toResponse)
+                    .map(s -> toResponse(s, trackNames))
                     .toList();
         }
 
         if (requesterRole == UserType.LECTURER) {
             return submissions.stream()
                     .filter(s -> canLecturerViewSubmission(requesterId, roundId, s.getTeamId()))
-                    .map(this::toResponse)
+                    .map(s -> toResponse(s, trackNames))
+                    .filter(r -> trackId == null || trackId.equals(r.getTrackId()))
                     .toList();
         }
 
@@ -241,20 +245,23 @@ public class SubmissionService {
     // ── BR-33: Mentor can view team submissions ──
     @Transactional(readOnly = true)
     public List<SubmissionResponse> getSubmissionsByMentor(UUID mentorId, UUID eventId, UUID roundId) {
+        Map<UUID, String> trackNames = trackNameMap(eventId);
         List<TeamSnapshot> teams = teamPublicService.getTeamsByMentor(mentorId, eventId);
         return teams.stream()
                 .flatMap(team -> submissionRepository.findByTeamId(team.getId()).stream())
                 .filter(s -> s.getRoundId().equals(roundId))
-                .map(this::toResponse)
+                .map(s -> toResponse(s, trackNames))
                 .toList();
     }
 
     @Transactional(readOnly = true)
-    public List<SubmissionVersionResponse> getVersionHistory(UUID roundId, UUID submissionId) {
+    public List<SubmissionVersionResponse> getVersionHistory(UUID roundId, UUID submissionId,
+                                                             UUID requesterId, UserType requesterRole) {
         Submission submission = getSubmission(submissionId);
         if (!submission.getRoundId().equals(roundId)) {
             throw new ResourceNotFoundException("Submission", "id", submissionId);
         }
+        assertSubmissionReadAccess(submission, roundId, requesterId, requesterRole);
         return versionRepository.findBySubmissionIdOrderByVersionNumberDesc(submissionId).stream()
                 .map(this::toVersionResponse)
                 .toList();
@@ -324,6 +331,15 @@ public class SubmissionService {
     }
 
     SubmissionResponse toResponse(Submission submission) {
+        Map<UUID, String> trackNames = Map.of();
+        OptionalTeamContext ctx = resolveTeamContext(submission.getTeamId());
+        if (ctx.eventId() != null) {
+            trackNames = trackNameMap(ctx.eventId());
+        }
+        return toResponse(submission, trackNames);
+    }
+
+    private SubmissionResponse toResponse(Submission submission, Map<UUID, String> trackNames) {
         List<SubmissionVersion> versions = versionRepository
                 .findBySubmissionIdOrderByVersionNumberDesc(submission.getId());
 
@@ -336,9 +352,17 @@ public class SubmissionService {
             currentVersionNum = latest.getVersionNumber();
         }
 
+        OptionalTeamContext teamCtx = resolveTeamContext(submission.getTeamId());
+        String trackName = teamCtx.trackId() != null
+                ? trackNames.get(teamCtx.trackId())
+                : null;
+
         return SubmissionResponse.builder()
                 .id(submission.getId())
                 .teamId(submission.getTeamId())
+                .teamName(teamCtx.teamName())
+                .trackId(teamCtx.trackId())
+                .trackName(trackName)
                 .roundId(submission.getRoundId())
                 .status(submission.getStatus())
                 .submittedBy(submission.getSubmittedBy())
@@ -348,6 +372,31 @@ public class SubmissionService {
                 .createdAt(submission.getCreatedAt())
                 .build();
     }
+
+    private List<SubmissionResponse> filterAndMap(List<Submission> submissions,
+                                                    UUID trackId,
+                                                    Map<UUID, String> trackNames) {
+        return submissions.stream()
+                .map(s -> toResponse(s, trackNames))
+                .filter(r -> trackId == null || trackId.equals(r.getTrackId()))
+                .toList();
+    }
+
+    private Map<UUID, String> trackNameMap(UUID eventId) {
+        if (eventId == null) {
+            return Map.of();
+        }
+        return eventPublicService.getTracksByEvent(eventId).stream()
+                .collect(Collectors.toMap(TrackSnapshot::getId, TrackSnapshot::getName, (a, b) -> a, HashMap::new));
+    }
+
+    private OptionalTeamContext resolveTeamContext(UUID teamId) {
+        return teamPublicService.getTeam(teamId)
+                .map(t -> new OptionalTeamContext(t.getName(), t.getTrackId(), t.getEventId()))
+                .orElse(new OptionalTeamContext(null, null, null));
+    }
+
+    private record OptionalTeamContext(String teamName, UUID trackId, UUID eventId) {}
 
     private SubmissionVersionResponse toVersionResponse(SubmissionVersion v) {
         List<AttachmentResponse> attachments = attachmentRepository
