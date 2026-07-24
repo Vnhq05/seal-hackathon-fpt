@@ -16,6 +16,8 @@ export interface ScoringTemplateResponse {
   id: string;
   name: string;
   description: string | null;
+  /** System default template — auto-selected for new rounds / scoring setup. */
+  isDefault?: boolean;
   criteria: ScoringTemplateCriterionResponse[];
   createdAt: string;
 }
