@@ -405,14 +405,14 @@ function ScoringPageContent({
             Slide Deck →
           </a>
         )}
-        {submission.demoUrl && (
+        {(submission.otherUrl ?? submission.demoUrl) && (
           <a
-            href={submission.demoUrl}
+            href={submission.otherUrl ?? submission.demoUrl ?? undefined}
             target="_blank"
             rel="noopener noreferrer"
             className="border-2 border-navy bg-white p-3 text-sm font-medium text-royal shadow-[4px_4px_0_0_#0c1228] hover:bg-seal-surface-sunken"
           >
-            Demo Video →
+            Other →
           </a>
         )}
       </div>

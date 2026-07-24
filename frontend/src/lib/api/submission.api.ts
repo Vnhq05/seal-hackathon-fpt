@@ -2,8 +2,11 @@ import { api } from "./api-client";
 import { apiClient } from "@/lib/axios";
 import type { ApiResponse, SubmissionStatus } from "./types";
 
-/** Max PDF upload size for non-SEAL submissions (5 MB). */
-export const SUBMISSION_MAX_PDF_BYTES = 5 * 1024 * 1024;
+/** Max size for Other-section file uploads (25 MB). */
+export const SUBMISSION_MAX_FILE_BYTES = 25 * 1024 * 1024;
+
+/** @deprecated Use SUBMISSION_MAX_FILE_BYTES */
+export const SUBMISSION_MAX_PDF_BYTES = SUBMISSION_MAX_FILE_BYTES;
 
 /** Normalize backend file path for apiClient (base URL already includes `/api`). */
 export function normalizeSubmissionFilePath(fileUrl: string): string {
@@ -22,7 +25,8 @@ export interface AttachmentResponse {
   fileName: string;
   fileUrl: string;
   fileSize: number;
-  pageCount: number;
+  pageCount?: number | null;
+  contentType?: string | null;
 }
 
 export interface SubmissionVersionResponse {
@@ -31,6 +35,8 @@ export interface SubmissionVersionResponse {
   /** Canonical source code URL */
   sourceCodeUrl?: string | null;
   slideUrl?: string | null;
+  otherUrl?: string | null;
+  /** @deprecated Prefer otherUrl — legacy demo / mapped Other */
   demoUrl?: string | null;
   /** @deprecated Use sourceCodeUrl — backend alias for backward compatibility */
   githubUrl?: string | null;
@@ -57,11 +63,12 @@ export interface CreateSubmissionRequest {
   /** Canonical source code URL (GitHub, Jira, Confluence, Notion) */
   sourceCodeUrl?: string;
   slideUrl?: string;
+  /** Any http(s) link under the Other section */
+  otherUrl?: string;
+  /** @deprecated Prefer otherUrl */
   demoUrl?: string;
   /** @deprecated Use sourceCodeUrl — still accepted by backend */
   githubUrl?: string;
-  /** Legacy non-SEAL PDF upload metadata */
-  pdfPageCount?: number;
 }
 
 // ═══ API calls ═══
@@ -70,15 +77,15 @@ export const submissionApi = {
   async submit(
     roundId: string,
     request: CreateSubmissionRequest,
-    pdfFile?: File | null,
+    file?: File | null,
   ): Promise<SubmissionResponse> {
     const formData = new FormData();
     formData.append(
       "submission",
       new Blob([JSON.stringify(request)], { type: "application/json" }),
     );
-    if (pdfFile) {
-      formData.append("pdf", pdfFile);
+    if (file) {
+      formData.append("file", file);
     }
 
     // Omit Content-Type so the browser sets multipart boundary.
@@ -128,7 +135,7 @@ export const submissionApi = {
     });
   },
 
-  /** GET /api/files/submissions/** — download PDF attachment (inline). */
+  /** GET /api/files/submissions/** — download attachment (inline). */
   async downloadAttachment(fileUrl: string): Promise<Blob> {
     const { data } = await apiClient.get(normalizeSubmissionFilePath(fileUrl), {
       responseType: "blob",

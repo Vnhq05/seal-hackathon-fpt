@@ -49,10 +49,12 @@ public class SubmissionController {
     public ResponseEntity<ApiResponse<SubmissionResponse>> submit(
             @PathVariable UUID roundId,
             @RequestPart("submission") String submissionJson,
+            @RequestPart(value = "file", required = false) MultipartFile file,
             @RequestPart(value = "pdf", required = false) MultipartFile pdfFile) {
         CreateSubmissionRequest request = parseAndValidateSubmission(submissionJson);
         UUID userId = authPublicService.getCurrentUserId();
-        SubmissionResponse response = submissionService.submit(userId, roundId, request, pdfFile);
+        MultipartFile upload = (file != null && !file.isEmpty()) ? file : pdfFile;
+        SubmissionResponse response = submissionService.submit(userId, roundId, request, upload);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Submission successful", response));
     }

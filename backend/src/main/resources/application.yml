@@ -8,8 +8,8 @@ spring:
   # which surfaces as MaxUploadSizeExceededException → "Uploaded file is too large."
   servlet:
     multipart:
-      max-file-size: ${SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE:5MB}
-      max-request-size: ${SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE:6MB}
+      max-file-size: ${SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE:25MB}
+      max-request-size: ${SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE:26MB}
 
   datasource:
     url: ${DB_URL:jdbc:sqlserver://localhost:1433;databaseName=SEAL;encrypt=true;trustServerCertificate=true;sendStringParametersAsUnicode=true}
@@ -75,6 +75,8 @@ app:
   submission:
     pdf:
       max-size-bytes: ${APP_SUBMISSION_PDF_MAX_SIZE_BYTES:5242880}
+    file:
+      max-size-bytes: ${APP_SUBMISSION_FILE_MAX_SIZE_BYTES:26214400}
   hackathon:
     judging:
       judge-trim-threshold: 5

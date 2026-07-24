@@ -155,7 +155,7 @@ class TeamProgressEvaluationServiceTest {
     }
 
     @Test
-    void evaluate_missingAttachment_whenSubmittedWithEmptyAttachments() {
+    void evaluate_doesNotFlagMissingAttachment_whenOtherIsLinkOnly() {
         Clock clock = fixedAt(DEADLINE.minusHours(3));
         service = new TeamProgressEvaluationService(properties, clock);
 
@@ -163,7 +163,7 @@ class TeamProgressEvaluationServiceTest {
         Submission submission = Submission.builder().status(SubmissionStatus.SUBMITTED).build();
         SubmissionVersion latest = SubmissionVersion.builder()
                 .githubUrl("https://github.com/org/repo")
-                .demoUrl("https://youtube.com/watch?v=abc")
+                .otherUrl("https://example.com/notes")
                 .submittedAt(DEADLINE.minusHours(4))
                 .attachments(Collections.emptyList())
                 .build();
@@ -171,8 +171,7 @@ class TeamProgressEvaluationServiceTest {
         TeamProgressEvaluationService.EvaluationResult result =
                 service.evaluate(submission, latest, 2, round, false, 2);
 
-        assertThat(result.riskLevel()).isEqualTo(ProgressRiskLevel.AT_RISK);
-        assertThat(result.reasons()).contains(ProgressRiskReason.MISSING_ATTACHMENT);
+        assertThat(result.reasons()).doesNotContain(ProgressRiskReason.MISSING_ATTACHMENT);
     }
 
     @Test

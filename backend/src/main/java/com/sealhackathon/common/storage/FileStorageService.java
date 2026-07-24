@@ -35,9 +35,9 @@ public class FileStorageService {
     }
 
     /**
-     * Persists a submission PDF and returns a public API path for download.
+     * Persists a submission file (any type) and returns a public API path for download.
      */
-    public String storeSubmissionPdf(MultipartFile file, UUID submissionId, int version) {
+    public String storeSubmissionFile(MultipartFile file, UUID submissionId, int version) {
         String safeName = sanitizeFilename(file.getOriginalFilename());
         String relativePath = String.format("submissions/%s/v%d/%s", submissionId, version, safeName);
         Path target = uploadRoot.resolve(relativePath).normalize();
@@ -49,12 +49,19 @@ public class FileStorageService {
         try {
             Files.createDirectories(target.getParent());
             file.transferTo(target);
-            log.debug("Stored submission PDF at {}", target);
+            log.debug("Stored submission file at {}", target);
         } catch (IOException e) {
-            throw new BusinessException("Failed to store PDF file", HttpStatus.INTERNAL_SERVER_ERROR) {};
+            throw new BusinessException("Failed to store submission file", HttpStatus.INTERNAL_SERVER_ERROR) {};
         }
 
         return "/api/files/" + relativePath.replace("\\", "/");
+    }
+
+    /**
+     * @deprecated Prefer {@link #storeSubmissionFile}; kept for callers that still use the PDF name.
+     */
+    public String storeSubmissionPdf(MultipartFile file, UUID submissionId, int version) {
+        return storeSubmissionFile(file, submissionId, version);
     }
 
     /**
@@ -215,7 +222,7 @@ public class FileStorageService {
 
     private String sanitizeFilename(String original) {
         if (original == null || original.isBlank()) {
-            return "submission.pdf";
+            return "attachment.bin";
         }
         String name = Paths.get(original).getFileName().toString();
         return name.replaceAll("[^a-zA-Z0-9._-]", "_");

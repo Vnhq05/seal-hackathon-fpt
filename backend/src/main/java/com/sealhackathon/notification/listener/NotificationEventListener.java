@@ -308,7 +308,7 @@ public class NotificationEventListener {
     private String describeProgressReason(ProgressRiskReason reason) {
         return switch (reason) {
             case NOT_STARTED -> "Team has not started submitting before the deadline.";
-            case SLIDE_ONLY_PAST_GATE -> "Slide deadline passed but source/demo not submitted.";
+            case SLIDE_ONLY_PAST_GATE -> "Slide deadline passed but GitHub/source or Other not submitted.";
             case SINGLE_VERSION_LAST_MINUTE -> "Only one last-minute submission with no follow-up edits.";
             case STALLED -> "No recent updates for an extended period.";
             case MISSING_ATTACHMENT -> "Submission is missing required attachments.";

@@ -55,6 +55,7 @@ export function useSubmissionScoring(roundId: string, teamId: string) {
         description: "",
         sourceCodeUrl: version?.sourceCodeUrl ?? version?.githubUrl ?? null,
         githubUrl: version?.sourceCodeUrl ?? version?.githubUrl ?? null,
+        otherUrl: version?.otherUrl ?? version?.demoUrl ?? null,
         demoUrl: version?.demoUrl ?? null,
         slideUrl: version?.slideUrl ?? null,
         pdfFileUrl: version?.attachments?.[0]?.fileUrl ?? null,

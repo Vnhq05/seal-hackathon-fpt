@@ -8,18 +8,20 @@ import java.util.List;
 @Component
 public class SubmissionProgressCalculator {
 
-    public static final int REQUIRED_PARTS = 4;
-    public static final int PERCENT_PER_PART = 25;
+    public static final int REQUIRED_PARTS = 3;
 
+    /**
+     * Three equal parts: Slide, GitHub/source, Other (any otherUrl / legacy demoUrl / any attachment).
+     * Percentages: 0 / 33.33 / 66.66 / 100.
+     */
     public ProgressParts calculate(List<SubmissionVersion> versions) {
         if (versions == null || versions.isEmpty()) {
-            return new ProgressParts(0, 0);
+            return new ProgressParts(0, 0.0);
         }
 
         boolean hasSlide = false;
         boolean hasSource = false;
-        boolean hasDemo = false;
-        boolean hasPdf = false;
+        boolean hasOther = false;
 
         for (SubmissionVersion version : versions) {
             if (isNonBlank(version.getSlideUrl())) {
@@ -28,17 +30,24 @@ public class SubmissionProgressCalculator {
             if (isNonBlank(version.getGithubUrl())) {
                 hasSource = true;
             }
-            if (isNonBlank(version.getDemoUrl())) {
-                hasDemo = true;
-            }
-            if (version.getAttachments() != null && !version.getAttachments().isEmpty()) {
-                hasPdf = true;
+            if (isNonBlank(version.getOtherUrl())
+                    || isNonBlank(version.getDemoUrl())
+                    || (version.getAttachments() != null && !version.getAttachments().isEmpty())) {
+                hasOther = true;
             }
         }
 
-        int submittedParts = countTrue(hasSlide, hasSource, hasDemo, hasPdf);
-        int percent = submittedParts * PERCENT_PER_PART;
-        return new ProgressParts(submittedParts, percent);
+        int submittedParts = countTrue(hasSlide, hasSource, hasOther);
+        return new ProgressParts(submittedParts, percentForParts(submittedParts));
+    }
+
+    public static double percentForParts(int submittedParts) {
+        return switch (submittedParts) {
+            case 0 -> 0.0;
+            case 1 -> 33.33;
+            case 2 -> 66.66;
+            default -> 100.0;
+        };
     }
 
     private static int countTrue(boolean... flags) {
@@ -55,5 +64,5 @@ public class SubmissionProgressCalculator {
         return value != null && !value.isBlank();
     }
 
-    public record ProgressParts(int submittedParts, int submissionProgressPercent) {}
+    public record ProgressParts(int submittedParts, double submissionProgressPercent) {}
 }
