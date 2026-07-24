@@ -40,7 +40,7 @@ public class TrackService {
                 .name(request.getName())
                 .description(request.getDescription())
                 .topic(request.getTopic())
-                .maxTeams(request.getMaxTeams())
+                .maxTeams(null)
                 .scoringTemplateId(request.getScoringTemplateId())
                 .build();
 
@@ -58,7 +58,7 @@ public class TrackService {
         track.setName(request.getName());
         track.setDescription(request.getDescription());
         track.setTopic(request.getTopic());
-        track.setMaxTeams(request.getMaxTeams());
+        track.setMaxTeams(null);
         track.setScoringTemplateId(request.getScoringTemplateId());
 
         return toResponse(trackRepository.save(track));

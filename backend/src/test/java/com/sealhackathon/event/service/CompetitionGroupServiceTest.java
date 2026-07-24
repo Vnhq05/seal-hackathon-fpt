@@ -38,6 +38,7 @@ class CompetitionGroupServiceTest {
 
     @Mock private CompetitionGroupRepository groupRepository;
     @Mock private TrackRepository trackRepository;
+    @Mock private com.sealhackathon.event.repository.HackathonEventRepository eventRepository;
     @Mock private EventService eventService;
     @Mock private TeamRepository teamRepository;
     @Mock private JudgeAssignmentService judgeAssignmentService;

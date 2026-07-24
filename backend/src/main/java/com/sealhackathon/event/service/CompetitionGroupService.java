@@ -4,26 +4,24 @@ import com.sealhackathon.common.exception.BusinessException;
 import com.sealhackathon.common.exception.DuplicateResourceException;
 import com.sealhackathon.common.exception.ResourceNotFoundException;
 import com.sealhackathon.event.domain.CompetitionGroup;
-import com.sealhackathon.event.domain.JudgeAssignment;
-import com.sealhackathon.event.domain.Round;
 import com.sealhackathon.event.domain.Track;
-import com.sealhackathon.event.domain.enums.AssignmentScope;
-import com.sealhackathon.event.domain.enums.RoundType;
-import com.sealhackathon.event.dto.request.AssignJudgeRequest;
 import com.sealhackathon.event.dto.request.CreateCompetitionGroupRequest;
-import com.sealhackathon.event.dto.request.DeactivateJudgeAssignmentRequest;
-import com.sealhackathon.event.dto.request.ReplaceJudgeAssignmentRequest;
+import com.sealhackathon.event.dto.request.GenerateCompetitionGroupsRequest;
 import com.sealhackathon.event.dto.response.CompetitionGroupResponse;
+import com.sealhackathon.event.dto.response.GenerateCompetitionGroupsResponse;
 import com.sealhackathon.event.repository.CompetitionGroupRepository;
+import com.sealhackathon.event.repository.HackathonEventRepository;
 import com.sealhackathon.event.repository.TrackRepository;
-import com.sealhackathon.event.service.EventService;
 import com.sealhackathon.team.domain.Team;
+import com.sealhackathon.team.domain.enums.TeamStatus;
 import com.sealhackathon.team.repository.TeamRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -33,6 +31,7 @@ public class CompetitionGroupService {
 
     private final CompetitionGroupRepository groupRepository;
     private final TrackRepository trackRepository;
+    private final HackathonEventRepository eventRepository;
     private final EventService eventService;
     private final TeamRepository teamRepository;
     private final JudgeAssignmentService judgeAssignmentService;
@@ -47,8 +46,11 @@ public class CompetitionGroupService {
         }
 
         CompetitionGroup group = CompetitionGroup.builder()
+                .eventId(eventId)
                 .trackId(trackId)
                 .name(request.getName().trim())
+                .maxTeams(10)
+                .sortOrder((int) groupRepository.findByTrackIdOrderByNameAsc(trackId).size() + 1)
                 .build();
         group = groupRepository.save(group);
         return toResponse(group);
@@ -70,22 +72,124 @@ public class CompetitionGroupService {
         CompetitionGroup group = groupRepository.findByIdAndTrackId(groupId, trackId)
                 .orElseThrow(() -> new ResourceNotFoundException("CompetitionGroup", "id", groupId));
 
-        judgeAssignmentService.deactivateAssignmentsForDeletedGroup(groupId, ipAddress);
+        deleteGroupInternal(group, ipAddress);
+    }
 
-        // teams.group_id has no FK to lean on (see docs/adr-fk-policy.md), and a team left pointing
-        // at a deleted group is worse than one with no group: it clears every != null guard yet
-        // matches no judge assignment, so the team silently goes unjudged.
-        List<Team> affectedTeams = teamRepository.findByGroupId(groupId);
-        affectedTeams.forEach(team -> team.setGroupId(null));
-        teamRepository.saveAll(affectedTeams);
+    /**
+     * After track assignment: BTC enters target teams/group (K). For each track with N teams,
+     * create G = ceil(N/K) groups and assign teams so group sizes differ by at most 1.
+     */
+    @Transactional
+    public GenerateCompetitionGroupsResponse generateGroups(
+            UUID eventId, GenerateCompetitionGroupsRequest request, String ipAddress) {
+        if (eventRepository.findById(eventId).isEmpty()) {
+            throw new ResourceNotFoundException("Event", "id", eventId);
+        }
+        eventService.enforceEventOwnership(eventId);
 
-        groupRepository.delete(group);
+        int teamsPerGroup = request.getTeamsPerGroup();
+        List<Team> confirmed = teamRepository.findByEventIdAndStatus(eventId, TeamStatus.CONFIRMED);
+        long withoutTrack = confirmed.stream().filter(t -> t.getTrackId() == null).count();
+        if (withoutTrack > 0) {
+            throw new BusinessException(
+                    withoutTrack + " confirmed team(s) still have no track. Finish track assignment first.",
+                    HttpStatus.CONFLICT);
+        }
+        if (confirmed.isEmpty()) {
+            throw new BusinessException("No confirmed teams to place into groups", HttpStatus.BAD_REQUEST);
+        }
+
+        List<Track> tracks = trackRepository.findByHackathonEventId(eventId);
+        for (Track track : tracks) {
+            List<CompetitionGroup> existing = groupRepository.findByTrackIdOrderByNameAsc(track.getId());
+            for (CompetitionGroup group : existing) {
+                deleteGroupInternal(group, ipAddress);
+            }
+        }
+
+        List<GenerateCompetitionGroupsResponse.TrackGroupPlan> plans = new ArrayList<>();
+        int totalGroups = 0;
+        int totalAssigned = 0;
+
+        for (Track track : tracks) {
+            List<Team> trackTeams = new ArrayList<>(
+                    confirmed.stream().filter(t -> track.getId().equals(t.getTrackId())).toList());
+            if (trackTeams.isEmpty()) {
+                continue;
+            }
+
+            Collections.shuffle(trackTeams);
+            int n = trackTeams.size();
+            int groupCount = Math.max(1, (int) Math.ceil((double) n / teamsPerGroup));
+            int base = n / groupCount;
+            int remain = n % groupCount;
+
+            List<GenerateCompetitionGroupsResponse.GroupSize> groupSizes = new ArrayList<>();
+            int cursor = 0;
+            for (int i = 0; i < groupCount; i++) {
+                int size = base + (i < remain ? 1 : 0);
+                String name = track.getName().trim() + " G" + (i + 1);
+                CompetitionGroup group = groupRepository.save(CompetitionGroup.builder()
+                        .eventId(eventId)
+                        .trackId(track.getId())
+                        .name(name)
+                        .maxTeams(Math.max(size, teamsPerGroup))
+                        .sortOrder(i + 1)
+                        .build());
+
+                List<String> teamNames = new ArrayList<>();
+                for (int j = 0; j < size; j++) {
+                    Team team = trackTeams.get(cursor++);
+                    team.setGroupId(group.getId());
+                    teamNames.add(team.getName());
+                }
+
+                groupSizes.add(GenerateCompetitionGroupsResponse.GroupSize.builder()
+                        .groupId(group.getId())
+                        .name(name)
+                        .teamCount(size)
+                        .teamNames(teamNames)
+                        .build());
+            }
+            teamRepository.saveAll(trackTeams);
+
+            totalGroups += groupCount;
+            totalAssigned += n;
+            plans.add(GenerateCompetitionGroupsResponse.TrackGroupPlan.builder()
+                    .trackId(track.getId())
+                    .trackName(track.getName())
+                    .teamCount(n)
+                    .groupCount(groupCount)
+                    .groups(groupSizes)
+                    .build());
+        }
+
+        if (plans.isEmpty()) {
+            throw new BusinessException("No tracks have assigned teams", HttpStatus.BAD_REQUEST);
+        }
+
+        return GenerateCompetitionGroupsResponse.builder()
+                .teamsPerGroup(teamsPerGroup)
+                .totalGroupsCreated(totalGroups)
+                .totalTeamsAssigned(totalAssigned)
+                .tracks(plans)
+                .build();
     }
 
     @Transactional(readOnly = true)
     public CompetitionGroup getGroupInTrack(UUID trackId, UUID groupId) {
         return groupRepository.findByIdAndTrackId(groupId, trackId)
                 .orElseThrow(() -> new ResourceNotFoundException("CompetitionGroup", "id", groupId));
+    }
+
+    private void deleteGroupInternal(CompetitionGroup group, String ipAddress) {
+        judgeAssignmentService.deactivateAssignmentsForDeletedGroup(group.getId(), ipAddress);
+
+        List<Team> affectedTeams = teamRepository.findByGroupId(group.getId());
+        affectedTeams.forEach(team -> team.setGroupId(null));
+        teamRepository.saveAll(affectedTeams);
+
+        groupRepository.delete(group);
     }
 
     private void validateTrack(UUID eventId, UUID trackId) {

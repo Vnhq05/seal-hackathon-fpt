@@ -588,7 +588,7 @@ public class TeamService {
                 .memberCount(memberCount)
                 .minTeamMembers(minTeamMembers)
                 .maxTeamMembers(maxTeamMembers)
-                .canSelectTrack(memberCount >= minTeamMembers && team.getTrackId() == null)
+                .canSelectTrack(false)
                 .members(memberResponses)
                 .createdAt(team.getCreatedAt())
                 .isRecruiting(team.isRecruiting())

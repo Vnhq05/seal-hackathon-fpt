@@ -12,13 +12,15 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class MentorRoomResponse {
+public class MentorTeamAssignmentResponse {
 
     private UUID id;
     private UUID teamId;
     private String teamName;
-    private UUID eventId;
-    private String eventName;
+    private UUID trackId;
+    private String trackName;
     private UUID mentorUserId;
-    private LocalDateTime createdAt;
+    private String mentorFullName;
+    private String mentorEmail;
+    private LocalDateTime assignedAt;
 }

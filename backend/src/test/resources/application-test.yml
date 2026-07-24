@@ -39,7 +39,6 @@ app:
   hackathon:
     seal:
       max-tracks: 3
-      max-teams-per-track: 8
       finalist-count: 6
       top-per-track: 2
   submission:

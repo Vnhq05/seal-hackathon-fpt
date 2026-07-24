@@ -84,7 +84,6 @@ export function TeamDetailPanel({ event, team }: TeamDetailPanelProps) {
   const { mutate: rename, isPending: renamePending } = useRenameTeam();
 
   const [inviteEmail, setInviteEmail] = useState("");
-  const [showTrackPicker, setShowTrackPicker] = useState(false);
   const qc = useQueryClient();
   const { mutate: sendInvite, isPending: invitePending } = useMutation({
     mutationFn: (email: string) => invitationApi.send(team.id, { inviteeEmail: email }),
@@ -107,16 +106,6 @@ export function TeamDetailPanel({ event, team }: TeamDetailPanelProps) {
   );
   const needsMoreMembers = team.memberCount < minMembers;
   const selectedTrack = event.tracks.find((t) => t.id === team.trackId);
-  const isSeal = event.competitionFormat === "SEAL_RAG_2026";
-
-  const { mutate: selectTrack, isPending: trackPending } = useMutation({
-    mutationFn: (trackId: string) => teamApi.selectTrack(event.id, team.id, { trackId }),
-    onSuccess: () => {
-      setShowTrackPicker(false);
-      qc.invalidateQueries({ queryKey: ["my-teams-all-events"] });
-    },
-  });
-
   const { mutate: removeMember, isPending: removing } = useMutation({
     mutationFn: (memberId: string) => teamApi.removeMember(event.id, team.id, memberId),
     onSuccess: () => {
@@ -204,18 +193,12 @@ export function TeamDetailPanel({ event, team }: TeamDetailPanelProps) {
 
         {needsMoreMembers && (
           <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
-            Team needs at least {minMembers} members (including you) before choosing a track.
-            Currently {team.memberCount} members.
+            Team needs at least {minMembers} members (including you). Currently {team.memberCount} members.
           </div>
         )}
-        {!needsMoreMembers && !team.trackId && isLeader && !isSeal && (
+        {!needsMoreMembers && !team.trackId && (
           <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs text-blue-800">
-            Your team is ready. Select a track to complete registration.
-          </div>
-        )}
-        {!needsMoreMembers && !team.trackId && isSeal && (
-          <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs text-blue-800">
-            SEAL Hackathon: track assignment is managed by organizers. Check back after the draw session.
+            Track assignment is managed by organizers (external draw). Check back after BTC assigns your track.
           </div>
         )}
 
@@ -226,22 +209,8 @@ export function TeamDetailPanel({ event, team }: TeamDetailPanelProps) {
               {selectedTrack.name}
               {selectedTrack.topic && ` — ${selectedTrack.topic}`}
             </span>
-          ) : isSeal ? (
-            <span className="text-xs text-seal-text-muted">Not selected — organizers assign tracks</span>
-          ) : team.canSelectTrack && isLeader ? (
-            <button
-              onClick={() => setShowTrackPicker((v) => !v)}
-              className="border-2 border-navy bg-seal-yellow px-3 py-1.5 text-navy font-mono font-bold shadow-[4px_4px_0_0_#0c1228]"
-            >
-              Select Track
-            </button>
           ) : (
-            <span
-              className="text-xs text-seal-text-muted"
-              title={needsMoreMembers ? `Need at least ${minMembers} members` : undefined}
-            >
-              {needsMoreMembers && isLeader ? "Not enough members" : "Not selected"}
-            </span>
+            <span className="text-xs text-seal-text-muted">Not selected — organizers assign tracks</span>
           )}
         </div>
         {team.trackId && (
@@ -254,20 +223,6 @@ export function TeamDetailPanel({ event, team }: TeamDetailPanelProps) {
             ) : (
               <span className="text-xs text-seal-text-muted">Not assigned</span>
             )}
-          </div>
-        )}
-        {showTrackPicker && (
-          <div className="mb-4 flex flex-wrap gap-2">
-            {event.tracks.map((track) => (
-              <button
-                key={track.id}
-                disabled={trackPending}
-                onClick={() => selectTrack(track.id)}
-                className="border-2 border-navy bg-white px-3 py-1.5 text-xs font-medium text-seal-text hover:border-royal/40 hover:bg-royal/5 disabled:opacity-50"
-              >
-                {track.name}
-              </button>
-            ))}
           </div>
         )}
 

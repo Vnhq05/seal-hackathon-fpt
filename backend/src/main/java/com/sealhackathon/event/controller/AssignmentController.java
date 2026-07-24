@@ -6,8 +6,10 @@ import com.sealhackathon.event.dto.request.AssignJudgeRequest;
 import com.sealhackathon.event.dto.request.AssignMentorRequest;
 import com.sealhackathon.event.dto.request.CreateCompetitionGroupRequest;
 import com.sealhackathon.event.dto.request.DeactivateJudgeAssignmentRequest;
+import com.sealhackathon.event.dto.request.GenerateCompetitionGroupsRequest;
 import com.sealhackathon.event.dto.request.ReplaceJudgeAssignmentRequest;
 import com.sealhackathon.event.dto.response.CompetitionGroupResponse;
+import com.sealhackathon.event.dto.response.GenerateCompetitionGroupsResponse;
 import com.sealhackathon.event.dto.response.JudgeAssignmentResponse;
 import com.sealhackathon.event.dto.response.JudgeWorkloadPreviewResponse;
 import com.sealhackathon.event.dto.response.MentorAssignmentResponse;
@@ -160,6 +162,17 @@ public class AssignmentController {
             HttpServletRequest httpRequest) {
         competitionGroupService.deleteGroup(eventId, trackId, groupId, httpRequest.getRemoteAddr());
         return ResponseEntity.ok(ApiResponse.success("Group deleted", null));
+    }
+
+    @PostMapping("/groups/generate")
+    @Operation(summary = "Generate balanced competition groups for all tracks from teams-per-group target")
+    public ResponseEntity<ApiResponse<GenerateCompetitionGroupsResponse>> generateGroups(
+            @PathVariable UUID eventId,
+            @Valid @RequestBody GenerateCompetitionGroupsRequest request,
+            HttpServletRequest httpRequest) {
+        GenerateCompetitionGroupsResponse result = competitionGroupService.generateGroups(
+                eventId, request, httpRequest.getRemoteAddr());
+        return ResponseEntity.ok(ApiResponse.success("Competition groups generated", result));
     }
 
     @PostMapping("/tracks/{trackId}/mentors")

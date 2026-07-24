@@ -12,8 +12,8 @@ function PageSkeleton() {
     <div className="flex flex-col gap-8" style={{ padding: 32, maxWidth: 1440 }}>
       <div className="animate-pulse border-2 border-navy/10 bg-seal-surface-sunken" style={{ height: 100 }} />
       <div className="grid grid-cols-12 gap-6">
-        <div className="col-span-8 grid grid-cols-4 gap-4">
-          {Array.from({ length: 4 }).map((_, i) => (
+        <div className="col-span-8 grid grid-cols-3 gap-4">
+          {Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="animate-pulse border-2 border-navy/10 bg-seal-surface-sunken" style={{ height: 114 }} />
           ))}
         </div>
@@ -55,7 +55,6 @@ export function MentorTrackPage() {
       <div className="grid grid-cols-12 gap-6">
         <div className="col-span-8">
           <MentorTrackStatsRow
-            maxTeams={track.maxTeams}
             registeredTeams={track.registeredTeams}
             currentRound={track.currentRound}
             submissionCount={track.submissionCount}

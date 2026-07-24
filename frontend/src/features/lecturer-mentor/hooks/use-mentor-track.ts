@@ -136,7 +136,6 @@ export function useMentorTrack() {
           name: track.name,
           hackathonName: event.name,
           description: track.description ?? "",
-          maxTeams: track.maxTeams,
           registeredTeams: track.assignedTeamCount ?? teams.length,
           currentRound: currentRound?.name ?? "No active round",
           submissionCount,

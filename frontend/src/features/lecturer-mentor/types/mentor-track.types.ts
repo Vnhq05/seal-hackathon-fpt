@@ -24,7 +24,6 @@ export interface MentorTrackDetail {
   name: string;
   hackathonName: string;
   description: string;
-  maxTeams: number;
   registeredTeams: number;
   currentRound: string;
   submissionCount: number;

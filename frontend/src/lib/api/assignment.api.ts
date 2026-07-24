@@ -58,6 +58,23 @@ export interface CompetitionGroupResponse {
   name: string;
 }
 
+export interface GenerateCompetitionGroupsRequest {
+  teamsPerGroup: number;
+}
+
+export interface GenerateCompetitionGroupsResponse {
+  teamsPerGroup: number;
+  totalGroupsCreated: number;
+  totalTeamsAssigned: number;
+  tracks: {
+    trackId: string;
+    trackName: string;
+    teamCount: number;
+    groupCount: number;
+    groups: { groupId: string; name: string; teamCount: number; teamNames: string[] }[];
+  }[];
+}
+
 export interface MentorAssignmentResponse {
   id: string;
   eventId: string;
@@ -67,6 +84,30 @@ export interface MentorAssignmentResponse {
   mentorFullName: string | null;
   mentorEmail: string | null;
   assignedAt: string;
+}
+
+export interface MentorTeamAssignmentResponse {
+  id: string;
+  teamId: string;
+  teamName: string;
+  trackId: string | null;
+  trackName: string | null;
+  mentorUserId: string;
+  mentorFullName: string | null;
+  mentorEmail: string | null;
+  assignedAt: string;
+}
+
+export interface MentorDrawResultResponse {
+  assignments: MentorTeamAssignmentResponse[];
+  assignedCount: number;
+  unassignedCount: number;
+  message: string;
+}
+
+export interface AssignMentorTeamBody {
+  mentorUserId: string;
+  teamId: string;
 }
 
 export interface AssignJudgeRequest {
@@ -207,6 +248,13 @@ export const assignmentApi = {
     return api.delete<void>(`/events/${eventId}/tracks/${trackId}/groups/${groupId}`);
   },
 
+  generateCompetitionGroups(
+    eventId: string,
+    body: GenerateCompetitionGroupsRequest,
+  ): Promise<GenerateCompetitionGroupsResponse> {
+    return api.post<GenerateCompetitionGroupsResponse>(`/events/${eventId}/groups/generate`, body);
+  },
+
   removeJudge(eventId: string, roundId: string, assignmentId: string): Promise<void> {
     return api.delete<void>(`/events/${eventId}/rounds/${roundId}/judges/${assignmentId}`);
   },
@@ -223,6 +271,24 @@ export const assignmentApi = {
 
   removeMentor(eventId: string, trackId: string, assignmentId: string): Promise<void> {
     return api.delete<void>(`/events/${eventId}/tracks/${trackId}/mentors/${assignmentId}`);
+  },
+
+  // ── Mentor–team (draw / list) ──
+
+  drawMentors(eventId: string): Promise<MentorDrawResultResponse> {
+    return api.post<MentorDrawResultResponse>(`/events/${eventId}/mentors/draw`);
+  },
+
+  listMentorTeams(eventId: string): Promise<MentorTeamAssignmentResponse[]> {
+    return api.get<MentorTeamAssignmentResponse[]>(`/events/${eventId}/mentor-teams`);
+  },
+
+  assignMentorToTeam(eventId: string, body: AssignMentorTeamBody): Promise<MentorTeamAssignmentResponse> {
+    return api.post<MentorTeamAssignmentResponse>(`/events/${eventId}/mentor-teams`, body);
+  },
+
+  removeMentorFromTeam(eventId: string, assignmentId: string): Promise<void> {
+    return api.delete<void>(`/events/${eventId}/mentor-teams/${assignmentId}`);
   },
 
   // ── Team judge assignments (overview) ──

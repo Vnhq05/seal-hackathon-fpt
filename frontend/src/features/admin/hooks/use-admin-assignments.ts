@@ -289,6 +289,48 @@ export function useRemoveMentor(eventId: string, trackId: string) {
   });
 }
 
+export const MENTOR_TEAMS_KEY = "mentor-teams" as const;
+
+export function useMentorTeams(eventId: string) {
+  return useQuery({
+    queryKey: [MENTOR_TEAMS_KEY, eventId],
+    queryFn: () => assignmentApi.listMentorTeams(eventId),
+    enabled: !!eventId,
+  });
+}
+
+export function useDrawMentors(eventId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => assignmentApi.drawMentors(eventId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [MENTOR_TEAMS_KEY, eventId] });
+    },
+  });
+}
+
+export function useAssignMentorToTeam(eventId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { mentorUserId: string; teamId: string }) =>
+      assignmentApi.assignMentorToTeam(eventId, body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [MENTOR_TEAMS_KEY, eventId] });
+    },
+  });
+}
+
+export function useRemoveMentorFromTeam(eventId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (assignmentId: string) =>
+      assignmentApi.removeMentorFromTeam(eventId, assignmentId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [MENTOR_TEAMS_KEY, eventId] });
+    },
+  });
+}
+
 /* ═══════════════════════════════════════════════
  *  Staff assignments — NOT supported by backend
  * ═══════════════════════════════════════════════ */

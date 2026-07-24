@@ -186,7 +186,6 @@ function ScoringSection({ event }: { event: EventResponse }) {
             trackId: track.id,
             name: track.name,
             description: track.description ?? undefined,
-            maxTeams: track.maxTeams,
             scoringTemplateId: trackTemplateIds[track.id] ?? undefined,
           },
           {
