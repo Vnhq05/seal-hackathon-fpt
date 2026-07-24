@@ -1,13 +1,12 @@
 package com.sealhackathon.team.service;
 
-import com.sealhackathon.common.dto.SystemConfigResponse;
 import com.sealhackathon.common.exception.BusinessException;
-import com.sealhackathon.common.service.SystemConfigService;
 import com.sealhackathon.team.domain.Team;
 import com.sealhackathon.team.domain.TeamJoinRequest;
 import com.sealhackathon.team.domain.enums.JoinRequestStatus;
 import com.sealhackathon.team.domain.enums.TeamStatus;
 import com.sealhackathon.team.dto.request.CreateJoinRequestRequest;
+import com.sealhackathon.team.repository.InvitationRepository;
 import com.sealhackathon.team.repository.TeamJoinRequestRepository;
 import com.sealhackathon.team.repository.TeamMemberRepository;
 import com.sealhackathon.team.repository.TeamRepository;
@@ -27,6 +26,8 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -34,10 +35,12 @@ import static org.mockito.Mockito.when;
 class TeamJoinRequestServiceTest {
 
     @Mock private TeamJoinRequestRepository joinRequestRepository;
+    @Mock private JoinRequestStatusService joinRequestStatusService;
+    @Mock private InvitationStatusService invitationStatusService;
+    @Mock private InvitationRepository invitationRepository;
     @Mock private TeamRepository teamRepository;
     @Mock private TeamMemberRepository teamMemberRepository;
     @Mock private EventEnrollmentService enrollmentService;
-    @Mock private SystemConfigService systemConfigService;
     @Mock private UserPublicService userPublicService;
     @Mock private ApplicationEventPublisher eventPublisher;
     @Mock private TeamService teamService;
@@ -83,12 +86,75 @@ class TeamJoinRequestServiceTest {
         when(teamMemberRepository.existsActiveByUserIdAndEventId(userId, eventId)).thenReturn(false);
         when(joinRequestRepository.existsByRequesterIdAndEventIdAndStatus(
                 userId, eventId, JoinRequestStatus.PENDING)).thenReturn(true);
-        when(systemConfigService.getConfig()).thenReturn(SystemConfigResponse.builder()
-                .minTeamMembers(3).maxTeamMembers(5).build());
 
         assertThatThrownBy(() -> joinRequestService.createJoinRequest(
                 userId, eventId, teamId, new CreateJoinRequestRequest()))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("pending join request");
+    }
+
+    @Test
+    void createJoinRequest_shouldThrow_whenTeamFull() {
+        UUID userId = UUID.randomUUID();
+        UUID eventId = UUID.randomUUID();
+        UUID teamId = UUID.randomUUID();
+
+        Team team = Team.builder().eventId(eventId).name("T").leaderId(UUID.randomUUID())
+                .status(TeamStatus.FORMING).build();
+        team.setId(teamId);
+
+        when(teamRepository.findByIdForUpdate(teamId)).thenReturn(Optional.of(team));
+        doNothing().when(teamService).validateTeamFormationAllowed(eventId);
+        doNothing().when(teamService).validateRegistrationOpen(eventId);
+        doNothing().when(enrollmentService).requireApprovedEnrollment(userId, eventId);
+        when(teamMemberRepository.existsActiveByUserIdAndEventId(userId, eventId)).thenReturn(false);
+        when(joinRequestRepository.existsByRequesterIdAndEventIdAndStatus(
+                userId, eventId, JoinRequestStatus.PENDING)).thenReturn(false);
+        when(teamService.resolveMaxTeamMembers(eventId)).thenReturn(5);
+        when(teamMemberRepository.countByTeamId(teamId)).thenReturn(5);
+
+        assertThatThrownBy(() -> joinRequestService.createJoinRequest(
+                userId, eventId, teamId, new CreateJoinRequestRequest()))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("maximum number of members");
+    }
+
+    @Test
+    void acceptJoinRequest_shouldRetirePending_whenTeamAlreadyFull() {
+        UUID leaderId = UUID.randomUUID();
+        UUID requesterId = UUID.randomUUID();
+        UUID eventId = UUID.randomUUID();
+        UUID teamId = UUID.randomUUID();
+        UUID joinRequestId = UUID.randomUUID();
+
+        Team team = Team.builder().eventId(eventId).name("T").leaderId(leaderId)
+                .status(TeamStatus.FORMING).build();
+        team.setId(teamId);
+
+        TeamJoinRequest joinRequest = TeamJoinRequest.builder()
+                .team(team)
+                .eventId(eventId)
+                .requesterId(requesterId)
+                .status(JoinRequestStatus.PENDING)
+                .build();
+        joinRequest.setId(joinRequestId);
+
+        when(joinRequestRepository.findByIdAndEventId(joinRequestId, eventId))
+                .thenReturn(Optional.of(joinRequest));
+        when(teamRepository.findByIdForUpdate(teamId)).thenReturn(Optional.of(team));
+        doNothing().when(teamService).validateMemberChangesAllowed(eventId);
+        when(teamMemberRepository.existsActiveByUserIdAndEventId(requesterId, eventId)).thenReturn(false);
+        when(teamMemberRepository.findByUserIdAndEventId(requesterId, eventId)).thenReturn(Optional.empty());
+        when(teamService.resolveMaxTeamMembers(eventId)).thenReturn(5);
+        when(teamService.resolveMinTeamMembers(eventId)).thenReturn(3);
+        when(teamMemberRepository.countByTeamId(teamId)).thenReturn(5);
+
+        assertThatThrownBy(() -> joinRequestService.acceptJoinRequest(leaderId, eventId, joinRequestId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("maximum number of members");
+
+        verify(joinRequestStatusService).rejectAllPendingForTeam(teamId);
+        verify(invitationStatusService).expireAllPendingForTeam(teamId);
+        verify(teamMemberRepository, never()).save(any());
     }
 }

@@ -2,8 +2,6 @@ package com.sealhackathon.team.service;
 
 import com.sealhackathon.common.exception.BusinessException;
 import com.sealhackathon.common.exception.DuplicateResourceException;
-import com.sealhackathon.common.dto.SystemConfigResponse;
-import com.sealhackathon.common.service.SystemConfigService;
 import com.sealhackathon.team.domain.Invitation;
 import com.sealhackathon.team.domain.Team;
 import com.sealhackathon.team.domain.enums.InvitationStatus;
@@ -23,14 +21,15 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -39,21 +38,23 @@ class InvitationServiceTest {
 
     @Mock private InvitationRepository invitationRepository;
     @Mock private InvitationStatusService invitationStatusService;
+    @Mock private JoinRequestStatusService joinRequestStatusService;
     @Mock private TeamRepository teamRepository;
     @Mock private TeamMemberRepository teamMemberRepository;
     @Mock private UserPublicService userPublicService;
     @Mock private ApplicationEventPublisher eventPublisher;
     @Mock private EventEnrollmentService enrollmentService;
-    @Mock private SystemConfigService systemConfigService;
     @Mock private TeamService teamService;
 
     @InjectMocks private InvitationService invitationService;
 
-    private void stubTeamSizeConfig() {
-        when(systemConfigService.getConfig()).thenReturn(SystemConfigResponse.builder()
-                .minTeamMembers(3)
-                .maxTeamMembers(5)
-                .build());
+    private void stubMaxTeamSize(UUID eventId) {
+        when(teamService.resolveMaxTeamMembers(eventId)).thenReturn(5);
+    }
+
+    private void stubTeamSize(UUID eventId) {
+        when(teamService.resolveMaxTeamMembers(eventId)).thenReturn(5);
+        when(teamService.resolveMinTeamMembers(eventId)).thenReturn(3);
     }
 
     @Test
@@ -64,7 +65,7 @@ class InvitationServiceTest {
         UUID inviteeId = UUID.randomUUID();
 
         Team team = buildTeam(teamId, eventId, leaderId);
-        stubTeamSizeConfig();
+        stubMaxTeamSize(eventId);
         when(teamRepository.findById(teamId)).thenReturn(Optional.of(team));
         when(teamMemberRepository.countByTeamId(teamId)).thenReturn(2);
         when(invitationRepository.existsByTeamIdAndInviteeEmailAndStatus(
@@ -108,9 +109,10 @@ class InvitationServiceTest {
     void sendInvitation_shouldThrow_whenTeamFull() {
         UUID leaderId = UUID.randomUUID();
         UUID teamId = UUID.randomUUID();
+        UUID eventId = UUID.randomUUID();
 
-        Team team = buildTeam(teamId, UUID.randomUUID(), leaderId);
-        stubTeamSizeConfig();
+        Team team = buildTeam(teamId, eventId, leaderId);
+        stubMaxTeamSize(eventId);
         when(teamRepository.findById(teamId)).thenReturn(Optional.of(team));
         when(teamMemberRepository.countByTeamId(teamId)).thenReturn(5);
 
@@ -119,16 +121,17 @@ class InvitationServiceTest {
 
         assertThatThrownBy(() -> invitationService.sendInvitation(leaderId, teamId, request))
                 .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("full");
+                .hasMessageContaining("maximum number of members");
     }
 
     @Test
     void sendInvitation_shouldThrow_whenDuplicatePending() {
         UUID leaderId = UUID.randomUUID();
         UUID teamId = UUID.randomUUID();
+        UUID eventId = UUID.randomUUID();
 
-        Team team = buildTeam(teamId, UUID.randomUUID(), leaderId);
-        stubTeamSizeConfig();
+        Team team = buildTeam(teamId, eventId, leaderId);
+        stubMaxTeamSize(eventId);
         when(teamRepository.findById(teamId)).thenReturn(Optional.of(team));
         when(teamMemberRepository.countByTeamId(teamId)).thenReturn(2);
         when(invitationRepository.existsByTeamIdAndInviteeEmailAndStatus(
@@ -188,6 +191,83 @@ class InvitationServiceTest {
         assertThatThrownBy(() -> invitationService.acceptInvitation(userId, invitationId))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("not for you");
+    }
+
+    @Test
+    void acceptInvitation_shouldRetirePending_whenTeamAlreadyFull() {
+        UUID userId = UUID.randomUUID();
+        UUID invitationId = UUID.randomUUID();
+        UUID teamId = UUID.randomUUID();
+        UUID eventId = UUID.randomUUID();
+        Team team = buildTeam(teamId, eventId, UUID.randomUUID());
+
+        Invitation invitation = Invitation.builder()
+                .team(team)
+                .inviterId(UUID.randomUUID())
+                .inviteeEmail("me@test.com")
+                .status(InvitationStatus.PENDING)
+                .expiresAt(LocalDateTime.now().plusDays(7))
+                .build();
+        invitation.setId(invitationId);
+
+        when(invitationRepository.findById(invitationId)).thenReturn(Optional.of(invitation));
+        when(userPublicService.findById(userId))
+                .thenReturn(Optional.of(UserSnapshot.builder().id(userId).email("me@test.com").build()));
+        when(teamRepository.findByIdForUpdate(teamId)).thenReturn(Optional.of(team));
+        doNothing().when(teamService).validateMemberChangesAllowed(eventId);
+        doNothing().when(enrollmentService).requireApprovedEnrollment(userId, eventId);
+        when(enrollmentService.hasActiveEnrollmentInOtherEvent(userId, eventId)).thenReturn(false);
+        stubTeamSize(eventId);
+        when(teamMemberRepository.countByTeamId(teamId)).thenReturn(5);
+
+        assertThatThrownBy(() -> invitationService.acceptInvitation(userId, invitationId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("maximum number of members");
+
+        verify(invitationStatusService).expireAllPendingForTeam(teamId);
+        verify(joinRequestStatusService).rejectAllPendingForTeam(teamId);
+        verify(teamMemberRepository, never()).save(any());
+    }
+
+    @Test
+    void acceptInvitation_shouldExpireLeftoverPending_whenLastSlotFilled() {
+        UUID userId = UUID.randomUUID();
+        UUID invitationId = UUID.randomUUID();
+        UUID teamId = UUID.randomUUID();
+        UUID eventId = UUID.randomUUID();
+        Team team = buildTeam(teamId, eventId, UUID.randomUUID());
+
+        Invitation invitation = Invitation.builder()
+                .team(team)
+                .inviterId(UUID.randomUUID())
+                .inviteeEmail("me@test.com")
+                .status(InvitationStatus.PENDING)
+                .expiresAt(LocalDateTime.now().plusDays(7))
+                .build();
+        invitation.setId(invitationId);
+
+        when(invitationRepository.findById(invitationId)).thenReturn(Optional.of(invitation));
+        when(userPublicService.findById(userId))
+                .thenReturn(Optional.of(UserSnapshot.builder()
+                        .id(userId).email("me@test.com").fullName("Me").build()));
+        when(teamRepository.findByIdForUpdate(teamId)).thenReturn(Optional.of(team));
+        doNothing().when(teamService).validateMemberChangesAllowed(eventId);
+        doNothing().when(enrollmentService).requireApprovedEnrollment(userId, eventId);
+        when(enrollmentService.hasActiveEnrollmentInOtherEvent(userId, eventId)).thenReturn(false);
+        stubTeamSize(eventId);
+        when(teamMemberRepository.countByTeamId(teamId)).thenReturn(4);
+        when(teamMemberRepository.existsActiveByUserIdAndEventId(userId, eventId)).thenReturn(false);
+        when(teamMemberRepository.findByUserIdAndEventId(userId, eventId)).thenReturn(Optional.empty());
+        when(invitationRepository.save(any(Invitation.class))).thenAnswer(i -> i.getArgument(0));
+        when(teamMemberRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+        when(invitationRepository.findByTeamIdAndStatus(teamId, InvitationStatus.PENDING))
+                .thenReturn(List.of());
+
+        InvitationResponse result = invitationService.acceptInvitation(userId, invitationId);
+
+        assertThat(result.getStatus()).isEqualTo(InvitationStatus.ACCEPTED);
+        verify(joinRequestStatusService).rejectAllPendingForTeam(teamId);
+        verify(teamService).syncRecruitingStatus(teamId);
     }
 
     private Team buildTeam(UUID teamId, UUID eventId, UUID leaderId) {

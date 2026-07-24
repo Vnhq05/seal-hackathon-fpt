@@ -32,4 +32,18 @@ public class JoinRequestStatusService {
             request.setResolvedAt(LocalDateTime.now());
         });
     }
+
+    /**
+     * Rejects every PENDING join request for a full team so leaders cannot accept/reject leftover
+     * requests after the last slot is taken.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void rejectAllPendingForTeam(UUID teamId) {
+        LocalDateTime now = LocalDateTime.now();
+        joinRequestRepository.findByTeamIdAndStatus(teamId, JoinRequestStatus.PENDING)
+                .forEach(request -> {
+                    request.setStatus(JoinRequestStatus.REJECTED);
+                    request.setResolvedAt(now);
+                });
+    }
 }

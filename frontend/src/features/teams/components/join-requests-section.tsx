@@ -29,6 +29,8 @@ export function JoinRequestsSection({
 
   if (pending.length === 0) return null;
 
+  const acceptError = accept.error instanceof Error ? accept.error.message : null;
+
   return (
     <div className="mt-4 border-t border-seal-border-light pt-4">
       <div className="mb-2 flex items-center gap-2">
@@ -39,12 +41,18 @@ export function JoinRequestsSection({
           {pending.length}
         </span>
       </div>
+      {acceptError && (
+        <p className="mb-2 text-xs text-red-600">{acceptError}</p>
+      )}
       <div className="flex flex-col gap-2">
         {pending.map((req) => (
           <JoinRequestCard
             key={req.id}
             request={req}
-            onAccept={() => accept.mutate(req.id)}
+            onAccept={() => {
+              accept.reset();
+              accept.mutate(req.id);
+            }}
             onReject={() => reject.mutate(req.id)}
             isAccepting={accept.isPending}
             isRejecting={reject.isPending}

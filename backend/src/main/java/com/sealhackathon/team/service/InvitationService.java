@@ -3,7 +3,6 @@ package com.sealhackathon.team.service;
 import com.sealhackathon.common.exception.BusinessException;
 import com.sealhackathon.common.exception.DuplicateResourceException;
 import com.sealhackathon.common.exception.ResourceNotFoundException;
-import com.sealhackathon.common.service.SystemConfigService;
 import com.sealhackathon.team.domain.Invitation;
 import com.sealhackathon.team.domain.Team;
 import com.sealhackathon.team.domain.TeamMember;
@@ -40,24 +39,19 @@ public class InvitationService {
 
     private final InvitationRepository invitationRepository;
     private final InvitationStatusService invitationStatusService;
+    private final JoinRequestStatusService joinRequestStatusService;
     private final TeamRepository teamRepository;
     private final TeamMemberRepository teamMemberRepository;
     private final UserPublicService userPublicService;
     private final ApplicationEventPublisher eventPublisher;
     private final EventEnrollmentService enrollmentService;
-    private final SystemConfigService systemConfigService;
     private final TeamService teamService;
+
+    private static final String TEAM_FULL_MESSAGE =
+            "Team has reached the maximum number of members";
 
     @Value("${app.hackathon.team.invitation-expiry-days:7}")
     private int invitationExpiryDays;
-
-    private int getMinTeamSize() {
-        return systemConfigService.getConfig().getMinTeamMembers();
-    }
-
-    private int getMaxTeamSize() {
-        return systemConfigService.getConfig().getMaxTeamMembers();
-    }
 
     // ── BR-21: Send invitation ──
     @Transactional
@@ -66,9 +60,10 @@ public class InvitationService {
         teamService.validateMemberChangesAllowed(team.getEventId());
         guardLeader(team, leaderId);
 
+        int maxSize = teamService.resolveMaxTeamMembers(team.getEventId());
         int currentSize = teamMemberRepository.countByTeamId(teamId);
-        if (currentSize >= getMaxTeamSize()) {
-            throw new BusinessException("Team is already full", HttpStatus.BAD_REQUEST) {};
+        if (currentSize >= maxSize) {
+            throw new BusinessException(TEAM_FULL_MESSAGE, HttpStatus.BAD_REQUEST) {};
         }
 
         String inviteeEmail = resolveInviteeEmail(request);
@@ -144,10 +139,14 @@ public class InvitationService {
                     HttpStatus.CONFLICT) {};
         }
 
+        int maxSize = teamService.resolveMaxTeamMembers(team.getEventId());
+        int minSize = teamService.resolveMinTeamMembers(team.getEventId());
         int currentSize = teamMemberRepository.countByTeamId(team.getId());
-        if (currentSize >= getMaxTeamSize()) {
-            invitationStatusService.retire(invitation.getId(), InvitationStatus.EXPIRED);
-            throw new BusinessException("Team is already full", HttpStatus.BAD_REQUEST) {};
+        if (currentSize >= maxSize) {
+            // REQUIRES_NEW so status survives the throw below
+            invitationStatusService.expireAllPendingForTeam(team.getId());
+            joinRequestStatusService.rejectAllPendingForTeam(team.getId());
+            throw new BusinessException(TEAM_FULL_MESSAGE, HttpStatus.BAD_REQUEST) {};
         }
 
         // BR-18 — disbanded teams don't count
@@ -177,10 +176,18 @@ public class InvitationService {
 
         // BR-22: auto-confirm
         int newSize = currentSize + 1;
-        if (newSize >= getMinTeamSize() && team.getStatus() == FORMING) {
+        if (newSize >= minSize && team.getStatus() == FORMING) {
             team.setStatus(CONFIRMED);
             teamRepository.save(team);
             eventPublisher.publishEvent(new TeamConfirmedEvent(team.getId(), newSize));
+        }
+
+        if (newSize >= maxSize) {
+            // Same TX: accepted invite already ACCEPTED; expire leftover PENDING invites / join requests
+            invitationRepository.findByTeamIdAndStatus(team.getId(), InvitationStatus.PENDING)
+                    .forEach(pending -> pending.setStatus(InvitationStatus.EXPIRED));
+            joinRequestStatusService.rejectAllPendingForTeam(team.getId());
+            teamService.syncRecruitingStatus(team.getId());
         }
 
         teamService.notifyTeamCountChanged(team.getEventId());
