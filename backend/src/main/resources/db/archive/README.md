@@ -53,6 +53,7 @@ legacy DB at dump time.
 | `seed_demo_events.sql` | Seed 7 SEAL seasons. Each event: **3 judges + 3 mentors** (separate lecturers). Teams split evenly (3 teams / mentor / track). Mentors ≠ judges so BR-34 conflict does not block scoring. Alert event also seeds notifications. |
 | `seed_track_mentor_assignment_qa.sql` | One **CLOSED_REGISTRATION** event, **2 tracks**, **20 teams without track/mentor**, event staff judges+mentors pre-added, mentor track pool ready for Draw. |
 | `seed_scoring_qa.sql` | One **SCORING** event, **4 teams** with submissions, **2 judges** (`score.judge1` done / `score.judge2` pending). Password `Demo@123456`. For Lecturer Scoring UI. |
+| `seed_final_advancement_qa.sql` | **Final advancement QA**: prelim fully scored + rankings, 2 groups, **no Final submissions**. Select Finalists → carry-over → score Final. See `FINAL_ADVANCEMENT_CHANGES.md`. |
 | `seed_summer_track_relation_mock.sql` | One **Summer 2026** event + **2 tracks** + **2 teams** (already on tracks). Demo: kì on event, tracks via `event_id`. |
 | `fix_emdash_mojibake.sql` | Repair `â€”` (UTF-8 em-dash mojibake) → ASCII ` - ` in event names |
 

@@ -37,11 +37,13 @@ import com.sealhackathon.judging.event.ScoreDeletedEvent;
 import com.sealhackathon.judging.event.ScoreUpdatedEvent;
 import com.sealhackathon.judging.event.ScoringCompletedEvent;
 import com.sealhackathon.judging.repository.JudgeScoreRepository;
+import com.sealhackathon.ranking.domain.FinalistSelection;
 import com.sealhackathon.ranking.repository.FinalistSelectionRepository;
 import com.sealhackathon.ranking.repository.PublishedResultRepository;
 import com.sealhackathon.submission.domain.Submission;
 import com.sealhackathon.submission.domain.enums.SubmissionStatus;
 import com.sealhackathon.submission.repository.SubmissionRepository;
+import com.sealhackathon.submission.service.FinalSubmissionCarryOverService;
 import com.sealhackathon.submission.service.SubmissionPublicService;
 import com.sealhackathon.team.domain.Team;
 import com.sealhackathon.team.repository.TeamRepository;
@@ -90,6 +92,7 @@ public class JudgingService {
     private final PublishedResultRepository publishedResultRepository;
     private final FinalistSelectionRepository finalistSelectionRepository;
     private final SubmissionPublicService submissionPublicService;
+    private final FinalSubmissionCarryOverService finalSubmissionCarryOverService;
     private final TeamPublicService teamPublicService;
     private final UserPublicService userPublicService;
     private final ApplicationEventPublisher eventPublisher;
@@ -205,6 +208,7 @@ public class JudgingService {
             UUID judgeId, UUID roundId, String filter) {
         return getMyScoringAssignments(judgeId).stream()
                 .filter(a -> a.getRoundId().equals(roundId))
+                .filter(a -> a.getTeamId() != null)
                 .filter(a -> a.getSubmissionId() != null)
                 .map(a -> toRoundSubmissionResponse(judgeId, a))
                 .filter(item -> matchesSubmissionFilter(item.getScoringStatus(), filter))
@@ -233,6 +237,15 @@ public class JudgingService {
                 case TRACK -> teamRepository.findByEventIdAndTrackId(eventId, assignment.getTrackId());
                 case GROUP -> teamRepository.findByEventIdAndGroupId(eventId, assignment.getGroupId());
             };
+            teams = filterTeamsForRound(round, eventId, teams);
+
+            if (teams.isEmpty()) {
+                // Keep Final visible in Assigned Rounds before/without team rows
+                if (round.getRoundType() == RoundType.FINAL && seen.add("ROUND:" + roundId)) {
+                    result.add(buildRoundShellAssignment(round, assignment));
+                }
+                continue;
+            }
 
             for (Team team : teams) {
                 String key = team.getId() + ":" + roundId;
@@ -244,6 +257,52 @@ public class JudgingService {
         }
 
         return result;
+    }
+
+    /**
+     * Round-level placeholder (no team) so Assigned Rounds still lists Finals
+     * when finalists are not selected yet or none match the judge scope.
+     */
+    private JudgeScoringAssignmentResponse buildRoundShellAssignment(
+            Round round, JudgeAssignment coveringAssignment) {
+        HackathonEvent event = round.getHackathonEvent();
+        String denied = round.getRoundType() == RoundType.FINAL
+                ? "Finalists have not been selected yet"
+                : "No teams in your assignment scope";
+        return JudgeScoringAssignmentResponse.builder()
+                .roundId(round.getId())
+                .roundName(round.getName())
+                .eventId(event != null ? event.getId() : null)
+                .eventName(event != null ? event.getName() : null)
+                .assignmentScope(coveringAssignment != null ? coveringAssignment.getScope() : null)
+                .scoringStatus("NOT_STARTED")
+                .scoringDeadline(round.getScoringDeadline())
+                .scoringAllowed(false)
+                .scoringDeniedReason(denied)
+                .build();
+    }
+
+    /**
+     * Final round is only for selected finalists. Before selection, hide the full pool
+     * so eliminated prelim teams are not offered for scoring.
+     */
+    private List<Team> filterTeamsForRound(Round round, UUID eventId, List<Team> teams) {
+        if (round.getRoundType() != RoundType.FINAL) {
+            return teams;
+        }
+        List<FinalistSelection> finalists =
+                finalistSelectionRepository.findByEventIdOrderByPreliminaryRankAsc(eventId);
+        if (finalists.isEmpty()) {
+            return List.of();
+        }
+        Set<UUID> finalistIds = finalists.stream()
+                .map(FinalistSelection::getTeamId)
+                .collect(Collectors.toSet());
+        return teams.stream().filter(t -> finalistIds.contains(t.getId())).toList();
+    }
+
+    private boolean isSelectedFinalist(UUID eventId, UUID teamId) {
+        return finalistSelectionRepository.existsByEventIdAndTeamId(eventId, teamId);
     }
 
     @Transactional(readOnly = true)
@@ -307,6 +366,12 @@ public class JudgingService {
 
         Submission submission = submissionRepository
                 .findByTeamIdAndRoundId(teamId, roundId).orElse(null);
+        // Only finalists get lazy carry-over — never invent Final submissions for eliminated teams
+        if (submission == null && round != null && round.getRoundType() == RoundType.FINAL
+                && team != null && isSelectedFinalist(team.getEventId(), teamId)) {
+            submission = finalSubmissionCarryOverService.ensureFinalSubmission(teamId, roundId)
+                    .orElse(null);
+        }
 
         Optional<JudgeScore> myScore = submission != null
                 ? judgeScoreRepository.findByJudgeUserIdAndSubmissionId(judgeId, submission.getId())
@@ -444,6 +509,7 @@ public class JudgingService {
         formatRuleEngine.assertCanScore(eventId);
         assertScoringWindowOpen(roundId);
         assertScoringNotLocked(roundId, eventId);
+        assertFinalistIfFinalRound(roundId, eventId, team.getId());
 
         if (!judgeAssignmentService.isJudgeAssignedToSubmissionScope(
                 roundId, judgeId, team.getTrackId(), team.getGroupId())) {
@@ -452,6 +518,19 @@ public class JudgingService {
         }
 
         conflictDetectionService.checkConflict(judgeId, submissionId);
+    }
+
+    private void assertFinalistIfFinalRound(UUID roundId, UUID eventId, UUID teamId) {
+        Round round = roundRepository.findById(roundId)
+                .orElseThrow(() -> new ResourceNotFoundException("Round", "id", roundId));
+        if (round.getRoundType() != RoundType.FINAL) {
+            return;
+        }
+        if (!finalistSelectionRepository.findByEventIdOrderByPreliminaryRankAsc(eventId).isEmpty()
+                && !isSelectedFinalist(eventId, teamId)) {
+            throw new BusinessException("Team is not a finalist for this round",
+                    HttpStatus.FORBIDDEN) {};
+        }
     }
 
     private String resolveScoringDeniedReason(
@@ -486,6 +565,12 @@ public class JudgingService {
         if (round.getRoundType() != RoundType.FINAL
                 && !finalistSelectionRepository.findByEventIdOrderByPreliminaryRankAsc(team.getEventId()).isEmpty()) {
             return "Finalists have been confirmed";
+        }
+
+        if (round.getRoundType() == RoundType.FINAL
+                && !finalistSelectionRepository.findByEventIdOrderByPreliminaryRankAsc(team.getEventId()).isEmpty()
+                && !isSelectedFinalist(team.getEventId(), team.getId())) {
+            return "Team is not a finalist for this round";
         }
 
         if (!judgeAssignmentService.isJudgeAssignedToSubmissionScope(

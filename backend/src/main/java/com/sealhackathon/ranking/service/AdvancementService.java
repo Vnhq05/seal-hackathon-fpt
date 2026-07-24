@@ -36,15 +36,14 @@ public class AdvancementService {
     private final RoundRepository roundRepository;
     private final TeamPublicService teamPublicService;
     private final FormatRuleEngine formatRuleEngine;
+    private final AdvancementCutoffCalculator cutoffCalculator;
 
     @Transactional
     public List<AdvancementResponse> determineAdvancements(UUID roundId) {
         Round round = roundRepository.findById(roundId)
                 .orElseThrow(() -> new ResourceNotFoundException("Round", "id", roundId));
 
-        AdvancementRule rule = round.getAdvancementRule() != null
-                ? round.getAdvancementRule()
-                : AdvancementRule.GLOBAL_TOP_N;
+        AdvancementRule rule = resolveEffectiveRule(round);
 
         int latestVersion = rankingRepository.findMaxVersionByRoundId(roundId);
         List<Ranking> rankings = rankingRepository
@@ -54,10 +53,22 @@ public class AdvancementService {
         advancementRepository.flush();
 
         Set<UUID> advancedTeamIds = switch (rule) {
-            case PER_TRACK_TOP_N -> determinePerTrackAdvanced(round, rankings);
+            case PER_GROUP_TOP_N -> determinePerGroupAdvanced(rankings);
+            case PER_TRACK_TOP_N -> determinePerTrackAdvanced(rankings);
             case FINALIST_POOL, NONE -> Set.of();
-            case GLOBAL_TOP_N -> determineGlobalAdvanced(round.getAdvancementCutoff(), rankings);
+            case GLOBAL_TOP_N -> determineGlobalAdvanced(rankings);
         };
+
+        // Persist computed cutoff for audit when auto mode is on
+        if (cutoffCalculator.isAutoEnabled()
+                && rule != AdvancementRule.FINALIST_POOL
+                && rule != AdvancementRule.NONE) {
+            int computed = advancedTeamIds.size();
+            if (computed > 0) {
+                round.setAdvancementCutoff(Math.max(1, computed));
+                roundRepository.save(round);
+            }
+        }
 
         List<Advancement> advancements = new ArrayList<>();
         for (Ranking r : rankings) {
@@ -81,7 +92,21 @@ public class AdvancementService {
                 .toList();
     }
 
-    private Set<UUID> determineGlobalAdvanced(int cutoff, List<Ranking> rankings) {
+    private AdvancementRule resolveEffectiveRule(Round round) {
+        AdvancementRule rule = round.getAdvancementRule() != null
+                ? round.getAdvancementRule()
+                : AdvancementRule.GLOBAL_TOP_N;
+        if (rule == AdvancementRule.FINALIST_POOL || rule == AdvancementRule.NONE) {
+            return rule;
+        }
+        // Prefer per-group when any ranked team is in a competition group
+        return rule;
+    }
+
+    private Set<UUID> determineGlobalAdvanced(List<Ranking> rankings) {
+        int cutoff = cutoffCalculator.isAutoEnabled()
+                ? cutoffCalculator.compute(rankings.size())
+                : rankings.isEmpty() ? 0 : Math.min(rankings.size(), Math.max(1, rankings.size()));
         Set<UUID> advanced = new HashSet<>();
         for (Ranking r : rankings) {
             if (r.getRank() <= cutoff) {
@@ -91,31 +116,75 @@ public class AdvancementService {
         return advanced;
     }
 
-    private Set<UUID> determinePerTrackAdvanced(Round round, List<Ranking> rankings) {
-        int cutoff = round.getAdvancementCutoff() != null
-                ? round.getAdvancementCutoff()
-                : formatRuleEngine.getSealTopPerTrack();
+    private Set<UUID> determinePerTrackAdvanced(List<Ranking> rankings) {
         Map<UUID, List<Ranking>> byTrack = new LinkedHashMap<>();
+        List<Ranking> untracked = new ArrayList<>();
 
         for (Ranking r : rankings) {
             UUID trackId = teamPublicService.getTeam(r.getTeamId())
                     .map(TeamSnapshot::getTrackId)
                     .orElse(null);
             if (trackId == null) {
+                untracked.add(r);
                 continue;
             }
             byTrack.computeIfAbsent(trackId, k -> new ArrayList<>()).add(r);
         }
 
-        Set<UUID> advanced = new HashSet<>();
-        for (List<Ranking> trackRankings : byTrack.values()) {
-            trackRankings.sort(Comparator
-                    .comparing(Ranking::getRank)
-                    .thenComparing(Ranking::getFinalScore, Comparator.reverseOrder()));
-            int take = Math.min(cutoff, trackRankings.size());
-            for (int i = 0; i < take; i++) {
-                advanced.add(trackRankings.get(i).getTeamId());
+        Set<UUID> advanced = takeTopFromBuckets(byTrack);
+        if (!untracked.isEmpty()) {
+            advanced.addAll(takeTopFromList(untracked));
+        }
+        return advanced;
+    }
+
+    private Set<UUID> determinePerGroupAdvanced(List<Ranking> rankings) {
+        Map<UUID, List<Ranking>> byGroup = new LinkedHashMap<>();
+        List<Ranking> withoutGroup = new ArrayList<>();
+
+        for (Ranking r : rankings) {
+            UUID groupId = teamPublicService.getTeam(r.getTeamId())
+                    .map(TeamSnapshot::getGroupId)
+                    .orElse(null);
+            if (groupId == null) {
+                withoutGroup.add(r);
+                continue;
             }
+            byGroup.computeIfAbsent(groupId, k -> new ArrayList<>()).add(r);
+        }
+
+        if (byGroup.isEmpty()) {
+            // No groups yet — fall back to per-track then global
+            return determinePerTrackAdvanced(rankings);
+        }
+
+        Set<UUID> advanced = takeTopFromBuckets(byGroup);
+        if (!withoutGroup.isEmpty()) {
+            // Ungrouped teams: treat as one bucket so they are not ignored
+            advanced.addAll(takeTopFromList(withoutGroup));
+        }
+        return advanced;
+    }
+
+    private Set<UUID> takeTopFromBuckets(Map<UUID, List<Ranking>> buckets) {
+        Set<UUID> advanced = new HashSet<>();
+        for (List<Ranking> bucket : buckets.values()) {
+            advanced.addAll(takeTopFromList(bucket));
+        }
+        return advanced;
+    }
+
+    private Set<UUID> takeTopFromList(List<Ranking> list) {
+        List<Ranking> sorted = new ArrayList<>(list);
+        sorted.sort(Comparator
+                .comparing(Ranking::getRank)
+                .thenComparing(Ranking::getFinalScore, Comparator.reverseOrder()));
+        int cutoff = cutoffCalculator.isAutoEnabled()
+                ? cutoffCalculator.compute(sorted.size())
+                : Math.min(sorted.size(), formatRuleEngine.getSealTopPerTrack());
+        Set<UUID> advanced = new HashSet<>();
+        for (int i = 0; i < Math.min(cutoff, sorted.size()); i++) {
+            advanced.add(sorted.get(i).getTeamId());
         }
         return advanced;
     }

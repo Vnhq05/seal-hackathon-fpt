@@ -15,6 +15,7 @@ import com.sealhackathon.event.service.EventPublicService;
 import com.sealhackathon.event.domain.enums.EventStatus;
 import com.sealhackathon.event.domain.enums.RoundType;
 import com.sealhackathon.event.service.FormatRuleEngine;
+import com.sealhackathon.ranking.domain.FinalistSelection;
 import com.sealhackathon.ranking.repository.FinalistSelectionRepository;
 import com.sealhackathon.ranking.repository.PublishedResultRepository;
 import com.sealhackathon.submission.domain.enums.SubmissionStatus;
@@ -29,6 +30,7 @@ import com.sealhackathon.judging.repository.JudgeScoreRepository;
 import com.sealhackathon.submission.domain.Submission;
 import com.sealhackathon.submission.dto.snapshot.SubmissionSnapshot;
 import com.sealhackathon.submission.repository.SubmissionRepository;
+import com.sealhackathon.submission.service.FinalSubmissionCarryOverService;
 import com.sealhackathon.submission.service.SubmissionPublicService;
 import com.sealhackathon.team.domain.Team;
 import com.sealhackathon.team.repository.TeamRepository;
@@ -77,6 +79,7 @@ class JudgingServiceTest {
     @Mock private ScoreReviewService scoreReviewService;
     @Mock private EventPublicService eventPublicService;
     @Mock private SubmissionPublicService submissionPublicService;
+    @Mock private FinalSubmissionCarryOverService finalSubmissionCarryOverService;
     @Mock private TeamPublicService teamPublicService;
     @Mock private UserPublicService userPublicService;
     @Mock private ApplicationEventPublisher eventPublisher;
@@ -296,6 +299,120 @@ class JudgingServiceTest {
         assertThat(result).hasSize(1);
         assertThat(result.getFirst().getTeamId()).isEqualTo(validTeamId);
         assertThat(result.getFirst().getRoundId()).isEqualTo(validRoundId);
+    }
+
+    @Test
+    void getMyScoringAssignments_finalRound_shouldOnlyIncludeSelectedFinalists() {
+        UUID finalRoundId = UUID.randomUUID();
+        UUID finalistTeamId = UUID.randomUUID();
+        UUID eliminatedTeamId = UUID.randomUUID();
+
+        HackathonEvent event = HackathonEvent.builder().name("SEAL Final QA").build();
+        event.setId(EVENT_ID);
+        Round finalRound = Round.builder()
+                .name("Finals")
+                .startDate(LocalDateTime.now().minusDays(1))
+                .scoringDeadline(LocalDateTime.now().plusDays(1))
+                .roundType(RoundType.FINAL)
+                .hackathonEvent(event)
+                .build();
+        finalRound.setId(finalRoundId);
+
+        JudgeAssignment poolAssignment = JudgeAssignment.builder()
+                .round(finalRound)
+                .judgeUserId(JUDGE_ID)
+                .scope(AssignmentScope.ROUND)
+                .active(true)
+                .assignedAt(LocalDateTime.now())
+                .build();
+
+        Team finalist = Team.builder().eventId(EVENT_ID).name("Finalist").build();
+        finalist.setId(finalistTeamId);
+        Team eliminated = Team.builder().eventId(EVENT_ID).name("Eliminated").build();
+        eliminated.setId(eliminatedTeamId);
+
+        FinalistSelection selection = FinalistSelection.builder()
+                .eventId(EVENT_ID)
+                .teamId(finalistTeamId)
+                .preliminaryRank(1)
+                .build();
+
+        Submission carried = Submission.builder()
+                .teamId(finalistTeamId)
+                .roundId(finalRoundId)
+                .status(SubmissionStatus.SUBMITTED)
+                .build();
+        carried.setId(UUID.randomUUID());
+
+        when(judgeAssignmentRepository.findByJudgeUserId(JUDGE_ID))
+                .thenReturn(List.of(poolAssignment));
+        when(roundRepository.existsById(finalRoundId)).thenReturn(true);
+        when(teamRepository.findByEventId(EVENT_ID)).thenReturn(List.of(finalist, eliminated));
+        when(teamRepository.existsById(finalistTeamId)).thenReturn(true);
+        when(finalistSelectionRepository.findByEventIdOrderByPreliminaryRankAsc(EVENT_ID))
+                .thenReturn(List.of(selection));
+        when(finalistSelectionRepository.existsByEventIdAndTeamId(EVENT_ID, finalistTeamId))
+                .thenReturn(true);
+
+        when(teamRepository.findById(finalistTeamId)).thenReturn(Optional.of(finalist));
+        when(roundRepository.findById(finalRoundId)).thenReturn(Optional.of(finalRound));
+        when(eventRepository.findById(EVENT_ID)).thenReturn(Optional.of(event));
+        when(submissionRepository.findByTeamIdAndRoundId(finalistTeamId, finalRoundId))
+                .thenReturn(Optional.of(carried));
+        when(conflictDetectionService.resolveConflictReason(eq(JUDGE_ID), any(Team.class)))
+                .thenReturn(null);
+        when(eventPublicService.getResolvedEventStatus(EVENT_ID)).thenReturn(EventStatus.SCORING);
+        when(publishedResultRepository.existsByRoundId(finalRoundId)).thenReturn(false);
+        when(judgeAssignmentService.isJudgeAssignedToSubmissionScope(
+                eq(finalRoundId), eq(JUDGE_ID), any(), any())).thenReturn(true);
+        when(judgeScoreRepository.findByJudgeUserIdAndSubmissionId(eq(JUDGE_ID), any()))
+                .thenReturn(Optional.empty());
+
+        List<JudgeScoringAssignmentResponse> result = judgingService.getMyScoringAssignments(JUDGE_ID);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.getFirst().getTeamId()).isEqualTo(finalistTeamId);
+    }
+
+    @Test
+    void getMyScoringAssignments_finalRound_shouldBeEmpty_beforeFinalistsSelected() {
+        UUID finalRoundId = UUID.randomUUID();
+
+        HackathonEvent event = HackathonEvent.builder().name("SEAL Final QA").build();
+        event.setId(EVENT_ID);
+        Round finalRound = Round.builder()
+                .name("Finals")
+                .startDate(LocalDateTime.now().minusDays(1))
+                .scoringDeadline(LocalDateTime.now().plusDays(1))
+                .roundType(RoundType.FINAL)
+                .hackathonEvent(event)
+                .build();
+        finalRound.setId(finalRoundId);
+
+        JudgeAssignment poolAssignment = JudgeAssignment.builder()
+                .round(finalRound)
+                .judgeUserId(JUDGE_ID)
+                .scope(AssignmentScope.ROUND)
+                .active(true)
+                .assignedAt(LocalDateTime.now())
+                .build();
+
+        Team team = Team.builder().eventId(EVENT_ID).name("Team").build();
+        team.setId(TEAM_ID);
+
+        when(judgeAssignmentRepository.findByJudgeUserId(JUDGE_ID))
+                .thenReturn(List.of(poolAssignment));
+        when(roundRepository.existsById(finalRoundId)).thenReturn(true);
+        when(teamRepository.findByEventId(EVENT_ID)).thenReturn(List.of(team));
+        when(finalistSelectionRepository.findByEventIdOrderByPreliminaryRankAsc(EVENT_ID))
+                .thenReturn(List.of());
+
+        List<JudgeScoringAssignmentResponse> result = judgingService.getMyScoringAssignments(JUDGE_ID);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.getFirst().getTeamId()).isNull();
+        assertThat(result.getFirst().getRoundName()).isEqualTo("Finals");
+        assertThat(result.getFirst().isScoringAllowed()).isFalse();
     }
 
     @Test

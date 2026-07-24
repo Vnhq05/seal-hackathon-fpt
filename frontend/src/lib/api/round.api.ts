@@ -4,7 +4,12 @@ import type { RoundType } from "./types";
 
 export type { RoundType };
 
-export type AdvancementRule = "GLOBAL_TOP_N" | "PER_TRACK_TOP_N" | "FINALIST_POOL" | "NONE";
+export type AdvancementRule =
+  | "GLOBAL_TOP_N"
+  | "PER_TRACK_TOP_N"
+  | "PER_GROUP_TOP_N"
+  | "FINALIST_POOL"
+  | "NONE";
 
 // ═══ Types ═══
 

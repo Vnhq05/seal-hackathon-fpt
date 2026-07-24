@@ -24,6 +24,7 @@ import com.sealhackathon.ranking.dto.response.FinalistSelectionSummaryResponse;
 import com.sealhackathon.ranking.repository.FinalistContestedSlotRepository;
 import com.sealhackathon.ranking.repository.FinalistSelectionRepository;
 import com.sealhackathon.ranking.repository.RankingRepository;
+import com.sealhackathon.submission.service.FinalSubmissionCarryOverService;
 import com.sealhackathon.submission.service.SubmissionPublicService;
 import com.sealhackathon.team.dto.snapshot.TeamSnapshot;
 import com.sealhackathon.team.service.TeamPublicService;
@@ -56,6 +57,8 @@ public class FinalistSelectionService {
     private final EventStatusResolver eventStatusResolver;
     private final RankingTieBreakComparator tieBreakComparator;
     private final FormatRuleEngine formatRuleEngine;
+    private final AdvancementCutoffCalculator cutoffCalculator;
+    private final FinalSubmissionCarryOverService finalSubmissionCarryOverService;
 
     @Transactional
     public FinalistSelectResultResponse selectFinalists(UUID eventId) {
@@ -105,6 +108,22 @@ public class FinalistSelectionService {
                 .map(s -> toContestedResponse(s, preliminary.getId()))
                 .toList();
 
+        // Carry previous-round submissions into FINAL for each finalist
+        Round finalRound = roundRepository.findByHackathonEventIdOrderByRoundNumberAsc(eventId).stream()
+                .filter(r -> r.getRoundType() == RoundType.FINAL)
+                .findFirst()
+                .orElse(null);
+        if (finalRound != null) {
+            List<UUID> teamIds = finalistResponses.stream().map(FinalistResponse::getTeamId).toList();
+            finalSubmissionCarryOverService.carryOverForTeams(finalRound.getId(), teamIds);
+        }
+
+        int targetCount = cutoffCalculator.isAutoEnabled()
+                ? Math.max(finalistResponses.size(), 1)
+                : (formatRuleEngine.isSealFormat(event)
+                        ? formatRuleEngine.getSealFinalistCount()
+                        : preliminary.getAdvancementCutoff());
+
         boolean penaltyRequired = contestedResponses.stream()
                 .anyMatch(ContestedSlotResponse::isNeedsPenaltyEvaluation);
 
@@ -113,16 +132,19 @@ public class FinalistSelectionService {
                 .contestedSlots(contestedResponses)
                 .summary(FinalistSelectionSummaryResponse.builder()
                         .selectedCount(finalistResponses.size())
-                        .targetCount(formatRuleEngine.isSealFormat(event)
-                                ? formatRuleEngine.getSealFinalistCount()
-                                : preliminary.getAdvancementCutoff())
+                        .targetCount(targetCount)
                         .penaltyEvaluationRequired(penaltyRequired)
                         .build())
                 .build();
     }
 
     private void selectGenericFinalists(Round preliminary, List<Ranking> rankings, SelectionState state) {
-        int cutoff = preliminary.getAdvancementCutoff() != null ? preliminary.getAdvancementCutoff() : 3;
+        if (selectByGroup(rankings, preliminary.getId(), state)) {
+            return;
+        }
+        int cutoff = cutoffCalculator.isAutoEnabled()
+                ? cutoffCalculator.compute(rankings.size())
+                : (preliminary.getAdvancementCutoff() != null ? preliminary.getAdvancementCutoff() : 3);
         RankingTieBreakComparator.SelectionCutResult cut = tieBreakComparator.cutTopN(
                 rankings, cutoff, preliminary.getId());
         for (Ranking r : cut.selected()) {
@@ -136,25 +158,36 @@ public class FinalistSelectionService {
 
     private void selectSealFinalists(UUID eventId, UUID roundId, List<Ranking> rankings,
                                       SelectionState state) {
+        if (selectByGroup(rankings, roundId, state)) {
+            return;
+        }
+
         Map<UUID, List<Ranking>> byTrack = groupByTrack(rankings);
         int slotIndex = 1;
 
         for (Map.Entry<UUID, List<Ranking>> entry : byTrack.entrySet()) {
             UUID trackId = entry.getKey();
+            int cutoff = cutoffCalculator.isAutoEnabled()
+                    ? cutoffCalculator.compute(entry.getValue().size())
+                    : formatRuleEngine.getSealTopPerTrack();
             RankingTieBreakComparator.SelectionCutResult cut = tieBreakComparator.cutTopN(
-                    entry.getValue(), formatRuleEngine.getSealTopPerTrack(), roundId);
+                    entry.getValue(), cutoff, roundId);
 
             for (Ranking r : cut.selected()) {
                 state.addSelection(r.getTeamId(), FinalistSelectionMethod.TOP_PER_TRACK,
-                        "Top 2 in track", false);
+                        "Top in track (auto cutoff " + cutoff + ")", false);
             }
             if (!cut.contested().isEmpty()) {
                 state.addContested(trackId, ContestedSlotType.PER_TRACK_CUTOFF, slotIndex++, cut.contested());
             }
         }
 
-        if (state.selectedTeamIds.size() < formatRuleEngine.getSealFinalistCount()) {
-            int needed = formatRuleEngine.getSealFinalistCount() - state.selectedTeamIds.size();
+        int target = cutoffCalculator.isAutoEnabled()
+                ? Math.max(state.selectedTeamIds.size(), cutoffCalculator.compute(rankings.size()))
+                : formatRuleEngine.getSealFinalistCount();
+
+        if (state.selectedTeamIds.size() < target) {
+            int needed = target - state.selectedTeamIds.size();
             List<Ranking> remaining = rankings.stream()
                     .filter(r -> !state.selectedSet.contains(r.getTeamId()))
                     .toList();
@@ -164,12 +197,46 @@ public class FinalistSelectionService {
 
             for (Ranking r : overflow.selected()) {
                 state.addSelection(r.getTeamId(), FinalistSelectionMethod.OVERFLOW_FILL,
-                        "Overflow fill to reach " + formatRuleEngine.getSealFinalistCount() + " finalists", false);
+                        "Overflow fill to reach " + target + " finalists", false);
             }
             if (!overflow.contested().isEmpty()) {
                 state.addContested(null, ContestedSlotType.OVERFLOW_FILL, slotIndex, overflow.contested());
             }
         }
+    }
+
+    /**
+     * @return true if at least one competition group was used for selection
+     */
+    private boolean selectByGroup(List<Ranking> rankings, UUID roundId, SelectionState state) {
+        Map<UUID, List<Ranking>> byGroup = new LinkedHashMap<>();
+        for (Ranking r : rankings) {
+            UUID groupId = teamPublicService.getTeam(r.getTeamId())
+                    .map(TeamSnapshot::getGroupId)
+                    .orElse(null);
+            if (groupId != null) {
+                byGroup.computeIfAbsent(groupId, k -> new ArrayList<>()).add(r);
+            }
+        }
+        if (byGroup.isEmpty()) {
+            return false;
+        }
+
+        int slotIndex = 1;
+        for (Map.Entry<UUID, List<Ranking>> entry : byGroup.entrySet()) {
+            int cutoff = cutoffCalculator.compute(entry.getValue().size());
+            RankingTieBreakComparator.SelectionCutResult cut = tieBreakComparator.cutTopN(
+                    entry.getValue(), cutoff, roundId);
+            for (Ranking r : cut.selected()) {
+                state.addSelection(r.getTeamId(), FinalistSelectionMethod.TOP_PER_GROUP,
+                        "Top in competition group (auto cutoff " + cutoff + ")", false);
+            }
+            if (!cut.contested().isEmpty()) {
+                state.addContested(null, ContestedSlotType.PER_GROUP_CUTOFF,
+                        slotIndex++, cut.contested());
+            }
+        }
+        return true;
     }
 
     private Map<UUID, List<Ranking>> groupByTrack(List<Ranking> rankings) {

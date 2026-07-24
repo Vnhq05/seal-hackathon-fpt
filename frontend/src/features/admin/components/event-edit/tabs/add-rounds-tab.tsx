@@ -375,7 +375,6 @@ export function AddRoundsTab({ event }: { event: EventResponse }) {
   const [roundStart, setRoundStart] = useState("");
   const [roundEnd, setRoundEnd] = useState("");
   const [submissionDeadline, setSubmissionDeadline] = useState("");
-  const [roundCutoff, setRoundCutoff] = useState(1);
   const [minJudgesPerRound, setMinJudgesPerRound] = useState(2);
   const [addRoundErrors, setAddRoundErrors] = useState<string[]>([]);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -412,7 +411,8 @@ export function AddRoundsTab({ event }: { event: EventResponse }) {
         endDate: resolvedEnd,
         submissionDeadline: resolvedSubmissionDeadline,
         scoringDeadline: resolvedEnd,
-        advancementCutoff: roundCutoff,
+        // Placeholder — advance slots are auto-computed from team counts (hidden config)
+        advancementCutoff: 1,
         minJudgesPerRound,
       },
       {
@@ -421,7 +421,6 @@ export function AddRoundsTab({ event }: { event: EventResponse }) {
           setRoundStart("");
           setRoundEnd("");
           setSubmissionDeadline("");
-          setRoundCutoff(1);
           setMinJudgesPerRound(2);
           setAddRoundErrors([]);
         },
@@ -501,19 +500,6 @@ export function AddRoundsTab({ event }: { event: EventResponse }) {
           </div>
 
           <div className="flex flex-col">
-            <label style={labelStyle}>Top N Advance</label>
-            <input
-              type="number"
-              value={roundCutoff}
-              onChange={(e) => setRoundCutoff(parseInt(e.target.value, 10) || 1)}
-              disabled={!editable}
-              style={inputStyle}
-              min={1}
-              placeholder="e.g. 10"
-            />
-          </div>
-
-          <div className="flex flex-col">
             <label style={labelStyle}>Min judges per scope</label>
             <input
               type="number"
@@ -527,6 +513,8 @@ export function AddRoundsTab({ event }: { event: EventResponse }) {
             />
             <p style={{ fontSize: 12, color: "#8891a5", marginTop: 4 }}>
               Minimum active judges required per track/group before scoring can start.
+              Advance slots are calculated automatically from team counts (not entered here).
+              The round with the latest end time is treated as Final.
             </p>
           </div>
 
@@ -570,7 +558,11 @@ export function AddRoundsTab({ event }: { event: EventResponse }) {
                       Round {r.roundNumber}: {r.name}
                     </span>
                     <span style={{ fontSize: 12, color: "#8891a5", marginLeft: 12 }}>
-                      Top {r.advancementCutoff} advance · Min {r.minJudgesPerRound ?? 2} judges/scope
+                      {r.roundType === "FINAL"
+                        ? "Final · uses previous round submission · "
+                        : "Auto advance by group/track · "}
+                      Min {r.minJudgesPerRound ?? 2} judges/scope
+                      {r.roundType ? ` · ${r.roundType}` : ""}
                     </span>
                   </div>
                   <button

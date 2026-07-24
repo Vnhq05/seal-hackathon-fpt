@@ -4,13 +4,26 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { eventApi } from "@/lib/api/event.api";
 import type { EventResponse } from "@/lib/api/event.api";
-import type { Page } from "@/lib/api/types";
+import type { EventStatus, Page } from "@/lib/api/types";
 import { SealCard } from "@/shared/ui/seal-card";
+
+/** In-progress statuses where rankings / Select Finalists still matter. */
+const LIVESCORE_STATUSES: EventStatus[] = [
+  "CLOSED_REGISTRATION",
+  "ACTIVE",
+  "SCORING",
+];
+
+const STATUS_BADGE: Record<string, string> = {
+  ACTIVE: "border-emerald-200 bg-emerald-50 text-emerald-800",
+  CLOSED_REGISTRATION: "border-amber-200 bg-amber-50 text-amber-900",
+  SCORING: "border-violet-200 bg-violet-50 text-violet-900",
+};
 
 export function LiveScoreListPage({ portalBase = "/admin" }: { portalBase?: string }) {
   const { data, isLoading } = useQuery<Page<EventResponse>>({
-    queryKey: ["admin-events-livescore"],
-    queryFn: () => eventApi.list({ status: "ACTIVE" }),
+    queryKey: ["admin-events-livescore", LIVESCORE_STATUSES],
+    queryFn: () => eventApi.list({ status: LIVESCORE_STATUSES, size: 50 }),
   });
 
   const events = data?.content ?? [];
@@ -22,7 +35,7 @@ export function LiveScoreListPage({ portalBase = "/admin" }: { portalBase?: stri
           LiveScore Arena
         </h1>
         <p className="mt-2 text-sm text-seal-text-muted">
-          Select an event to view real-time rankings.
+          Select an event to view real-time rankings and manage finalists.
         </p>
       </header>
 
@@ -32,9 +45,9 @@ export function LiveScoreListPage({ portalBase = "/admin" }: { portalBase?: stri
         </div>
       ) : events.length === 0 ? (
         <SealCard className="flex flex-col items-center justify-center px-6 py-16 text-center">
-          <p className="text-base font-semibold text-navy">No active events</p>
+          <p className="text-base font-semibold text-navy">No events in progress</p>
           <p className="mt-1 text-sm text-seal-text-muted">
-            LiveScore is available for active events only.
+            LiveScore lists events in Active, Scoring, or Registration Closed.
           </p>
         </SealCard>
       ) : (
@@ -52,7 +65,11 @@ export function LiveScoreListPage({ portalBase = "/admin" }: { portalBase?: stri
                 </p>
               </div>
               <div className="flex shrink-0 items-center gap-3">
-                <span className="rounded border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-800">
+                <span
+                  className={`rounded border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide ${
+                    STATUS_BADGE[event.status] ?? "border-slate-200 bg-slate-50 text-slate-700"
+                  }`}
+                >
                   {event.status}
                 </span>
                 <svg

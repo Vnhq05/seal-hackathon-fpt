@@ -86,6 +86,12 @@ app:
       max-tracks: ${APP_HACKATHON_SEAL_MAX_TRACKS:3}
       finalist-count: ${APP_HACKATHON_SEAL_FINALIST_COUNT:6}
       top-per-track: ${APP_HACKATHON_SEAL_TOP_PER_TRACK:2}
+    advancement:
+      # Hidden config: auto-compute advance slots from team count (not shown on round form)
+      auto: ${APP_HACKATHON_ADVANCEMENT_AUTO:true}
+      ratio: ${APP_HACKATHON_ADVANCEMENT_RATIO:0.25}
+      min-per-bucket: ${APP_HACKATHON_ADVANCEMENT_MIN:1}
+      max-per-bucket: ${APP_HACKATHON_ADVANCEMENT_MAX:10}
   progress:
     alert-lead-time-hours: 6
     stalled-hours: 24
