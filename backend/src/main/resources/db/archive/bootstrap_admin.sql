@@ -24,7 +24,7 @@ SET ANSI_NULLS ON;
 SET XACT_ABORT ON;
 BEGIN TRANSACTION;
 
-DECLARE @adminEmail  NVARCHAR(255) = N'sinhvienfpt1908@gmail.com';
+DECLARE @adminEmail  NVARCHAR(255) = N'admin@seal.com';
 DECLARE @fullName    NVARCHAR(255) = N'System Admin';
 DECLARE @passwordHash NVARCHAR(255) = N'PASTE_BCRYPT_HASH_HERE';
 

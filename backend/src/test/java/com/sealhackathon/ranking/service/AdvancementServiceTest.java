@@ -3,6 +3,7 @@ package com.sealhackathon.ranking.service;
 import com.sealhackathon.event.domain.Round;
 import com.sealhackathon.event.domain.enums.AdvancementRule;
 import com.sealhackathon.event.repository.RoundRepository;
+import com.sealhackathon.event.service.FormatRuleEngine;
 import com.sealhackathon.ranking.domain.Advancement;
 import com.sealhackathon.ranking.domain.Ranking;
 import com.sealhackathon.ranking.domain.enums.AdvancementStatus;
@@ -27,6 +28,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -38,6 +40,8 @@ class AdvancementServiceTest {
     @Mock private RankingRepository rankingRepository;
     @Mock private RoundRepository roundRepository;
     @Mock private TeamPublicService teamPublicService;
+    @Mock private FormatRuleEngine formatRuleEngine;
+    @Mock private AdvancementCutoffCalculator cutoffCalculator;
 
     @InjectMocks private AdvancementService advancementService;
 
@@ -63,6 +67,8 @@ class AdvancementServiceTest {
         when(advancementRepository.saveAll(any())).thenAnswer(inv -> inv.getArgument(0));
         when(teamPublicService.getTeam(any())).thenReturn(Optional.of(
                 TeamSnapshot.builder().name("Team").build()));
+        when(cutoffCalculator.isAutoEnabled()).thenReturn(true);
+        when(cutoffCalculator.compute(3)).thenReturn(2);
 
         List<AdvancementResponse> result = advancementService.determineAdvancements(roundId);
 
@@ -104,6 +110,8 @@ class AdvancementServiceTest {
         when(teamPublicService.getTeam(a3)).thenReturn(Optional.of(team(a3, trackA)));
         when(teamPublicService.getTeam(b1)).thenReturn(Optional.of(team(b1, trackB)));
         when(teamPublicService.getTeam(b2)).thenReturn(Optional.of(team(b2, trackB)));
+        when(cutoffCalculator.isAutoEnabled()).thenReturn(true);
+        when(cutoffCalculator.compute(anyInt())).thenReturn(2);
 
         List<AdvancementResponse> result = advancementService.determineAdvancements(roundId);
 

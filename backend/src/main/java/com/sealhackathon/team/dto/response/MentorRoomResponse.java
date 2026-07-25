@@ -18,6 +18,7 @@ public class MentorRoomResponse {
     private UUID teamId;
     private String teamName;
     private UUID eventId;
+    private String eventName;
     private UUID mentorUserId;
     private LocalDateTime createdAt;
 }

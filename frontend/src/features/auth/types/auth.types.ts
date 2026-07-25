@@ -19,6 +19,7 @@ export interface AuthState {
   refreshToken: string | null;
   isAuthenticated: boolean;
   setAuth: (user: UserInfo, accessToken: string) => void;
+  patchUser: (patch: Partial<UserInfo>) => void;
   setRefreshToken: (token: string) => void;
   clearAuth: () => void;
 }

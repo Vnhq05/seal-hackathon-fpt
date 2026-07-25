@@ -32,6 +32,10 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       setAuth: (user: UserInfo, accessToken: string) =>
         set({ user, accessToken, isAuthenticated: true }),
+      patchUser: (patch) =>
+        set((state) =>
+          state.user ? { user: { ...state.user, ...patch } } : state,
+        ),
       setRefreshToken: (token: string) => set({ refreshToken: token }),
       clearAuth: () => {
         if (typeof window !== "undefined") {

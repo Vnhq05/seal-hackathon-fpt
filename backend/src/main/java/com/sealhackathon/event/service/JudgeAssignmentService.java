@@ -201,12 +201,8 @@ public class JudgeAssignmentService {
     @Transactional(readOnly = true)
     public List<UUID> getEffectiveJudgeUserIdsForTeam(UUID roundId, UUID teamId,
                                                       UUID teamTrackId, UUID teamGroupId) {
-        UUID eventId = teamTrackId == null
-                ? null
-                : teamRepository.findById(teamId).map(Team::getEventId).orElse(null);
         return getEligibleJudgeUserIds(roundId, teamTrackId, teamGroupId).stream()
-                .filter(judgeUserId -> !hasConflictForTeam(
-                        judgeUserId, teamId, eventId, teamTrackId))
+                .filter(judgeUserId -> !hasConflictForTeam(judgeUserId, teamId))
                 .toList();
     }
 
@@ -222,9 +218,7 @@ public class JudgeAssignmentService {
             Set<UUID> judgeIds = new HashSet<>();
             for (JudgeAssignment assignment : assignments) {
                 if (coversTeam(assignment, team.getTrackId(), team.getGroupId())
-                        && !hasConflictForTeam(
-                                assignment.getJudgeUserId(), team.getId(),
-                                team.getEventId(), team.getTrackId())) {
+                        && !hasConflictForTeam(assignment.getJudgeUserId(), team.getId())) {
                     judgeIds.add(assignment.getJudgeUserId());
                 }
             }
@@ -618,13 +612,25 @@ public class JudgeAssignmentService {
     }
 
     private void validateNoConflictInScope(UUID eventId, ResolvedScope scope, UUID judgeUserId) {
-        for (Team team : teamsInScope(eventId, scope)) {
-            if (team.getTrackId() != null && mentorAssignmentRepository.existsByHackathonEventIdAndTrackIdAndMentorUserId(
-                    eventId, team.getTrackId(), judgeUserId)) {
+        // Track mentors cannot judge that track (pool-level). Team-level mentor checks are
+        // unnecessary for assign because mentors of a track are excluded up front.
+        if (scope.trackId() != null
+                && mentorAssignmentRepository.existsByHackathonEventIdAndTrackIdAndMentorUserId(
+                        eventId, scope.trackId(), judgeUserId)) {
+            throw new BusinessException(
+                    "Cannot assign judge who is a mentor of this track",
+                    HttpStatus.CONFLICT) {};
+        }
+        if (scope.scope() == AssignmentScope.ROUND) {
+            boolean mentorsAnyTrack = mentorAssignmentRepository.findByHackathonEventId(eventId).stream()
+                    .anyMatch(a -> a.getMentorUserId().equals(judgeUserId));
+            if (mentorsAnyTrack) {
                 throw new BusinessException(
-                        "Cannot assign judge who is mentor of track containing team " + team.getName(),
+                        "Cannot assign a track mentor as a whole-round judge",
                         HttpStatus.CONFLICT) {};
             }
+        }
+        for (Team team : teamsInScope(eventId, scope)) {
             if (teamMemberRepository.existsByTeamIdAndUserId(team.getId(), judgeUserId)) {
                 throw new BusinessException(
                         "Cannot assign judge who is a member of team " + team.getName(),
@@ -633,18 +639,9 @@ public class JudgeAssignmentService {
         }
     }
 
-    private boolean hasConflictForTeam(
-            UUID judgeUserId, UUID teamId, UUID eventId, UUID trackId) {
-        if (teamPublicService.isMentorOfTeam(judgeUserId, teamId)
-                || teamMemberRepository.existsByTeamIdAndUserId(teamId, judgeUserId)) {
-            return true;
-        }
-        if (eventId == null || trackId == null) {
-            return false;
-        }
-        return mentorAssignmentRepository
-                .existsByHackathonEventIdAndTrackIdAndMentorUserId(
-                        eventId, trackId, judgeUserId);
+    private boolean hasConflictForTeam(UUID judgeUserId, UUID teamId) {
+        return teamPublicService.isMentorOfTeam(judgeUserId, teamId)
+                || teamMemberRepository.existsByTeamIdAndUserId(teamId, judgeUserId);
     }
 
     private void validateTeamsAssignedToGroups(UUID eventId, ResolvedScope scope) {
@@ -762,11 +759,7 @@ public class JudgeAssignmentService {
                 .count();
 
         boolean conflictRisk = teams.stream().anyMatch(team ->
-                teamPublicService.isMentorOfTeam(assignment.getJudgeUserId(), team.getId())
-                        || (team.getTrackId() != null && mentorAssignmentRepository
-                                .existsByHackathonEventIdAndTrackIdAndMentorUserId(
-                                        eventId, team.getTrackId(), assignment.getJudgeUserId()))
-                        || teamMemberRepository.existsByTeamIdAndUserId(team.getId(), assignment.getJudgeUserId()));
+                hasConflictForTeam(assignment.getJudgeUserId(), team.getId()));
 
         return JudgeAssignmentResponse.builder()
                 .id(assignment.getId())

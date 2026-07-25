@@ -1,31 +1,25 @@
 "use client";
 
-export const PART_LABELS = ["Slide", "GitHub", "Other"] as const;
-export const REQUIRED_SUBMISSION_PARTS = 3;
+const PART_LABELS = ["Slide", "GitHub", "Demo", "PDF"] as const;
 
 export interface SubmissionPartStatus {
   slide: boolean;
   source: boolean;
-  other: boolean;
+  demo: boolean;
+  pdf: boolean;
 }
 
-export function percentForSubmittedParts(submittedParts: number): number {
-  if (submittedParts <= 0) return 0;
-  if (submittedParts === 1) return 33.33;
-  if (submittedParts === 2) return 66.66;
-  return 100;
-}
-
-export function submissionPartsFromCounts(submittedParts: number): SubmissionPartStatus {
+export function submissionPartsFromCounts(submittedParts: number, requiredParts = 4): SubmissionPartStatus {
   return {
     slide: submittedParts >= 1,
     source: submittedParts >= 2,
-    other: submittedParts >= 3,
+    demo: submittedParts >= 3,
+    pdf: submittedParts >= requiredParts,
   };
 }
 
 export function countSubmissionParts(status: SubmissionPartStatus): number {
-  return [status.slide, status.source, status.other].filter(Boolean).length;
+  return [status.slide, status.source, status.demo, status.pdf].filter(Boolean).length;
 }
 
 export function submissionPartsFromVersion(
@@ -33,20 +27,19 @@ export function submissionPartsFromVersion(
     slideUrl?: string | null;
     sourceCodeUrl?: string | null;
     githubUrl?: string | null;
-    otherUrl?: string | null;
     demoUrl?: string | null;
     attachments?: unknown[] | null;
   } | null | undefined,
 ): SubmissionPartStatus {
   if (!version) {
-    return { slide: false, source: false, other: false };
+    return { slide: false, source: false, demo: false, pdf: false };
   }
   const source = version.sourceCodeUrl ?? version.githubUrl;
-  const otherLink = version.otherUrl ?? version.demoUrl;
   return {
     slide: Boolean(version.slideUrl?.trim()),
     source: Boolean(source?.trim()),
-    other: Boolean(otherLink?.trim()) || Boolean(version.attachments && version.attachments.length > 0),
+    demo: Boolean(version.demoUrl?.trim()),
+    pdf: Boolean(version.attachments && version.attachments.length > 0),
   };
 }
 
@@ -62,7 +55,7 @@ interface SubmissionProgressBarProps {
 export function SubmissionProgressBar({
   percent,
   submittedParts,
-  requiredParts = REQUIRED_SUBMISSION_PARTS,
+  requiredParts = 4,
   partStatus,
   showPartLabels = false,
   size = "md",
@@ -70,16 +63,17 @@ export function SubmissionProgressBar({
   const clampedPercent = Math.max(0, Math.min(100, percent));
   const isComplete = clampedPercent >= 100;
   const barHeight = size === "sm" ? "h-1.5" : "h-2";
-  const displayPercent =
-    Number.isInteger(clampedPercent) ? `${clampedPercent}` : clampedPercent.toFixed(2);
-  const partsLabel =
-    submittedParts != null ? `${submittedParts}/${requiredParts} parts` : `${displayPercent}%`;
+  const filesLabel =
+    submittedParts != null
+      ? `${submittedParts}/${requiredParts} files`
+      : `${clampedPercent}%`;
 
   const labels = partStatus
     ? [
         { label: PART_LABELS[0], done: partStatus.slide },
         { label: PART_LABELS[1], done: partStatus.source },
-        { label: PART_LABELS[2], done: partStatus.other },
+        { label: PART_LABELS[2], done: partStatus.demo },
+        { label: PART_LABELS[3], done: partStatus.pdf },
       ]
     : null;
 
@@ -87,9 +81,9 @@ export function SubmissionProgressBar({
     <div className="w-full">
       <div className="mb-1 flex items-center justify-between gap-2">
         <span className={`font-mono font-bold ${size === "sm" ? "text-[10px]" : "text-xs"} text-amber-900/80`}>
-          {displayPercent}%
+          {clampedPercent}%
         </span>
-        <span className={`${size === "sm" ? "text-[10px]" : "text-xs"} text-amber-800/60`}>{partsLabel}</span>
+        <span className={`${size === "sm" ? "text-[10px]" : "text-xs"} text-amber-800/60`}>{filesLabel}</span>
       </div>
       <div className={`w-full overflow-hidden rounded-full bg-amber-200/60 ${barHeight}`}>
         <div
@@ -100,16 +94,13 @@ export function SubmissionProgressBar({
         />
       </div>
       {showPartLabels && labels && (
-        <div className="mt-2 flex flex-wrap gap-2">
-          {labels.map((item) => (
+        <div className="mt-1.5 flex flex-wrap gap-x-2 gap-y-0.5">
+          {labels.map(({ label, done }) => (
             <span
-              key={item.label}
-              className={`rounded px-1.5 py-0.5 font-mono text-[10px] ${
-                item.done ? "bg-emerald-100 text-emerald-800" : "bg-amber-100/80 text-amber-900/70"
-              }`}
+              key={label}
+              className={`text-[10px] ${done ? "font-semibold text-emerald-700" : "text-amber-800/50"}`}
             >
-              {item.done ? "✓ " : ""}
-              {item.label}
+              {done ? "✓" : "○"} {label}
             </span>
           ))}
         </div>

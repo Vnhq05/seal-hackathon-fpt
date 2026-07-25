@@ -395,7 +395,7 @@ function ScheduleSection({
 
         {schedules.length > 0 && (
           <div className="mb-10">
-            <EventScheduleTimeline schedules={schedules} rounds={rounds} variant="full" />
+            <EventScheduleTimeline schedules={schedules} variant="full" />
           </div>
         )}
 

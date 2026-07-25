@@ -91,10 +91,9 @@ public class SubmissionService {
                     HttpStatus.FORBIDDEN) {};
         }
 
-        if (roundSnapshot.getRoundType() == RoundType.FINAL
-                && !finalistSelectionService.isFinalist(roundSnapshot.getEventId(), team.getId())) {
+        if (roundSnapshot.getRoundType() == RoundType.FINAL) {
             throw new BusinessException(
-                    "Only finalists can submit for the final round",
+                    "Final round reuses the previous round's submission. Teams cannot submit a new proposal.",
                     HttpStatus.FORBIDDEN) {};
         }
 

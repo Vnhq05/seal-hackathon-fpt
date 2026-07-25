@@ -12,7 +12,7 @@ BEGIN TRANSACTION;
 
 -- Owner of the seeded event. Must match an EVENT_COORDINATOR or SYSTEM_ADMIN in `users`:
 -- ownership is enforced via owner_user_id (V7); created_by is audit-only.
-DECLARE @ownerEmail NVARCHAR(255) = N'sinhvienfpt1908@gmail.com';
+DECLARE @ownerEmail NVARCHAR(255) = N'admin@seal.com';
 DECLARE @ownerUserId UNIQUEIDENTIFIER = (SELECT id FROM users WHERE email = @ownerEmail);
 
 DECLARE @now DATETIME2 = SYSUTCDATETIME();

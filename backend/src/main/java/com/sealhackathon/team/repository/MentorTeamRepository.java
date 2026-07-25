@@ -28,4 +28,10 @@ public interface MentorTeamRepository extends JpaRepository<MentorTeam, UUID> {
 
     @Query("SELECT COUNT(mt) > 0 FROM MentorTeam mt WHERE mt.mentorUserId = :mentorId AND mt.team.id = :teamId")
     boolean isMentorOfTeam(@Param("mentorId") UUID mentorId, @Param("teamId") UUID teamId);
+
+    @Query("SELECT mt FROM MentorTeam mt JOIN FETCH mt.team t WHERE t.eventId = :eventId")
+    List<MentorTeam> findByEventIdWithTeam(@Param("eventId") UUID eventId);
+
+    @Query("SELECT COUNT(mt) FROM MentorTeam mt WHERE mt.mentorUserId = :mentorId AND mt.team.trackId = :trackId")
+    long countByMentorUserIdAndTrackId(@Param("mentorId") UUID mentorId, @Param("trackId") UUID trackId);
 }

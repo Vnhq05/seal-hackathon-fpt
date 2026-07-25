@@ -1,7 +1,6 @@
 package com.sealhackathon.judging.service;
 
 import com.sealhackathon.common.exception.BusinessException;
-import com.sealhackathon.event.repository.MentorAssignmentRepository;
 import com.sealhackathon.judging.event.ConflictDetectedEvent;
 import com.sealhackathon.submission.dto.snapshot.SubmissionSnapshot;
 import com.sealhackathon.submission.service.SubmissionPublicService;
@@ -20,13 +19,11 @@ import java.util.UUID;
 public class ConflictDetectionService {
 
     public static final String REASON_MENTOR_OF_TEAM = "MENTOR_OF_TEAM";
-    public static final String REASON_MENTOR_OF_TRACK = "MENTOR_OF_TRACK";
     public static final String REASON_COORDINATOR_MARKED = "COORDINATOR_MARKED_CONFLICT";
 
     private final TeamPublicService teamPublicService;
     private final SubmissionPublicService submissionPublicService;
     private final ApplicationEventPublisher eventPublisher;
-    private final MentorAssignmentRepository mentorAssignmentRepository;
     private final TeamRepository teamRepository;
 
     public void checkConflict(UUID judgeId, UUID submissionId) {
@@ -48,10 +45,6 @@ public class ConflictDetectionService {
     public String resolveConflictReason(UUID judgeId, Team team) {
         if (teamPublicService.isMentorOfTeam(judgeId, team.getId())) {
             return REASON_MENTOR_OF_TEAM;
-        }
-        if (team.getTrackId() != null && mentorAssignmentRepository.existsByHackathonEventIdAndTrackIdAndMentorUserId(
-                team.getEventId(), team.getTrackId(), judgeId)) {
-            return REASON_MENTOR_OF_TRACK;
         }
         return null;
     }
@@ -77,8 +70,6 @@ public class ConflictDetectionService {
         String message = switch (reason) {
             case REASON_MENTOR_OF_TEAM ->
                     "Conflict of interest: you are a mentor of this team and cannot score their submission";
-            case REASON_MENTOR_OF_TRACK ->
-                    "Conflict of interest: you are a mentor of this team's track and cannot score their submission";
             case REASON_COORDINATOR_MARKED ->
                     "Conflict of interest: scoring has been blocked by the coordinator";
             default -> "Conflict of interest: you cannot score this submission";

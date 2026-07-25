@@ -4,6 +4,7 @@ import com.sealhackathon.common.enums.UserType;
 import com.sealhackathon.common.exception.BusinessException;
 import com.sealhackathon.common.exception.DuplicateResourceException;
 import com.sealhackathon.common.exception.ResourceNotFoundException;
+import com.sealhackathon.event.dto.snapshot.EventSnapshot;
 import com.sealhackathon.event.repository.MentorAssignmentRepository;
 import com.sealhackathon.event.service.EventPublicService;
 import com.sealhackathon.team.domain.MentorInvitation;
@@ -44,56 +45,9 @@ public class MentorInvitationService {
 
     @Transactional
     public MentorInvitationResponse sendInvitation(UUID leaderId, UUID eventId, SendMentorInvitationRequest request) {
-        eventPublicService.getEvent(eventId)
-                .orElseThrow(() -> new ResourceNotFoundException("Event", "id", eventId));
-
-        Team team = teamRepository.findById(request.getTeamId())
-                .orElseThrow(() -> new ResourceNotFoundException("Team", "id", request.getTeamId()));
-
-        if (!team.getEventId().equals(eventId)) {
-            throw new BusinessException("Team does not belong to this event", HttpStatus.BAD_REQUEST) {};
-        }
-
-        if (!team.getLeaderId().equals(leaderId)) {
-            throw new BusinessException("Only the team leader can invite a mentor", HttpStatus.FORBIDDEN) {};
-        }
-
-        if (mentorTeamRepository.existsByTeamId(team.getId())) {
-            throw new BusinessException("Team already has a mentor assigned", HttpStatus.CONFLICT) {};
-        }
-
-        if (team.getTrackId() == null) {
-            throw new BusinessException("Team must be assigned to a track before inviting a mentor", HttpStatus.BAD_REQUEST) {};
-        }
-
-        if (!mentorAssignmentRepository.existsByHackathonEventIdAndTrackIdAndMentorUserId(
-                eventId, team.getTrackId(), request.getMentorUserId())) {
-            throw new BusinessException("Mentor is not assigned to this team's track", HttpStatus.BAD_REQUEST) {};
-        }
-
-        UserSnapshot mentor = userPublicService.findById(request.getMentorUserId())
-                .orElseThrow(() -> new ResourceNotFoundException("User", "id", request.getMentorUserId()));
-
-        if (mentor.getUserType() != UserType.LECTURER) {
-            throw new BusinessException("Selected user is not a mentor", HttpStatus.BAD_REQUEST) {};
-        }
-
-        if (invitationRepository.existsByTeamIdAndMentorUserIdAndStatus(
-                team.getId(), request.getMentorUserId(), MentorInvitationStatus.PENDING)) {
-            throw new DuplicateResourceException("MentorInvitation", "team+mentor",
-                    team.getName() + "+" + mentor.getEmail());
-        }
-
-        MentorInvitation invitation = MentorInvitation.builder()
-                .team(team)
-                .mentorUserId(request.getMentorUserId())
-                .inviterId(leaderId)
-                .status(MentorInvitationStatus.PENDING)
-                .message(request.getMessage())
-                .build();
-
-        invitation = invitationRepository.save(invitation);
-        return toResponse(invitation, mentor, team);
+        throw new BusinessException(
+                "Mentor assignment is managed by coordinators (random draw / manual). Teams cannot invite mentors.",
+                HttpStatus.FORBIDDEN) {};
     }
 
     @Transactional
@@ -220,11 +174,15 @@ public class MentorInvitationService {
     }
 
     private MentorRoomResponse toRoomResponse(MentorTeam mt, Team team) {
+        String eventName = eventPublicService.getEvent(team.getEventId())
+                .map(EventSnapshot::getName)
+                .orElse(null);
         return MentorRoomResponse.builder()
                 .id(mt.getId())
                 .teamId(team.getId())
                 .teamName(team.getName())
                 .eventId(team.getEventId())
+                .eventName(eventName)
                 .mentorUserId(mt.getMentorUserId())
                 .createdAt(mt.getAssignedAt())
                 .build();

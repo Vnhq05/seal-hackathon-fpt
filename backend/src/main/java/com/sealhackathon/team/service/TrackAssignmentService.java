@@ -20,9 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -61,33 +59,15 @@ public class TrackAssignmentService {
             throw new BusinessException("Event has no tracks configured", HttpStatus.BAD_REQUEST);
         }
 
-        Map<UUID, Integer> capacity = new HashMap<>();
-        for (Track t : tracks) {
-            int max = t.getMaxTeams() != null ? t.getMaxTeams() : formatRuleEngine.getSealMaxTeamsPerTrack();
-            long current = teamRepository.countByEventIdAndTrackId(eventId, t.getId());
-            capacity.put(t.getId(), (int) (max - current));
-        }
-
         Collections.shuffle(unassigned);
         List<TrackAssignmentResponse> results = new ArrayList<>();
         int trackIndex = 0;
 
+        // Round-robin across tracks — no per-track capacity limit.
         for (Team team : unassigned) {
-            boolean assigned = false;
-            for (int attempt = 0; attempt < tracks.size(); attempt++) {
-                Track track = tracks.get((trackIndex + attempt) % tracks.size());
-                int remaining = capacity.getOrDefault(track.getId(), 0);
-                if (remaining > 0) {
-                    results.add(assignOne(eventId, assignedBy, team.getId(), track.getId(), TrackAssignmentMethod.RANDOM));
-                    capacity.put(track.getId(), remaining - 1);
-                    trackIndex = (trackIndex + attempt + 1) % tracks.size();
-                    assigned = true;
-                    break;
-                }
-            }
-            if (!assigned) {
-                break;
-            }
+            Track track = tracks.get(trackIndex % tracks.size());
+            results.add(assignOne(eventId, assignedBy, team.getId(), track.getId(), TrackAssignmentMethod.RANDOM));
+            trackIndex++;
         }
 
         int stillUnassigned = teamRepository.findByEventIdAndTrackIdIsNull(eventId).size();
@@ -109,9 +89,6 @@ public class TrackAssignmentService {
         if (!team.getEventId().equals(eventId)) {
             throw new BusinessException("Team does not belong to this event", HttpStatus.BAD_REQUEST);
         }
-        if (team.getTrackId() != null) {
-            throw new BusinessException("Team already has a track assigned", HttpStatus.CONFLICT);
-        }
 
         Track track = trackRepository.findById(trackId)
                 .orElseThrow(() -> new ResourceNotFoundException("Track", "id", trackId));
@@ -122,8 +99,29 @@ public class TrackAssignmentService {
             throw new BusinessException("Track '" + track.getName() + "' is locked", HttpStatus.CONFLICT);
         }
 
+        UUID currentTrackId = team.getTrackId();
+        if (currentTrackId != null) {
+            if (currentTrackId.equals(trackId)) {
+                return TrackAssignmentResponse.builder()
+                        .teamId(teamId)
+                        .trackId(trackId)
+                        .trackName(track.getName())
+                        .method(team.getTrackAssignmentMethod() != null
+                                ? team.getTrackAssignmentMethod()
+                                : method)
+                        .build();
+            }
+            // Coordinators may reassign via MANUAL; draw/self-draw still reject already-assigned teams.
+            if (method != TrackAssignmentMethod.MANUAL) {
+                throw new BusinessException("Team already has a track assigned", HttpStatus.CONFLICT);
+            }
+        }
+
         formatRuleEngine.validateTrackCapacity(eventId, trackId);
 
+        if (currentTrackId != null) {
+            team.setGroupId(null);
+        }
         team.setTrackId(trackId);
         team.setTrackAssignedAt(LocalDateTime.now());
         team.setTrackAssignmentMethod(method);

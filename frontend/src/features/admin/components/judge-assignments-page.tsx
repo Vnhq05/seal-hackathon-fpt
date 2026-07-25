@@ -23,6 +23,7 @@ import {
   useEventStaffJudges,
   useJudgeAssignments,
   useJudgeWorkloadPreview,
+  useMentorAssignments,
   useRemoveJudge,
   useTeamAssignmentsOverview,
   useUpdateTeamGroup,
@@ -221,6 +222,9 @@ function JudgePoolSection({
     groupId: scope === "GROUP" ? selectedGroupId || undefined : undefined,
     requiresTrackId: isPreliminary && scope !== "ROUND",
   });
+  /** All active assignments in this round — used to hide judges already placed on any track. */
+  const { data: roundAssignments = [] } = useJudgeAssignments(eventId, roundId);
+  const { data: trackMentors = [] } = useMentorAssignments(eventId, selectedTrackId);
   const { data: workload } = useJudgeWorkloadPreview(
     eventId,
     roundId,
@@ -234,14 +238,22 @@ function JudgePoolSection({
   const activeJudgeCount = poolJudges.filter((j) => j.active).length;
   const incompleteFromApi = poolJudges[0]?.incompleteScopes ?? [];
 
-  const pooledUserIds = useMemo(
-    () => new Set(poolJudges.filter((j) => j.active).map((j) => j.judgeUserId)),
-    [poolJudges],
+  const assignedAnywhereIds = useMemo(
+    () => new Set(roundAssignments.filter((j) => j.active).map((j) => j.judgeUserId)),
+    [roundAssignments],
   );
-  const availableJudges = useMemo(
-    () => eventJudges.filter((j) => !pooledUserIds.has(j.userId)),
-    [eventJudges, pooledUserIds],
+  const trackMentorIds = useMemo(
+    () => new Set(trackMentors.map((m) => m.mentorUserId)),
+    [trackMentors],
   );
+  const availableJudges = useMemo(() => {
+    return eventJudges.filter((j) => {
+      if (assignedAnywhereIds.has(j.userId)) return false;
+      // For track/group scope: hide mentors of the selected track up front.
+      if (scope !== "ROUND" && selectedTrackId && trackMentorIds.has(j.userId)) return false;
+      return true;
+    });
+  }, [eventJudges, assignedAnywhereIds, scope, selectedTrackId, trackMentorIds]);
 
   const canAssign =
     !!judgeUserId &&
@@ -285,7 +297,7 @@ function JudgePoolSection({
         ))}
       </div>
       <p className="mt-1 text-xs text-seal-text-muted">
-        Assign judges by scope — they automatically score all teams in that scope.
+        Only unassigned judges who are not mentors of this track appear in the list.
       </p>
       {ungroupedTeamNames.length > 0 && (
         <div className="mt-3 border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
@@ -333,7 +345,7 @@ function JudgePoolSection({
             value={judgeUserId}
             onChange={(e) => setJudgeUserId(e.target.value)}
             className="border-2 border-navy bg-white px-3 py-2 text-sm"
-            disabled={eventJudges.length === 0 || ungroupedTeamNames.length > 0}
+            disabled={availableJudges.length === 0 || ungroupedTeamNames.length > 0}
           >
             <option value="">Select judge...</option>
             {availableJudges.map((j) => (
@@ -350,6 +362,11 @@ function JudgePoolSection({
                 Event → Add Lecture
               </Link>
               .
+            </p>
+          )}
+          {eventJudges.length > 0 && availableJudges.length === 0 && ungroupedTeamNames.length === 0 && (
+            <p className="mt-1 text-xs text-amber-700">
+              No eligible judges left — all are already assigned in this round or are mentors of this track.
             </p>
           )}
         </div>
@@ -436,6 +453,7 @@ function EventAssignmentPanel({
   overviewLoading: boolean;
   portalBase: string;
 }) {
+  const [showTeamDetails, setShowTeamDetails] = useState(false);
   const selectedRound = rounds.find((r) => r.id === selectedRoundId);
   const roundType = selectedRound?.roundType ?? undefined;
   const isPreliminary = roundType === "PRELIMINARY";
@@ -444,6 +462,7 @@ function EventAssignmentPanel({
   const ungroupedTeamNames = (overview?.teams ?? [])
     .filter((team) => team.groupId == null)
     .map((team) => team.teamName);
+  const teamCount = overview?.teams?.length ?? 0;
 
   return (
     <div className="flex flex-col gap-4">
@@ -451,7 +470,10 @@ function EventAssignmentPanel({
         {tracks.length > 0 && (
           <select
             value={selectedTrackId}
-            onChange={(e) => onTrackChange(e.target.value)}
+            onChange={(e) => {
+              setShowTeamDetails(false);
+              onTrackChange(e.target.value);
+            }}
             className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] px-3 py-2 text-sm"
           >
             <option value="">All tracks</option>
@@ -462,7 +484,10 @@ function EventAssignmentPanel({
         )}
         <select
           value={selectedRoundId}
-          onChange={(e) => onRoundChange(e.target.value)}
+          onChange={(e) => {
+            setShowTeamDetails(false);
+            onRoundChange(e.target.value);
+          }}
           className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] px-3 py-2 text-sm"
         >
           <option value="">Select round...</option>
@@ -473,7 +498,7 @@ function EventAssignmentPanel({
       </div>
 
       {!selectedRoundId && (
-        <p className="text-sm text-seal-text-muted">Select a round to view the team list.</p>
+        <p className="text-sm text-seal-text-muted">Select a round to manage the judge pool.</p>
       )}
 
       {needsTrackForPool && (
@@ -495,82 +520,105 @@ function EventAssignmentPanel({
       )}
 
       {selectedRoundId && (
-        <div className="overflow-hidden border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]">
-          {overviewLoading ? (
-            <div className="flex justify-center p-12">
-              <div className="h-8 w-8 animate-spin rounded-full border-2 border-seal-cyan border-t-transparent" />
-            </div>
-          ) : (
-            <table className="w-full text-left">
-              <thead className="bg-seal-surface-elevated text-xs font-semibold uppercase tracking-wider text-seal-text-muted">
-                <tr>
-                  <th className="px-4 py-3">Team</th>
-                  <th className="px-4 py-3">Track</th>
-                  <th className="px-4 py-3">Group</th>
-                  <th className="px-4 py-3">Submission</th>
-                  <th className="px-4 py-3">Judges (pool)</th>
-                  <th className="px-4 py-3">COI</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(overview?.teams ?? []).map((team) => {
-                  const hasCoiRisk =
-                    team.mentorUserId != null &&
-                    team.judges.some((j) => j.judgeUserId === team.mentorUserId);
-                  return (
-                    <tr key={team.teamId} className="border-t border-seal-border">
-                      <td className="px-4 py-3 text-sm font-medium text-seal-text">{team.teamName}</td>
-                      <td className="px-4 py-3 text-sm text-seal-text-secondary">{team.trackName ?? "—"}</td>
-                      <td className="px-4 py-3">
-                        <TeamGroupCell
-                          eventId={eventId}
-                          teamId={team.teamId}
-                          trackId={team.trackId}
-                          groupId={team.groupId}
-                        />
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`rounded-md px-2 py-0.5 text-xs font-medium ${
-                          team.submissionStatus
-                            ? "bg-emerald-50 text-emerald-700"
-                            : "bg-amber-50 text-amber-700"
-                        }`}>
-                          {team.submissionStatus ?? "Not submitted"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-seal-text-secondary">
-                        {team.judgeCount === 0 ? (
-                          <span className="text-seal-text-muted">No judges in pool</span>
-                        ) : (
-                          <>
-                            <span className="font-medium">{team.judgeCount}</span>
-                            <div className="mt-1 text-xs text-seal-text-muted">
-                              {team.judges.map((j) => j.judgeFullName ?? j.judgeUserId).join(", ")}
-                            </div>
-                          </>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        {hasCoiRisk ? (
-                          <span className="rounded-md bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700">
-                            COI Risk
-                          </span>
-                        ) : (
-                          <span className="text-sm text-seal-text-muted">—</span>
-                        )}
-                      </td>
+        <div className="flex flex-col gap-3">
+          <button
+            type="button"
+            onClick={() => setShowTeamDetails((open) => !open)}
+            className="self-start border-2 border-navy bg-white px-3 py-1.5 text-sm font-semibold text-navy shadow-[3px_3px_0_0_#0c1228] hover:bg-seal-surface-elevated"
+          >
+            {showTeamDetails ? "Hide team details" : `Show team details${teamCount > 0 || !overviewLoading ? ` (${teamCount})` : ""}`}
+          </button>
+
+          {showTeamDetails && (
+            <div className="overflow-hidden border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]">
+              {overviewLoading ? (
+                <div className="flex justify-center p-12">
+                  <div className="h-8 w-8 animate-spin rounded-full border-2 border-seal-cyan border-t-transparent" />
+                </div>
+              ) : (
+                <table className="w-full text-left">
+                  <thead className="bg-seal-surface-elevated text-xs font-semibold uppercase tracking-wider text-seal-text-muted">
+                    <tr>
+                      <th className="px-4 py-3">Team</th>
+                      <th className="px-4 py-3">Track</th>
+                      <th className="px-4 py-3">Group</th>
+                      <th className="px-4 py-3">Submission</th>
+                      <th className="px-4 py-3">Judges (pool)</th>
+                      <th className="px-4 py-3">Mentor</th>
                     </tr>
-                  );
-                })}
-                {(overview?.teams ?? []).length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="px-4 py-12 text-center text-sm text-seal-text-muted">
-                      No teams found.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                  </thead>
+                  <tbody>
+                    {(overview?.teams ?? []).map((team) => {
+                      const mentorInJudgePool =
+                        team.mentorUserId != null &&
+                        team.judges.some((j) => j.judgeUserId === team.mentorUserId);
+                      return (
+                        <tr key={team.teamId} className="border-t border-seal-border">
+                          <td className="px-4 py-3 text-sm font-medium text-seal-text">{team.teamName}</td>
+                          <td className="px-4 py-3 text-sm text-seal-text-secondary">{team.trackName ?? "—"}</td>
+                          <td className="px-4 py-3">
+                            <TeamGroupCell
+                              eventId={eventId}
+                              teamId={team.teamId}
+                              trackId={team.trackId}
+                              groupId={team.groupId}
+                            />
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`rounded-md px-2 py-0.5 text-xs font-medium ${
+                              team.submissionStatus
+                                ? "bg-emerald-50 text-emerald-700"
+                                : "bg-amber-50 text-amber-700"
+                            }`}>
+                              {team.submissionStatus ?? "Not submitted"}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-seal-text-secondary">
+                            {team.judgeCount === 0 ? (
+                              <span className="text-seal-text-muted">No judges in pool</span>
+                            ) : (
+                              <>
+                                <span className="font-medium">{team.judgeCount}</span>
+                                <div className="mt-1 text-xs text-seal-text-muted">
+                                  {team.judges.map((j) => j.judgeFullName ?? j.judgeUserId).join(", ")}
+                                </div>
+                              </>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            {team.mentorFullName || team.mentorUserId ? (
+                              <div>
+                                <span
+                                  className={`text-sm font-medium ${
+                                    mentorInJudgePool ? "text-red-700" : "text-seal-text"
+                                  }`}
+                                >
+                                  {team.mentorFullName ?? "Unknown"}
+                                </span>
+                                {mentorInJudgePool && (
+                                  <div className="mt-0.5 text-[10px] font-medium text-red-600">
+                                    Also in judge pool
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-sm text-seal-text-muted">No mentor</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {(overview?.teams ?? []).length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="px-4 py-12 text-center text-sm text-seal-text-muted">
+                          No teams found.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              )}
+            </div>
           )}
         </div>
       )}
