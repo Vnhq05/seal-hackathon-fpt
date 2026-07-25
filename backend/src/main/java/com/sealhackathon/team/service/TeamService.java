@@ -81,11 +81,30 @@ public class TeamService {
     private int maxSkillRoles;
 
     private int getMinTeamSize() {
-        return systemConfigService.getConfig().getMinTeamMembers();
+        return systemConfigService.getMinTeamMembers();
     }
 
     private int getMaxTeamSize() {
-        return systemConfigService.getConfig().getMaxTeamMembers();
+        return systemConfigService.getMaxTeamMembers();
+    }
+
+    /**
+     * Event {@code minTeam}/{@code maxTeam} override system defaults when set (same rule as FE
+     * {@code resolveEventTeamSize}). Keeps invitation / join-request capacity in sync with the
+     * values admin/coordinator edit on the event.
+     */
+    public int resolveMinTeamMembers(UUID eventId) {
+        return eventRepository.findById(eventId)
+                .map(HackathonEvent::getMinTeam)
+                .filter(v -> v != null && v > 0)
+                .orElseGet(this::getMinTeamSize);
+    }
+
+    public int resolveMaxTeamMembers(UUID eventId) {
+        return eventRepository.findById(eventId)
+                .map(HackathonEvent::getMaxTeam)
+                .filter(v -> v != null && v > 0)
+                .orElseGet(this::getMaxTeamSize);
     }
 
     // ── BR-15, BR-16: Create team (form 1 — create new) ──
@@ -155,7 +174,7 @@ public class TeamService {
         }
 
         int memberCount = teamMemberRepository.countByTeamId(teamId);
-        int maxSize = getMaxTeamSize();
+        int maxSize = resolveMaxTeamMembers(eventId);
 
         if (request.isRecruiting() && memberCount >= maxSize) {
             throw new BusinessException("Cannot recruit — team is full", HttpStatus.BAD_REQUEST) {};
@@ -181,7 +200,7 @@ public class TeamService {
     public void syncRecruitingStatus(UUID teamId) {
         Team team = getTeam(teamId);
         int memberCount = teamMemberRepository.countByTeamId(teamId);
-        if (memberCount >= getMaxTeamSize() && team.isRecruiting()) {
+        if (memberCount >= resolveMaxTeamMembers(team.getEventId()) && team.isRecruiting()) {
             team.setRecruiting(false);
             teamRepository.save(team);
         }
@@ -197,7 +216,7 @@ public class TeamService {
         }
 
         int size = teamMemberRepository.countByTeamId(teamId);
-        int minSize = getMinTeamSize();
+        int minSize = resolveMinTeamMembers(team.getEventId());
         if (size < minSize) {
             throw new BusinessException(
                     "Team must have at least " + minSize + " members before selecting a track",
@@ -345,7 +364,7 @@ public class TeamService {
      */
     @Transactional
     public int disbandUndersizedTeams(UUID eventId) {
-        int minSize = getMinTeamSize();
+        int minSize = resolveMinTeamMembers(eventId);
         int disbanded = 0;
 
         for (Team team : teamRepository.findByEventId(eventId)) {
@@ -450,7 +469,7 @@ public class TeamService {
 
     private void checkAndConfirmTeam(Team team) {
         int size = teamMemberRepository.countByTeamId(team.getId());
-        if (size >= getMinTeamSize() && team.getStatus() == TeamStatus.FORMING) {
+        if (size >= resolveMinTeamMembers(team.getEventId()) && team.getStatus() == TeamStatus.FORMING) {
             team.setStatus(TeamStatus.CONFIRMED);
             teamRepository.save(team);
             eventPublisher.publishEvent(new TeamConfirmedEvent(team.getId(), size));
@@ -459,11 +478,13 @@ public class TeamService {
 
     private void updateTeamStatus(Team team) {
         int size = teamMemberRepository.countByTeamId(team.getId());
-        if (size < getMinTeamSize() && team.getStatus() == TeamStatus.CONFIRMED) {
+        int minSize = resolveMinTeamMembers(team.getEventId());
+        int maxSize = resolveMaxTeamMembers(team.getEventId());
+        if (size < minSize && team.getStatus() == TeamStatus.CONFIRMED) {
             team.setStatus(TeamStatus.FORMING);
             teamRepository.save(team);
         }
-        if (size >= getMaxTeamSize() && team.isRecruiting()) {
+        if (size >= maxSize && team.isRecruiting()) {
             team.setRecruiting(false);
             teamRepository.save(team);
         }
@@ -493,26 +514,32 @@ public class TeamService {
     }
 
     private void validateTeamCapacity(UUID eventId) {
-        HackathonEvent event = eventRepository.findByIdForUpdate(eventId)
-                .orElseThrow(() -> new ResourceNotFoundException("Event", "id", eventId));
-        if (event.getMaxTeam() == null) {
+        // event.maxTeam = max members per team; platform maxTeams = max teams in an event
+        Integer maxTeams = systemConfigService.getConfig().getMaxTeams();
+        if (maxTeams == null || maxTeams <= 0) {
             return;
         }
+        eventRepository.findByIdForUpdate(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Event", "id", eventId));
         long teamCount = teamRepository.countByEventId(eventId);
-        if (teamCount >= event.getMaxTeam()) {
+        if (teamCount >= maxTeams) {
             throw new BusinessException(
-                    "Maximum team capacity (" + event.getMaxTeam() + ") has been reached",
+                    "Maximum team capacity (" + maxTeams + ") has been reached",
                     HttpStatus.BAD_REQUEST) {};
         }
     }
 
     private void closeRegistrationIfMaxTeamsReached(UUID eventId) {
+        Integer maxTeams = systemConfigService.getConfig().getMaxTeams();
+        if (maxTeams == null || maxTeams <= 0) {
+            return;
+        }
         HackathonEvent event = eventRepository.findById(eventId).orElse(null);
-        if (event == null || event.getMaxTeam() == null) {
+        if (event == null) {
             return;
         }
         long teamCount = teamRepository.countByEventId(eventId);
-        if (teamCount >= event.getMaxTeam()) {
+        if (teamCount >= maxTeams) {
             event.setRegistrationDeadline(LocalDate.now().minusDays(1));
             eventRepository.save(event);
         }
@@ -568,8 +595,8 @@ public class TeamService {
                     .toList();
         }
 
-        int minTeamMembers = getMinTeamSize();
-        int maxTeamMembers = getMaxTeamSize();
+        int minTeamMembers = resolveMinTeamMembers(team.getEventId());
+        int maxTeamMembers = resolveMaxTeamMembers(team.getEventId());
         int memberCount = members.size();
 
         List<HackathonSkillRole> neededRoles = team.getNeededRoles() != null

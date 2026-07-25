@@ -7,7 +7,6 @@ import com.sealhackathon.progress.domain.enums.ProgressRiskLevel;
 import com.sealhackathon.progress.domain.enums.ProgressRiskReason;
 import com.sealhackathon.submission.domain.Submission;
 import com.sealhackathon.submission.domain.SubmissionVersion;
-import com.sealhackathon.submission.domain.enums.SubmissionStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -32,7 +31,8 @@ public class TeamProgressEvaluationService {
                                      SubmissionVersion latestVersion,
                                      int totalVersions,
                                      RoundSnapshot round,
-                                     boolean sealFormat) {
+                                     boolean sealFormat,
+                                     int submittedParts) {
         LocalDateTime now = LocalDateTime.now(clock);
         LocalDateTime submissionDeadline = round.getSubmissionDeadline();
         long hoursUntilDeadline = submissionDeadline != null
@@ -40,10 +40,17 @@ public class TeamProgressEvaluationService {
                 : Long.MAX_VALUE;
         LocalDateTime lastSubmittedAt = latestVersion != null ? latestVersion.getSubmittedAt() : null;
 
+        if (submittedParts >= SubmissionProgressCalculator.REQUIRED_PARTS) {
+            return new EvaluationResult(
+                    ProgressRiskLevel.OK, List.of(), totalVersions, lastSubmittedAt, hoursUntilDeadline,
+                    submittedParts);
+        }
+
         // Alerts only apply while the submission window is still open.
         if (submissionDeadline != null && !now.isBefore(submissionDeadline)) {
             return new EvaluationResult(
-                    ProgressRiskLevel.OK, List.of(), totalVersions, lastSubmittedAt, hoursUntilDeadline);
+                    ProgressRiskLevel.OK, List.of(), totalVersions, lastSubmittedAt, hoursUntilDeadline,
+                    submittedParts);
         }
 
         // And only inside the lead-time window before the deadline (default 6h).
@@ -52,14 +59,13 @@ public class TeamProgressEvaluationService {
                 : null;
         if (leadThreshold != null && now.isBefore(leadThreshold)) {
             return new EvaluationResult(
-                    ProgressRiskLevel.OK, List.of(), totalVersions, lastSubmittedAt, hoursUntilDeadline);
+                    ProgressRiskLevel.OK, List.of(), totalVersions, lastSubmittedAt, hoursUntilDeadline,
+                    submittedParts);
         }
 
         List<ProgressRiskReason> reasons = new ArrayList<>();
 
-        boolean notStarted = submission == null
-                || (submission.getStatus() == SubmissionStatus.DRAFT && totalVersions == 0);
-        if (notStarted) {
+        if (submittedParts == 0) {
             reasons.add(ProgressRiskReason.NOT_STARTED);
         }
 
@@ -70,7 +76,7 @@ public class TeamProgressEvaluationService {
                 && latestVersion != null
                 && latestVersion.getSlideUrl() != null
                 && latestVersion.getGithubUrl() == null
-                && latestVersion.getDemoUrl() == null) {
+                && !hasOtherArtifact(latestVersion)) {
             reasons.add(ProgressRiskReason.SLIDE_ONLY_PAST_GATE);
         }
 
@@ -91,16 +97,22 @@ public class TeamProgressEvaluationService {
             reasons.add(ProgressRiskReason.STALLED);
         }
 
-        if (submission != null
-                && submission.getStatus() == SubmissionStatus.SUBMITTED
-                && latestVersion != null
-                && (latestVersion.getAttachments() == null || latestVersion.getAttachments().isEmpty())) {
-            reasons.add(ProgressRiskReason.MISSING_ATTACHMENT);
-        }
+        // MISSING_ATTACHMENT no longer applies: Other may be link-only (no file required).
 
         ProgressRiskLevel riskLevel = resolveRiskLevel(reasons);
 
-        return new EvaluationResult(riskLevel, reasons, totalVersions, lastSubmittedAt, hoursUntilDeadline);
+        return new EvaluationResult(
+                riskLevel, reasons, totalVersions, lastSubmittedAt, hoursUntilDeadline, submittedParts);
+    }
+
+    private static boolean hasOtherArtifact(SubmissionVersion version) {
+        if (version.getOtherUrl() != null && !version.getOtherUrl().isBlank()) {
+            return true;
+        }
+        if (version.getDemoUrl() != null && !version.getDemoUrl().isBlank()) {
+            return true;
+        }
+        return version.getAttachments() != null && !version.getAttachments().isEmpty();
     }
 
     private ProgressRiskLevel resolveRiskLevel(List<ProgressRiskReason> reasons) {
@@ -121,5 +133,6 @@ public class TeamProgressEvaluationService {
             List<ProgressRiskReason> reasons,
             int totalVersions,
             LocalDateTime lastSubmittedAt,
-            long hoursUntilDeadline) {}
+            long hoursUntilDeadline,
+            int submittedParts) {}
 }

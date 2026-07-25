@@ -6,7 +6,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useHackathonRegistration } from "@/features/events/hooks/use-hackathon-registration";
 import { useEventParticipationGate } from "@/features/events/hooks/use-event-participation-gate";
-import { usePublicAllowedEmailDomains } from "@/features/events/hooks/use-allowed-email-domains";
 import { useProfile } from "@/features/profile/hooks/use-profile";
 import {
   hackathonRegistrationSchema,
@@ -14,7 +13,7 @@ import {
 } from "@/features/events/schemas/hackathon-registration.schema";
 import { Button } from "@/shared/ui/button";
 import type { EventResponse } from "@/lib/api/event.api";
-import { matchesAllowedDomain } from "@/lib/email-domain";
+import { isEduVnEmail } from "@/lib/email-domain";
 
 function ArrowRightIcon() {
   return (
@@ -62,8 +61,6 @@ interface RegistrationFormProps {
 export function RegistrationForm({ hackathonId, event }: RegistrationFormProps) {
   const { data: profile } = useProfile();
 
-  const { data: allowedDomains = [] } = usePublicAllowedEmailDomains(hackathonId);
-
   const { canEnroll, enrollmentBlockReason, registrationClosedReason } =
     useEventParticipationGate(event, {
       studentStanding:
@@ -78,15 +75,11 @@ export function RegistrationForm({ hackathonId, event }: RegistrationFormProps) 
     if (profile?.userType !== "EXTERNAL_STUDENT" || !profile.email) {
       return null;
     }
-    if (allowedDomains.length === 0) {
-      return "No allowed email domains configured for this event. Contact the organizer.";
-    }
-    const domainRules = allowedDomains.map((d) => d.domain);
-    if (!matchesAllowedDomain(profile.email, domainRules)) {
-      return "Email domain is not allowed for this event. Use a university email from the approved list.";
+    if (!isEduVnEmail(profile.email)) {
+      return "Email must use a university domain ending in .edu.vn (e.g. student@hcmut.edu.vn).";
     }
     return null;
-  }, [profile, allowedDomains]);
+  }, [profile]);
 
   const canEnrollWithDomain = canEnroll && !domainBlockReason;
   const displayBlockReason = domainBlockReason ?? enrollmentBlockReason;

@@ -41,4 +41,13 @@ public final class EmailDomainValidator {
         }
         return false;
     }
+
+    /** External student emails must use a Vietnamese university domain ending in {@code .edu.vn}. */
+    public static boolean isEduVnEmail(String email) {
+        String emailDomain = extractDomain(email);
+        if (emailDomain.isEmpty()) {
+            return false;
+        }
+        return emailDomain.equals("edu.vn") || emailDomain.endsWith(".edu.vn");
+    }
 }

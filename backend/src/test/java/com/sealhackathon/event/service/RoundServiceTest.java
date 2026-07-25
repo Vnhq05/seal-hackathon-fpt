@@ -8,6 +8,7 @@ import com.sealhackathon.event.dto.request.CreateRoundRequest;
 import com.sealhackathon.event.dto.response.RoundResponse;
 import com.sealhackathon.event.repository.HackathonEventRepository;
 import com.sealhackathon.event.repository.RoundRepository;
+import com.sealhackathon.event.repository.ScoringTemplateRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,6 +38,7 @@ class RoundServiceTest {
 
     @Mock private RoundRepository roundRepository;
     @Mock private HackathonEventRepository eventRepository;
+    @Mock private ScoringTemplateRepository scoringTemplateRepository;
     @Mock private ApplicationEventPublisher eventPublisher;
     @Mock private FormatRuleEngine formatRuleEngine;
 
@@ -51,6 +53,8 @@ class RoundServiceTest {
         event = buildEvent(eventId);
         when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
         when(roundRepository.findByHackathonEventIdOrderByRoundNumberAsc(eventId)).thenReturn(List.of());
+        when(scoringTemplateRepository.findWithCriteriaByNameIgnoreCase("Default"))
+                .thenReturn(Optional.empty());
     }
 
     // ── BR-09: Round dates within event dates ──

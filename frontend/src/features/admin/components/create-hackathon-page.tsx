@@ -15,6 +15,7 @@ import {
   formatDisplayDate,
   getEventEndDate,
   getInclusiveDayCount,
+  parsePositiveInt,
 } from "@/features/admin/utils/event-wizard.utils";
 import type { CreateEventRequest } from "@/lib/api";
 import { useStaffPortalBase } from "@/shared/hooks/use-staff-portal-base";
@@ -84,7 +85,10 @@ export function CreateHackathonPage() {
 
   const startDate = watch("startDate");
   const duration = watch("duration");
-  const eventEnd = startDate ? getEventEndDate(startDate, duration) : "";
+  const hasValidDuration =
+    typeof duration === "number" && Number.isInteger(duration) && duration >= 1;
+  const eventEnd =
+    startDate && hasValidDuration ? getEventEndDate(startDate, duration) : "";
   const inclusiveDays =
     startDate && eventEnd ? getInclusiveDayCount(startDate, eventEnd) : 0;
 
@@ -125,7 +129,8 @@ export function CreateHackathonPage() {
   };
 
   return (
-    <div style={{ padding: 24 }}>
+    <div style={{ padding: 24, display: "flex", justifyContent: "center" }}>
+      <div style={{ width: "100%", maxWidth: 720 }}>
       <div style={{ marginBottom: 32 }}>
         <h1
           style={{
@@ -145,7 +150,7 @@ export function CreateHackathonPage() {
 
       <form
         onSubmit={handleSubmit(onSubmit)}
-        className="flex flex-col gap-6 p-8 max-w-[720px] border border-[rgba(198,198,205,0.5)] bg-white rounded-xl"
+        className="flex flex-col gap-6 p-8 w-full border border-[rgba(198,198,205,0.5)] bg-white rounded-xl"
       >
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -219,36 +224,36 @@ export function CreateHackathonPage() {
               {errors.startDate && <p style={errorStyle}>{errors.startDate.message}</p>}
             </div>
             <div>
-              <label style={labelStyle}>Duration</label>
+              <label style={labelStyle}>Duration (days)</label>
               <Controller
                 name="duration"
                 control={control}
                 render={({ field }) => (
-                  <div className="flex gap-3" style={{ marginTop: 6 }}>
-                    {[1, 2, 3].map((d) => (
-                      <button
-                        key={d}
-                        type="button"
-                        onClick={() => field.onChange(d)}
-                        style={{
-                          flex: 1,
-                          padding: "10px 0",
-                          borderRadius: 8,
-                          cursor: "pointer",
-                          fontSize: 14,
-                          fontWeight: 600,
-                          border:
-                            field.value === d
-                              ? "2px solid #38bdf8"
-                              : "1px solid rgba(223,226,236,0.8)",
-                          backgroundColor: field.value === d ? "#f0f9ff" : "#ffffff",
-                          color: "#0e1528",
-                        }}
-                      >
-                        {d} day{d > 1 ? "s" : ""}
-                      </button>
-                    ))}
-                  </div>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={
+                      typeof field.value === "number" && !Number.isNaN(field.value)
+                        ? String(field.value)
+                        : ""
+                    }
+                    onChange={(e) => {
+                      const raw = e.target.value.replace(/\D/g, "");
+                      if (!raw) {
+                        field.onChange(undefined);
+                        return;
+                      }
+                      field.onChange(parsePositiveInt(raw));
+                    }}
+                    onBlur={field.onBlur}
+                    name={field.name}
+                    ref={field.ref}
+                    placeholder="e.g. 3"
+                    style={{
+                      ...inputStyle,
+                      borderColor: errors.duration ? "#ef4444" : undefined,
+                    }}
+                  />
                 )}
               />
               {errors.duration && <p style={errorStyle}>{errors.duration.message}</p>}
@@ -324,6 +329,7 @@ export function CreateHackathonPage() {
           </button>
         </div>
       </form>
+      </div>
     </div>
   );
 }

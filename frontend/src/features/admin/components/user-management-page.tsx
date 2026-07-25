@@ -2,6 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useAdminUserAchievements, useAdminUserDetails, useAdminUsers, useApproveOrReject, useCreateInternalAccount, useDeactivateUser, useDeleteUser, useReactivateUser } from "@/features/admin/hooks/use-admin-users";
+import { AchievementCertificateDialog } from "@/features/profile/components/achievement-certificate-dialog";
+import {
+  buildCertificateData,
+  formatAchievementPrize,
+} from "@/features/profile/utils/build-certificate-data";
+import type { CertificateTemplateData } from "@/features/profile/types/certificate.types";
 import type { UserListItem, CreateInternalAccountRequest } from "@/lib/api";
 import type { UserType, AccountStatus } from "@/lib/api";
 import { resolveFileUrl } from "@/lib/files";
@@ -61,7 +67,7 @@ const CREATE_ROLE_OPTIONS: { label: string; value: InternalRole }[] = [
 
 // Must mirror app.protected-emails on the backend — the server rejects the delete either way,
 // this only hides the button.
-const PROTECTED_EMAILS = new Set(["sinhvienfpt1908@gmail.com"]);
+const PROTECTED_EMAILS = new Set(["admin@seal.com"]);
 
 function isProtectedAccount(email: string): boolean {
   return PROTECTED_EMAILS.has(email.toLowerCase());
@@ -180,10 +186,15 @@ function UserDetailsModal({ userId, onClose }: { userId: string; onClose: () => 
     isError: isAchievementsError,
   } = useAdminUserAchievements(userId);
   const [showAvatarPreview, setShowAvatarPreview] = useState(false);
+  const [certificate, setCertificate] = useState<CertificateTemplateData | null>(null);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
+      if (certificate) {
+        setCertificate(null);
+        return;
+      }
       setShowAvatarPreview((isPreviewOpen) => {
         if (!isPreviewOpen) onClose();
         return false;
@@ -191,7 +202,7 @@ function UserDetailsModal({ userId, onClose }: { userId: string; onClose: () => 
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+  }, [onClose, certificate]);
 
   const details = user ? [
     { label: "Email", value: user.email },
@@ -328,6 +339,7 @@ function UserDetailsModal({ userId, onClose }: { userId: string; onClose: () => 
                 <div className="mt-3 space-y-2">
                   {achievements.map((achievement) => {
                     const isAward = achievement.type === "TEAM_AWARD";
+                    const prize = formatAchievementPrize(achievement);
                     return (
                       <article
                         key={`${achievement.type}-${achievement.id}`}
@@ -356,13 +368,52 @@ function UserDetailsModal({ userId, onClose }: { userId: string; onClose: () => 
                           </div>
                           <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1">
                             <p style={{ fontSize: 12, color: "#64748b" }}>
-                              <span style={{ fontWeight: 600, color: "#475569" }}>Ranking: </span>
-                              {achievement.prizeRank ? RANKING_LABELS[achievement.prizeRank] : "Participation"}
+                              <span style={{ fontWeight: 600, color: "#475569" }}>Prize: </span>
+                              <span style={{ color: isAward ? "#b45309" : "#0369a1", fontWeight: 700 }}>
+                                {prize.label}
+                              </span>
+                              {prize.detail ? (
+                                <span style={{ color: "#64748b" }}> — {prize.detail}</span>
+                              ) : null}
                             </p>
                             <p style={{ fontSize: 12, color: "#64748b" }}>
                               <span style={{ fontWeight: 600, color: "#475569" }}>Team: </span>
                               {achievement.teamName || "—"}
                             </p>
+                            {achievement.prizeRank && (
+                              <p style={{ fontSize: 12, color: "#64748b" }}>
+                                <span style={{ fontWeight: 600, color: "#475569" }}>Ranking: </span>
+                                {RANKING_LABELS[achievement.prizeRank]}
+                              </p>
+                            )}
+                          </div>
+                          <div className="mt-3">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setCertificate(
+                                  buildCertificateData(achievement, {
+                                    fullName: user.fullName,
+                                  }),
+                                )
+                              }
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 6,
+                                height: 32,
+                                padding: "0 12px",
+                                border: "1px solid #1a2b56",
+                                background: "#fff",
+                                color: "#1a2b56",
+                                fontSize: 12,
+                                fontWeight: 700,
+                                cursor: "pointer",
+                              }}
+                            >
+                              <span aria-hidden="true">📜</span>
+                              Certificate
+                            </button>
                           </div>
                         </div>
                       </article>
@@ -374,6 +425,12 @@ function UserDetailsModal({ userId, onClose }: { userId: string; onClose: () => 
           </>
         )}
       </div>
+
+      <AchievementCertificateDialog
+        open={certificate != null}
+        data={certificate}
+        onClose={() => setCertificate(null)}
+      />
 
       {showAvatarPreview && avatarSrc && user && (
         <div

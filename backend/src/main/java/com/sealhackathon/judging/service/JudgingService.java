@@ -74,7 +74,7 @@ import java.util.stream.Collectors;
 public class JudgingService {
 
     private static final int DEFAULT_MIN_SCORE = 1;
-    private static final int DEFAULT_MAX_SCORE = 5;
+    private static final int DEFAULT_MAX_SCORE = 100;
 
     private final JudgeScoreRepository judgeScoreRepository;
     private final JudgeAssignmentRepository judgeAssignmentRepository;
@@ -91,8 +91,8 @@ public class JudgingService {
     private final FormatRuleEngine formatRuleEngine;
     private final PublishedResultRepository publishedResultRepository;
     private final FinalistSelectionRepository finalistSelectionRepository;
-    private final SubmissionPublicService submissionPublicService;
     private final FinalSubmissionCarryOverService finalSubmissionCarryOverService;
+    private final SubmissionPublicService submissionPublicService;
     private final TeamPublicService teamPublicService;
     private final UserPublicService userPublicService;
     private final ApplicationEventPublisher eventPublisher;
@@ -507,7 +507,8 @@ public class JudgingService {
 
         UUID eventId = team.getEventId();
         formatRuleEngine.assertCanScore(eventId);
-        assertScoringWindowOpen(roundId);
+        boolean adjustmentApproved = scoreReviewService.isAdjustmentApproved(submissionId);
+        assertScoringWindowOpen(roundId, adjustmentApproved);
         assertScoringNotLocked(roundId, eventId);
         assertFinalistIfFinalRound(roundId, eventId, team.getId());
 
@@ -644,14 +645,14 @@ public class JudgingService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    private void assertScoringWindowOpen(UUID roundId) {
+    private void assertScoringWindowOpen(UUID roundId, boolean adjustmentApproved) {
         Round round = roundRepository.findById(roundId)
                 .orElseThrow(() -> new ResourceNotFoundException("Round", "id", roundId));
         LocalDateTime now = LocalDateTime.now();
         if (now.isBefore(round.getStartDate())) {
             throw new BusinessException("Round scoring has not opened yet", HttpStatus.BAD_REQUEST) {};
         }
-        if (now.isAfter(round.getScoringDeadline())) {
+        if (now.isAfter(round.getScoringDeadline()) && !adjustmentApproved) {
             throw new BusinessException("Scoring deadline has passed", HttpStatus.BAD_REQUEST) {};
         }
     }

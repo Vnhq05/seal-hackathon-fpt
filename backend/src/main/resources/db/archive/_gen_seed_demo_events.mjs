@@ -277,7 +277,7 @@ const EVENTS = [
     season: "Fall",
     year: 2026,
     status: "ACTIVE",
-    qa: "ACTIVE - deadline in ~2h, no submissions, progress alerts + mentor_teams + notifications seeded",
+    qa: "ACTIVE - deadline in ~3h, no submissions, progress alerts + mentor_teams + notifications seeded",
     login: "pham.quoc.bao@fpt.edu.vn (mentor track 1) or nguyen.hoang.minh.preview26@fpt.edu.vn (student leader)",
     view: "admin/lecturer dashboard Teams needing support · /student dashboard banner · notifications",
     pool: "e6",
@@ -448,6 +448,10 @@ L(`DELETE FROM honored_guests WHERE event_id IN (SELECT id FROM @demoEventIds);`
 L(`DELETE FROM prizes WHERE event_id IN (SELECT id FROM @demoEventIds);`);
 L(`DELETE FROM event_schedules WHERE event_id IN (SELECT id FROM @demoEventIds);`);
 L(`DELETE FROM allowed_email_domains WHERE event_id IN (SELECT id FROM @demoEventIds);`);
+L(`IF OBJECT_ID(N'competition_groups', N'U') IS NOT NULL`);
+L(`    DELETE cg FROM competition_groups cg`);
+L(`    INNER JOIN tracks tr ON tr.id = cg.track_id`);
+L(`    WHERE tr.event_id IN (SELECT id FROM @demoEventIds);`);
 L(`DELETE FROM tracks WHERE event_id IN (SELECT id FROM @demoEventIds);`);
 L(`DELETE FROM hackathon_events WHERE id IN (SELECT id FROM @demoEventIds);`);
 L(``);
@@ -580,7 +584,7 @@ function emitEvent(ev) {
     L(`DECLARE @e${ev.n}_regOpen DATE = CAST(DATEADD(DAY, -15, @now) AS DATE);`);
     L(`DECLARE @e${ev.n}_regDeadline DATE = CAST(DATEADD(DAY, -1, @now) AS DATE);`);
     L(`DECLARE @e${ev.n}_prelimStart DATETIME2 = DATEADD(DAY, -1, @now);`);
-    L(`DECLARE @e${ev.n}_prelimSub DATETIME2 = DATEADD(HOUR, 2, @now);`);
+    L(`DECLARE @e${ev.n}_prelimSub DATETIME2 = DATEADD(HOUR, 3, @now);`);
     L(`DECLARE @e${ev.n}_prelimScore DATETIME2 = DATEADD(DAY, 2, @now);`);
     L(`DECLARE @e${ev.n}_finalStart DATETIME2 = DATEADD(DAY, 2, @now);`);
     L(`DECLARE @e${ev.n}_finalSub DATETIME2 = DATEADD(DAY, 2, @now);`);

@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useSystemConfig, useUpdateSystemConfig } from "@/features/admin/hooks/use-admin-system";
-import { AllowedEmailDomainsPanel } from "@/features/events/components/allowed-email-domains-panel";
 import type { SystemConfigResponse } from "@/lib/api/system-config.api";
 import { SealButton } from "@/shared/ui/seal-button";
 import { SealCard } from "@/shared/ui/seal-card";
@@ -295,17 +294,13 @@ export function SystemConfigPage() {
           System Configuration
         </h1>
         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-seal-text-muted">
-          Platform-wide settings for team sizes, event team limits, semester eligibility, default
-          rules, and allowed email domains.
+          Platform-wide settings for team sizes, event team limits, semester eligibility, and default
+          rules. External student emails must end with .edu.vn.
         </p>
       </header>
 
       <div className="flex flex-col gap-8">
         <SystemConfigForm key={data.id} data={data} />
-
-        <div id="allowed-email-domains">
-          <AllowedEmailDomainsPanel />
-        </div>
       </div>
     </div>
   );

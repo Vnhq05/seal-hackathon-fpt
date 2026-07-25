@@ -35,4 +35,14 @@ public class InvitationStatusService {
         invitationRepository.findById(invitationId)
                 .ifPresent(invitation -> invitation.setStatus(status));
     }
+
+    /**
+     * Expires every PENDING invitation for a full team so invitees cannot accept a closed slot and
+     * leaders are not left with stale pending invites to cancel.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void expireAllPendingForTeam(UUID teamId) {
+        invitationRepository.findByTeamIdAndStatus(teamId, InvitationStatus.PENDING)
+                .forEach(invitation -> invitation.setStatus(InvitationStatus.EXPIRED));
+    }
 }

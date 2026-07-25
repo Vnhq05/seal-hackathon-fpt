@@ -99,11 +99,12 @@ export function TeamDetailPanel({ event, team }: TeamDetailPanelProps) {
   const { data: roundSubs, isLoading: roundsLoading } = useTeamSubmissions(event.id, team.id);
   const [activeRound, setActiveRound] = useState<RoundResponse | null>(null);
 
-  const { minTeam: minMembers, maxTeam: maxMembers } = resolveEventTeamSize(
-    event,
-    team.minTeamMembers ?? 3,
-    team.maxTeamMembers ?? 5,
-  );
+  // Prefer sizes resolved by the API (event override → system config) so F5 after
+  // admin min/max edits stays aligned with invitation / join capacity checks.
+  const minMembers = team.minTeamMembers
+    ?? resolveEventTeamSize(event).minTeam;
+  const maxMembers = team.maxTeamMembers
+    ?? resolveEventTeamSize(event).maxTeam;
   const needsMoreMembers = team.memberCount < minMembers;
   const selectedTrack = event.tracks.find((t) => t.id === team.trackId);
   const { mutate: removeMember, isPending: removing } = useMutation({

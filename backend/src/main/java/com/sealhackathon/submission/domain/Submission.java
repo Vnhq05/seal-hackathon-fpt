@@ -27,7 +27,7 @@ import java.util.UUID;
 /**
  * Aggregate Root — Submission Context.
  *
- * BR-25  Valid submission = GitHub URL + PDF + Demo video URL.
+ * BR-25  Valid submission parts: slide URL, source/GitHub URL, and optional Other (any link/file).
  * BR-30  Each re-submission creates a new SubmissionVersion (append-only).
  * BR-31  Only the team leader can create/update a submission.
  * BR-32  No submissions after the round's submission deadline.

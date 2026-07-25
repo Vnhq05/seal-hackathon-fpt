@@ -71,8 +71,8 @@ function RiskBadge({ riskLevel, reasons }: { riskLevel?: MentorTeam["riskLevel"]
         fontWeight: 700,
         padding: "2px 8px",
         marginLeft: 8,
-        color: isCritical ? "#be123c" : "#b45309",
-        backgroundColor: isCritical ? "rgba(225,29,72,0.1)" : "rgba(245,158,11,0.15)",
+        color: isCritical ? "#854d0e" : "#b45309",
+        backgroundColor: isCritical ? "rgba(234,179,8,0.28)" : "rgba(245,158,11,0.15)",
       }}
     >
       Needs support

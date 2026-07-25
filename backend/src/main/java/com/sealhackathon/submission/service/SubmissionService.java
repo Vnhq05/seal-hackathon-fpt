@@ -6,8 +6,8 @@ import com.sealhackathon.common.exception.ResourceNotFoundException;
 import com.sealhackathon.common.storage.FileStorageService;
 import com.sealhackathon.event.domain.enums.RoundType;
 import com.sealhackathon.event.dto.snapshot.RoundSnapshot;
+import com.sealhackathon.event.dto.snapshot.TrackSnapshot;
 import com.sealhackathon.event.service.EventPublicService;
-import com.sealhackathon.event.service.FormatRuleEngine;
 import com.sealhackathon.event.service.JudgeAssignmentService;
 import com.sealhackathon.ranking.service.FinalistSelectionService;
 import com.sealhackathon.submission.domain.Submission;
@@ -23,10 +23,9 @@ import com.sealhackathon.submission.event.SubmissionUpdatedEvent;
 import com.sealhackathon.submission.repository.SubmissionAttachmentRepository;
 import com.sealhackathon.submission.repository.SubmissionRepository;
 import com.sealhackathon.submission.repository.SubmissionVersionRepository;
-import com.sealhackathon.submission.validation.DemoUrlWhitelistValidator;
-import com.sealhackathon.submission.validation.GitHubUrlValidator;
-import com.sealhackathon.submission.validation.PdfValidator;
+import com.sealhackathon.submission.validation.HttpUrlValidator;
 import com.sealhackathon.submission.validation.SourceCodeUrlValidator;
+import com.sealhackathon.submission.validation.SubmissionFileValidator;
 import com.sealhackathon.team.dto.snapshot.TeamSnapshot;
 import com.sealhackathon.team.service.TeamPublicService;
 import lombok.RequiredArgsConstructor;
@@ -37,8 +36,12 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -49,32 +52,31 @@ public class SubmissionService {
     private final SubmissionAttachmentRepository attachmentRepository;
     private final TeamPublicService teamPublicService;
     private final EventPublicService eventPublicService;
-    private final GitHubUrlValidator gitHubUrlValidator;
     private final SourceCodeUrlValidator sourceCodeUrlValidator;
-    private final DemoUrlWhitelistValidator demoUrlValidator;
-    private final PdfValidator pdfValidator;
+    private final HttpUrlValidator httpUrlValidator;
+    private final SubmissionFileValidator submissionFileValidator;
     private final FinalistSelectionService finalistSelectionService;
     private final FileStorageService fileStorageService;
     private final JudgeAssignmentService judgeAssignmentService;
     private final ApplicationEventPublisher eventPublisher;
-    private final FormatRuleEngine formatRuleEngine;
 
     // ── BR-25, BR-31, BR-32: Create or re-submit ──
     @Transactional
     public SubmissionResponse submit(UUID currentUserId, UUID roundId,
-                                     CreateSubmissionRequest request, MultipartFile pdfFile) {
+                                     CreateSubmissionRequest request, MultipartFile file) {
         RoundSnapshot roundSnapshot = eventPublicService.getRound(roundId)
                 .orElseThrow(() -> new ResourceNotFoundException("Round", "id", roundId));
 
-        validateSealSubmission(roundSnapshot, request);
+        validatePartialSubmission(roundSnapshot, request, file);
 
-        String sourceUrl = resolveSourceUrl(request, roundSnapshot);
-        if (sourceUrl != null) {
-            sourceCodeUrlValidator.validate(sourceUrl);
+        String requestSourceUrl = resolveSourceUrlOptional(request);
+        if (requestSourceUrl != null) {
+            sourceCodeUrlValidator.validate(requestSourceUrl);
         }
 
-        if (request.getDemoUrl() != null && !request.getDemoUrl().isBlank()) {
-            demoUrlValidator.validate(request.getDemoUrl());
+        String requestOtherUrl = resolveOtherUrlOptional(request);
+        if (requestOtherUrl != null) {
+            httpUrlValidator.validate(requestOtherUrl, "Other URL");
         }
 
         TeamSnapshot team = teamPublicService.getTeamByParticipantAndEvent(
@@ -103,10 +105,9 @@ public class SubmissionService {
                 .orElse(null);
 
         boolean isNew = (submission == null);
-        boolean hasPdf = pdfFile != null && !pdfFile.isEmpty();
+        boolean hasFile = file != null && !file.isEmpty();
 
-        boolean pdfRequired = isNew && isPdfRequiredForSubmit(roundSnapshot);
-        pdfValidator.validate(pdfFile, request.getPdfPageCount(), pdfRequired);
+        submissionFileValidator.validateOptional(file);
 
         if (isNew) {
             submission = Submission.builder()
@@ -118,27 +119,48 @@ public class SubmissionService {
             submission = submissionRepository.save(submission);
         }
 
-        // BR-30: create new version (append-only)
+        // BR-30: create new version (append-only), merging artifacts from previous version
+        SubmissionVersion previousVersion = resolvePreviousVersion(submission);
+
+        String slideUrl = coalesceNonBlank(
+                trimToNull(request.getSlideUrl()), previousVersion != null ? previousVersion.getSlideUrl() : null);
+        String sourceUrl = coalesceNonBlank(requestSourceUrl,
+                previousVersion != null ? previousVersion.getGithubUrl() : null);
+        String otherUrl = coalesceNonBlank(requestOtherUrl,
+                previousVersion != null
+                        ? coalesceNonBlank(previousVersion.getOtherUrl(), previousVersion.getDemoUrl())
+                        : null);
+        // Keep demoUrl in sync for legacy readers: prefer explicit other, else previous demo
+        String demoUrl = otherUrl;
+
+        if (!isNew && previousVersion != null && !hasFile
+                && urlsUnchanged(previousVersion, slideUrl, sourceUrl, otherUrl)) {
+            return toResponse(submission);
+        }
+
         int nextVersion = versionRepository.findMaxVersionNumber(submission.getId()) + 1;
 
         SubmissionVersion version = SubmissionVersion.builder()
                 .submission(submission)
                 .versionNumber(nextVersion)
                 .githubUrl(sourceUrl)
-                .slideUrl(request.getSlideUrl() != null ? request.getSlideUrl().trim() : null)
-                .demoUrl(request.getDemoUrl() != null ? request.getDemoUrl().trim() : null)
+                .slideUrl(slideUrl)
+                .otherUrl(otherUrl)
+                .demoUrl(demoUrl)
                 .submittedAt(LocalDateTime.now())
                 .build();
         final SubmissionVersion savedVersion = versionRepository.save(version);
 
-        if (hasPdf) {
-            String fileUrl = fileStorageService.storeSubmissionPdf(pdfFile, submission.getId(), nextVersion);
+        if (hasFile) {
+            String fileUrl = fileStorageService.storeSubmissionFile(file, submission.getId(), nextVersion);
+            String originalName = file.getOriginalFilename();
             SubmissionAttachment attachment = SubmissionAttachment.builder()
                     .submissionVersion(savedVersion)
-                    .fileName(pdfFile.getOriginalFilename())
+                    .fileName(originalName != null && !originalName.isBlank() ? originalName : "attachment.bin")
                     .fileUrl(fileUrl)
-                    .fileSize(pdfFile.getSize())
-                    .pageCount(request.getPdfPageCount() != null ? request.getPdfPageCount() : 1)
+                    .fileSize(file.getSize())
+                    .pageCount(null)
+                    .contentType(file.getContentType())
                     .build();
             attachmentRepository.save(attachment);
         } else if (!isNew && submission.getCurrentVersionId() != null) {
@@ -150,6 +172,7 @@ public class SubmissionService {
                             .fileUrl(prev.getFileUrl())
                             .fileSize(prev.getFileSize())
                             .pageCount(prev.getPageCount())
+                            .contentType(prev.getContentType())
                             .build()));
         }
 
@@ -192,15 +215,15 @@ public class SubmissionService {
 
     @Transactional(readOnly = true)
     public List<SubmissionResponse> getSubmissionsByRound(UUID roundId, UUID requesterId,
-                                                          UserType requesterRole) {
+                                                          UserType requesterRole, UUID trackId) {
         List<Submission> submissions = submissionRepository.findByRoundId(roundId);
-
-        if (requesterRole == UserType.SYSTEM_ADMIN || requesterRole == UserType.EVENT_COORDINATOR) {
-            return submissions.stream().map(this::toResponse).toList();
-        }
-
         RoundSnapshot round = eventPublicService.getRound(roundId)
                 .orElseThrow(() -> new ResourceNotFoundException("Round", "id", roundId));
+        Map<UUID, String> trackNames = trackNameMap(round.getEventId());
+
+        if (requesterRole == UserType.SYSTEM_ADMIN || requesterRole == UserType.EVENT_COORDINATOR) {
+            return filterAndMap(submissions, trackId, trackNames);
+        }
 
         if (requesterRole == UserType.FPT_STUDENT || requesterRole == UserType.EXTERNAL_STUDENT) {
             TeamSnapshot team = teamPublicService.getTeamByParticipantAndEvent(
@@ -210,14 +233,15 @@ public class SubmissionService {
                             HttpStatus.FORBIDDEN) {});
             return submissions.stream()
                     .filter(s -> s.getTeamId().equals(team.getId()))
-                    .map(this::toResponse)
+                    .map(s -> toResponse(s, trackNames))
                     .toList();
         }
 
         if (requesterRole == UserType.LECTURER) {
             return submissions.stream()
                     .filter(s -> canLecturerViewSubmission(requesterId, roundId, s.getTeamId()))
-                    .map(this::toResponse)
+                    .map(s -> toResponse(s, trackNames))
+                    .filter(r -> trackId == null || trackId.equals(r.getTrackId()))
                     .toList();
         }
 
@@ -227,20 +251,23 @@ public class SubmissionService {
     // ── BR-33: Mentor can view team submissions ──
     @Transactional(readOnly = true)
     public List<SubmissionResponse> getSubmissionsByMentor(UUID mentorId, UUID eventId, UUID roundId) {
+        Map<UUID, String> trackNames = trackNameMap(eventId);
         List<TeamSnapshot> teams = teamPublicService.getTeamsByMentor(mentorId, eventId);
         return teams.stream()
                 .flatMap(team -> submissionRepository.findByTeamId(team.getId()).stream())
                 .filter(s -> s.getRoundId().equals(roundId))
-                .map(this::toResponse)
+                .map(s -> toResponse(s, trackNames))
                 .toList();
     }
 
     @Transactional(readOnly = true)
-    public List<SubmissionVersionResponse> getVersionHistory(UUID roundId, UUID submissionId) {
+    public List<SubmissionVersionResponse> getVersionHistory(UUID roundId, UUID submissionId,
+                                                             UUID requesterId, UserType requesterRole) {
         Submission submission = getSubmission(submissionId);
         if (!submission.getRoundId().equals(roundId)) {
             throw new ResourceNotFoundException("Submission", "id", submissionId);
         }
+        assertSubmissionReadAccess(submission, roundId, requesterId, requesterRole);
         return versionRepository.findBySubmissionIdOrderByVersionNumberDesc(submissionId).stream()
                 .map(this::toVersionResponse)
                 .toList();
@@ -310,6 +337,15 @@ public class SubmissionService {
     }
 
     SubmissionResponse toResponse(Submission submission) {
+        Map<UUID, String> trackNames = Map.of();
+        OptionalTeamContext ctx = resolveTeamContext(submission.getTeamId());
+        if (ctx.eventId() != null) {
+            trackNames = trackNameMap(ctx.eventId());
+        }
+        return toResponse(submission, trackNames);
+    }
+
+    private SubmissionResponse toResponse(Submission submission, Map<UUID, String> trackNames) {
         List<SubmissionVersion> versions = versionRepository
                 .findBySubmissionIdOrderByVersionNumberDesc(submission.getId());
 
@@ -322,9 +358,17 @@ public class SubmissionService {
             currentVersionNum = latest.getVersionNumber();
         }
 
+        OptionalTeamContext teamCtx = resolveTeamContext(submission.getTeamId());
+        String trackName = teamCtx.trackId() != null
+                ? trackNames.get(teamCtx.trackId())
+                : null;
+
         return SubmissionResponse.builder()
                 .id(submission.getId())
                 .teamId(submission.getTeamId())
+                .teamName(teamCtx.teamName())
+                .trackId(teamCtx.trackId())
+                .trackName(trackName)
                 .roundId(submission.getRoundId())
                 .status(submission.getStatus())
                 .submittedBy(submission.getSubmittedBy())
@@ -335,6 +379,31 @@ public class SubmissionService {
                 .build();
     }
 
+    private List<SubmissionResponse> filterAndMap(List<Submission> submissions,
+                                                    UUID trackId,
+                                                    Map<UUID, String> trackNames) {
+        return submissions.stream()
+                .map(s -> toResponse(s, trackNames))
+                .filter(r -> trackId == null || trackId.equals(r.getTrackId()))
+                .toList();
+    }
+
+    private Map<UUID, String> trackNameMap(UUID eventId) {
+        if (eventId == null) {
+            return Map.of();
+        }
+        return eventPublicService.getTracksByEvent(eventId).stream()
+                .collect(Collectors.toMap(TrackSnapshot::getId, TrackSnapshot::getName, (a, b) -> a, HashMap::new));
+    }
+
+    private OptionalTeamContext resolveTeamContext(UUID teamId) {
+        return teamPublicService.getTeam(teamId)
+                .map(t -> new OptionalTeamContext(t.getName(), t.getTrackId(), t.getEventId()))
+                .orElse(new OptionalTeamContext(null, null, null));
+    }
+
+    private record OptionalTeamContext(String teamName, UUID trackId, UUID eventId) {}
+
     private SubmissionVersionResponse toVersionResponse(SubmissionVersion v) {
         List<AttachmentResponse> attachments = attachmentRepository
                 .findBySubmissionVersionId(v.getId()).stream()
@@ -344,10 +413,12 @@ public class SubmissionService {
                         .fileUrl(a.getFileUrl())
                         .fileSize(a.getFileSize())
                         .pageCount(a.getPageCount())
+                        .contentType(a.getContentType())
                         .build())
                 .toList();
 
         String sourceCodeUrl = v.getGithubUrl();
+        String otherUrl = coalesceNonBlank(v.getOtherUrl(), v.getDemoUrl());
 
         return SubmissionVersionResponse.builder()
                 .id(v.getId())
@@ -355,90 +426,64 @@ public class SubmissionService {
                 .sourceCodeUrl(sourceCodeUrl)
                 .githubUrl(sourceCodeUrl)
                 .slideUrl(v.getSlideUrl())
+                .otherUrl(otherUrl)
                 .demoUrl(v.getDemoUrl())
                 .submittedAt(v.getSubmittedAt())
                 .attachments(attachments)
                 .build();
     }
 
-    /**
-     * PDF required on first submit for non-SEAL events only (SEAL uses slide instead).
-     */
-    private boolean isPdfRequiredForSubmit(RoundSnapshot round) {
-        return !formatRuleEngine.isSealFormat(round.getEventId());
-    }
-
-    private String resolveSourceUrl(CreateSubmissionRequest request, RoundSnapshot round) {
-        String url = null;
-        if (request.getSourceCodeUrl() != null && !request.getSourceCodeUrl().isBlank()) {
-            url = request.getSourceCodeUrl().trim();
-        } else if (request.getGithubUrl() != null && !request.getGithubUrl().isBlank()) {
-            url = request.getGithubUrl().trim();
-        }
-        if (url == null && isFullSubmissionPhase(round)) {
-            throw new BusinessException("Source code URL is required", HttpStatus.BAD_REQUEST);
-        }
-        return url;
-    }
-
-    private void validateSealSubmission(RoundSnapshot round, CreateSubmissionRequest request) {
-        if (!formatRuleEngine.isSealFormat(round.getEventId())) {
-            if (request.getDemoUrl() == null || request.getDemoUrl().isBlank()) {
-                throw new BusinessException("Demo URL is required", HttpStatus.BAD_REQUEST);
-            }
-            if (resolveSourceUrlOptional(request) == null) {
-                throw new BusinessException("Source code URL is required", HttpStatus.BAD_REQUEST);
-            }
-            return;
-        }
-
-        if (round.getRoundType() != RoundType.PRELIMINARY) {
-            if (request.getDemoUrl() == null || request.getDemoUrl().isBlank()) {
-                throw new BusinessException("Demo URL is required", HttpStatus.BAD_REQUEST);
-            }
-            if (resolveSourceUrlOptional(request) == null) {
-                throw new BusinessException("Source code URL is required", HttpStatus.BAD_REQUEST);
-            }
-            return;
-        }
-
-        LocalDateTime now = LocalDateTime.now();
+    private void validatePartialSubmission(RoundSnapshot round,
+                                           CreateSubmissionRequest request,
+                                           MultipartFile file) {
         boolean hasSlide = request.getSlideUrl() != null && !request.getSlideUrl().isBlank();
-        boolean hasDemo = request.getDemoUrl() != null && !request.getDemoUrl().isBlank();
         boolean hasSource = resolveSourceUrlOptional(request) != null;
+        boolean hasOtherUrl = resolveOtherUrlOptional(request) != null;
+        boolean hasFile = file != null && !file.isEmpty();
 
-        if (round.getSlideDeadline() != null && now.isBefore(round.getSlideDeadline())) {
-            if (hasSlide && !hasDemo && !hasSource) {
-                return;
-            }
-        } else if (round.getSlideDeadline() != null && now.isAfter(round.getSlideDeadline())
-                && hasSlide && !hasDemo && !hasSource) {
+        if (!hasSlide && !hasSource && !hasOtherUrl && !hasFile) {
             throw new BusinessException(
-                    "Slide submission gate closed at " + round.getSlideDeadline(),
-                    HttpStatus.BAD_REQUEST);
+                    "At least one submission part is required (slide, GitHub, or other link/file)",
+                    HttpStatus.BAD_REQUEST) {};
         }
 
-        if (round.getSubmissionDeadline() != null && now.isAfter(round.getSubmissionDeadline())) {
+        if (round.getSubmissionDeadline() != null
+                && LocalDateTime.now().isAfter(round.getSubmissionDeadline())) {
             throw new BusinessException(
-                    "Demo submission deadline passed at " + round.getSubmissionDeadline(),
-                    HttpStatus.BAD_REQUEST);
-        }
-        if (!hasDemo) {
-            throw new BusinessException("Demo URL is required for " + round.getName(), HttpStatus.BAD_REQUEST);
-        }
-        if (!hasSource) {
-            throw new BusinessException("Source code URL is required for " + round.getName(), HttpStatus.BAD_REQUEST);
+                    "Submission deadline passed at " + round.getSubmissionDeadline(),
+                    HttpStatus.BAD_REQUEST) {};
         }
     }
 
-    private boolean isFullSubmissionPhase(RoundSnapshot round) {
-        if (formatRuleEngine.isSealFormat(round.getEventId())
-                && round.getRoundType() == RoundType.PRELIMINARY
-                && round.getSlideDeadline() != null
-                && LocalDateTime.now().isBefore(round.getSlideDeadline())) {
-            return false;
+    private SubmissionVersion resolvePreviousVersion(Submission submission) {
+        if (submission.getCurrentVersionId() != null) {
+            return versionRepository.findById(submission.getCurrentVersionId()).orElse(null);
         }
-        return true;
+        return versionRepository.findBySubmissionIdOrderByVersionNumberDesc(submission.getId()).stream()
+                .findFirst()
+                .orElse(null);
+    }
+
+    private static String coalesceNonBlank(String preferred, String fallback) {
+        if (preferred != null && !preferred.isBlank()) {
+            return preferred.trim();
+        }
+        return fallback;
+    }
+
+    private static boolean urlsUnchanged(SubmissionVersion previous,
+                                         String slideUrl, String sourceUrl, String otherUrl) {
+        String previousOther = coalesceNonBlank(previous.getOtherUrl(), previous.getDemoUrl());
+        return Objects.equals(trimToNull(previous.getSlideUrl()), trimToNull(slideUrl))
+                && Objects.equals(trimToNull(previous.getGithubUrl()), trimToNull(sourceUrl))
+                && Objects.equals(trimToNull(previousOther), trimToNull(otherUrl));
+    }
+
+    private static String trimToNull(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.trim();
     }
 
     private String resolveSourceUrlOptional(CreateSubmissionRequest request) {
@@ -447,6 +492,16 @@ public class SubmissionService {
         }
         if (request.getGithubUrl() != null && !request.getGithubUrl().isBlank()) {
             return request.getGithubUrl().trim();
+        }
+        return null;
+    }
+
+    private String resolveOtherUrlOptional(CreateSubmissionRequest request) {
+        if (request.getOtherUrl() != null && !request.getOtherUrl().isBlank()) {
+            return request.getOtherUrl().trim();
+        }
+        if (request.getDemoUrl() != null && !request.getDemoUrl().isBlank()) {
+            return request.getDemoUrl().trim();
         }
         return null;
     }

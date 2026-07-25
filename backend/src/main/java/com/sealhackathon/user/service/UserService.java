@@ -53,7 +53,7 @@ public class UserService {
     private final AuthPublicService authPublicService;
     private final FileStorageService fileStorageService;
 
-    @Value("${app.protected-emails:sinhvienfpt1908@gmail.com}")
+    @Value("${app.protected-emails:admin@seal.com}")
     private String protectedEmailsConfig;
 
     private Set<String> protectedEmails;

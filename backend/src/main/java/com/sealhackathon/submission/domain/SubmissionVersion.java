@@ -27,8 +27,8 @@ import java.util.List;
 /**
  * Child entity of Submission aggregate. Immutable once created.
  *
- * BR-25  Artifacts: slideUrl (SEAL), source code URL, demoUrl, optional PDF (non-SEAL).
- * BR-28  demoUrl must match whitelist (YouTube, Vimeo, etc.).
+ * Artifacts: slideUrl, source code URL (githubUrl), otherUrl and/or generic attachments.
+ * demoUrl retained for backward compatibility (treated as Other in progress).
  * BR-29  Source code URL validated by SourceCodeUrlValidator (GitHub, Jira, Notion, etc.).
  * BR-30  Every re-submission creates a new version; old versions retained.
  * BR-47  submittedAt used as final tie-breaker in ranking.
@@ -65,17 +65,21 @@ public class SubmissionVersion extends BaseEntity {
     @Column(name = "slide_url")
     private String slideUrl;
 
-    // ── BR-28: validated against domain whitelist; nullable during SEAL Milestone 1 ──
+    /** @deprecated Prefer {@link #otherUrl}; kept for legacy rows / progress mapping. */
     @Size(max = 500)
     @Column(name = "demo_url")
     private String demoUrl;
+
+    @Size(max = 500)
+    @Column(name = "other_url")
+    private String otherUrl;
 
     // ── BR-47: tie-breaker — earlier submission wins ──
     @NotNull
     @Column(name = "submitted_at", nullable = false)
     private LocalDateTime submittedAt;
 
-    // ── Child: PDF attachments for this version ──
+    // ── Child: Other-section file attachments for this version ──
     @OneToMany(mappedBy = "submissionVersion", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @Builder.Default
     private List<SubmissionAttachment> attachments = new ArrayList<>();

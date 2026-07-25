@@ -26,7 +26,10 @@ import {
   computeWeightedScore,
   computeMaxWeightedScore,
 } from "@/features/judging/schemas/scoring.schema";
-import { SEAL_SCORE_BUTTON_LABELS } from "@/features/judging/constants/scoring-scale";
+import {
+  MAX_DISCRETE_SCORE_BUTTONS,
+  SEAL_SCORE_BUTTON_LABELS,
+} from "@/features/judging/constants/scoring-scale";
 import { usePortalBase } from "@/shared/hooks/use-portal-base";
 import { SubmissionPdfViewer } from "@/features/submissions/components/submission-pdf-viewer";
 import type { SubmissionForScoring } from "@/features/judging/types/judge.types";
@@ -402,14 +405,14 @@ function ScoringPageContent({
             Slide Deck →
           </a>
         )}
-        {submission.demoUrl && (
+        {(submission.otherUrl ?? submission.demoUrl) && (
           <a
-            href={submission.demoUrl}
+            href={submission.otherUrl ?? submission.demoUrl ?? undefined}
             target="_blank"
             rel="noopener noreferrer"
             className="border-2 border-navy bg-white p-3 text-sm font-medium text-royal shadow-[4px_4px_0_0_#0c1228] hover:bg-seal-surface-sunken"
           >
-            Demo Video →
+            Other →
           </a>
         )}
       </div>
@@ -446,27 +449,54 @@ function ScoringPageContent({
                     {c.name} — {c.weight}%
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-1">
-                      {scoreValues(c.minScore, c.maxScore).map((value) => {
-                        const isActive = score === value;
-                        const label = SEAL_SCORE_BUTTON_LABELS[value] ?? String(value);
-                        return (
-                          <button
-                            key={value}
-                            type="button"
-                            disabled={disabled}
-                            onClick={() => onScoreChange(i, value)}
-                            className={`rounded border px-2 py-1 text-xs font-medium transition-colors ${
-                              isActive
-                                ? "border-seal-cyan bg-seal-cyan/10 text-seal-text"
-                                : "border-seal-border text-seal-text-secondary hover:border-seal-cyan/50"
-                            } ${disabled ? "cursor-not-allowed opacity-50" : ""}`}
-                          >
-                            {value} {label}
-                          </button>
-                        );
-                      })}
-                    </div>
+                    {c.maxScore - c.minScore + 1 > MAX_DISCRETE_SCORE_BUTTONS ? (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min={c.minScore}
+                          max={c.maxScore}
+                          step={1}
+                          disabled={disabled}
+                          value={score ?? ""}
+                          onChange={(e) => {
+                            const raw = e.target.value;
+                            if (raw === "") {
+                              onScoreChange(i, null);
+                              return;
+                            }
+                            const next = Number(raw);
+                            if (Number.isFinite(next)) onScoreChange(i, next);
+                          }}
+                          className="w-24 rounded border border-seal-border px-2 py-1 text-sm disabled:opacity-50"
+                          aria-label={`Score for ${c.name}`}
+                        />
+                        <span className="text-xs text-seal-text-muted">
+                          / {c.maxScore}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex flex-wrap gap-1">
+                        {scoreValues(c.minScore, c.maxScore).map((value) => {
+                          const isActive = score === value;
+                          const label = SEAL_SCORE_BUTTON_LABELS[value] ?? String(value);
+                          return (
+                            <button
+                              key={value}
+                              type="button"
+                              disabled={disabled}
+                              onClick={() => onScoreChange(i, value)}
+                              className={`rounded border px-2 py-1 text-xs font-medium transition-colors ${
+                                isActive
+                                  ? "border-seal-cyan bg-seal-cyan/10 text-seal-text"
+                                  : "border-seal-border text-seal-text-secondary hover:border-seal-cyan/50"
+                              } ${disabled ? "cursor-not-allowed opacity-50" : ""}`}
+                            >
+                              {value} {label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     {!hideComment && (

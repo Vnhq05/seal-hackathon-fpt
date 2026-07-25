@@ -34,6 +34,7 @@ export type { UserListItem, UserListParams, UserAchievement, ApprovalRequest, Cr
 export { eventApi } from "./event.api";
 export type {
   EventResponse,
+  EventStaffPublicResponse,
   CreateEventRequest,
   UpdateEventRequest,
   PublishEventRequest,
@@ -85,7 +86,12 @@ export type { TeamResponse, TeamMemberResponse, CreateTeamRequest, JoinTeamReque
 export { invitationApi } from "./invitation.api";
 export type { InvitationResponse, SendInvitationRequest } from "./invitation.api";
 
-export { submissionApi, SUBMISSION_MAX_PDF_BYTES, normalizeSubmissionFilePath } from "./submission.api";
+export {
+  submissionApi,
+  SUBMISSION_MAX_FILE_BYTES,
+  SUBMISSION_MAX_PDF_BYTES,
+  normalizeSubmissionFilePath,
+} from "./submission.api";
 export type { SubmissionResponse, SubmissionVersionResponse, AttachmentResponse, CreateSubmissionRequest } from "./submission.api";
 
 export { judgingApi } from "./judging.api";

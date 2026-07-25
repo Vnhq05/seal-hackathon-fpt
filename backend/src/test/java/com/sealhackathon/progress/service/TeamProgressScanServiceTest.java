@@ -36,7 +36,7 @@ class TeamProgressScanServiceTest {
         Clock clock = Clock.fixed(
                 LocalDateTime.of(2026, 7, 10, 12, 0).atZone(ZONE).toInstant(), ZONE);
         scanService = new TeamProgressScanService(
-                null, null, null, null, null, null, null, null, null, null, properties, clock);
+                null, null, null, null, null, null, null, null, null, null, null, properties, clock);
     }
 
     @Test
@@ -46,7 +46,8 @@ class TeamProgressScanServiceTest {
                 List.of(ProgressRiskReason.STALLED),
                 2,
                 LocalDateTime.now(),
-                24);
+                24,
+                2);
 
         assertThat(scanService.shouldPublishAlert(
                 evaluation, null, LocalDateTime.of(2026, 7, 10, 12, 0))).isTrue();
@@ -55,7 +56,7 @@ class TeamProgressScanServiceTest {
     @Test
     void shouldPublishAlert_skipsOkRisk() {
         var evaluation = new TeamProgressEvaluationService.EvaluationResult(
-                ProgressRiskLevel.OK, List.of(), 2, LocalDateTime.now(), 48);
+                ProgressRiskLevel.OK, List.of(), 2, LocalDateTime.now(), 48, 4);
 
         assertThat(scanService.shouldPublishAlert(
                 evaluation, null, LocalDateTime.of(2026, 7, 10, 12, 0))).isFalse();
@@ -68,7 +69,8 @@ class TeamProgressScanServiceTest {
                 List.of(ProgressRiskReason.STALLED),
                 2,
                 LocalDateTime.now(),
-                24);
+                24,
+                2);
 
         TeamProgressAlert existing = TeamProgressAlert.builder()
                 .teamId(UUID.randomUUID())
@@ -86,10 +88,11 @@ class TeamProgressScanServiceTest {
     void shouldPublishAlert_whenReasonSetChanges() {
         var evaluation = new TeamProgressEvaluationService.EvaluationResult(
                 ProgressRiskLevel.AT_RISK,
-                List.of(ProgressRiskReason.MISSING_ATTACHMENT),
+                List.of(ProgressRiskReason.STALLED, ProgressRiskReason.SINGLE_VERSION_LAST_MINUTE),
                 1,
                 LocalDateTime.now(),
-                24);
+                24,
+                2);
 
         TeamProgressAlert existing = TeamProgressAlert.builder()
                 .teamId(UUID.randomUUID())
@@ -110,7 +113,8 @@ class TeamProgressScanServiceTest {
                 List.of(ProgressRiskReason.NOT_STARTED),
                 0,
                 null,
-                4);
+                4,
+                0);
 
         TeamProgressAlert existing = TeamProgressAlert.builder()
                 .teamId(UUID.randomUUID())

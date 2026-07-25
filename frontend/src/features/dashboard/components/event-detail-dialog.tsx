@@ -148,7 +148,6 @@ export function EventDetailDialog({ event, onClose, canRegister, activeEnrollmen
                 <div className="mb-2 text-xs font-medium uppercase tracking-wider text-seal-text-muted">Schedule</div>
                 <EventScheduleTimeline
                   schedules={schedules}
-                  rounds={rounds}
                   variant="compact"
                   highlightTypes={["MILESTONE", "SCORING", "FINAL"]}
                 />

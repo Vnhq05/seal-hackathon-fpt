@@ -39,6 +39,7 @@ import com.sealhackathon.team.repository.TeamRepository;
 import com.sealhackathon.user.dto.snapshot.UserSnapshot;
 import com.sealhackathon.user.service.UserPublicService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
@@ -73,6 +74,8 @@ public class EventEnrollmentService {
     private final MagicLinkTokenService magicLinkTokenService;
     private final SystemConfigService systemConfigService;
     private final ApplicationEventPublisher eventPublisher;
+    /** Lazily resolved to avoid a cycle with {@link TeamService}. */
+    private final ObjectProvider<TeamService> teamService;
 
     @Value("${app.frontend.url}")
     private String frontendUrl;
@@ -400,6 +403,14 @@ public class EventEnrollmentService {
     }
 
     @Transactional(readOnly = true)
+    public List<EnrollmentResponse> getMyEnrollments(UUID userId) {
+        return enrollmentRepository.findAllByUserIdAndStatusIn(userId, ACTIVE_STATUSES)
+                .stream()
+                .map(e -> toResponse(e, null))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public EnrollmentResponse getMyEnrollment(UUID userId, UUID eventId) {
         EventEnrollment enrollment = enrollmentRepository.findByUserIdAndEventId(userId, eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Enrollment", "userId+eventId", userId + "+" + eventId));
@@ -472,9 +483,10 @@ public class EventEnrollmentService {
         }
 
         int currentSize = teamMemberRepository.countByTeamId(teamId);
-        int maxTeamSize = systemConfigService.getConfig().getMaxTeamMembers();
+        int maxTeamSize = teamService.getObject().resolveMaxTeamMembers(eventId);
         if (currentSize >= maxTeamSize) {
-            throw new BusinessException("Team is already full", HttpStatus.BAD_REQUEST) {};
+            throw new BusinessException(
+                    "Team has reached the maximum number of members", HttpStatus.BAD_REQUEST) {};
         }
     }
 

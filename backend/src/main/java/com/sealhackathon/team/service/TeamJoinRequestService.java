@@ -2,11 +2,11 @@ package com.sealhackathon.team.service;
 
 import com.sealhackathon.common.exception.BusinessException;
 import com.sealhackathon.common.exception.ResourceNotFoundException;
-import com.sealhackathon.common.service.SystemConfigService;
 import com.sealhackathon.team.domain.Team;
 import com.sealhackathon.team.domain.TeamJoinRequest;
 import com.sealhackathon.team.domain.TeamMember;
 import com.sealhackathon.team.domain.enums.HackathonSkillRole;
+import com.sealhackathon.team.domain.enums.InvitationStatus;
 import com.sealhackathon.team.domain.enums.JoinRequestStatus;
 import com.sealhackathon.team.domain.enums.TeamMemberRole;
 import com.sealhackathon.team.domain.enums.TeamStatus;
@@ -17,6 +17,7 @@ import com.sealhackathon.team.event.JoinRequestCreatedEvent;
 import com.sealhackathon.team.event.JoinRequestResolvedEvent;
 import com.sealhackathon.team.event.MemberJoinedEvent;
 import com.sealhackathon.team.event.TeamConfirmedEvent;
+import com.sealhackathon.team.repository.InvitationRepository;
 import com.sealhackathon.team.repository.TeamJoinRequestRepository;
 import com.sealhackathon.team.repository.TeamMemberRepository;
 import com.sealhackathon.team.repository.TeamRepository;
@@ -41,23 +42,19 @@ import static com.sealhackathon.team.domain.enums.TeamStatus.FORMING;
 @RequiredArgsConstructor
 public class TeamJoinRequestService {
 
+    private static final String TEAM_FULL_MESSAGE =
+            "Team has reached the maximum number of members";
+
     private final TeamJoinRequestRepository joinRequestRepository;
     private final JoinRequestStatusService joinRequestStatusService;
+    private final InvitationStatusService invitationStatusService;
+    private final InvitationRepository invitationRepository;
     private final TeamRepository teamRepository;
     private final TeamMemberRepository teamMemberRepository;
     private final EventEnrollmentService enrollmentService;
-    private final SystemConfigService systemConfigService;
     private final UserPublicService userPublicService;
     private final ApplicationEventPublisher eventPublisher;
     private final TeamService teamService;
-
-    private int getMaxTeamSize() {
-        return systemConfigService.getConfig().getMaxTeamMembers();
-    }
-
-    private int getMinTeamSize() {
-        return systemConfigService.getConfig().getMinTeamMembers();
-    }
 
     @Transactional(readOnly = true)
     public List<JoinableTeamResponse> getJoinableTeams(
@@ -73,7 +70,7 @@ public class TeamJoinRequestService {
             return List.of();
         }
 
-        int maxSize = getMaxTeamSize();
+        int maxSize = teamService.resolveMaxTeamMembers(eventId);
         List<Team> teams = teamRepository.findByEventId(eventId).stream()
                 .filter(t -> t.getStatus() != TeamStatus.DISBANDED)
                 .filter(t -> teamMemberRepository.countByTeamId(t.getId()) < maxSize)
@@ -138,8 +135,8 @@ public class TeamJoinRequestService {
         }
 
         int currentSize = teamMemberRepository.countByTeamId(teamId);
-        if (currentSize >= getMaxTeamSize()) {
-            throw new BusinessException("Team is full", HttpStatus.BAD_REQUEST) {};
+        if (currentSize >= teamService.resolveMaxTeamMembers(eventId)) {
+            throw new BusinessException(TEAM_FULL_MESSAGE, HttpStatus.BAD_REQUEST) {};
         }
 
         TeamJoinRequest joinRequest = TeamJoinRequest.builder()
@@ -198,9 +195,13 @@ public class TeamJoinRequestService {
                 .ifPresent(teamMemberRepository::delete);
         teamMemberRepository.flush();
 
+        int maxSize = teamService.resolveMaxTeamMembers(eventId);
+        int minSize = teamService.resolveMinTeamMembers(eventId);
         int currentSize = teamMemberRepository.countByTeamId(team.getId());
-        if (currentSize >= getMaxTeamSize()) {
-            throw new BusinessException("Team is full", HttpStatus.BAD_REQUEST) {};
+        if (currentSize >= maxSize) {
+            joinRequestStatusService.rejectAllPendingForTeam(team.getId());
+            invitationStatusService.expireAllPendingForTeam(team.getId());
+            throw new BusinessException(TEAM_FULL_MESSAGE, HttpStatus.BAD_REQUEST) {};
         }
 
         joinRequest.setStatus(JoinRequestStatus.ACCEPTED);
@@ -220,10 +221,20 @@ public class TeamJoinRequestService {
                 team.getId(), requesterId, TeamMemberRole.MEMBER));
 
         int newSize = currentSize + 1;
-        if (newSize >= getMinTeamSize() && team.getStatus() == FORMING) {
+        if (newSize >= minSize && team.getStatus() == FORMING) {
             team.setStatus(CONFIRMED);
             teamRepository.save(team);
             eventPublisher.publishEvent(new TeamConfirmedEvent(team.getId(), newSize));
+        }
+
+        if (newSize >= maxSize) {
+            joinRequestRepository.findByTeamIdAndStatus(team.getId(), JoinRequestStatus.PENDING)
+                    .forEach(pending -> {
+                        pending.setStatus(JoinRequestStatus.REJECTED);
+                        pending.setResolvedAt(LocalDateTime.now());
+                    });
+            invitationRepository.findByTeamIdAndStatus(team.getId(), InvitationStatus.PENDING)
+                    .forEach(pending -> pending.setStatus(InvitationStatus.EXPIRED));
         }
 
         teamService.notifyTeamCountChanged(eventId);

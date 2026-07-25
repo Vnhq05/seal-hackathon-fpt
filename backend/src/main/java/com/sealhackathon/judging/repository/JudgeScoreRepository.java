@@ -1,5 +1,6 @@
 package com.sealhackathon.judging.repository;
 
+import com.sealhackathon.event.domain.enums.RoundType;
 import com.sealhackathon.judging.domain.JudgeScore;
 import com.sealhackathon.judging.domain.enums.ScoreStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -43,6 +44,20 @@ public interface JudgeScoreRepository extends JpaRepository<JudgeScore, UUID> {
             @Param("teamId") UUID teamId);
 
     boolean existsByRoundIdAndStatus(UUID roundId, ScoreStatus status);
+
+    /** Any score on a non-Final round of the event (Final judges must be a fresh panel). */
+    @Query("""
+            SELECT CASE WHEN COUNT(js) > 0 THEN true ELSE false END
+            FROM JudgeScore js, com.sealhackathon.event.domain.Round r
+            WHERE js.roundId = r.id
+              AND js.judgeUserId = :judgeUserId
+              AND r.hackathonEvent.id = :eventId
+              AND r.roundType <> :finalType
+            """)
+    boolean existsScoreOnNonFinalRoundInEvent(
+            @Param("judgeUserId") UUID judgeUserId,
+            @Param("eventId") UUID eventId,
+            @Param("finalType") RoundType finalType);
 
     @Query("SELECT js.submissionId, COUNT(js) FROM JudgeScore js "
             + "WHERE js.roundId = :roundId AND js.status IN :statuses GROUP BY js.submissionId")

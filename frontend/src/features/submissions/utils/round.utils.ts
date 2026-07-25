@@ -45,9 +45,25 @@ function formatDt(iso: string): string {
 }
 
 export const MAX_PDF_BYTES = 5 * 1024 * 1024;
+export const MAX_SUBMISSION_FILE_BYTES = 25 * 1024 * 1024;
 
 export function validatePdfFile(file: File): string | null {
-  if (file.type !== "application/pdf") return "File must be a PDF";
-  if (file.size > MAX_PDF_BYTES) return "PDF must be smaller than 5MB";
+  const isPdfName = file.name.toLowerCase().endsWith(".pdf");
+  // Windows often leaves File.type empty for locally created PDFs.
+  const isPdfMime = !file.type || file.type === "application/pdf";
+  if (!isPdfName || !isPdfMime) {
+    return "File must be a PDF";
+  }
+  if (file.size > MAX_PDF_BYTES) {
+    return `PDF must be smaller than 5MB (selected: ${(file.size / 1024).toFixed(1)} KB)`;
+  }
+  return null;
+}
+
+/** Any file type allowed under Other; size capped at 25 MB. */
+export function validateAnySubmissionFile(file: File): string | null {
+  if (file.size > MAX_SUBMISSION_FILE_BYTES) {
+    return `File must be smaller than 25MB (selected: ${(file.size / (1024 * 1024)).toFixed(2)} MB)`;
+  }
   return null;
 }

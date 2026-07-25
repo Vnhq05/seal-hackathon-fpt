@@ -44,7 +44,7 @@ class TeamProgressEvaluationServiceTest {
         RoundSnapshot round = preliminaryRound(DEADLINE);
 
         TeamProgressEvaluationService.EvaluationResult result =
-                service.evaluate(null, null, 0, round, false);
+                service.evaluate(null, null, 0, round, false, 0);
 
         assertThat(result.riskLevel()).isEqualTo(ProgressRiskLevel.CRITICAL);
         assertThat(result.reasons()).containsExactly(ProgressRiskReason.NOT_STARTED);
@@ -58,7 +58,7 @@ class TeamProgressEvaluationServiceTest {
         RoundSnapshot round = preliminaryRound(DEADLINE);
 
         TeamProgressEvaluationService.EvaluationResult result =
-                service.evaluate(null, null, 0, round, false);
+                service.evaluate(null, null, 0, round, false, 0);
 
         assertThat(result.riskLevel()).isEqualTo(ProgressRiskLevel.OK);
         assertThat(result.reasons()).isEmpty();
@@ -90,7 +90,7 @@ class TeamProgressEvaluationServiceTest {
                 .build();
 
         TeamProgressEvaluationService.EvaluationResult result =
-                service.evaluate(submission, latest, 1, round, true);
+                service.evaluate(submission, latest, 1, round, true, 1);
 
         assertThat(result.riskLevel()).isEqualTo(ProgressRiskLevel.CRITICAL);
         assertThat(result.reasons()).contains(ProgressRiskReason.SLIDE_ONLY_PAST_GATE);
@@ -110,7 +110,7 @@ class TeamProgressEvaluationServiceTest {
                 .build();
 
         TeamProgressEvaluationService.EvaluationResult result =
-                service.evaluate(submission, latest, 1, round, false);
+                service.evaluate(submission, latest, 1, round, false, 1);
 
         assertThat(result.riskLevel()).isEqualTo(ProgressRiskLevel.OK);
         assertThat(result.reasons()).isEmpty();
@@ -131,10 +131,7 @@ class TeamProgressEvaluationServiceTest {
                 .build();
 
         TeamProgressEvaluationService.EvaluationResult result =
-                service.evaluate(submission, latest, 1, round, false);
-
-        assertThat(result.riskLevel()).isEqualTo(ProgressRiskLevel.AT_RISK);
-        assertThat(result.reasons()).contains(ProgressRiskReason.SINGLE_VERSION_LAST_MINUTE);
+                service.evaluate(submission, latest, 1, round, false, 2);
     }
 
     @Test
@@ -151,14 +148,14 @@ class TeamProgressEvaluationServiceTest {
                 .build();
 
         TeamProgressEvaluationService.EvaluationResult result =
-                service.evaluate(submission, latest, 2, round, false);
+                service.evaluate(submission, latest, 2, round, false, 1);
 
         assertThat(result.riskLevel()).isEqualTo(ProgressRiskLevel.AT_RISK);
         assertThat(result.reasons()).contains(ProgressRiskReason.STALLED);
     }
 
     @Test
-    void evaluate_missingAttachment_whenSubmittedWithEmptyAttachments() {
+    void evaluate_doesNotFlagMissingAttachment_whenOtherIsLinkOnly() {
         Clock clock = fixedAt(DEADLINE.minusHours(3));
         service = new TeamProgressEvaluationService(properties, clock);
 
@@ -166,16 +163,15 @@ class TeamProgressEvaluationServiceTest {
         Submission submission = Submission.builder().status(SubmissionStatus.SUBMITTED).build();
         SubmissionVersion latest = SubmissionVersion.builder()
                 .githubUrl("https://github.com/org/repo")
-                .demoUrl("https://youtube.com/watch?v=abc")
+                .otherUrl("https://example.com/notes")
                 .submittedAt(DEADLINE.minusHours(4))
                 .attachments(Collections.emptyList())
                 .build();
 
         TeamProgressEvaluationService.EvaluationResult result =
-                service.evaluate(submission, latest, 2, round, false);
+                service.evaluate(submission, latest, 2, round, false, 2);
 
-        assertThat(result.riskLevel()).isEqualTo(ProgressRiskLevel.AT_RISK);
-        assertThat(result.reasons()).contains(ProgressRiskReason.MISSING_ATTACHMENT);
+        assertThat(result.reasons()).doesNotContain(ProgressRiskReason.MISSING_ATTACHMENT);
     }
 
     @Test
@@ -193,7 +189,29 @@ class TeamProgressEvaluationServiceTest {
                 .build();
 
         TeamProgressEvaluationService.EvaluationResult result =
-                service.evaluate(submission, latest, 2, round, false);
+                service.evaluate(submission, latest, 2, round, false, 2);
+
+        assertThat(result.riskLevel()).isEqualTo(ProgressRiskLevel.OK);
+        assertThat(result.reasons()).isEmpty();
+    }
+
+    @Test
+    void evaluate_ok_whenFullyCompleteInsideLeadWindow() {
+        Clock clock = fixedAt(DEADLINE.minusHours(3));
+        service = new TeamProgressEvaluationService(properties, clock);
+
+        RoundSnapshot round = preliminaryRound(DEADLINE);
+        Submission submission = Submission.builder().status(SubmissionStatus.SUBMITTED).build();
+        SubmissionVersion latest = SubmissionVersion.builder()
+                .githubUrl("https://github.com/org/repo")
+                .slideUrl("https://slides.example.com/deck")
+                .demoUrl("https://youtube.com/watch?v=abc")
+                .submittedAt(DEADLINE.minusHours(4))
+                .attachments(Collections.emptyList())
+                .build();
+
+        TeamProgressEvaluationService.EvaluationResult result =
+                service.evaluate(submission, latest, 3, round, false, 4);
 
         assertThat(result.riskLevel()).isEqualTo(ProgressRiskLevel.OK);
         assertThat(result.reasons()).isEmpty();

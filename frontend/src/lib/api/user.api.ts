@@ -1,5 +1,6 @@
 import { api } from "./api-client";
 import type { UserType, AccountStatus, StudentStanding } from "./types";
+import type { UserAchievement } from "./admin-user.api";
 
 // ═══ Response types ═══
 
@@ -70,6 +71,10 @@ export const userApi = {
 
   setOfficialPassword(body: SetOfficialPasswordRequest): Promise<UserProfile> {
     return api.put<UserProfile>("/users/me/official-password", body);
+  },
+
+  getMyAchievements(): Promise<UserAchievement[]> {
+    return api.get<UserAchievement[]>("/users/me/achievements").then((data) => data ?? []);
   },
 
   search(q: string, limit = 20): Promise<UserSearchResult[]> {

@@ -25,4 +25,7 @@ public class TeamProgressResponse {
     private LocalDateTime lastSubmittedAt;
     private int totalVersions;
     private long hoursUntilDeadline;
+    private double submissionProgressPercent;
+    private int submittedParts;
+    private int requiredParts;
 }

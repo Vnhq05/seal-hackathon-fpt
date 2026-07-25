@@ -18,6 +18,9 @@ export interface TeamProgressResponse {
   lastSubmittedAt: string | null;
   totalVersions: number;
   hoursUntilDeadline: number;
+  submissionProgressPercent: number;
+  submittedParts: number;
+  requiredParts: number;
 }
 
 export const progressApi = {

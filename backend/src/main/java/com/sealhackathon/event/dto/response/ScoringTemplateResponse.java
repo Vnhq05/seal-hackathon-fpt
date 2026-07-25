@@ -1,5 +1,6 @@
 package com.sealhackathon.event.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -18,6 +19,9 @@ public class ScoringTemplateResponse {
     private UUID id;
     private String name;
     private String description;
+    /** True when this is the system Default template (auto-selected for new rounds/events). */
+    @JsonProperty("isDefault")
+    private boolean isDefault;
     private List<CriterionResponse> criteria;
     private LocalDateTime createdAt;
 

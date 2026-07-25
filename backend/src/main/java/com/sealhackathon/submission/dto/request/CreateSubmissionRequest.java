@@ -1,7 +1,5 @@
 package com.sealhackathon.submission.dto.request;
 
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -27,11 +25,16 @@ public class CreateSubmissionRequest {
     @Size(max = 500)
     private String slideUrl;
 
+    /** Optional Other-section URL (any http/https link). */
+    @Size(max = 500)
+    private String otherUrl;
+
+    /**
+     * @deprecated Prefer {@link #otherUrl}. Still accepted and coalesced into Other.
+     */
     @Size(max = 500)
     private String demoUrl;
 
-    /** Optional — for non-SEAL first submit when PDF is uploaded. */
-    @Min(value = 1, message = "PDF must have at least 1 page")
-    @Max(value = 50, message = "PDF page count is invalid")
+    /** @deprecated Page count no longer required for Other files. */
     private Integer pdfPageCount;
 }

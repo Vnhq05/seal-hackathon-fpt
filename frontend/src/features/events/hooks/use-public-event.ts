@@ -10,7 +10,7 @@ export function usePublicEvent(eventId: string) {
     queryKey: [PUBLIC_EVENT_KEY, eventId],
     queryFn: () => publicApi.getEventById(eventId),
     enabled: !!eventId,
-    staleTime: 2 * 60 * 1000,
+    staleTime: 30 * 1000,
   });
 }
 

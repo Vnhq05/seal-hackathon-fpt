@@ -22,14 +22,19 @@ import com.sealhackathon.event.dto.request.CreateEventRequest;
 import com.sealhackathon.event.dto.request.PrizeRequest;
 import com.sealhackathon.event.dto.request.UpdateEventRequest;
 import com.sealhackathon.event.dto.request.UpdateEventStatusRequest;
+import com.sealhackathon.event.domain.EventJudgeAssignment;
+import com.sealhackathon.event.domain.EventMentorAssignment;
 import com.sealhackathon.event.dto.response.EventResponse;
+import com.sealhackathon.event.dto.response.EventStaffPublicResponse;
 import com.sealhackathon.event.dto.response.HonoredGuestResponse;
 import com.sealhackathon.event.dto.response.PrizeResponse;
 import com.sealhackathon.event.dto.response.TrackResponse;
 import com.sealhackathon.event.event.EventCreatedEvent;
 import com.sealhackathon.event.template.SealSpring2026Template;
+import com.sealhackathon.event.repository.EventMentorAssignmentRepository;
 import com.sealhackathon.event.repository.HackathonEventRepository;
 import com.sealhackathon.event.repository.ScoringTemplateRepository;
+import com.sealhackathon.team.repository.TeamRepository;
 import com.sealhackathon.team.service.TeamService;
 import com.sealhackathon.user.dto.snapshot.UserSnapshot;
 import com.sealhackathon.user.service.UserPublicService;
@@ -58,7 +63,8 @@ import java.util.regex.Pattern;
 @RequiredArgsConstructor
 public class EventService {
 
-    private static final Pattern EVENT_NAME_PATTERN = Pattern.compile("^[a-zA-Z\\s]+$");
+    private static final Pattern EVENT_NAME_PATTERN =
+            Pattern.compile("^[a-zA-Z0-9][a-zA-Z0-9\\s\\-&,.'()/]*$");
     private static final List<PrizeRank> PRIZE_RANK_ORDER = List.of(
             PrizeRank.FIRST, PrizeRank.SECOND, PrizeRank.THIRD);
 
@@ -77,6 +83,8 @@ public class EventService {
     private final JudgeAssignmentService judgeAssignmentService;
     private final FormatRuleEngine formatRuleEngine;
     private final TeamService teamService;
+    private final TeamRepository teamRepository;
+    private final EventMentorAssignmentRepository eventMentorAssignmentRepository;
     private final EventStatusResolver eventStatusResolver;
     private final EventFinder eventFinder;
     private final EventOwnershipGuard eventOwnershipGuard;
@@ -115,6 +123,7 @@ public class EventService {
                 .semesterMin(request.getSemesterMin())
                 .semesterMax(request.getSemesterMax())
                 .scoringTemplateId(request.getScoringTemplateId())
+                .scoreScaleMax(resolveScoreScaleMax(request.getScoreScaleMax()))
                 .tiebreakerCriteria(request.getTiebreakerCriteria())
                 .status(EventStatus.UPCOMING)
                 .build();
@@ -218,6 +227,10 @@ public class EventService {
         event.setSemesterMin(request.getSemesterMin());
         event.setSemesterMax(request.getSemesterMax());
         event.setScoringTemplateId(request.getScoringTemplateId());
+        if (request.getScoreScaleMax() != null) {
+            event.setScoreScaleMax(resolveScoreScaleMax(request.getScoreScaleMax()));
+            applyScoreScaleToExistingRounds(event);
+        }
         event.setTiebreakerCriteria(request.getTiebreakerCriteria());
         if (request.getTiebreakerCriterionIds() != null) {
             applyTiebreakerCriterionIds(event, request.getTiebreakerCriterionIds());
@@ -634,7 +647,7 @@ public class EventService {
     private void validateEventName(String name) {
         if (name == null || !EVENT_NAME_PATTERN.matcher(name.trim()).matches()) {
             throw new BusinessException(
-                    "Event name must contain only letters and spaces",
+                    "Event name may only contain letters, numbers, spaces, and - & , . ' ( )",
                     HttpStatus.BAD_REQUEST) {};
         }
     }
@@ -736,6 +749,37 @@ public class EventService {
     }
 
     EventResponse toResponse(HackathonEvent event) {
+        UUID eventId = event.getId();
+        List<EventJudgeAssignment> judgeAssignments = event.getEventJudgeAssignments() != null
+                ? event.getEventJudgeAssignments()
+                : List.of();
+        List<EventMentorAssignment> mentorAssignments = eventId == null
+                ? List.of()
+                : eventMentorAssignmentRepository.findByHackathonEventId(eventId);
+
+        List<UUID> staffUserIds = new java.util.ArrayList<>();
+        judgeAssignments.forEach(a -> staffUserIds.add(a.getJudgeUserId()));
+        mentorAssignments.forEach(a -> staffUserIds.add(a.getMentorUserId()));
+
+        Map<UUID, UserSnapshot> usersById = staffUserIds.isEmpty()
+                ? Map.of()
+                : userPublicService.findAllByIds(staffUserIds).stream()
+                        .collect(Collectors.toMap(UserSnapshot::getId, u -> u, (a, b) -> a));
+
+        List<EventStaffPublicResponse> judges = judgeAssignments.stream()
+                .map(a -> toStaffPublic(a.getId(), usersById.get(a.getJudgeUserId())))
+                .toList();
+        List<EventStaffPublicResponse> mentors = mentorAssignments.stream()
+                .map(a -> toStaffPublic(a.getId(), usersById.get(a.getMentorUserId())))
+                .toList();
+
+        int eventMentorCount = mentors.size();
+        int trackMentorCount = event.getMentorAssignments() != null ? event.getMentorAssignments().size() : 0;
+        int teamCount = eventId == null
+                ? 0
+                : (int) teamRepository.countByEventIdAndStatusNot(
+                        eventId, com.sealhackathon.team.domain.enums.TeamStatus.DISBANDED);
+
         return EventResponse.builder()
                 .id(event.getId())
                 .name(event.getName())
@@ -756,10 +800,13 @@ public class EventService {
                 .semesterMin(event.getSemesterMin())
                 .semesterMax(event.getSemesterMax())
                 .scoringTemplateId(event.getScoringTemplateId())
+                .scoreScaleMax(event.getScoreScaleMax() != null ? event.getScoreScaleMax() : 100)
                 .tiebreakerCriteria(event.getTiebreakerCriteria())
                 .tiebreakerCriterionIds(List.copyOf(event.getTiebreakerCriterionIds()))
                 .roundCount(event.getRounds().size())
-                .mentorCount(event.getMentorAssignments().size())
+                .mentorCount(eventMentorCount > 0 ? eventMentorCount : trackMentorCount)
+                .judgeCount(judges.size())
+                .teamCount(teamCount)
                 .trackCount(event.getTracks().size())
                 .tracks(event.getTracks().stream()
                         .map(t -> TrackResponse.builder()
@@ -790,7 +837,18 @@ public class EventService {
                                 .title(g.getTitle())
                                 .build())
                         .toList())
+                .judges(judges)
+                .mentors(mentors)
                 .createdAt(event.getCreatedAt())
+                .build();
+    }
+
+    private static EventStaffPublicResponse toStaffPublic(UUID assignmentId, UserSnapshot user) {
+        return EventStaffPublicResponse.builder()
+                .id(assignmentId)
+                .fullName(user != null && user.getFullName() != null && !user.getFullName().isBlank()
+                        ? user.getFullName()
+                        : "Staff member")
                 .build();
     }
 
@@ -803,6 +861,37 @@ public class EventService {
         event.getTiebreakerCriterionIds().addAll(ids);
         if (event.getTiebreakerCriteria() == null || event.getTiebreakerCriteria().isBlank()) {
             event.setTiebreakerCriteria(buildTiebreakerDisplayLabel(event.getScoringTemplateId(), ids));
+        }
+    }
+
+    private static final Set<Integer> ALLOWED_SCORE_SCALE_MAX = Set.of(5, 10, 100);
+
+    private int resolveScoreScaleMax(Integer requested) {
+        if (requested == null) {
+            return 100;
+        }
+        if (!ALLOWED_SCORE_SCALE_MAX.contains(requested)) {
+            throw new BusinessException(
+                    "scoreScaleMax must be one of: 5, 10, 100",
+                    HttpStatus.BAD_REQUEST) {};
+        }
+        return requested;
+    }
+
+    /** Remap existing round criteria to the event score scale (min=1, max=scoreScaleMax). */
+    private void applyScoreScaleToExistingRounds(HackathonEvent event) {
+        int max = event.getScoreScaleMax() != null ? event.getScoreScaleMax() : 100;
+        if (event.getRounds() == null) {
+            return;
+        }
+        for (var round : event.getRounds()) {
+            if (round.getCriteria() == null) {
+                continue;
+            }
+            for (var criterion : round.getCriteria()) {
+                criterion.setMinScore(1);
+                criterion.setMaxScore(max);
+            }
         }
     }
 

@@ -49,6 +49,7 @@ public class TeamProgressScanService {
     private final TeamRepository teamRepository;
     private final TeamProgressAlertRepository teamProgressAlertRepository;
     private final TeamProgressEvaluationService evaluationService;
+    private final SubmissionProgressCalculator progressCalculator;
     private final FormatRuleEngine formatRuleEngine;
     private final FinalistSelectionService finalistSelectionService;
     private final AdvancementRepository advancementRepository;
@@ -81,6 +82,10 @@ public class TeamProgressScanService {
                 .findLatestVersionsByRoundId(roundId).stream()
                 .collect(Collectors.toMap(v -> v.getSubmission().getId(), Function.identity()));
 
+        Map<UUID, List<SubmissionVersion>> versionsBySubmissionId = submissionVersionRepository
+                .findAllByRoundIdWithAttachments(roundId).stream()
+                .collect(Collectors.groupingBy(v -> v.getSubmission().getId()));
+
         Round previousRound = findPreviousRound(eventId, round.getRoundNumber());
 
         for (Team team : teamRepository.findByEventId(eventId)) {
@@ -93,9 +98,13 @@ public class TeamProgressScanService {
                     ? latestBySubmissionId.get(submission.getId())
                     : null;
             int totalVersions = latest != null ? latest.getVersionNumber() : 0;
+            List<SubmissionVersion> allVersions = submission != null
+                    ? versionsBySubmissionId.getOrDefault(submission.getId(), List.of())
+                    : List.of();
+            int submittedParts = progressCalculator.calculate(allVersions).submittedParts();
 
             TeamProgressEvaluationService.EvaluationResult evaluation = evaluationService.evaluate(
-                    submission, latest, totalVersions, roundSnapshot, sealFormat);
+                    submission, latest, totalVersions, roundSnapshot, sealFormat, submittedParts);
 
             TeamProgressAlert existing = teamProgressAlertRepository
                     .findByTeamIdAndRoundId(team.getId(), roundId)

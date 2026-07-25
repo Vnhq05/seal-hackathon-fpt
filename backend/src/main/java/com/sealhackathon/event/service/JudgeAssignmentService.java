@@ -102,9 +102,9 @@ public class JudgeAssignmentService {
         }
 
         validateScopeHierarchy(resolvedEventId, round, scope);
-        validateTeamsAssignedToGroups(resolvedEventId, scope);
         validateScopeOverlap(roundId, request.getJudgeUserId(), scope, null);
         validateNoConflictInScope(resolvedEventId, scope, request.getJudgeUserId());
+        validateFinalJudgeIsFresh(resolvedEventId, round, request.getJudgeUserId());
 
         JudgeAssignment assignment = JudgeAssignment.builder()
                 .round(round)
@@ -308,9 +308,9 @@ public class JudgeAssignmentService {
         UUID eventId = assignment.getRound().getHackathonEvent().getId();
         ResolvedScope scope = new ResolvedScope(assignment.getScope(), assignment.getTrackId(), assignment.getGroupId());
         validateScopeHierarchy(eventId, assignment.getRound(), scope);
-        validateTeamsAssignedToGroups(eventId, scope);
         validateScopeOverlap(assignment.getRound().getId(), assignment.getJudgeUserId(), scope, assignment.getId());
         validateNoConflictInScope(eventId, scope, assignment.getJudgeUserId());
+        validateFinalJudgeIsFresh(eventId, assignment.getRound(), assignment.getJudgeUserId());
 
         String oldValue = toAuditJson(assignment, eventId, assignment.getDeactivationReason());
         assignment.setActive(true);
@@ -382,8 +382,7 @@ public class JudgeAssignmentService {
 
     @Transactional(readOnly = true)
     public void assertEventReadyForScoring(UUID eventId) {
-        validateTeamsAssignedToGroups(
-                eventId, new ResolvedScope(AssignmentScope.ROUND, null, null));
+        // Competition groups are optional — only required when admin chooses GROUP-scoped judging.
         List<Round> rounds = roundRepository.findByHackathonEventIdOrderByRoundNumberAsc(eventId);
         for (Round round : rounds) {
             List<IncompleteAssignmentScopeResponse> incomplete = computeIncompleteScopes(round);
@@ -639,34 +638,31 @@ public class JudgeAssignmentService {
         }
     }
 
+    /**
+     * Final panel must be fresh: no active assignment and no scores on any non-Final
+     * round of the same event (guest judges / separate panel for Final).
+     */
+    private void validateFinalJudgeIsFresh(UUID eventId, Round round, UUID judgeUserId) {
+        if (round.getRoundType() != RoundType.FINAL) {
+            return;
+        }
+        if (judgeAssignmentRepository.existsActiveNonFinalAssignmentInEvent(
+                judgeUserId, eventId, RoundType.FINAL)) {
+            throw new BusinessException(
+                    "Final judges must not be assigned to any prior round, track, or group in this event",
+                    HttpStatus.CONFLICT) {};
+        }
+        if (judgeScoreRepository.existsScoreOnNonFinalRoundInEvent(
+                judgeUserId, eventId, RoundType.FINAL)) {
+            throw new BusinessException(
+                    "Final judges must not have scored any prior round in this event",
+                    HttpStatus.CONFLICT) {};
+        }
+    }
+
     private boolean hasConflictForTeam(UUID judgeUserId, UUID teamId) {
         return teamPublicService.isMentorOfTeam(judgeUserId, teamId)
                 || teamMemberRepository.existsByTeamIdAndUserId(teamId, judgeUserId);
-    }
-
-    private void validateTeamsAssignedToGroups(UUID eventId, ResolvedScope scope) {
-        List<Team> candidateTeams = switch (scope.scope()) {
-            case ROUND -> teamRepository.findByEventId(eventId);
-            case TRACK, GROUP -> teamRepository.findByEventIdAndTrackId(eventId, scope.trackId());
-        };
-        List<Team> missingGroups = candidateTeams.stream()
-                .filter(team -> team.getStatus() != TeamStatus.DISBANDED)
-                .filter(team -> team.getGroupId() == null)
-                .toList();
-        if (missingGroups.isEmpty()) {
-            return;
-        }
-        String teamNames = missingGroups.stream()
-                .map(Team::getName)
-                .limit(5)
-                .collect(Collectors.joining(", "));
-        if (missingGroups.size() > 5) {
-            teamNames += " (+" + (missingGroups.size() - 5) + " more)";
-        }
-        throw new BusinessException(
-                "Assign every team to a competition group before assigning judges. Missing: "
-                        + teamNames,
-                HttpStatus.CONFLICT) {};
     }
 
     private boolean hasScoresInScope(JudgeAssignment assignment) {

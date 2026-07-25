@@ -8,19 +8,23 @@ export interface MyEventTeam {
 }
 
 async function fetchMyTeamsAllEvents(): Promise<MyEventTeam[]> {
-  const enrollment = await enrollmentApi.getMyActiveEnrollment();
-  if (!enrollment || enrollment.status === "REJECTED" || enrollment.status === "WITHDRAWN") {
-    return [];
-  }
+  const enrollments = await enrollmentApi.getMyEnrollments();
+  const eligible = enrollments.filter(
+    (e) => e.status !== "REJECTED" && e.status !== "WITHDRAWN",
+  );
 
-  const event = await eventApi.getById(enrollment.eventId);
-  try {
-    // Backend hides disbanded teams here (404) — the student is back on the waiting list.
-    const team = await teamApi.getMyTeam(event.id);
-    return [{ event, team }];
-  } catch {
-    return [{ event, team: null }];
-  }
+  return Promise.all(
+    eligible.map(async (enrollment) => {
+      const event = await eventApi.getById(enrollment.eventId);
+      try {
+        // Backend hides disbanded teams here (404) — the student is back on the waiting list.
+        const team = await teamApi.getMyTeam(event.id);
+        return { event, team };
+      } catch {
+        return { event, team: null };
+      }
+    }),
+  );
 }
 
 export function useMyTeamsAllEvents() {

@@ -87,7 +87,15 @@ export function AdminEventsTable({ viewAllHref = "/admin/hackathons" }: { viewAl
           ) : (
             events.map((event: EventResponse) => (
               <tr key={event.id} style={{ borderTop: "1px solid rgba(198,198,205,0.3)" }}>
-                <td style={{ ...bodyCell, fontWeight: 600 }}>{event.name}</td>
+                <td style={{ ...bodyCell, fontWeight: 600 }}>
+                  <Link
+                    href={`/hackathons/${event.id}`}
+                    className="text-royal hover:underline"
+                    style={{ color: "#4f46e5", fontWeight: 600 }}
+                  >
+                    {event.name}
+                  </Link>
+                </td>
                 <td style={bodyCell}><StatusBadge status={event.status} /></td>
                 <td style={{ ...bodyCell, color: "#8891a5" }}>{event.season}</td>
                 <td style={{ ...bodyCell, color: "#8891a5" }}>{event.year}</td>

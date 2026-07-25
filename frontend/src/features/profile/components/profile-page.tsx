@@ -6,6 +6,7 @@ import { ProfileHeader } from "@/features/profile/components/profile-header";
 import { ProfileInfoForm } from "@/features/profile/components/profile-info-form";
 import { ChangePasswordForm } from "@/features/profile/components/change-password-form";
 import { SetupOfficialPasswordForm } from "@/features/profile/components/setup-official-password-form";
+import { ProfileAchievements } from "@/features/profile/components/profile-achievements";
 import type { ProfileTab } from "@/features/profile/components/profile-header";
 
 function ProfileSkeleton() {
@@ -93,19 +94,7 @@ export function ProfilePage() {
           <ChangePasswordForm />
         )
       )}
-      {activeTab === "events" && (
-        <div
-          className="p-10 text-center border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]"
-          style={{
-            border: "1px solid rgba(223,226,236,0.8)",
-            boxShadow: "0px 1px 2px rgba(0, 0, 0, 0.05)",
-          }}
-        >
-          <p style={{ fontSize: "14px", color: "#8891a5" }}>
-            Your events will appear here.
-          </p>
-        </div>
-      )}
+      {activeTab === "events" && <ProfileAchievements />}
     </div>
   );
 }

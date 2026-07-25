@@ -49,10 +49,12 @@ public class SubmissionController {
     public ResponseEntity<ApiResponse<SubmissionResponse>> submit(
             @PathVariable UUID roundId,
             @RequestPart("submission") String submissionJson,
+            @RequestPart(value = "file", required = false) MultipartFile file,
             @RequestPart(value = "pdf", required = false) MultipartFile pdfFile) {
         CreateSubmissionRequest request = parseAndValidateSubmission(submissionJson);
         UUID userId = authPublicService.getCurrentUserId();
-        SubmissionResponse response = submissionService.submit(userId, roundId, request, pdfFile);
+        MultipartFile upload = (file != null && !file.isEmpty()) ? file : pdfFile;
+        SubmissionResponse response = submissionService.submit(userId, roundId, request, upload);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Submission successful", response));
     }
@@ -81,11 +83,12 @@ public class SubmissionController {
     @GetMapping
     @Operation(summary = "List all submissions for a round")
     public ResponseEntity<ApiResponse<List<SubmissionResponse>>> getSubmissions(
-            @PathVariable UUID roundId) {
+            @PathVariable UUID roundId,
+            @RequestParam(required = false) UUID trackId) {
         UUID userId = authPublicService.getCurrentUserId();
         var role = authPublicService.getCurrentUserRole();
         List<SubmissionResponse> submissions =
-                submissionService.getSubmissionsByRound(roundId, userId, role);
+                submissionService.getSubmissionsByRound(roundId, userId, role, trackId);
         return ResponseEntity.ok(ApiResponse.success(submissions));
     }
 
@@ -115,7 +118,10 @@ public class SubmissionController {
     @Operation(summary = "Get version history (BR-30)")
     public ResponseEntity<ApiResponse<List<SubmissionVersionResponse>>> getVersions(
             @PathVariable UUID roundId, @PathVariable UUID submissionId) {
-        List<SubmissionVersionResponse> versions = submissionService.getVersionHistory(roundId, submissionId);
+        UUID userId = authPublicService.getCurrentUserId();
+        var role = authPublicService.getCurrentUserRole();
+        List<SubmissionVersionResponse> versions =
+                submissionService.getVersionHistory(roundId, submissionId, userId, role);
         return ResponseEntity.ok(ApiResponse.success(versions));
     }
 

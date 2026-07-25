@@ -22,12 +22,20 @@ import java.util.concurrent.atomic.AtomicInteger;
 @RequiredArgsConstructor
 public class ScoringTemplateService {
 
+    public static final String DEFAULT_TEMPLATE_NAME = "Default";
+
     private final ScoringTemplateRepository templateRepository;
     private final HackathonEventRepository eventRepository;
 
     @Transactional
     public ScoringTemplateResponse createTemplate(CreateScoringTemplateRequest request) {
         validateWeightSum(request.getCriteria());
+
+        if (DEFAULT_TEMPLATE_NAME.equalsIgnoreCase(request.getName())) {
+            throw new BusinessException(
+                    "Name \"" + DEFAULT_TEMPLATE_NAME + "\" is reserved for the system default template",
+                    HttpStatus.BAD_REQUEST) {};
+        }
 
         if (templateRepository.existsByName(request.getName())) {
             throw new DuplicateResourceException("ScoringTemplate", "name", request.getName());
@@ -58,14 +66,21 @@ public class ScoringTemplateService {
     @Transactional
     public ScoringTemplateResponse updateTemplate(UUID templateId, CreateScoringTemplateRequest request) {
         ScoringTemplate template = getTemplateEntity(templateId);
+        boolean wasDefault = isDefaultTemplate(template);
 
         validateWeightSum(request.getCriteria());
 
-        if (templateRepository.existsByNameAndIdNot(request.getName(), templateId)) {
-            throw new DuplicateResourceException("ScoringTemplate", "name", request.getName());
+        String nextName = wasDefault ? DEFAULT_TEMPLATE_NAME : request.getName();
+        if (!wasDefault && templateRepository.existsByNameAndIdNot(nextName, templateId)) {
+            throw new DuplicateResourceException("ScoringTemplate", "name", nextName);
+        }
+        if (!wasDefault && DEFAULT_TEMPLATE_NAME.equalsIgnoreCase(nextName)) {
+            throw new BusinessException(
+                    "Name \"" + DEFAULT_TEMPLATE_NAME + "\" is reserved for the system default template",
+                    HttpStatus.BAD_REQUEST) {};
         }
 
-        template.setName(request.getName());
+        template.setName(nextName);
         template.setDescription(request.getDescription());
 
         template.getCriteria().clear();
@@ -96,12 +111,24 @@ public class ScoringTemplateService {
     public List<ScoringTemplateResponse> listTemplates() {
         return templateRepository.findAllByOrderByCreatedAtDesc().stream()
                 .map(this::toResponse)
+                .sorted((a, b) -> {
+                    if (a.isDefault() == b.isDefault()) {
+                        return 0;
+                    }
+                    return a.isDefault() ? -1 : 1;
+                })
                 .toList();
     }
 
     @Transactional
     public void deleteTemplate(UUID templateId) {
         ScoringTemplate template = getTemplateEntity(templateId);
+
+        if (isDefaultTemplate(template)) {
+            throw new BusinessException(
+                    "Cannot delete the system Default scoring template",
+                    HttpStatus.BAD_REQUEST) {};
+        }
 
         if (eventRepository.existsByScoringTemplateId(templateId)) {
             throw new BusinessException(
@@ -174,12 +201,16 @@ public class ScoringTemplateService {
                 .orElseThrow(() -> new ResourceNotFoundException("ScoringTemplate", "id", templateId));
     }
 
+    private boolean isDefaultTemplate(ScoringTemplate template) {
+        return DEFAULT_TEMPLATE_NAME.equalsIgnoreCase(template.getName());
+    }
+
     private int resolveMinScore(CreateScoringTemplateRequest.CriterionRequest c) {
         return c.getMinScore() != null ? c.getMinScore() : 1;
     }
 
     private int resolveMaxScore(CreateScoringTemplateRequest.CriterionRequest c) {
-        return c.getMaxScore() != null ? c.getMaxScore() : 5;
+        return c.getMaxScore() != null ? c.getMaxScore() : 100;
     }
 
     private ScoringTemplateResponse toResponse(ScoringTemplate template) {
@@ -199,6 +230,7 @@ public class ScoringTemplateService {
                 .id(template.getId())
                 .name(template.getName())
                 .description(template.getDescription())
+                .isDefault(isDefaultTemplate(template))
                 .criteria(criteriaResponses)
                 .createdAt(template.getCreatedAt())
                 .build();

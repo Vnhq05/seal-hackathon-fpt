@@ -25,7 +25,6 @@ public class AllowedEmailDomainService {
 
     private final AllowedEmailDomainRepository domainRepository;
     private final HackathonEventRepository eventRepository;
-    private final FormatRuleEngine formatRuleEngine;
 
     @Transactional
     public List<AllowedEmailDomainResponse> listPlatformDomains() {
@@ -98,7 +97,10 @@ public class AllowedEmailDomainService {
 
     @Transactional(readOnly = true)
     public void validateExternalRegistration(String email, String universityName) {
-        validateEmailAndUniversity(effectivePlatformDomains(), email, universityName);
+        if (universityName == null || universityName.isBlank()) {
+            throw new BusinessException("University name is required", HttpStatus.BAD_REQUEST) {};
+        }
+        validateEduVnEmail(email);
     }
 
     @Transactional(readOnly = true)
@@ -108,21 +110,11 @@ public class AllowedEmailDomainService {
 
     @Transactional(readOnly = true)
     public void validateExternalStudentForEvent(UUID eventId, String email, String universityName) {
-        HackathonEvent event = ensureEventExists(eventId);
-        List<AllowedEmailDomain> domains = effectivePlatformDomains();
-        if (domains.isEmpty()) {
-            if (formatRuleEngine.isSealFormat(event)) {
-                throw new BusinessException(
-                        "No allowed email domains configured for this event. Contact the organizer.",
-                        HttpStatus.BAD_REQUEST) {};
-            }
-            return;
+        ensureEventExists(eventId);
+        if (universityName != null && universityName.isBlank()) {
+            throw new BusinessException("University name is required", HttpStatus.BAD_REQUEST) {};
         }
-        if (universityName != null && !universityName.isBlank()) {
-            validateEmailAndUniversity(domains, email, universityName);
-        } else {
-            validateEmailOnly(domains, email);
-        }
+        validateEduVnEmail(email);
     }
 
     private List<AllowedEmailDomain> effectivePlatformDomains() {
@@ -156,29 +148,10 @@ public class AllowedEmailDomainService {
         return normalizedDomain;
     }
 
-    private void validateEmailOnly(List<AllowedEmailDomain> domains, String email) {
-        List<String> rules = domains.stream().map(AllowedEmailDomain::getDomain).toList();
-        if (!EmailDomainValidator.matchesAllowedDomain(email, rules)) {
+    private void validateEduVnEmail(String email) {
+        if (!EmailDomainValidator.isEduVnEmail(email)) {
             throw new BusinessException(
-                    "Email domain is not allowed for this event. Use a university email from the approved list.",
-                    HttpStatus.BAD_REQUEST) {};
-        }
-    }
-
-    private void validateEmailAndUniversity(List<AllowedEmailDomain> domains, String email, String universityName) {
-        if (universityName == null || universityName.isBlank()) {
-            throw new BusinessException("University name is required", HttpStatus.BAD_REQUEST) {};
-        }
-        validateEmailOnly(domains, email);
-
-        String normalizedUniversity = universityName.trim();
-        boolean universityMatches = domains.stream()
-                .filter(d -> EmailDomainValidator.matchesAllowedDomain(email, List.of(d.getDomain())))
-                .anyMatch(d -> d.getUniversityLabel() != null
-                        && normalizedUniversity.equalsIgnoreCase(d.getUniversityLabel().trim()));
-        if (!universityMatches) {
-            throw new BusinessException(
-                    "University name does not match your email domain.",
+                    "Email must use a university domain ending in .edu.vn (e.g. student@hcmut.edu.vn).",
                     HttpStatus.BAD_REQUEST) {};
         }
     }

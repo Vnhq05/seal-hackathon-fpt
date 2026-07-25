@@ -697,7 +697,7 @@ interface LiveScoreArenaPageProps {
 
 export function LiveScoreArenaPage({ eventId }: LiveScoreArenaPageProps) {
   const [selectedTrackId, setSelectedTrackId] = useState<string | undefined>(undefined);
-  const [roundTypeSelection, setRoundTypeSelection] = useState<RoundType | null>(null);
+  const [roundTypeSelection, setRoundTypeSelection] = useState<RoundType | null>("PRELIMINARY");
   const [leaderToast, setLeaderToast] = useState<string | null>(null);
   const [rowAnimations, setRowAnimations] = useState<Map<string, RowAnimation>>(new Map());
   const prevRankingsRef = useRef<Map<string, number>>(new Map());

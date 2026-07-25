@@ -21,6 +21,13 @@ export function matchesAllowedDomain(email: string, allowedDomains: string[]): b
   });
 }
 
+/** External student emails must use a Vietnamese university domain ending in `.edu.vn`. */
+export function isEduVnEmail(email: string): boolean {
+  const emailDomain = extractEmailDomain(email);
+  if (!emailDomain) return false;
+  return emailDomain === "edu.vn" || emailDomain.endsWith(".edu.vn");
+}
+
 export function uniqueUniversityLabels(domains: AllowedEmailDomainResponse[]): string[] {
   const labels = new Set<string>();
   for (const d of domains) {

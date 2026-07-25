@@ -38,13 +38,22 @@ public class EventResponse {
     private Integer semesterMin;
     private Integer semesterMax;
     private UUID scoringTemplateId;
+    /** Per-criterion score ceiling (1–N). Allowed: 5, 10, 100. */
+    private Integer scoreScaleMax;
     private String tiebreakerCriteria;
     private List<UUID> tiebreakerCriterionIds;
     private int roundCount;
     private int mentorCount;
+    private int judgeCount;
+    /** Number of teams currently registered for this event. */
+    private int teamCount;
     private int trackCount;
     private List<TrackResponse> tracks;
     private List<PrizeResponse> prizes;
     private List<HonoredGuestResponse> honoredGuests;
+    /** Event-level judges (public: name only). */
+    private List<EventStaffPublicResponse> judges;
+    /** Event-level mentors (public: name only). */
+    private List<EventStaffPublicResponse> mentors;
     private LocalDateTime createdAt;
 }

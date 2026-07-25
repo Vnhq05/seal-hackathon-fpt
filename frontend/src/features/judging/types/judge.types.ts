@@ -136,6 +136,9 @@ export interface SubmissionForScoring {
   sourceCodeUrl: string | null;
   /** @deprecated Use sourceCodeUrl */
   githubUrl: string | null;
+  /** Canonical Other link */
+  otherUrl: string | null;
+  /** @deprecated Prefer otherUrl — legacy demo / mapped Other */
   demoUrl: string | null;
   slideUrl: string | null;
   pdfFileUrl: string | null;

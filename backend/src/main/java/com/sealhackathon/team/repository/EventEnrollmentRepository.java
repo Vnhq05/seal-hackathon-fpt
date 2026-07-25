@@ -56,6 +56,17 @@ public interface EventEnrollmentRepository extends JpaRepository<EventEnrollment
             + "ORDER BY e.enrolledAt DESC")
     List<EventEnrollment> findByUserIdAndStatusIn(@Param("userId") UUID userId, @Param("statuses") List<EnrollmentStatus> statuses);
 
+    /**
+     * All non-cancelled enrollments for a user, including COMPLETED / past-endDate events.
+     * Used by student history surfaces (feedback, past participation) where /my-active is too narrow.
+     */
+    @Query("SELECT e FROM EventEnrollment e, HackathonEvent he "
+            + "WHERE e.eventId = he.id AND e.userId = :userId AND e.status IN :statuses "
+            + "AND he.status <> com.sealhackathon.event.domain.enums.EventStatus.CANCELLED "
+            + "ORDER BY e.enrolledAt DESC")
+    List<EventEnrollment> findAllByUserIdAndStatusIn(
+            @Param("userId") UUID userId, @Param("statuses") List<EnrollmentStatus> statuses);
+
     @Query("SELECT COUNT(e) > 0 FROM EventEnrollment e, HackathonEvent he "
             + "WHERE e.eventId = he.id AND e.userId = :userId AND e.status IN :statuses AND e.eventId <> :eventId "
             + "AND he.status <> com.sealhackathon.event.domain.enums.EventStatus.CANCELLED "

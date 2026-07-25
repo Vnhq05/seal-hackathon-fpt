@@ -21,4 +21,7 @@ public interface ScoringTemplateRepository extends JpaRepository<ScoringTemplate
     boolean existsByName(String name);
 
     boolean existsByNameAndIdNot(String name, UUID id);
+
+    @EntityGraph(attributePaths = "criteria")
+    Optional<ScoringTemplate> findWithCriteriaByNameIgnoreCase(String name);
 }

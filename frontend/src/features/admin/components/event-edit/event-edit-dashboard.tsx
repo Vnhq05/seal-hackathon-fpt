@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAdminEvent } from "@/features/admin/hooks/use-admin-hackathons";
 import { EventPhasePanel } from "@/features/events/components/event-phase-panel";
-import { AllowedEmailDomainsPanel } from "@/features/events/components/allowed-email-domains-panel";
 import {
   EventEditTabs,
   isValidEventEditTab,
@@ -92,8 +91,10 @@ export function EventEditDashboard({
     );
   }
 
+  const contentMaxWidth = activeTab === "enrollments" ? "max-w-6xl" : "max-w-4xl";
+
   return (
-    <div className="mx-auto w-full max-w-4xl px-2 py-2 sm:px-4">
+    <div className={`mx-auto w-full ${contentMaxWidth} px-2 py-2 sm:px-4`}>
       <Link
         href={`${portalBase}/hackathons`}
         className="mb-5 inline-flex items-center gap-1 text-[13px] text-seal-text-muted no-underline transition-colors hover:text-navy"
@@ -115,15 +116,11 @@ export function EventEditDashboard({
       <div className="flex flex-col gap-6">
         <EventPhasePanel eventId={eventId} currentStatus={event.status} />
 
-        <div id="allowed-email-domains">
-          <AllowedEmailDomainsPanel eventId={eventId} readOnly />
-        </div>
-
         <div className="border-t-2 border-navy/10 pt-6">
           <EventEditTabs activeTab={activeTab} onTabChange={setActiveTab} />
         </div>
 
-        <div>{tabContent}</div>
+        <div className="min-w-0">{tabContent}</div>
       </div>
     </div>
   );

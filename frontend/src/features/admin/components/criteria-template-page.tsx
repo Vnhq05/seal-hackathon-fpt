@@ -8,7 +8,14 @@ import {
   useDeleteCriteriaTemplate,
 } from "@/features/admin/hooks/use-admin-criteria";
 import type { ScoringTemplateResponse, ScoringTemplateCriterionResponse } from "@/lib/api";
-import { DEFAULT_MAX_SCORE, DEFAULT_MIN_SCORE } from "@/features/judging/constants/scoring-scale";
+import {
+  DEFAULT_MAX_SCORE,
+  DEFAULT_MIN_SCORE,
+  SCORE_SCALE_OPTIONS,
+  type ScoreScaleMax,
+  inferScoreScaleMax,
+  isScoreScaleMax,
+} from "@/features/judging/constants/scoring-scale";
 
 const headerCell: React.CSSProperties = {
   fontSize: 12, fontWeight: 600, color: "#8891a5",
@@ -66,7 +73,28 @@ function TemplateRow({ t, onDelete, onEdit, expanded, onToggle, readOnly = false
   return (
     <>
       <tr style={{ borderTop: "1px solid rgba(198,198,205,0.3)", cursor: "pointer" }} onClick={onToggle}>
-        <td style={{ ...bodyCell, fontWeight: 600 }}>{t.name}</td>
+        <td style={{ ...bodyCell, fontWeight: 600 }}>
+          <div className="flex items-center gap-2">
+            {(t.isDefault || t.name.toLowerCase() === "default") && (
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  letterSpacing: "0.04em",
+                  textTransform: "uppercase",
+                  color: "#0c4a6e",
+                  backgroundColor: "#e0f2fe",
+                  border: "1px solid #7dd3fc",
+                  borderRadius: 4,
+                  padding: "2px 8px",
+                }}
+              >
+                Default
+              </span>
+            )}
+            <span>{t.name}</span>
+          </div>
+        </td>
         <td style={bodyCell}>{t.criteria.length}</td>
         <td style={bodyCell}>
           {t.criteria.reduce((sum: number, c: ScoringTemplateCriterionResponse) => sum + c.weight, 0)}%
@@ -82,12 +110,14 @@ function TemplateRow({ t, onDelete, onEdit, expanded, onToggle, readOnly = false
               >
                 Edit
               </button>
-              <button
-                onClick={() => onDelete(t.id)}
-                style={{ fontSize: 12, fontWeight: 600, color: "#991b1b", background: "none", border: "none", cursor: "pointer" }}
-              >
-                Delete
-              </button>
+              {!(t.isDefault || t.name.toLowerCase() === "default") && (
+                <button
+                  onClick={() => onDelete(t.id)}
+                  style={{ fontSize: 12, fontWeight: 600, color: "#991b1b", background: "none", border: "none", cursor: "pointer" }}
+                >
+                  Delete
+                </button>
+              )}
             </div>
           )}
         </td>
@@ -138,6 +168,9 @@ function TemplateForm({
 
   const [name, setName] = useState(template?.name ?? "");
   const [description, setDescription] = useState(template?.description ?? "");
+  const [scoreScaleMax, setScoreScaleMax] = useState<ScoreScaleMax>(
+    template ? inferScoreScaleMax(template.criteria) : DEFAULT_MAX_SCORE,
+  );
   const [criteria, setCriteria] = useState<CriterionForm[]>(
     template ? criteriaFromTemplate(template) : [emptyCriterion()]
   );
@@ -149,7 +182,19 @@ function TemplateForm({
   const allWeightsPositive = criteria.every((c) => c.weight !== undefined && c.weight > 0);
   const isWeightValid = totalWeight === 100 && allWeightsPositive;
 
-  const addCriterion = () => setCriteria([...criteria, emptyCriterion()]);
+  const applyScoreScale = (max: ScoreScaleMax) => {
+    setScoreScaleMax(max);
+    setDeleteWarning(null);
+    setCriteria((prev) =>
+      prev.map((c) => ({ ...c, minScore: DEFAULT_MIN_SCORE, maxScore: max })),
+    );
+  };
+
+  const addCriterion = () =>
+    setCriteria([
+      ...criteria,
+      { ...emptyCriterion(), minScore: DEFAULT_MIN_SCORE, maxScore: scoreScaleMax },
+    ]);
 
   const updateCriterion = (idx: number, field: keyof CriterionForm, value: string | number | undefined) => {
     setDeleteWarning(null);
@@ -220,12 +265,47 @@ function TemplateForm({
 
       <div className="flex flex-col">
         <label style={{ fontSize: 14, fontWeight: 600, color: "#0e1528", marginBottom: 4 }}>Template Name</label>
-        <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} placeholder="Template name" required />
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          style={inputStyle}
+          placeholder="Template name"
+          required
+          disabled={isEdit && (template?.isDefault || template?.name.toLowerCase() === "default")}
+        />
+        {isEdit && (template?.isDefault || template?.name.toLowerCase() === "default") && (
+          <p style={{ fontSize: 12, color: "#0369a1", marginTop: 4 }}>
+            System Default template — name is fixed; criteria remain editable.
+          </p>
+        )}
       </div>
 
       <div className="flex flex-col">
         <label style={{ fontSize: 14, fontWeight: 600, color: "#0e1528", marginBottom: 4 }}>Description (optional)</label>
         <input value={description} onChange={(e) => setDescription(e.target.value)} style={inputStyle} placeholder="Description" />
+      </div>
+
+      <div className="flex flex-col">
+        <label style={{ fontSize: 14, fontWeight: 600, color: "#0e1528", marginBottom: 4 }}>
+          Score scale
+        </label>
+        <select
+          value={scoreScaleMax}
+          onChange={(e) => {
+            const next = Number(e.target.value);
+            if (isScoreScaleMax(next)) applyScoreScale(next);
+          }}
+          style={inputStyle}
+        >
+          {SCORE_SCALE_OPTIONS.map((opt) => (
+            <option key={opt.max} value={opt.max}>
+              {opt.label} — {opt.description}
+            </option>
+          ))}
+        </select>
+        <p style={{ fontSize: 12, color: "#8891a5", marginTop: 4 }}>
+          Applies min {DEFAULT_MIN_SCORE} and max {scoreScaleMax} to all criteria in this template.
+        </p>
       </div>
 
       <div>
@@ -258,13 +338,26 @@ function TemplateForm({
           </div>
         )}
 
+        <div
+          className="grid grid-cols-12 gap-2"
+          style={{ marginBottom: 4, fontSize: 12, fontWeight: 600, color: "#8891a5" }}
+          aria-hidden="true"
+        >
+          <div className="col-span-3">Name</div>
+          <div className="col-span-4">Description</div>
+          <div className="col-span-2">Weight %</div>
+          <div className="col-span-1">Min</div>
+          <div className="col-span-1">Max</div>
+          <div className="col-span-1" />
+        </div>
+
         {criteria.map((c, idx) => (
           <div key={idx} className="grid grid-cols-12 gap-2" style={{ marginBottom: 8 }}>
             <div className="col-span-3">
-              <input value={c.name} onChange={(e) => updateCriterion(idx, "name", e.target.value)} style={inputStyle} placeholder="Name" required />
+              <input value={c.name} onChange={(e) => updateCriterion(idx, "name", e.target.value)} style={inputStyle} placeholder="Name" aria-label="Criterion name" required />
             </div>
             <div className="col-span-4">
-              <input value={c.description} onChange={(e) => updateCriterion(idx, "description", e.target.value)} style={inputStyle} placeholder="Description" />
+              <input value={c.description} onChange={(e) => updateCriterion(idx, "description", e.target.value)} style={inputStyle} placeholder="Description" aria-label="Criterion description" />
             </div>
             <div className="col-span-2">
               <input
@@ -276,6 +369,7 @@ function TemplateForm({
                 onKeyDown={blockInvalidKeys}
                 style={inputStyle}
                 placeholder="Weight %"
+                aria-label="Weight percent"
                 required
               />
             </div>
@@ -284,9 +378,11 @@ function TemplateForm({
                 type="number"
                 min={1}
                 value={c.minScore}
-                onChange={(e) => updateCriterion(idx, "minScore", Number(e.target.value))}
-                style={inputStyle}
+                readOnly
+                style={{ ...inputStyle, backgroundColor: "#f8f9fc", color: "#4a5468" }}
                 placeholder="Min"
+                aria-label="Minimum score"
+                title="Controlled by Score scale"
                 required
               />
             </div>
@@ -295,15 +391,17 @@ function TemplateForm({
                 type="number"
                 min={c.minScore + 1}
                 value={c.maxScore}
-                onChange={(e) => updateCriterion(idx, "maxScore", Number(e.target.value))}
-                style={inputStyle}
+                readOnly
+                style={{ ...inputStyle, backgroundColor: "#f8f9fc", color: "#4a5468" }}
                 placeholder="Max"
+                aria-label="Maximum score"
+                title="Controlled by Score scale"
                 required
               />
             </div>
             <div className="col-span-1 flex items-center">
               {criteria.length > 1 && (
-                <button type="button" onClick={() => removeCriterion(idx)} style={{ fontSize: 18, color: "#991b1b", background: "none", border: "none", cursor: "pointer" }}>
+                <button type="button" onClick={() => removeCriterion(idx)} aria-label="Remove criterion" style={{ fontSize: 18, color: "#991b1b", background: "none", border: "none", cursor: "pointer" }}>
                   x
                 </button>
               )}

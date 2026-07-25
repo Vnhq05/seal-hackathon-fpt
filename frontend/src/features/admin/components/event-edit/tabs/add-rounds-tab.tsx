@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import type { EventResponse, RoundResponse, ScoringTemplateResponse } from "@/lib/api";
 import {
   useAdminRounds,
@@ -8,7 +8,6 @@ import {
   useDeleteRound,
 } from "@/features/admin/hooks/use-admin-rounds";
 import { useUpdateEvent } from "@/features/admin/hooks/use-admin-hackathons";
-import { useAdminTracks, useUpdateTrack } from "@/features/admin/hooks/use-admin-tracks";
 import { useCriteriaTemplates } from "@/features/admin/hooks/use-admin-criteria";
 import {
   formatRoundDateTime,
@@ -23,6 +22,13 @@ import {
   toDateInput,
   warnBoxStyle,
 } from "@/features/admin/components/event-edit/event-edit.utils";
+import {
+  DEFAULT_MAX_SCORE,
+  DEFAULT_MIN_SCORE,
+  SCORE_SCALE_OPTIONS,
+  type ScoreScaleMax,
+  isScoreScaleMax,
+} from "@/features/judging/constants/scoring-scale";
 
 function toDateTimeLocalBounds(date: string, endOfDay = false): string | undefined {
   if (!date) return undefined;
@@ -36,14 +42,44 @@ function toApiDateTime(value: string): string {
   return `${value}T00:00:00`;
 }
 
-function TemplateCriteriaPreview({ template }: { template: ScoringTemplateResponse }) {
+function isDefaultTemplate(template: ScoringTemplateResponse): boolean {
+  return template.isDefault === true || template.name.toLowerCase() === "default";
+}
+
+function TemplateCriteriaPreview({
+  template,
+  scoreScaleMax,
+}: {
+  template: ScoringTemplateResponse;
+  scoreScaleMax: ScoreScaleMax;
+}) {
   const totalWeight = template.criteria.reduce((sum, c) => sum + c.weight, 0);
+  const showDefault = isDefaultTemplate(template);
   return (
     <div style={{ padding: 12, backgroundColor: "#f8f9fc", borderRadius: 8, marginTop: 8 }}>
       <div className="flex items-center justify-between" style={{ marginBottom: 8 }}>
-        <p style={{ fontSize: 13, fontWeight: 600, color: "#0e1528" }}>{template.name}</p>
+        <div className="flex items-center gap-2">
+          {showDefault && (
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                letterSpacing: "0.04em",
+                textTransform: "uppercase",
+                color: "#0c4a6e",
+                backgroundColor: "#e0f2fe",
+                border: "1px solid #7dd3fc",
+                borderRadius: 4,
+                padding: "2px 8px",
+              }}
+            >
+              Default
+            </span>
+          )}
+          <p style={{ fontSize: 13, fontWeight: 600, color: "#0e1528" }}>{template.name}</p>
+        </div>
         <p style={{ fontSize: 12, fontWeight: 700, color: totalWeight === 100 ? "#10b981" : "#ef4444" }}>
-          Total: {totalWeight}%
+          Total: {totalWeight}% · Scale {DEFAULT_MIN_SCORE}–{scoreScaleMax}
         </p>
       </div>
       {template.criteria.map((c) => (
@@ -53,7 +89,9 @@ function TemplateCriteriaPreview({ template }: { template: ScoringTemplateRespon
           style={{ padding: "4px 0", borderBottom: "1px solid rgba(223,226,236,0.3)" }}
         >
           <span style={{ fontSize: 12, color: "#0e1528" }}>{c.name}</span>
-          <span style={{ fontSize: 12, fontWeight: 600, color: "#4a5468" }}>{c.weight}%</span>
+          <span style={{ fontSize: 12, fontWeight: 600, color: "#4a5468" }}>
+            {c.weight}% · {DEFAULT_MIN_SCORE}–{scoreScaleMax}
+          </span>
         </div>
       ))}
     </div>
@@ -76,6 +114,11 @@ function TemplateSelect({
   if (isLoading) {
     return <div className="animate-pulse rounded" style={{ height: 44, backgroundColor: "rgba(223,226,236,0.8)" }} />;
   }
+  const ordered = [...templates].sort((a, b) => {
+    const aDef = isDefaultTemplate(a) ? 0 : 1;
+    const bDef = isDefaultTemplate(b) ? 0 : 1;
+    return aDef - bDef;
+  });
   return (
     <select
       value={value ?? ""}
@@ -84,49 +127,49 @@ function TemplateSelect({
       style={inputStyle}
     >
       <option value="">Select a template...</option>
-      {templates.map((t) => (
-        <option key={t.id} value={t.id}>{t.name}</option>
+      {ordered.map((t) => (
+        <option key={t.id} value={t.id}>
+          {t.name}{isDefaultTemplate(t) ? " (Default)" : ""}
+        </option>
       ))}
     </select>
   );
 }
 
+function defaultBadgeStyle(active: boolean): CSSProperties {
+  return {
+    fontSize: 11,
+    fontWeight: 700,
+    letterSpacing: "0.04em",
+    textTransform: "uppercase",
+    color: active ? "#0c4a6e" : "#64748b",
+    backgroundColor: active ? "#e0f2fe" : "#f1f5f9",
+    border: active ? "1px solid #7dd3fc" : "1px solid #e2e8f0",
+    borderRadius: 4,
+    padding: "2px 8px",
+  };
+}
+
 function ScoringSection({ event }: { event: EventResponse }) {
   const editable = isEventEditable(event.status);
   const eventId = event.id;
-  const { data: tracks = [] } = useAdminTracks(eventId);
   const { data: templates = [], isLoading, isError } = useCriteriaTemplates();
   const allTemplates = templates as ScoringTemplateResponse[];
   const { mutate: updateEvent, isPending: savingEvent } = useUpdateEvent();
-  const { mutate: updateTrack, isPending: savingTrack } = useUpdateTrack(eventId);
 
-  const initialApplyAll = useMemo(() => {
-    if (event.scoringTemplateId) return true;
-    const trackTemplates = tracks.map((t) => t.scoringTemplateId).filter(Boolean);
-    if (trackTemplates.length === 0) return true;
-    return new Set(trackTemplates).size === 1 && trackTemplates.length === tracks.length;
-  }, [event.scoringTemplateId, tracks]);
-
-  const [applyToAllTracks, setApplyToAllTracks] = useState(initialApplyAll);
-  const [scoringTemplateId, setScoringTemplateId] = useState<string | null>(event.scoringTemplateId);
-  const tracksKey = tracks.map((t) => `${t.id}:${t.scoringTemplateId}`).join("|");
-  const [trackTemplateIds, setTrackTemplateIds] = useState<Record<string, string | null>>(() =>
-    Object.fromEntries(tracks.map((t) => [t.id, t.scoringTemplateId])),
+  const defaultTemplate = useMemo(
+    () => allTemplates.find(isDefaultTemplate) ?? null,
+    [allTemplates],
   );
-  const [prevTracksKey, setPrevTracksKey] = useState(tracksKey);
+
+  const [scoringTemplateId, setScoringTemplateId] = useState<string | null>(event.scoringTemplateId);
+  const [scoreScaleMax, setScoreScaleMax] = useState<ScoreScaleMax>(() => {
+    const fromEvent = event.scoreScaleMax;
+    return fromEvent != null && isScoreScaleMax(fromEvent) ? fromEvent : DEFAULT_MAX_SCORE;
+  });
   const [tiebreakerIds, setTiebreakerIds] = useState<string[]>(event.tiebreakerCriterionIds ?? []);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
-
-  if (tracksKey !== prevTracksKey) {
-    setPrevTracksKey(tracksKey);
-    setTrackTemplateIds(Object.fromEntries(tracks.map((t) => [t.id, t.scoringTemplateId])));
-  }
-
-  const selectedSharedTemplate = allTemplates.find((t) => t.id === scoringTemplateId);
-  const activeTemplate = applyToAllTracks
-    ? selectedSharedTemplate
-    : allTemplates.find((t) => t.id === trackTemplateIds[tracks[0]?.id ?? ""]);
 
   const syncTiebreakerFromTemplate = (template: ScoringTemplateResponse | undefined) => {
     if (!template) return;
@@ -135,6 +178,17 @@ function ScoringSection({ event }: { event: EventResponse }) {
       .map((c) => c.id);
     setTiebreakerIds(defaultIds);
   };
+
+  // Auto-select system Default when the event has no scoring template yet.
+  useEffect(() => {
+    if (!defaultTemplate) return;
+    if (event.scoringTemplateId || scoringTemplateId) return;
+    setScoringTemplateId(defaultTemplate.id);
+    syncTiebreakerFromTemplate(defaultTemplate);
+  }, [defaultTemplate, event.scoringTemplateId, scoringTemplateId]);
+
+  const selectedTemplate = allTemplates.find((t) => t.id === scoringTemplateId);
+  const isDefaultSelected = !!(selectedTemplate && isDefaultTemplate(selectedTemplate));
 
   const moveTiebreaker = (index: number, direction: -1 | 1) => {
     const ids = [...tiebreakerIds];
@@ -148,74 +202,28 @@ function ScoringSection({ event }: { event: EventResponse }) {
     setSaveError(null);
     setSaveSuccess(false);
 
-    if (applyToAllTracks) {
-      if (!scoringTemplateId) {
-        setSaveError("Please select a scoring template");
-        return;
-      }
-      const names = tiebreakerIds
-        .map((id) => selectedSharedTemplate?.criteria.find((c) => c.id === id)?.name)
-        .filter(Boolean);
-      updateEvent(
-        {
-          eventId,
-          ...mergeEventUpdate(event, {
-            scoringTemplateId,
-            tiebreakerCriterionIds: tiebreakerIds,
-            tiebreakerCriteria: names.join(", "),
-          }),
-        },
-        {
-          onSuccess: () => setSaveSuccess(true),
-          onError: (err) => setSaveError(err instanceof Error ? err.message : "Failed to save scoring"),
-        },
-      );
-    } else {
-      if (tracks.some((t) => !trackTemplateIds[t.id])) {
-        setSaveError("Each track must have a scoring template assigned");
-        return;
-      }
-      const names = tiebreakerIds
-        .map((id) => activeTemplate?.criteria.find((c) => c.id === id)?.name)
-        .filter(Boolean);
-      let pending = tracks.length;
-      let failed = false;
-      tracks.forEach((track) => {
-        updateTrack(
-          {
-            trackId: track.id,
-            name: track.name,
-            description: track.description ?? undefined,
-            scoringTemplateId: trackTemplateIds[track.id] ?? undefined,
-          },
-          {
-            onSuccess: () => {
-              pending -= 1;
-              if (pending === 0 && !failed) {
-                updateEvent(
-                  {
-                    eventId,
-                    ...mergeEventUpdate(event, {
-                      scoringTemplateId: undefined,
-                      tiebreakerCriterionIds: tiebreakerIds,
-                      tiebreakerCriteria: names.join(", "),
-                    }),
-                  },
-                  {
-                    onSuccess: () => setSaveSuccess(true),
-                    onError: (err) => setSaveError(err instanceof Error ? err.message : "Failed to save tiebreaker"),
-                  },
-                );
-              }
-            },
-            onError: (err) => {
-              failed = true;
-              setSaveError(err instanceof Error ? err.message : "Failed to save track template");
-            },
-          },
-        );
-      });
+    if (!scoringTemplateId) {
+      setSaveError("Please select a scoring template");
+      return;
     }
+    const names = tiebreakerIds
+      .map((id) => selectedTemplate?.criteria.find((c) => c.id === id)?.name)
+      .filter(Boolean);
+    updateEvent(
+      {
+        eventId,
+        ...mergeEventUpdate(event, {
+          scoringTemplateId,
+          scoreScaleMax,
+          tiebreakerCriterionIds: tiebreakerIds,
+          tiebreakerCriteria: names.join(", "),
+        }),
+      },
+      {
+        onSuccess: () => setSaveSuccess(true),
+        onError: (err) => setSaveError(err instanceof Error ? err.message : "Failed to save scoring"),
+      },
+    );
   };
 
   return (
@@ -234,97 +242,73 @@ function ScoringSection({ event }: { event: EventResponse }) {
         </div>
       )}
 
-      <div>
-        <label style={labelStyle}>Scoring Mode</label>
-        <div className="flex gap-3" style={{ marginTop: 6 }}>
-          <button
-            type="button"
-            disabled={!editable}
-            onClick={() => setApplyToAllTracks(true)}
-            style={{
-              flex: 1,
-              padding: "14px 16px",
-              borderRadius: 10,
-              border: applyToAllTracks ? "2px solid #38bdf8" : "1px solid rgba(223,226,236,0.8)",
-              backgroundColor: applyToAllTracks ? "#f0f9ff" : "#ffffff",
-              cursor: editable ? "pointer" : "not-allowed",
-              textAlign: "left",
-            }}
-          >
-            <p style={{ fontSize: 14, fontWeight: 600, color: "#0e1528", marginBottom: 2 }}>Shared Template</p>
-            <p style={{ fontSize: 12, color: "#8891a5" }}>All tracks use the same scoring criteria</p>
-          </button>
-          <button
-            type="button"
-            disabled={!editable}
-            onClick={() => setApplyToAllTracks(false)}
-            style={{
-              flex: 1,
-              padding: "14px 16px",
-              borderRadius: 10,
-              border: !applyToAllTracks ? "2px solid #38bdf8" : "1px solid rgba(223,226,236,0.8)",
-              backgroundColor: !applyToAllTracks ? "#f0f9ff" : "#ffffff",
-              cursor: editable ? "pointer" : "not-allowed",
-              textAlign: "left",
-            }}
-          >
-            <p style={{ fontSize: 14, fontWeight: 600, color: "#0e1528", marginBottom: 2 }}>Per-Track Template</p>
-            <p style={{ fontSize: 12, color: "#8891a5" }}>Each track has its own scoring criteria</p>
-          </button>
+      <div
+        style={{
+          padding: "14px 16px",
+          borderRadius: 10,
+          border: "2px solid #38bdf8",
+          backgroundColor: "#f0f9ff",
+        }}
+      >
+        <div className="flex items-center gap-2" style={{ marginBottom: 2 }}>
+          <p style={{ fontSize: 14, fontWeight: 600, color: "#0e1528", margin: 0 }}>Shared Template</p>
+          {isDefaultSelected && <span style={defaultBadgeStyle(true)}>Default</span>}
         </div>
+        <p style={{ fontSize: 12, color: "#8891a5" }}>
+          {isDefaultSelected
+            ? "Using the Default rubric for all tracks"
+            : "All tracks use the same scoring criteria"}
+        </p>
       </div>
 
-      {applyToAllTracks ? (
-        <div>
-          <label style={labelStyle}>Scoring Template</label>
-          <TemplateSelect
-            value={scoringTemplateId}
-            onChange={(id) => {
-              setScoringTemplateId(id);
-              syncTiebreakerFromTemplate(allTemplates.find((t) => t.id === id));
-            }}
-            templates={allTemplates}
-            isLoading={isLoading}
-            disabled={!editable}
-          />
-          {selectedSharedTemplate && <TemplateCriteriaPreview template={selectedSharedTemplate} />}
+      <div>
+        <div className="flex items-center gap-2" style={{ marginBottom: 6 }}>
+          <label style={{ ...labelStyle, marginBottom: 0 }}>Scoring Template</label>
+          {isDefaultSelected && <span style={defaultBadgeStyle(true)}>Default</span>}
         </div>
-      ) : tracks.length === 0 ? (
-        <div style={{ padding: 16, backgroundColor: "#fffbeb", border: "1px solid #fde68a", borderRadius: 8, fontSize: 13, color: "#92400e" }}>
-          No tracks configured. Add tracks first.
-        </div>
-      ) : (
-        <div className="flex flex-col gap-4">
-          {tracks.map((track) => {
-            const trackTemplate = allTemplates.find((t) => t.id === trackTemplateIds[track.id]);
-            return (
-              <div key={track.id} style={{ padding: 16, backgroundColor: "#ffffff", border: "1px solid rgba(223,226,236,0.8)", borderRadius: 10 }}>
-                <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>{track.name}</p>
-                <TemplateSelect
-                  value={trackTemplateIds[track.id] ?? null}
-                  onChange={(id) => {
-                    setTrackTemplateIds((prev) => ({ ...prev, [track.id]: id }));
-                    if (track.id === tracks[0]?.id && id) {
-                      syncTiebreakerFromTemplate(allTemplates.find((t) => t.id === id));
-                    }
-                  }}
-                  templates={allTemplates}
-                  isLoading={isLoading}
-                  disabled={!editable}
-                />
-                {trackTemplate && <TemplateCriteriaPreview template={trackTemplate} />}
-              </div>
-            );
-          })}
-        </div>
-      )}
+        <TemplateSelect
+          value={scoringTemplateId}
+          onChange={(id) => {
+            setScoringTemplateId(id);
+            syncTiebreakerFromTemplate(allTemplates.find((t) => t.id === id));
+          }}
+          templates={allTemplates}
+          isLoading={isLoading}
+          disabled={!editable}
+        />
+        {selectedTemplate && (
+          <TemplateCriteriaPreview template={selectedTemplate} scoreScaleMax={scoreScaleMax} />
+        )}
+      </div>
 
-      {activeTemplate && tiebreakerIds.length > 0 && (
+      <div>
+        <label style={labelStyle}>Score scale</label>
+        <select
+          value={scoreScaleMax}
+          onChange={(e) => {
+            const next = Number(e.target.value);
+            if (isScoreScaleMax(next)) setScoreScaleMax(next);
+          }}
+          disabled={!editable}
+          style={inputStyle}
+        >
+          {SCORE_SCALE_OPTIONS.map((opt) => (
+            <option key={opt.max} value={opt.max}>
+              {opt.label} — {opt.description}
+            </option>
+          ))}
+        </select>
+        <p style={{ fontSize: 12, color: "#8891a5", marginTop: 6 }}>
+          Default is 1–100. Applies to criteria on new rounds and remaps existing round criteria when saved.
+        </p>
+      </div>
+
+      {selectedTemplate && tiebreakerIds.length > 0 && (
         <div style={{ padding: 16, backgroundColor: "#f8f9fc", borderRadius: 10 }}>
           <label style={labelStyle}>Tiebreaker priority (first wins ties)</label>
           <div className="flex flex-col gap-2" style={{ marginTop: 8 }}>
             {tiebreakerIds.map((id, index) => {
-              const criterion = activeTemplate.criteria.find((c) => c.id === id);
+              const criterion = selectedTemplate.criteria.find((c) => c.id === id);
               if (!criterion) return null;
               return (
                 <div key={id} className="flex items-center justify-between gap-2" style={{ padding: "8px 12px", backgroundColor: "#fff", borderRadius: 6 }}>
@@ -350,10 +334,10 @@ function ScoringSection({ event }: { event: EventResponse }) {
       <button
         type="button"
         onClick={handleSaveScoring}
-        disabled={!editable || savingEvent || savingTrack}
+        disabled={!editable || savingEvent}
         className="border-2 border-navy bg-seal-yellow px-6 py-2.5 text-sm text-navy font-mono font-bold cursor-pointer self-start disabled:opacity-50"
       >
-        {savingEvent || savingTrack ? "Saving..." : "Save Scoring"}
+        {savingEvent ? "Saving..." : "Save Scoring"}
       </button>
     </div>
   );
@@ -513,6 +497,10 @@ export function AddRoundsTab({ event }: { event: EventResponse }) {
             />
             <p style={{ fontSize: 12, color: "#8891a5", marginTop: 4 }}>
               Minimum active judges required per track/group before scoring can start.
+              Advance slots are calculated automatically from team counts (not entered here).
+              The round with the latest end time is treated as Final.
+            </p>
+            <p style={{ fontSize: 12, color: "#8891a5", marginTop: 4 }}>
               Advance slots are calculated automatically from team counts (not entered here).
               The round with the latest end time is treated as Final.
             </p>

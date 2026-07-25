@@ -116,6 +116,10 @@ DELETE FROM honored_guests WHERE event_id IN (SELECT id FROM @demoEventIds);
 DELETE FROM prizes WHERE event_id IN (SELECT id FROM @demoEventIds);
 DELETE FROM event_schedules WHERE event_id IN (SELECT id FROM @demoEventIds);
 DELETE FROM allowed_email_domains WHERE event_id IN (SELECT id FROM @demoEventIds);
+IF OBJECT_ID(N'competition_groups', N'U') IS NOT NULL
+    DELETE cg FROM competition_groups cg
+    INNER JOIN tracks tr ON tr.id = cg.track_id
+    WHERE tr.event_id IN (SELECT id FROM @demoEventIds);
 DELETE FROM tracks WHERE event_id IN (SELECT id FROM @demoEventIds);
 DELETE FROM hackathon_events WHERE id IN (SELECT id FROM @demoEventIds);
 
@@ -5575,7 +5579,7 @@ UPDATE submissions SET status = 'SUBMITTED' WHERE round_id = '05030000-EEEE-4EEE
 
 -- ============================================================
 -- === SEAL Hackathon Fall Preview 2026 - Early Access Build ===
--- QA phase: ACTIVE - deadline in ~2h, no submissions, progress alerts + mentor_teams + notifications seeded
+-- QA phase: ACTIVE - deadline in ~3h, no submissions, progress alerts + mentor_teams + notifications seeded
 -- Login: pham.quoc.bao@fpt.edu.vn (mentor track 1) or nguyen.hoang.minh.preview26@fpt.edu.vn (student leader) / Demo@123456
 -- View: admin/lecturer dashboard Teams needing support · /student dashboard banner · notifications
 -- ============================================================
@@ -5586,7 +5590,7 @@ DECLARE @e6_compDt DATETIME2 = CAST(@e6_compDay AS DATETIME2);
 DECLARE @e6_regOpen DATE = CAST(DATEADD(DAY, -15, @now) AS DATE);
 DECLARE @e6_regDeadline DATE = CAST(DATEADD(DAY, -1, @now) AS DATE);
 DECLARE @e6_prelimStart DATETIME2 = DATEADD(DAY, -1, @now);
-DECLARE @e6_prelimSub DATETIME2 = DATEADD(HOUR, 2, @now);
+DECLARE @e6_prelimSub DATETIME2 = DATEADD(HOUR, 3, @now);
 DECLARE @e6_prelimScore DATETIME2 = DATEADD(DAY, 2, @now);
 DECLARE @e6_finalStart DATETIME2 = DATEADD(DAY, 2, @now);
 DECLARE @e6_finalSub DATETIME2 = DATEADD(DAY, 2, @now);

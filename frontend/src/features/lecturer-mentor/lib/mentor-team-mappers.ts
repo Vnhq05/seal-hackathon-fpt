@@ -74,8 +74,9 @@ function mapSubmissionLinks(submission: SubmissionResponse | null): MentorRoundS
   if (version.slideUrl) {
     links.push({ label: "Slide", url: version.slideUrl, type: "demo" });
   }
-  if (version.demoUrl) {
-    links.push({ label: "Demo", url: version.demoUrl, type: "demo" });
+  const otherLink = version.otherUrl ?? version.demoUrl;
+  if (otherLink) {
+    links.push({ label: "Other", url: otherLink, type: "other" });
   }
   if (version.attachments.length > 0) {
     const attachment = version.attachments[0];

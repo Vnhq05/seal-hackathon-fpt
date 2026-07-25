@@ -8,6 +8,8 @@ import { openSubmissionAttachment } from "@/lib/files";
 interface SubmissionDetailPageProps {
   roundId: string;
   submissionId: string;
+  backHref?: string;
+  backLabel?: string;
 }
 
 function PageSkeleton() {
@@ -35,11 +37,37 @@ function PageSkeleton() {
   );
 }
 
-export function SubmissionDetailPage({ roundId, submissionId }: SubmissionDetailPageProps) {
-  const { data: submission, isLoading } = useSubmissionDetail(roundId, submissionId);
-  const { data: versions } = useSubmissionVersions(roundId, submissionId);
+export function SubmissionDetailPage({
+  roundId,
+  submissionId,
+  backHref = "/student/projects",
+  backLabel = "Back to Project Dashboard",
+}: SubmissionDetailPageProps) {
+  const { data: submission, isLoading, isError: submissionError, error: submissionErrorObj } =
+    useSubmissionDetail(roundId, submissionId);
+  const {
+    data: versions,
+    isLoading: versionsLoading,
+    isError: versionsError,
+    error: versionsErrorObj,
+  } = useSubmissionVersions(roundId, submissionId);
 
   if (isLoading) return <PageSkeleton />;
+
+  if (submissionError) {
+    return (
+      <div className="flex flex-col items-center justify-center py-32">
+        <p style={{ fontSize: 18, fontWeight: 600, color: "#b91c1c" }}>
+          Failed to load submission
+        </p>
+        <p style={{ fontSize: 14, color: "#8891a5", marginTop: 4 }}>
+          {submissionErrorObj instanceof Error
+            ? submissionErrorObj.message
+            : "The submission could not be loaded."}
+        </p>
+      </div>
+    );
+  }
 
   if (!submission) {
     return (
@@ -57,7 +85,7 @@ export function SubmissionDetailPage({ roundId, submissionId }: SubmissionDetail
   return (
     <div className="flex flex-col gap-6">
       <Link
-        href="/student/projects"
+        href={backHref}
         className="inline-flex items-center gap-1 self-start"
         style={{
           fontSize: 12,
@@ -76,7 +104,7 @@ export function SubmissionDetailPage({ roundId, submissionId }: SubmissionDetail
             strokeLinejoin="round"
           />
         </svg>
-        Back to Project Dashboard
+        {backLabel}
       </Link>
 
       {/* Submission header */}
@@ -93,7 +121,8 @@ export function SubmissionDetailPage({ roundId, submissionId }: SubmissionDetail
               Submission v{submission.currentVersion}
             </h1>
             <p style={{ fontSize: 14, color: "#8891a5", marginTop: 4 }}>
-              Team: {submission.teamId} | Round: {submission.roundId}
+              Team: {submission.teamName ?? submission.teamId}
+              {submission.trackName ? ` · Track: ${submission.trackName}` : ""}
             </p>
           </div>
           <span
@@ -153,16 +182,16 @@ export function SubmissionDetailPage({ roundId, submissionId }: SubmissionDetail
                 </a>
               </div>
             )}
-            {submission.latestVersion.demoUrl && (
+            {(submission.latestVersion.otherUrl ?? submission.latestVersion.demoUrl) && (
               <div className="flex items-center gap-2">
-                <span style={{ fontSize: 12, fontWeight: 600, color: "#8891a5" }}>Demo:</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: "#8891a5" }}>Other:</span>
                 <a
-                  href={submission.latestVersion.demoUrl}
+                  href={submission.latestVersion.otherUrl ?? submission.latestVersion.demoUrl ?? undefined}
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{ fontSize: 14, color: "#38bdf8" }}
                 >
-                  {submission.latestVersion.demoUrl}
+                  {submission.latestVersion.otherUrl ?? submission.latestVersion.demoUrl}
                 </a>
               </div>
             )}
@@ -195,17 +224,29 @@ export function SubmissionDetailPage({ roundId, submissionId }: SubmissionDetail
         </div>
       )}
 
-      {versions && versions.length > 0 && (
-        <div
-          className="rounded-lg p-6"
-          style={{
-            backgroundColor: "#ffffff",
-            border: "1px solid rgba(223,226,236,0.8)",
-          }}
-        >
-          <h2 style={{ fontSize: 18, fontWeight: 600, color: "#0e1528", marginBottom: 12 }}>
-            Version History
-          </h2>
+      <div
+        className="rounded-lg p-6"
+        style={{
+          backgroundColor: "#ffffff",
+          border: "1px solid rgba(223,226,236,0.8)",
+        }}
+      >
+        <h2 style={{ fontSize: 18, fontWeight: 600, color: "#0e1528", marginBottom: 12 }}>
+          Version History
+        </h2>
+        {versionsLoading && (
+          <p style={{ fontSize: 14, color: "#8891a5" }}>Loading version history…</p>
+        )}
+        {versionsError && (
+          <p style={{ fontSize: 14, color: "#b91c1c" }}>
+            Failed to load version history
+            {versionsErrorObj instanceof Error ? `: ${versionsErrorObj.message}` : "."}
+          </p>
+        )}
+        {!versionsLoading && !versionsError && (!versions || versions.length === 0) && (
+          <p style={{ fontSize: 14, color: "#8891a5" }}>No versions found.</p>
+        )}
+        {!versionsLoading && !versionsError && versions && versions.length > 0 && (
           <div className="flex flex-col gap-3">
             {versions.map((version) => (
               <div
@@ -213,17 +254,62 @@ export function SubmissionDetailPage({ roundId, submissionId }: SubmissionDetail
                 className="rounded-md p-3"
                 style={{ backgroundColor: "#f8fafc", border: "1px solid rgba(223,226,236,0.6)" }}
               >
-                <div style={{ fontSize: 14, fontWeight: 600, color: "#0e1528" }}>
-                  v{version.versionNumber}
+                <div className="flex items-center justify-between gap-3">
+                  <div style={{ fontSize: 14, fontWeight: 600, color: "#0e1528" }}>
+                    v{version.versionNumber}
+                  </div>
+                  <div style={{ fontSize: 12, color: "#8891a5" }}>
+                    {new Date(version.submittedAt).toLocaleString()}
+                  </div>
                 </div>
-                <div style={{ fontSize: 12, color: "#8891a5", marginTop: 4 }}>
-                  {new Date(version.submittedAt).toLocaleString()}
+                <div className="mt-2 flex flex-col gap-1">
+                  {(version.sourceCodeUrl ?? version.githubUrl) && (
+                    <a
+                      href={version.sourceCodeUrl ?? version.githubUrl ?? undefined}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ fontSize: 12, color: "#38bdf8" }}
+                    >
+                      Source: {version.sourceCodeUrl ?? version.githubUrl}
+                    </a>
+                  )}
+                  {version.slideUrl && (
+                    <a
+                      href={version.slideUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ fontSize: 12, color: "#38bdf8" }}
+                    >
+                      Slide: {version.slideUrl}
+                    </a>
+                  )}
+                  {(version.otherUrl ?? version.demoUrl) && (
+                    <a
+                      href={version.otherUrl ?? version.demoUrl ?? undefined}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ fontSize: 12, color: "#38bdf8" }}
+                    >
+                      Other: {version.otherUrl ?? version.demoUrl}
+                    </a>
+                  )}
+                  {version.attachments?.map((attachment) => (
+                    <button
+                      key={attachment.id}
+                      type="button"
+                      onClick={() => void openSubmissionAttachment(attachment.fileUrl)}
+                      style={{ fontSize: 12, color: "#38bdf8", textDecoration: "underline", textAlign: "left" }}
+                      className="bg-transparent p-0"
+                    >
+                      PDF: {attachment.fileName} ({attachment.pageCount} pages)
+                    </button>
+                  ))}
                 </div>
               </div>
             ))}
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

@@ -58,6 +58,17 @@ public class DataSeeder implements CommandLineRunner {
     }
 
     private void seedScoringTemplates() {
+        // BR-44 system default — also ensured by DefaultScoringTemplateInitializer
+        ensureTemplate(
+                "Default",
+                "Default rubric applied when creating rounds — editable after selection",
+                List.of(
+                        new CriterionDef("Technical", "Technical quality and implementation", 40, 0, 1, 100),
+                        new CriterionDef("Innovation", "Novelty and creative approach", 30, 1, 1, 100),
+                        new CriterionDef("Presentation Quality", "Clarity and communication", 20, 2, 1, 100),
+                        new CriterionDef("Feasibility", "Practicality and delivery readiness", 10, 3, 1, 100)
+                ));
+
         ensureTemplate(
                 "Standard Hackathon",
                 "Default scoring criteria for hackathon projects",

@@ -23,22 +23,20 @@ async function buildStaffGroups(): Promise<EventAtRiskGroup[]> {
     if (!isSubmissionDeadlineOpen(currentRound.submissionDeadline)) continue;
 
     const progress = await progressApi.getByRound(event.id, currentRound.id);
-    const atRisk: AtRiskTeamEntry[] = progress
-      .filter(
-        (p) =>
-          p.riskLevel !== "OK" &&
-          isSubmissionDeadlineOpen(currentRound.submissionDeadline, p.hoursUntilDeadline),
+    const teams: AtRiskTeamEntry[] = progress
+      .filter((p) =>
+        isSubmissionDeadlineOpen(currentRound.submissionDeadline, p.hoursUntilDeadline),
       )
       .map((p) => ({
         ...p,
         submissionDeadline: currentRound.submissionDeadline,
       }));
 
-    if (atRisk.length > 0) {
+    if (teams.length > 0) {
       groups.push({
         eventId: event.id,
         eventName: event.name,
-        teams: atRisk,
+        teams,
       });
     }
   }
@@ -52,30 +50,32 @@ async function buildMentorGroups(): Promise<EventAtRiskGroup[]> {
   const groups: EventAtRiskGroup[] = [];
 
   for (const eventId of eventIds) {
-    const [event, atRisk, rounds] = await Promise.all([
+    const [event, rounds] = await Promise.all([
       eventApi.getById(eventId).catch(() => null),
-      progressApi.getMentorAtRisk(eventId).catch(() => []),
       roundApi.list(eventId),
     ]);
 
-    if (!event || atRisk.length === 0) continue;
+    if (!event) continue;
 
     const currentRound = findCurrentRound(rounds);
-    const deadline = currentRound?.submissionDeadline ?? "";
+    if (!currentRound) continue;
+    const deadline = currentRound.submissionDeadline ?? "";
     if (deadline && !isSubmissionDeadlineOpen(deadline)) continue;
 
-    const openAtRisk = atRisk.filter((team) =>
-      isSubmissionDeadlineOpen(deadline || null, team.hoursUntilDeadline),
-    );
-    if (openAtRisk.length === 0) continue;
+    const progress = await progressApi.getByRound(eventId, currentRound.id).catch(() => []);
+    const openTeams = progress
+      .filter((team) => isSubmissionDeadlineOpen(deadline || null, team.hoursUntilDeadline))
+      .map((team) => ({
+        ...team,
+        submissionDeadline: deadline,
+      }));
+
+    if (openTeams.length === 0) continue;
 
     groups.push({
       eventId,
       eventName: event.name,
-      teams: openAtRisk.map((team) => ({
-        ...team,
-        submissionDeadline: deadline,
-      })),
+      teams: openTeams,
     });
   }
 
