@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 export const PART_LABELS = ["Slide", "GitHub", "Other"] as const;
 export const REQUIRED_SUBMISSION_PARTS = 3;
