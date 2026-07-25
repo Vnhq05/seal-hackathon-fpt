@@ -14,8 +14,8 @@ import {
   useDrawMentors,
   useAssignMentorToTeam,
   useRemoveMentorFromTeam,
+  useEventStaffMentors,
 } from "@/features/admin/hooks/use-admin-assignments";
-import { useLecturerOptions } from "@/features/admin/hooks/use-lecturer-options";
 import { trackApi } from "@/lib/api/track.api";
 import { teamApi } from "@/lib/api/team.api";
 import type { MentorAssignmentResponse, MentorTeamAssignmentResponse } from "@/lib/api";
@@ -86,7 +86,7 @@ export function MentorAssignmentPage({ defaultEventId, embedded }: { defaultEven
 
   const { data: eventsPage } = useAdminEvents();
   const { data: defaultEvent } = useAdminEvent(defaultEventId ?? "");
-  const { data: lecturers = [] } = useLecturerOptions();
+  const { data: eventMentors = [] } = useEventStaffMentors(eventId);
   const { data: tracks = [] } = useQuery({
     queryKey: ["tracks", eventId, userEmail],
     queryFn: () => trackApi.list(eventId),
@@ -137,6 +137,16 @@ export function MentorAssignmentPage({ defaultEventId, embedded }: { defaultEven
     });
     return map;
   }, [tracks, trackId, allTrackMentorQueries]);
+
+  const inCurrentTrackPool = useMemo(
+    () => new Set((mentors ?? []).map((m) => m.mentorUserId)),
+    [mentors],
+  );
+
+  const availableEventMentors = useMemo(
+    () => eventMentors.filter((m) => !inCurrentTrackPool.has(m.userId)),
+    [eventMentors, inCurrentTrackPool],
+  );
 
   const events = eventsPage?.content ?? [];
   const mentorList = mentors ?? [];
@@ -221,7 +231,7 @@ export function MentorAssignmentPage({ defaultEventId, embedded }: { defaultEven
               {defaultEvent?.name ?? defaultEventId}
             </span>
           ) : (
-            <select value={eventId} onChange={(e) => { setEventId(e.target.value); setTrackId(""); setDrawMessage(null); }} style={inputStyle}>
+            <select value={eventId} onChange={(e) => { setEventId(e.target.value); setTrackId(""); setMentorUserId(""); setDrawMessage(null); }} style={inputStyle}>
               <option value="">Select event</option>
               {events.map((ev) => <option key={ev.id} value={ev.id}>{ev.name}</option>)}
             </select>
@@ -247,11 +257,11 @@ export function MentorAssignmentPage({ defaultEventId, embedded }: { defaultEven
             disabled={!eventId || !trackId}
           >
             <option value="">Select mentor...</option>
-            {lecturers.map((l) => {
-              const conflictTrack = mentorTrackConflict.get(l.id);
+            {availableEventMentors.map((m) => {
+              const conflictTrack = mentorTrackConflict.get(m.userId);
               return (
-                <option key={l.id} value={l.id}>
-                  {l.fullName ?? l.email}
+                <option key={m.userId} value={m.userId}>
+                  {m.fullName ?? m.email}
                   {conflictTrack ? ` — ⚠ Already in ${conflictTrack}` : ""}
                 </option>
               );
@@ -266,6 +276,16 @@ export function MentorAssignmentPage({ defaultEventId, embedded }: { defaultEven
         >
           Add to pool
         </button>
+        {eventId && eventMentors.length === 0 && (
+          <p style={{ fontSize: 12, color: "#92400e", width: "100%", margin: 0 }}>
+            No event mentors yet. Add mentors on the event staff (Lecturers) tab first.
+          </p>
+        )}
+        {eventId && eventMentors.length > 0 && availableEventMentors.length === 0 && trackId && (
+          <p style={{ fontSize: 12, color: "#8891a5", width: "100%", margin: 0 }}>
+            All event mentors are already in this track pool.
+          </p>
+        )}
       </div>
 
       <div className="overflow-hidden border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] mb-8">

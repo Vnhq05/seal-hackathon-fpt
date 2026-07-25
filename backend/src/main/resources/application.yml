@@ -85,8 +85,6 @@ app:
     team:
       invitation-expiry-days: 7
       max-skill-roles: 5
-      min-track-max-teams: 16
-      max-track-max-teams: 40
     auth:
       max-failed-attempts: 5
       lock-duration-minutes: 15
@@ -95,7 +93,6 @@ app:
       max-rating: 5
     seal:
       max-tracks: ${APP_HACKATHON_SEAL_MAX_TRACKS:3}
-      max-teams-per-track: ${APP_HACKATHON_SEAL_MAX_TEAMS_PER_TRACK:8}
       finalist-count: ${APP_HACKATHON_SEAL_FINALIST_COUNT:6}
       top-per-track: ${APP_HACKATHON_SEAL_TOP_PER_TRACK:2}
     advancement:

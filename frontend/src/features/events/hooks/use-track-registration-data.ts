@@ -31,7 +31,6 @@ export function useTrackRegistrationData(hackathonId: string) {
           name: t.name,
           description: t.description ?? "",
           topic: t.topic ?? null,
-          maxTeams: t.maxTeams,
         })),
       };
     },

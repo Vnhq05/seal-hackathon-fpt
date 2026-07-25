@@ -65,19 +65,19 @@ export type {
   AssignmentScope,
   JudgeAssignmentResponse,
   MentorAssignmentResponse,
+  MentorTeamAssignmentResponse,
+  MentorDrawResultResponse,
+  AssignMentorTeamBody,
   AssignJudgeRequest,
   AssignMentorRequest,
   AssignEventStaffRequest,
   CompetitionGroupResponse,
+  GenerateCompetitionGroupsResponse,
   EventStaffResponse,
   EventAssignmentsOverviewResponse,
   TeamAssignmentOverview,
   EventJudgeOption,
   TeamJudgeAssignmentResponse,
-  MentorTeamAssignmentResponse,
-  MentorDrawResultResponse,
-  AssignMentorTeamBody,
-  GenerateCompetitionGroupsResponse,
 } from "./assignment.api";
 
 export { teamApi } from "./team.api";

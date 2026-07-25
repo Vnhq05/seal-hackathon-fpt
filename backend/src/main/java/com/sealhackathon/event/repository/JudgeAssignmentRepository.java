@@ -2,7 +2,10 @@ package com.sealhackathon.event.repository;
 
 import com.sealhackathon.event.domain.JudgeAssignment;
 import com.sealhackathon.event.domain.enums.AssignmentScope;
+import com.sealhackathon.event.domain.enums.RoundType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -30,4 +33,18 @@ public interface JudgeAssignmentRepository extends JpaRepository<JudgeAssignment
     List<JudgeAssignment> findByGroupIdAndActiveTrue(UUID groupId);
 
     long countByJudgeUserId(UUID judgeUserId);
+
+    /** Active assignment on any non-Final round of the event (used to keep Final panel fresh). */
+    @Query("""
+            SELECT CASE WHEN COUNT(a) > 0 THEN true ELSE false END
+            FROM JudgeAssignment a
+            WHERE a.judgeUserId = :judgeUserId
+              AND a.active = true
+              AND a.round.hackathonEvent.id = :eventId
+              AND a.round.roundType <> :finalType
+            """)
+    boolean existsActiveNonFinalAssignmentInEvent(
+            @Param("judgeUserId") UUID judgeUserId,
+            @Param("eventId") UUID eventId,
+            @Param("finalType") RoundType finalType);
 }

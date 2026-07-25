@@ -5,15 +5,14 @@
 --
 -- Event: SEAL Final Advancement QA
 --   - 1 track, 2 groups (G1/G2), 4 teams (2 per group), all submitted on PRELIM only
---   - Both judges completed prelim scoring; rankings version=1 ready
---   - Final round later endDate; judge ROUND assignments on Final ready
+--   - Prelim scored by score.judge1/2; Final assigned to final.judge1/2 (fresh panel)
 --
 -- Test flow:
 --   1. Admin/coordinator: open event → Select Finalists
 --      POST /api/events/F1000000-FFFF-4FFF-8FFF-000000000001/finalists
 --   2. Each group advances top ~25% (min 1) → typically 1 team / group
 --   3. Carry-over creates Final submissions from prelim
---   4. Login score.judge1@fpt.edu.vn / Demo@123456 → score Final
+--   4. Login final.judge1@fpt.edu.vn / Demo@123456 → score Final
 --
 -- Run:
 --   sqlcmd -S localhost -U sa -P <password> -d SEAL -C -I -i seed_final_advancement_qa.sql
@@ -135,9 +134,11 @@ IF OBJECT_ID(N'competition_groups', N'U') IS NOT NULL
 DELETE FROM tracks WHERE event_id = @eventId;
 DELETE FROM hackathon_events WHERE id = @eventId;
 
--- ── Judges (reuse scoring QA accounts) ──
+-- ── Judges: prelim = score.judge*; Final = final.judge* (fresh panel) ──
 DECLARE @judge1Id UNIQUEIDENTIFIER;
 DECLARE @judge2Id UNIQUEIDENTIFIER;
+DECLARE @finalJudge1Id UNIQUEIDENTIFIER;
+DECLARE @finalJudge2Id UNIQUEIDENTIFIER;
 
 IF NOT EXISTS (SELECT 1 FROM users WHERE email = N'score.judge1@fpt.edu.vn')
 BEGIN
@@ -177,8 +178,48 @@ BEGIN
         updated_at = @now WHERE email = N'score.judge2@fpt.edu.vn';
 END
 
+IF NOT EXISTS (SELECT 1 FROM users WHERE email = N'final.judge1@fpt.edu.vn')
+BEGIN
+    SET @finalJudge1Id = 'F1000000-FFFF-4FFF-8FFF-0000000000D3';
+    INSERT INTO users (
+        id, email, password_hash, full_name, phone, avatar_url, student_id, university_name,
+        user_type, status, failed_login_attempts, locked_until, semester, student_standing, temporary_account,
+        created_at, updated_at, created_by, updated_by
+    ) VALUES (
+        @finalJudge1Id, N'final.judge1@fpt.edu.vn', @demoHash, N'Final Guest Judge One', NULL, NULL, NULL, N'FPT University',
+        N'LECTURER', N'ACTIVE', 0, NULL, NULL, N'ENROLLED', 0,
+        @now, @now, @ownerEmail, @ownerEmail
+    );
+END
+ELSE
+BEGIN
+    UPDATE users SET password_hash = @demoHash, status = N'ACTIVE', failed_login_attempts = 0, locked_until = NULL,
+        full_name = N'Final Guest Judge One', updated_at = @now WHERE email = N'final.judge1@fpt.edu.vn';
+END
+
+IF NOT EXISTS (SELECT 1 FROM users WHERE email = N'final.judge2@fpt.edu.vn')
+BEGIN
+    SET @finalJudge2Id = 'F1000000-FFFF-4FFF-8FFF-0000000000D4';
+    INSERT INTO users (
+        id, email, password_hash, full_name, phone, avatar_url, student_id, university_name,
+        user_type, status, failed_login_attempts, locked_until, semester, student_standing, temporary_account,
+        created_at, updated_at, created_by, updated_by
+    ) VALUES (
+        @finalJudge2Id, N'final.judge2@fpt.edu.vn', @demoHash, N'Final Guest Judge Two', NULL, NULL, NULL, N'FPT University',
+        N'LECTURER', N'ACTIVE', 0, NULL, NULL, N'ENROLLED', 0,
+        @now, @now, @ownerEmail, @ownerEmail
+    );
+END
+ELSE
+BEGIN
+    UPDATE users SET password_hash = @demoHash, status = N'ACTIVE', failed_login_attempts = 0, locked_until = NULL,
+        full_name = N'Final Guest Judge Two', updated_at = @now WHERE email = N'final.judge2@fpt.edu.vn';
+END
+
 SET @judge1Id = (SELECT id FROM users WHERE email = N'score.judge1@fpt.edu.vn');
 SET @judge2Id = (SELECT id FROM users WHERE email = N'score.judge2@fpt.edu.vn');
+SET @finalJudge1Id = (SELECT id FROM users WHERE email = N'final.judge1@fpt.edu.vn');
+SET @finalJudge2Id = (SELECT id FROM users WHERE email = N'final.judge2@fpt.edu.vn');
 
 -- ── 12 students ──
 DECLARE @i INT = 1;
@@ -310,16 +351,18 @@ VALUES
 INSERT INTO event_judge_assignments (id, created_at, assigned_at, judge_user_id, event_id, created_by)
 VALUES
     (NEWID(), @now, @now, @judge1Id, @eventId, @ownerEmail),
-    (NEWID(), @now, @now, @judge2Id, @eventId, @ownerEmail);
+    (NEWID(), @now, @now, @judge2Id, @eventId, @ownerEmail),
+    (NEWID(), @now, @now, @finalJudge1Id, @eventId, @ownerEmail),
+    (NEWID(), @now, @now, @finalJudge2Id, @eventId, @ownerEmail);
 
--- Judges on prelim + final (ROUND scope for Final)
+-- Judges on prelim (score.judge*) + Final (final.judge*) — Final panel must be fresh
 INSERT INTO judge_assignments (
     id, created_at, assigned_at, judge_user_id, round_id, scope, active, created_by
 ) VALUES
     (NEWID(), @now, @now, @judge1Id, @prelimId, N'ROUND', 1, @ownerEmail),
     (NEWID(), @now, @now, @judge2Id, @prelimId, N'ROUND', 1, @ownerEmail),
-    (NEWID(), @now, @now, @judge1Id, @finalId, N'ROUND', 1, @ownerEmail),
-    (NEWID(), @now, @now, @judge2Id, @finalId, N'ROUND', 1, @ownerEmail);
+    (NEWID(), @now, @now, @finalJudge1Id, @finalId, N'ROUND', 1, @ownerEmail),
+    (NEWID(), @now, @now, @finalJudge2Id, @finalId, N'ROUND', 1, @ownerEmail);
 
 -- ── 4 teams: G1 = Team 01 (winner), Team 02; G2 = Team 03 (winner), Team 04 ──
 -- Scores designed so ranks: T01 > T03 > T02 > T04 (but per-group still advances T01 + T03)
@@ -420,7 +463,7 @@ COMMIT TRANSACTION;
 
 PRINT '=== Seed OK: SEAL Final Advancement QA ===';
 PRINT 'Event id: F1000000-FFFF-4FFF-8FFF-000000000001';
-PRINT 'Prelim: scored by both judges + rankings v1. Final: no submissions yet.';
+PRINT 'Prelim: scored by score.judge1/2 + rankings v1. Final: final.judge1/2 assigned, no submissions yet.';
 PRINT 'Groups: G1 (Team 01 winner, Team 02), G2 (Team 03 winner, Team 04)';
 PRINT 'Next: POST /api/events/F1000000-FFFF-4FFF-8FFF-000000000001/finalists';
-PRINT 'Then score Final as score.judge1@fpt.edu.vn / Demo@123456';
+PRINT 'Then score Final as final.judge1@fpt.edu.vn / Demo@123456';

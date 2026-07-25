@@ -9,6 +9,7 @@ import com.sealhackathon.event.service.FormatRuleEngine;
 import com.sealhackathon.team.domain.Team;
 import com.sealhackathon.team.domain.enums.TeamStatus;
 import com.sealhackathon.team.domain.enums.TrackAssignmentMethod;
+import com.sealhackathon.team.dto.response.TrackAssignmentResponse;
 import com.sealhackathon.team.repository.TeamRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -51,18 +52,53 @@ class TrackAssignmentServiceTest {
     private final UUID trackId = UUID.randomUUID();
 
     @Test
-    void assignOneInternal_shouldThrowConflict_whenTeamAlreadyHasTrack() {
+    void assignOneInternal_shouldThrowConflict_whenNonManualAndTeamAlreadyHasTrack() {
         Team team = buildTeam();
         team.setTrackId(UUID.randomUUID());
         when(teamRepository.findById(teamId)).thenReturn(Optional.of(team));
 
         assertThatThrownBy(() -> trackAssignmentService.assignOneInternal(
-                eventId, assignedBy, teamId, trackId, TrackAssignmentMethod.MANUAL))
+                eventId, assignedBy, teamId, trackId, TrackAssignmentMethod.RANDOM))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage("Team already has a track assigned")
                 .extracting(e -> ((BusinessException) e).getHttpStatus())
                 .isEqualTo(HttpStatus.CONFLICT);
 
+        verify(teamRepository, never()).save(any());
+        verifyNoInteractions(groupAssignmentService);
+    }
+
+    @Test
+    void assignOneInternal_shouldReassignTrack_whenManualAndTeamAlreadyHasDifferentTrack() {
+        Team team = buildTeam();
+        team.setTrackId(UUID.randomUUID());
+        team.setGroupId(UUID.randomUUID());
+        stubHappyPath(team);
+
+        trackAssignmentService.assignOneInternal(
+                eventId, assignedBy, teamId, trackId, TrackAssignmentMethod.MANUAL);
+
+        ArgumentCaptor<Team> captor = ArgumentCaptor.forClass(Team.class);
+        verify(teamRepository).save(captor.capture());
+        Team saved = captor.getValue();
+        assertThat(saved.getTrackId()).isEqualTo(trackId);
+        assertThat(saved.getGroupId()).isNull();
+        assertThat(saved.getTrackAssignmentMethod()).isEqualTo(TrackAssignmentMethod.MANUAL);
+        verify(groupAssignmentService).autoAssignGroup(team);
+    }
+
+    @Test
+    void assignOneInternal_shouldNoOp_whenManualAndSameTrackAlreadyAssigned() {
+        Team team = buildTeam();
+        team.setTrackId(trackId);
+        team.setTrackAssignmentMethod(TrackAssignmentMethod.RANDOM);
+        stubHappyPath(team);
+
+        TrackAssignmentResponse response = trackAssignmentService.assignOneInternal(
+                eventId, assignedBy, teamId, trackId, TrackAssignmentMethod.MANUAL);
+
+        assertThat(response.getTrackId()).isEqualTo(trackId);
+        assertThat(response.getMethod()).isEqualTo(TrackAssignmentMethod.RANDOM);
         verify(teamRepository, never()).save(any());
         verifyNoInteractions(groupAssignmentService);
     }

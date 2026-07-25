@@ -28,7 +28,6 @@ const valueStyle: React.CSSProperties = {
 };
 
 interface MentorTrackStatsRowProps {
-  maxTeams: number;
   registeredTeams: number;
   currentRound: string;
   submissionCount: number;
@@ -36,39 +35,16 @@ interface MentorTrackStatsRowProps {
 }
 
 export function MentorTrackStatsRow({
-  maxTeams,
   registeredTeams,
   currentRound,
   submissionCount,
   totalTeams,
 }: MentorTrackStatsRowProps) {
-  const registeredPercent = maxTeams > 0 ? (registeredTeams / maxTeams) * 100 : 0;
-
   return (
-    <div className="grid grid-cols-4 gap-4">
+    <div className="grid grid-cols-3 gap-4">
       <div style={cardBase}>
-        <p style={labelStyle}>MAX TEAMS</p>
-        <p style={valueStyle}>{maxTeams}</p>
-      </div>
-
-      <div style={{ ...cardBase, padding: "27px 17px" }}>
         <p style={labelStyle}>REGISTERED</p>
         <p style={valueStyle}>{registeredTeams}</p>
-        <div style={{ marginTop: 8 }}>
-          <div style={{
-            width: "100%",
-            height: 4,
-            backgroundColor: "rgba(223,226,236,0.8)",
-            borderRadius: 9999,
-          }}>
-            <div style={{
-              width: `${registeredPercent}%`,
-              height: 4,
-              backgroundColor: "#38bdf8",
-              borderRadius: 9999,
-            }} />
-          </div>
-        </div>
       </div>
 
       <div style={{

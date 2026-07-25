@@ -27,7 +27,7 @@ export interface EventRankingBoard {
   roundId: string;
   roundName: string;
   roundType: RoundType | null;
-  tracks: { id: string; name: string; description?: string | null; maxTeams: number; eventId: string; scoringTemplateId?: string | null }[];
+  tracks: { id: string; name: string; description?: string | null; maxTeams: number | null; eventId: string; scoringTemplateId?: string | null }[];
   rankings: RankingResponse[];
 }
 

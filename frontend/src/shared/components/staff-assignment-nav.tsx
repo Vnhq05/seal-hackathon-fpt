@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useStaffPortalBase } from "@/shared/hooks/use-staff-portal-base";
 
 const TABS = [
+  { segment: "assignments/overview", label: "Overview", exact: false },
   { segment: "assignments", label: "Judge assignments", exact: true },
   { segment: "assignments/teams", label: "Team assignments", exact: false },
   { segment: "assignments/mentors", label: "Mentor assignments", exact: false },

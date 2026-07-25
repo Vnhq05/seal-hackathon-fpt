@@ -3,7 +3,6 @@ export interface TrackRegistrationTrack {
   name: string;
   description: string;
   topic: string | null;
-  maxTeams: number;
 }
 
 export interface TrackRegistrationData {

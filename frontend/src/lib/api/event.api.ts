@@ -89,7 +89,8 @@ export interface TrackRequest {
   name: string;
   description?: string;
   topic?: string;
-  maxTeams: number;
+  /** Ignored — track capacity removed. */
+  maxTeams?: number | null;
   scoringTemplateId?: string;
 }
 

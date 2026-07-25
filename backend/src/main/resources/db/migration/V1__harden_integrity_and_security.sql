@@ -8,24 +8,83 @@
 IF OBJECT_ID(N'dbo.refresh_tokens', N'U') IS NOT NULL
 BEGIN
     DELETE FROM refresh_tokens;
+    -- Drop UNIQUE constraints / nonclustered indexes on token before ALTER.
+    DECLARE @sql_rt NVARCHAR(MAX) = N'';
+    SELECT @sql_rt = @sql_rt + N'ALTER TABLE refresh_tokens DROP CONSTRAINT ' + QUOTENAME(kc.name) + N';'
+    FROM sys.key_constraints kc
+    JOIN sys.index_columns ic ON kc.parent_object_id = ic.object_id AND kc.unique_index_id = ic.index_id
+    JOIN sys.columns c ON ic.object_id = c.object_id AND ic.column_id = c.column_id
+    WHERE kc.parent_object_id = OBJECT_ID(N'dbo.refresh_tokens') AND kc.type = N'UQ' AND c.name = N'token';
+    SELECT @sql_rt = @sql_rt + N'DROP INDEX ' + QUOTENAME(i.name) + N' ON refresh_tokens;'
+    FROM sys.indexes i
+    JOIN sys.index_columns ic ON i.object_id = ic.object_id AND i.index_id = ic.index_id
+    JOIN sys.columns c ON ic.object_id = c.object_id AND ic.column_id = c.column_id
+    WHERE i.object_id = OBJECT_ID(N'dbo.refresh_tokens') AND c.name = N'token'
+      AND i.is_primary_key = 0 AND i.is_unique_constraint = 0;
+    IF @sql_rt <> N'' EXEC sp_executesql @sql_rt;
     ALTER TABLE refresh_tokens ALTER COLUMN token NVARCHAR(64) NOT NULL;
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'uq_refresh_tokens_token' AND object_id = OBJECT_ID(N'dbo.refresh_tokens'))
+        CREATE UNIQUE INDEX uq_refresh_tokens_token ON refresh_tokens (token);
 END;
 
 IF OBJECT_ID(N'dbo.password_reset_tokens', N'U') IS NOT NULL
 BEGIN
     DELETE FROM password_reset_tokens;
+    DECLARE @sql_prt NVARCHAR(MAX) = N'';
+    SELECT @sql_prt = @sql_prt + N'ALTER TABLE password_reset_tokens DROP CONSTRAINT ' + QUOTENAME(kc.name) + N';'
+    FROM sys.key_constraints kc
+    JOIN sys.index_columns ic ON kc.parent_object_id = ic.object_id AND kc.unique_index_id = ic.index_id
+    JOIN sys.columns c ON ic.object_id = c.object_id AND ic.column_id = c.column_id
+    WHERE kc.parent_object_id = OBJECT_ID(N'dbo.password_reset_tokens') AND kc.type = N'UQ' AND c.name = N'token';
+    SELECT @sql_prt = @sql_prt + N'DROP INDEX ' + QUOTENAME(i.name) + N' ON password_reset_tokens;'
+    FROM sys.indexes i
+    JOIN sys.index_columns ic ON i.object_id = ic.object_id AND i.index_id = ic.index_id
+    JOIN sys.columns c ON ic.object_id = c.object_id AND ic.column_id = c.column_id
+    WHERE i.object_id = OBJECT_ID(N'dbo.password_reset_tokens') AND c.name = N'token'
+      AND i.is_primary_key = 0 AND i.is_unique_constraint = 0;
+    IF @sql_prt <> N'' EXEC sp_executesql @sql_prt;
     ALTER TABLE password_reset_tokens ALTER COLUMN token NVARCHAR(64) NOT NULL;
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'uq_password_reset_tokens_token' AND object_id = OBJECT_ID(N'dbo.password_reset_tokens'))
+        CREATE UNIQUE INDEX uq_password_reset_tokens_token ON password_reset_tokens (token);
 END;
 
 IF OBJECT_ID(N'dbo.event_magic_tokens', N'U') IS NOT NULL
 BEGIN
     DELETE FROM event_magic_tokens;
+    DECLARE @sql_emt NVARCHAR(MAX) = N'';
+    SELECT @sql_emt = @sql_emt + N'ALTER TABLE event_magic_tokens DROP CONSTRAINT ' + QUOTENAME(kc.name) + N';'
+    FROM sys.key_constraints kc
+    JOIN sys.index_columns ic ON kc.parent_object_id = ic.object_id AND kc.unique_index_id = ic.index_id
+    JOIN sys.columns c ON ic.object_id = c.object_id AND ic.column_id = c.column_id
+    WHERE kc.parent_object_id = OBJECT_ID(N'dbo.event_magic_tokens') AND kc.type = N'UQ' AND c.name = N'token';
+    SELECT @sql_emt = @sql_emt + N'DROP INDEX ' + QUOTENAME(i.name) + N' ON event_magic_tokens;'
+    FROM sys.indexes i
+    JOIN sys.index_columns ic ON i.object_id = ic.object_id AND i.index_id = ic.index_id
+    JOIN sys.columns c ON ic.object_id = c.object_id AND ic.column_id = c.column_id
+    WHERE i.object_id = OBJECT_ID(N'dbo.event_magic_tokens') AND c.name = N'token'
+      AND i.is_primary_key = 0 AND i.is_unique_constraint = 0;
+    IF @sql_emt <> N'' EXEC sp_executesql @sql_emt;
     ALTER TABLE event_magic_tokens ALTER COLUMN token NVARCHAR(64) NOT NULL;
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'uq_event_magic_tokens_token' AND object_id = OBJECT_ID(N'dbo.event_magic_tokens'))
+        CREATE UNIQUE INDEX uq_event_magic_tokens_token ON event_magic_tokens (token);
 END;
 
 IF OBJECT_ID(N'dbo.email_otp_tokens', N'U') IS NOT NULL
 BEGIN
     DELETE FROM email_otp_tokens;
+    DECLARE @sql_eot NVARCHAR(MAX) = N'';
+    SELECT @sql_eot = @sql_eot + N'ALTER TABLE email_otp_tokens DROP CONSTRAINT ' + QUOTENAME(kc.name) + N';'
+    FROM sys.key_constraints kc
+    JOIN sys.index_columns ic ON kc.parent_object_id = ic.object_id AND kc.unique_index_id = ic.index_id
+    JOIN sys.columns c ON ic.object_id = c.object_id AND ic.column_id = c.column_id
+    WHERE kc.parent_object_id = OBJECT_ID(N'dbo.email_otp_tokens') AND kc.type = N'UQ' AND c.name = N'code';
+    SELECT @sql_eot = @sql_eot + N'DROP INDEX ' + QUOTENAME(i.name) + N' ON email_otp_tokens;'
+    FROM sys.indexes i
+    JOIN sys.index_columns ic ON i.object_id = ic.object_id AND i.index_id = ic.index_id
+    JOIN sys.columns c ON ic.object_id = c.object_id AND ic.column_id = c.column_id
+    WHERE i.object_id = OBJECT_ID(N'dbo.email_otp_tokens') AND c.name = N'code'
+      AND i.is_primary_key = 0 AND i.is_unique_constraint = 0;
+    IF @sql_eot <> N'' EXEC sp_executesql @sql_eot;
     ALTER TABLE email_otp_tokens ALTER COLUMN code NVARCHAR(64) NOT NULL;
 END;
 
