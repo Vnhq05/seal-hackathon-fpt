@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 export const PART_LABELS = ["Slide", "GitHub", "Other"] as const;
 export const REQUIRED_SUBMISSION_PARTS = 3;
@@ -72,8 +72,8 @@ export function SubmissionProgressBar({
   const barHeight = size === "sm" ? "h-1.5" : "h-2";
   const displayPercent =
     Number.isInteger(clampedPercent) ? `${clampedPercent}` : clampedPercent.toFixed(2);
-  const partsLabel =
-    submittedParts != null ? `${submittedParts}/${requiredParts} parts` : `${displayPercent}%`;
+  const filesLabel =
+    submittedParts != null ? `${submittedParts}/${requiredParts} files` : `${displayPercent}%`;
 
   const labels = partStatus
     ? [
@@ -89,7 +89,7 @@ export function SubmissionProgressBar({
         <span className={`font-mono font-bold ${size === "sm" ? "text-[10px]" : "text-xs"} text-amber-900/80`}>
           {displayPercent}%
         </span>
-        <span className={`${size === "sm" ? "text-[10px]" : "text-xs"} text-amber-800/60`}>{partsLabel}</span>
+        <span className={`${size === "sm" ? "text-[10px]" : "text-xs"} text-amber-800/60`}>{filesLabel}</span>
       </div>
       <div className={`w-full overflow-hidden rounded-full bg-amber-200/60 ${barHeight}`}>
         <div
@@ -108,7 +108,7 @@ export function SubmissionProgressBar({
                 item.done ? "bg-emerald-100 text-emerald-800" : "bg-amber-100/80 text-amber-900/70"
               }`}
             >
-              {item.done ? "✓ " : ""}
+              {item.done ? "âœ“ " : ""}
               {item.label}
             </span>
           ))}
