@@ -114,7 +114,7 @@ class JudgeAssignmentServiceTest {
     }
 
     @Test
-    void assignJudge_shouldAllowPoolAssignment_whenJudgeMentorsOneTeamInScope() {
+    void assignJudge_shouldReject_whenJudgeIsMentorOfTrack() {
         UUID eventId = UUID.randomUUID();
         UUID roundId = UUID.randomUUID();
         UUID trackId = UUID.randomUUID();
@@ -125,7 +125,7 @@ class JudgeAssignmentServiceTest {
         Round round = preliminaryRound(roundId, eventId);
         Team team = Team.builder()
                 .eventId(eventId)
-                .name("Alpha")
+                .name("QA Team 05")
                 .trackId(trackId)
                 .groupId(groupId)
                 .build();
@@ -149,7 +149,53 @@ class JudgeAssignmentServiceTest {
         when(judgeAssignmentRepository.findByRoundIdAndJudgeUserIdAndActiveTrue(roundId, judgeUserId))
                 .thenReturn(List.of());
         when(teamRepository.findByEventIdAndTrackId(eventId, trackId)).thenReturn(List.of(team));
-        when(teamPublicService.isMentorOfTeam(judgeUserId, teamId)).thenReturn(true);
+        when(mentorAssignmentRepository.existsByHackathonEventIdAndTrackIdAndMentorUserId(
+                eventId, trackId, judgeUserId)).thenReturn(true);
+
+        assertThatThrownBy(() -> judgeAssignmentService.assignJudge(eventId, roundId, request, "127.0.0.1"))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("mentor of this track");
+        verify(judgeAssignmentRepository, never()).save(any());
+    }
+
+    @Test
+    void assignJudge_shouldAllow_whenJudgeDoesNotMentorTrack() {
+        UUID eventId = UUID.randomUUID();
+        UUID roundId = UUID.randomUUID();
+        UUID trackId = UUID.randomUUID();
+        UUID groupId = UUID.randomUUID();
+        UUID judgeUserId = UUID.randomUUID();
+        UUID teamId = UUID.randomUUID();
+
+        Round round = preliminaryRound(roundId, eventId);
+        Team team = Team.builder()
+                .eventId(eventId)
+                .name("QA Team 05")
+                .trackId(trackId)
+                .groupId(groupId)
+                .build();
+        team.setId(teamId);
+
+        Track track = Track.builder().name("Track A").hackathonEvent(round.getHackathonEvent()).build();
+        track.setId(trackId);
+
+        AssignJudgeRequest request = AssignJudgeRequest.builder()
+                .judgeUserId(judgeUserId)
+                .scope(AssignmentScope.TRACK)
+                .trackId(trackId)
+                .build();
+
+        when(roundService.getRound(roundId)).thenReturn(round);
+        when(publishedResultRepository.existsByRoundId(roundId)).thenReturn(false);
+        when(userPublicService.findById(judgeUserId)).thenReturn(Optional.of(
+                UserSnapshot.builder().userType(UserType.LECTURER).email("judge@fpt.edu.vn").build()));
+        when(eventJudgeService.isEventJudge(eventId, judgeUserId)).thenReturn(true);
+        when(trackRepository.findById(trackId)).thenReturn(Optional.of(track));
+        when(judgeAssignmentRepository.findByRoundIdAndJudgeUserIdAndActiveTrue(roundId, judgeUserId))
+                .thenReturn(List.of());
+        when(teamRepository.findByEventIdAndTrackId(eventId, trackId)).thenReturn(List.of(team));
+        when(mentorAssignmentRepository.existsByHackathonEventIdAndTrackIdAndMentorUserId(
+                eventId, trackId, judgeUserId)).thenReturn(false);
         when(judgeAssignmentRepository.save(any(JudgeAssignment.class))).thenAnswer(invocation -> {
             JudgeAssignment saved = invocation.getArgument(0);
             saved.setId(UUID.randomUUID());

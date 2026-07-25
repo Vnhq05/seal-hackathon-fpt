@@ -179,6 +179,7 @@ public class EventService {
         eventRepository.flush();
 
         if (formatRuleEngine.isSealFormat(competitionFormat)) {
+            roundService.reconcileRoundTypesForEvent(saved.getId());
             eventScheduleService.seedSchedules(saved, SealSpring2026Template.buildSchedules(saved));
             allowedEmailDomainService.seedDomains(saved.getId(), SealSpring2026Template.buildDefaultEmailDomains());
         }

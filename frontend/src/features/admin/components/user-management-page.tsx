@@ -67,7 +67,7 @@ const CREATE_ROLE_OPTIONS: { label: string; value: InternalRole }[] = [
 
 // Must mirror app.protected-emails on the backend — the server rejects the delete either way,
 // this only hides the button.
-const PROTECTED_EMAILS = new Set(["sinhvienfpt1908@gmail.com"]);
+const PROTECTED_EMAILS = new Set(["admin@seal.com"]);
 
 function isProtectedAccount(email: string): boolean {
   return PROTECTED_EMAILS.has(email.toLowerCase());

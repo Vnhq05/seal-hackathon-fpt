@@ -6,6 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { performLogout } from "@/features/auth/lib/logout";
 import { useAuthStore } from "@/features/auth/store/auth.store";
+import { useSyncAuthProfile } from "@/features/auth/hooks/use-sync-auth-profile";
 import { PixelLogo } from "@/shared/ui/seal-logo";
 import { GridBackground } from "@/shared/ui/seal-logo";
 import {
@@ -74,6 +75,7 @@ export function PortalSidebar({
   const router = useRouter();
   const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
+  useSyncAuthProfile();
 
   const handleLogout = async () => {
     await performLogout(router, queryClient);

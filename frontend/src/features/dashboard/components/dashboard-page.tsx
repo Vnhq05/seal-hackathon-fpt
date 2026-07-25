@@ -133,7 +133,7 @@ function ProgressAlertBanner({
       <p className="mt-1">
         {statusText} · {deadlineText}
       </p>
-      <div className="mt-3 max-w-md">
+      <div className="mt-3 w-full">
         <SubmissionProgressBar
           percent={progress.submissionProgressPercent ?? 0}
           submittedParts={progress.submittedParts}
@@ -662,10 +662,8 @@ function ScheduleDashboardCard({ event }: { event: EventResponse }) {
 
       <EventScheduleTimeline
         schedules={schedules}
-        rounds={rounds}
         variant="compact"
         highlightTypes={["MILESTONE"]}
-        preliminaryRound={prelimRound}
       />
     </div>
   );

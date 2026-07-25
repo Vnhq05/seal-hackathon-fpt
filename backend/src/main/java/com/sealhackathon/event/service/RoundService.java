@@ -58,6 +58,7 @@ public class RoundService {
         validateSealRoundType(event, request.getRoundType());
 
         int roundWeight = resolveRoundWeight(eventId, request.getRoundWeight());
+        int cutoff = request.getAdvancementCutoff() != null ? request.getAdvancementCutoff() : 1;
 
         Round round = Round.builder()
                 .hackathonEvent(event)
@@ -67,12 +68,12 @@ public class RoundService {
                 .endDate(request.getEndDate())
                 .submissionDeadline(request.getSubmissionDeadline())
                 .scoringDeadline(request.getScoringDeadline())
-                .advancementCutoff(request.getAdvancementCutoff())
+                .advancementCutoff(cutoff)
                 .roundWeight(roundWeight)
                 .roundType(request.getRoundType())
                 .advancementRule(request.getAdvancementRule() != null
                         ? request.getAdvancementRule()
-                        : AdvancementRule.GLOBAL_TOP_N)
+                        : AdvancementRule.PER_GROUP_TOP_N)
                 .minJudgesPerRound(request.getMinJudgesPerRound() != null
                         ? request.getMinJudgesPerRound() : 2)
                 .build();
@@ -83,6 +84,8 @@ public class RoundService {
             round = roundRepository.findById(round.getId()).orElse(round);
         }
         applyDefaultCriteria(round, event);
+        reconcileRoundTypesForEvent(eventId);
+        round = roundRepository.findById(round.getId()).orElse(round);
         return toResponse(round);
     }
 
@@ -116,7 +119,9 @@ public class RoundService {
         round.setEndDate(request.getEndDate());
         round.setSubmissionDeadline(request.getSubmissionDeadline());
         round.setScoringDeadline(request.getScoringDeadline());
-        round.setAdvancementCutoff(request.getAdvancementCutoff());
+        round.setAdvancementCutoff(request.getAdvancementCutoff() != null
+                ? request.getAdvancementCutoff()
+                : round.getAdvancementCutoff());
         round.setRoundWeight(roundWeight);
         if (request.getRoundType() != null) {
             round.setRoundType(request.getRoundType());
@@ -129,6 +134,8 @@ public class RoundService {
         }
 
         round = roundRepository.save(round);
+        reconcileRoundTypesForEvent(event.getId());
+        round = roundRepository.findById(round.getId()).orElse(round);
         return toResponse(round);
     }
 
@@ -166,8 +173,44 @@ public class RoundService {
     @Transactional
     public void deleteRound(UUID roundId) {
         Round round = getRound(roundId);
+        UUID eventId = round.getHackathonEvent().getId();
         guardDraftOrActive(round.getHackathonEvent());
         roundRepository.delete(round);
+        reconcileRoundTypesForEvent(eventId);
+    }
+
+    /**
+     * Final = round with the latest endDate. Others are PRELIMINARY.
+     * Types are persisted so existing FINAL checks keep working.
+     */
+    @Transactional
+    public void reconcileRoundTypesForEvent(UUID eventId) {
+        List<Round> rounds = roundRepository.findByHackathonEventIdOrderByRoundNumberAsc(eventId);
+        if (rounds.isEmpty()) {
+            return;
+        }
+        Round latestEnding = rounds.stream()
+                .max(java.util.Comparator
+                        .comparing(Round::getEndDate)
+                        .thenComparing(Round::getRoundNumber))
+                .orElse(null);
+        if (latestEnding == null) {
+            return;
+        }
+        for (Round r : rounds) {
+            if (r.getId().equals(latestEnding.getId())) {
+                r.setRoundType(RoundType.FINAL);
+                r.setAdvancementRule(AdvancementRule.FINALIST_POOL);
+            } else {
+                r.setRoundType(RoundType.PRELIMINARY);
+                if (r.getAdvancementRule() == null
+                        || r.getAdvancementRule() == AdvancementRule.FINALIST_POOL
+                        || r.getAdvancementRule() == AdvancementRule.NONE) {
+                    r.setAdvancementRule(AdvancementRule.PER_GROUP_TOP_N);
+                }
+            }
+        }
+        roundRepository.saveAll(rounds);
     }
 
     Round getRound(UUID roundId) {

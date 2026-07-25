@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { formatEventDateTime } from "@/features/events/utils/event-landing.utils";
 import {
-  getGateDeadlineFromRound,
   groupSchedulesByDay,
   resolveScheduleStatus,
   scheduleGateLabel,
@@ -12,7 +11,6 @@ import {
   sortSchedules,
 } from "@/features/events/utils/schedule.utils";
 import type { EventScheduleResponse, ScheduleType } from "@/lib/api/schedule.api";
-import type { RoundResponse } from "@/lib/api/round.api";
 
 const STATUS_STYLES = {
   upcoming: "border-seal-border bg-seal-surface-elevated text-seal-text-secondary",
@@ -28,28 +26,23 @@ const ITEM_STYLES = {
 
 export interface EventScheduleTimelineProps {
   schedules: EventScheduleResponse[];
-  rounds?: RoundResponse[];
   variant?: "compact" | "full";
   highlightTypes?: ScheduleType[];
   showDayHeaders?: boolean;
-  preliminaryRound?: RoundResponse | null;
 }
 
 function ScheduleItemCard({
   item,
   variant,
   highlighted,
-  preliminaryRound,
   now,
 }: {
   item: EventScheduleResponse;
   variant: "compact" | "full";
   highlighted: boolean;
-  preliminaryRound?: RoundResponse | null;
   now: number;
 }) {
   const status = resolveScheduleStatus(item, now);
-  const gateDeadline = getGateDeadlineFromRound(item.gate, preliminaryRound ?? undefined);
 
   return (
     <div
@@ -84,23 +77,15 @@ function ScheduleItemCard({
       <p className={`mt-2 font-mono text-seal-text ${variant === "compact" ? "text-xs" : "text-sm"}`}>
         {formatEventDateTime(item.startTime)} → {formatEventDateTime(item.endTime)}
       </p>
-
-      {gateDeadline && (
-        <p className="mt-1 font-mono text-xs text-seal-cyan">
-          System deadline: {formatEventDateTime(gateDeadline)}
-        </p>
-      )}
     </div>
   );
 }
 
 export function EventScheduleTimeline({
   schedules,
-  rounds,
   variant = "full",
   highlightTypes,
   showDayHeaders = true,
-  preliminaryRound,
 }: EventScheduleTimelineProps) {
   const [now, setNow] = useState(() => Date.now());
 
@@ -112,11 +97,6 @@ export function EventScheduleTimeline({
   if (schedules.length === 0) return null;
 
   const sorted = sortSchedules(schedules);
-  const prelim =
-    preliminaryRound ??
-    rounds?.find((r) => r.roundType === "PRELIMINARY") ??
-    rounds?.[0] ??
-    null;
 
   const isHighlighted = (type: ScheduleType) =>
     !highlightTypes || highlightTypes.length === 0 || highlightTypes.includes(type);
@@ -136,7 +116,6 @@ export function EventScheduleTimeline({
             item={item}
             variant="compact"
             highlighted={isHighlighted(item.type)}
-            preliminaryRound={prelim}
             now={now}
           />
         ))}
@@ -170,7 +149,6 @@ export function EventScheduleTimeline({
                     item={item}
                     variant="full"
                     highlighted={isHighlighted(item.type)}
-                    preliminaryRound={prelim}
                     now={now}
                   />
                 </div>

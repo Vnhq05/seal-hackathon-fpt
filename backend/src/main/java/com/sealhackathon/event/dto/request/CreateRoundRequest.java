@@ -39,7 +39,7 @@ public class CreateRoundRequest {
     @NotNull(message = "Scoring deadline is required")
     private LocalDateTime scoringDeadline;
 
-    @NotNull(message = "Advancement cutoff is required")
+    /** Placeholder; advance slots are auto-computed from team counts at ranking time. */
     @Min(value = 1, message = "Advancement cutoff must be at least 1")
     private Integer advancementCutoff;
 

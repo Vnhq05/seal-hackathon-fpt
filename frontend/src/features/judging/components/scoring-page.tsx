@@ -42,9 +42,6 @@ function conflictMessage(reason: string | null): string {
   if (reason === "MENTOR_OF_TEAM") {
     return "You are a mentor for this team and cannot score this submission.";
   }
-  if (reason === "MENTOR_OF_TRACK") {
-    return "You are a mentor for this team's track and cannot score this submission.";
-  }
   if (reason === "COORDINATOR_MARKED_CONFLICT") {
     return "Scoring has been blocked by the coordinator due to a conflict of interest.";
   }
