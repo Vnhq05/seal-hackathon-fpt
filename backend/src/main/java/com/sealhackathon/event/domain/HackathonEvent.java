@@ -34,7 +34,7 @@ import java.util.UUID;
  * Aggregate Root — Event Management Context.
  *
  * BR-08  Coordinator / Admin create and configure events.
- *        No edits after Active without audit justification.
+ *        Edits allowed while event is ongoing; blocked when completed or cancelled.
  * BR-10  Event name unique system-wide.
  */
 @Entity

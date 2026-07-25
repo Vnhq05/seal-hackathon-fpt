@@ -21,10 +21,12 @@ import com.sealhackathon.ranking.dto.response.UserAchievementResponse;
 import com.sealhackathon.ranking.repository.ParticipationCertificateRepository;
 import com.sealhackathon.ranking.repository.RankingRepository;
 import com.sealhackathon.ranking.repository.TeamAwardRepository;
+import com.sealhackathon.team.domain.Team;
 import com.sealhackathon.team.domain.TeamMember;
 import com.sealhackathon.team.domain.enums.TeamStatus;
 import com.sealhackathon.team.dto.snapshot.TeamSnapshot;
 import com.sealhackathon.team.repository.TeamMemberRepository;
+import com.sealhackathon.team.repository.TeamRepository;
 import com.sealhackathon.team.service.TeamPublicService;
 import com.sealhackathon.user.dto.snapshot.UserSnapshot;
 import com.sealhackathon.user.service.UserPublicService;
@@ -37,8 +39,10 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -58,6 +62,7 @@ public class AwardService {
     private final PrizeRepository prizeRepository;
     private final TeamPublicService teamPublicService;
     private final TeamMemberRepository teamMemberRepository;
+    private final TeamRepository teamRepository;
     private final UserPublicService userPublicService;
 
     @Transactional
@@ -149,17 +154,29 @@ public class AwardService {
     @Transactional(readOnly = true)
     public List<UserAchievementResponse> getUserAchievements(UUID userId) {
         List<TeamMember> memberships = teamMemberRepository.findByUserId(userId);
-        Map<UUID, String> teamNames = memberships.stream()
-                .collect(Collectors.toMap(
-                        member -> member.getTeam().getId(),
-                        member -> member.getTeam().getName(),
-                        (first, ignored) -> first));
+        Set<UUID> memberTeamIds = memberships.stream()
+                .map(member -> member.getTeam().getId())
+                .collect(Collectors.toCollection(HashSet::new));
 
-        List<TeamAward> awards = teamNames.isEmpty()
+        List<TeamAward> awards = memberTeamIds.isEmpty()
                 ? List.of()
-                : teamAwardRepository.findByTeamIdInOrderByAwardedAtDesc(teamNames.keySet());
+                : teamAwardRepository.findByTeamIdInOrderByAwardedAtDesc(memberTeamIds);
         List<ParticipationCertificate> certificates =
                 participationCertificateRepository.findByUserIdOrderByIssuedAtDesc(userId);
+
+        // Resolve team names from teams table so certificates/awards still show
+        // after the student leaves or membership rows are missing.
+        Set<UUID> teamIds = new HashSet<>(memberTeamIds);
+        awards.forEach(award -> teamIds.add(award.getTeamId()));
+        certificates.forEach(certificate -> {
+            if (certificate.getTeamId() != null) {
+                teamIds.add(certificate.getTeamId());
+            }
+        });
+        Map<UUID, String> teamNames = teamIds.isEmpty()
+                ? Map.of()
+                : teamRepository.findAllById(teamIds).stream()
+                        .collect(Collectors.toMap(Team::getId, Team::getName, (first, ignored) -> first));
 
         List<UUID> eventIds = new ArrayList<>();
         awards.forEach(award -> eventIds.add(award.getEventId()));

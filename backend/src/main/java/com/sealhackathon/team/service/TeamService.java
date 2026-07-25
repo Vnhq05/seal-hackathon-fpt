@@ -399,18 +399,25 @@ public class TeamService {
         guardLeader(team, currentLeaderId);
         validateMemberChangesAllowed(team.getEventId());
 
+        if (currentLeaderId.equals(newLeaderId)) {
+            throw new BusinessException("Cannot transfer leadership to yourself", HttpStatus.BAD_REQUEST) {};
+        }
+
+        if (!teamMemberRepository.existsByTeamIdAndUserId(teamId, newLeaderId)) {
+            throw new ResourceNotFoundException("TeamMember", "userId", newLeaderId);
+        }
+
+        // JPQL demote + clear PC: avoids Hibernate flushing promote before demote
+        // against filtered unique uq_team_members_one_leader.
+        teamMemberRepository.demoteLeaders(teamId);
+
+        team = getTeam(teamId);
         TeamMember newLeaderMember = teamMemberRepository.findByTeamIdAndUserId(teamId, newLeaderId)
                 .orElseThrow(() -> new ResourceNotFoundException("TeamMember", "userId", newLeaderId));
 
-        TeamMember currentLeaderMember = teamMemberRepository.findByTeamIdAndUserId(teamId, currentLeaderId)
-                .orElseThrow(() -> new ResourceNotFoundException("TeamMember", "userId", currentLeaderId));
-
-        currentLeaderMember.setRole(TeamMemberRole.MEMBER);
         newLeaderMember.setRole(TeamMemberRole.LEADER);
         team.setLeaderId(newLeaderId);
-
-        teamMemberRepository.save(currentLeaderMember);
-        teamMemberRepository.save(newLeaderMember);
+        teamMemberRepository.saveAndFlush(newLeaderMember);
         teamRepository.save(team);
 
         return toResponse(team, currentLeaderId, null);

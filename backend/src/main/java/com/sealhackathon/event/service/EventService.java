@@ -179,6 +179,7 @@ public class EventService {
         eventRepository.flush();
 
         if (formatRuleEngine.isSealFormat(competitionFormat)) {
+            roundService.reconcileRoundTypesForEvent(saved.getId());
             eventScheduleService.seedSchedules(saved, SealSpring2026Template.buildSchedules(saved));
             allowedEmailDomainService.seedDomains(saved.getId(), SealSpring2026Template.buildDefaultEmailDomains());
         }
@@ -202,9 +203,9 @@ public class EventService {
         enforceOwnership(event);
 
         EventStatus liveStatus = resolveStatus(event);
-        if (liveStatus == EventStatus.ACTIVE || liveStatus == EventStatus.COMPLETED) {
+        if (liveStatus == EventStatus.COMPLETED || liveStatus == EventStatus.CANCELLED) {
             throw new BusinessException(
-                    "Cannot modify event during or after the competition period.",
+                    "Cannot modify a completed or cancelled event.",
                     HttpStatus.BAD_REQUEST) {};
         }
 
@@ -542,9 +543,9 @@ public class EventService {
 
     private void assertEventMutable(HackathonEvent event) {
         EventStatus liveStatus = resolveStatus(event);
-        if (liveStatus == EventStatus.ACTIVE || liveStatus == EventStatus.COMPLETED) {
+        if (liveStatus == EventStatus.COMPLETED || liveStatus == EventStatus.CANCELLED) {
             throw new BusinessException(
-                    "Cannot modify event during or after the competition period.",
+                    "Cannot modify a completed or cancelled event.",
                     HttpStatus.BAD_REQUEST) {};
         }
     }
@@ -679,7 +680,10 @@ public class EventService {
     }
 
     private void validateTrackMaxTeams(Integer maxTeams) {
-        if (maxTeams == null || maxTeams < minTrackMaxTeams || maxTeams > maxTrackMaxTeams) {
+        if (maxTeams == null) {
+            return;
+        }
+        if (maxTeams < minTrackMaxTeams || maxTeams > maxTrackMaxTeams) {
             throw new BusinessException(
                     "Track max teams must be between " + minTrackMaxTeams + " and " + maxTrackMaxTeams,
                     HttpStatus.BAD_REQUEST) {};

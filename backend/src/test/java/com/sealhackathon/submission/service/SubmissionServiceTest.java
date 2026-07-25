@@ -15,8 +15,8 @@ import com.sealhackathon.submission.event.SubmissionUpdatedEvent;
 import com.sealhackathon.submission.repository.SubmissionAttachmentRepository;
 import com.sealhackathon.submission.repository.SubmissionRepository;
 import com.sealhackathon.submission.repository.SubmissionVersionRepository;
-import com.sealhackathon.submission.validation.DemoUrlWhitelistValidator;
-import com.sealhackathon.submission.validation.PdfValidator;
+import com.sealhackathon.submission.validation.HttpUrlValidator;
+import com.sealhackathon.submission.validation.SubmissionFileValidator;
 import com.sealhackathon.submission.validation.SourceCodeUrlValidator;
 import com.sealhackathon.common.storage.FileStorageService;
 import com.sealhackathon.team.dto.snapshot.TeamSnapshot;
@@ -53,8 +53,8 @@ class SubmissionServiceTest {
     @Mock private TeamPublicService teamPublicService;
     @Mock private EventPublicService eventPublicService;
     @Mock private SourceCodeUrlValidator sourceCodeUrlValidator;
-    @Mock private DemoUrlWhitelistValidator demoUrlValidator;
-    @Mock private PdfValidator pdfValidator;
+    @Mock private HttpUrlValidator httpUrlValidator;
+    @Mock private SubmissionFileValidator submissionFileValidator;
     @Mock private FileStorageService fileStorageService;
     @Mock private ApplicationEventPublisher eventPublisher;
     @Mock private FinalistSelectionService finalistSelectionService;
@@ -93,7 +93,7 @@ class SubmissionServiceTest {
 
         assertThat(result.getStatus()).isEqualTo(SubmissionStatus.SUBMITTED);
         verify(eventPublisher).publishEvent(any(Object.class));
-        verify(pdfValidator).validate(pdf, 2, false);
+        verify(submissionFileValidator).validateOptional(pdf);
     }
 
     @Test
@@ -138,7 +138,7 @@ class SubmissionServiceTest {
         SubmissionResponse result = submissionService.submit(USER_ID, ROUND_ID, request, null);
 
         assertThat(result.getStatus()).isEqualTo(SubmissionStatus.SUBMITTED);
-        verify(pdfValidator).validate(null, null, false);
+        verify(submissionFileValidator).validateOptional(null);
         verify(sourceCodeUrlValidator, never()).validate(any());
     }
 
@@ -284,7 +284,7 @@ class SubmissionServiceTest {
         submissionService.submit(USER_ID, ROUND_ID, request, pdf);
 
         verify(versionRepository).findMaxVersionNumber(existing.getId());
-        verify(pdfValidator).validate(pdf, 1, false);
+        verify(submissionFileValidator).validateOptional(pdf);
     }
 
     @Test
@@ -490,7 +490,7 @@ class SubmissionServiceTest {
     void submit_shouldThrow_whenDemoUrlNotWhitelisted() {
         setupRoundContext(false);
         doThrow(new BusinessException("Demo URL not approved", org.springframework.http.HttpStatus.BAD_REQUEST) {})
-                .when(demoUrlValidator).validate("https://tiktok.com/video");
+                .when(httpUrlValidator).validate("https://tiktok.com/video", "Other URL");
 
         CreateSubmissionRequest request = CreateSubmissionRequest.builder()
                 .sourceCodeUrl("https://github.com/user/repo")
@@ -540,7 +540,7 @@ class SubmissionServiceTest {
         when(teamPublicService.getTeamByParticipantAndEvent(USER_ID, EVENT_ID))
                 .thenReturn(Optional.of(team));
         when(teamPublicService.isTeamLeader(USER_ID, TEAM_ID)).thenReturn(true);
-        lenient().when(fileStorageService.storeSubmissionPdf(any(), any(), anyInt()))
+        lenient().when(fileStorageService.storeSubmissionFile(any(), any(), anyInt()))
                 .thenReturn("/api/files/submissions/test.pdf");
     }
 }

@@ -75,7 +75,7 @@ public class EventController {
 
     @PutMapping("/{eventId}")
     @PreAuthorize("hasAnyRole('SYSTEM_ADMIN', 'EVENT_COORDINATOR')")
-    @Operation(summary = "Update event configuration (BR-08 — blocked after activation)")
+    @Operation(summary = "Update event configuration (BR-08 — blocked when completed or cancelled)")
     public ResponseEntity<ApiResponse<EventResponse>> updateEvent(
             @PathVariable UUID eventId,
             @Valid @RequestBody UpdateEventRequest request,

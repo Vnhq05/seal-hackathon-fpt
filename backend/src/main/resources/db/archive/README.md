@@ -52,6 +52,7 @@ legacy DB at dump time.
 | `reset_and_seed_template.sql` | Wipe event graph; restore SEAL Spring 2026 template |
 | `seed_demo_events.sql` | Seed 7 SEAL seasons. Each event: **3 judges + 3 mentors** (separate lecturers). Teams split evenly (3 teams / mentor / track). Mentors ≠ judges so BR-34 conflict does not block scoring. **AS2 demos:** Event 6 = team progress risks; Event 5 = ready to publish results by track/round; Event 1–3/7 = already published leaderboard. |
 | `seed_as2_full_demo.sql` | Full AS2 demo: (1) progress 9 teams, (2) LiveScore 9 teams not published, (3) completed + published results. Password `12345678`. Regenerate: `node _gen_seed_as2_full_demo.mjs`. |
+| `seed_final_advancement_qa.sql` | **Final advancement QA:** prelim fully scored + rankings, 2 groups, **no Final submissions**. Flow: Select Finalists → carry-over → score Final. See `FINAL_ADVANCEMENT_CHANGES.md`. |
 
 ### AS2 full demo cheat sheet (`seed_as2_full_demo.sql`)
 

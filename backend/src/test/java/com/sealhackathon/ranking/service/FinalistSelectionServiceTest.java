@@ -60,6 +60,8 @@ class FinalistSelectionServiceTest {
     @Mock private EventStatusResolver eventStatusResolver;
     @Mock private RankingTieBreakComparator tieBreakComparator;
     @Mock private FormatRuleEngine formatRuleEngine;
+    @Mock private AdvancementCutoffCalculator cutoffCalculator;
+    @Mock private com.sealhackathon.submission.service.FinalSubmissionCarryOverService finalSubmissionCarryOverService;
 
     @InjectMocks private FinalistSelectionService finalistSelectionService;
 

@@ -30,7 +30,8 @@ export function useAssignedRounds() {
 
       const data: AssignedRound[] = Array.from(byRound.entries()).map(([roundId, items]) => {
         const first = items[0];
-        const scored = items.filter(
+        const teamItems = items.filter((i) => i.teamId);
+        const scored = teamItems.filter(
           (i) => i.scoringStatus === "COMPLETED" || i.scoringStatus === "LOCKED",
         ).length;
         const deadline = first.scoringDeadline ?? "";
@@ -44,7 +45,7 @@ export function useAssignedRounds() {
           deadline,
           criteria: (criteriaByRound.get(roundId) ?? []).map((c) => ({ name: c.name })),
           scored,
-          total: items.length,
+          total: teamItems.length,
         };
       });
 

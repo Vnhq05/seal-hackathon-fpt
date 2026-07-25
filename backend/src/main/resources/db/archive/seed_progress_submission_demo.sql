@@ -1,4 +1,4 @@
--- Recreate: ACTIVE preliminary event + 5 teams (2x100% / 1x~33% / 2x0%)
+﻿-- Recreate: ACTIVE preliminary event + 5 teams (2x100% / 1x~33% / 2x0%)
 -- Deletes ALL previous @progress.demo accounts + old progress event first.
 -- New accounts use @prelim.demo — password: 123456
 -- advancement_rule MUST be PER_TRACK_TOP_N (Java enum).
@@ -220,24 +220,24 @@ INSERT INTO submissions (id, created_at, created_by, updated_at, updated_by, cur
 VALUES (@subFullA, @now, N'seed', @now, N'seed', @verFullA, @roundId, N'SUBMITTED', @leadFullA, @teamFullA, 0);
 IF @hasOtherUrl = 1
     INSERT INTO submission_versions (id, created_at, created_by, updated_at, updated_by, demo_url, github_url, submitted_at, version_number, submission_id, slide_url, other_url)
-    VALUES (@verFullA, @now, N'seed', @now, N'seed', NULL, N'https://github.com/seal-prelim/alpha', @now, 1, @subFullA,
-            N'https://docs.google.com/presentation/d/alpha-complete', N'https://example.com/alpha-other');
+    VALUES (@verFullA, @now, N'seed', @now, N'seed', NULL, N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', @now, 1, @subFullA,
+            N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', N'https://www.youtube.com/watch?v=qL9bVgB0dkE');
 ELSE
     INSERT INTO submission_versions (id, created_at, created_by, updated_at, updated_by, demo_url, github_url, submitted_at, version_number, submission_id, slide_url)
-    VALUES (@verFullA, @now, N'seed', @now, N'seed', N'https://example.com/alpha-other', N'https://github.com/seal-prelim/alpha', @now, 1, @subFullA,
-            N'https://docs.google.com/presentation/d/alpha-complete');
+    VALUES (@verFullA, @now, N'seed', @now, N'seed', N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', @now, 1, @subFullA,
+            N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ');
 
 -- Full B 100%
 INSERT INTO submissions (id, created_at, created_by, updated_at, updated_by, current_version_id, round_id, status, submitted_by, team_id, opt_lock)
 VALUES (@subFullB, @now, N'seed', @now, N'seed', @verFullB, @roundId, N'SUBMITTED', @leadFullB, @teamFullB, 0);
 IF @hasOtherUrl = 1
     INSERT INTO submission_versions (id, created_at, created_by, updated_at, updated_by, demo_url, github_url, submitted_at, version_number, submission_id, slide_url, other_url)
-    VALUES (@verFullB, @now, N'seed', @now, N'seed', NULL, N'https://github.com/seal-prelim/beta', @now, 1, @subFullB,
-            N'https://docs.google.com/presentation/d/beta-complete', N'https://example.com/beta-other');
+    VALUES (@verFullB, @now, N'seed', @now, N'seed', NULL, N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', @now, 1, @subFullB,
+            N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', N'https://www.youtube.com/watch?v=qL9bVgB0dkE');
 ELSE
     INSERT INTO submission_versions (id, created_at, created_by, updated_at, updated_by, demo_url, github_url, submitted_at, version_number, submission_id, slide_url)
-    VALUES (@verFullB, @now, N'seed', @now, N'seed', N'https://example.com/beta-other', N'https://github.com/seal-prelim/beta', @now, 1, @subFullB,
-            N'https://docs.google.com/presentation/d/beta-complete');
+    VALUES (@verFullB, @now, N'seed', @now, N'seed', N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', @now, 1, @subFullB,
+            N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ');
 
 -- Partial ~33%
 INSERT INTO submissions (id, created_at, created_by, updated_at, updated_by, current_version_id, round_id, status, submitted_by, team_id, opt_lock)
@@ -245,11 +245,11 @@ VALUES (@subPart, @now, N'seed', @now, N'seed', @verPart, @roundId, N'SUBMITTED'
 IF @hasOtherUrl = 1
     INSERT INTO submission_versions (id, created_at, created_by, updated_at, updated_by, demo_url, github_url, submitted_at, version_number, submission_id, slide_url, other_url)
     VALUES (@verPart, @now, N'seed', @now, N'seed', NULL, NULL, @now, 1, @subPart,
-            N'https://docs.google.com/presentation/d/gamma-one-third', NULL);
+            N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', NULL);
 ELSE
     INSERT INTO submission_versions (id, created_at, created_by, updated_at, updated_by, demo_url, github_url, submitted_at, version_number, submission_id, slide_url)
     VALUES (@verPart, @now, N'seed', @now, N'seed', NULL, NULL, @now, 1, @subPart,
-            N'https://docs.google.com/presentation/d/gamma-one-third');
+            N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ');
 
 COMMIT TRANSACTION;
 

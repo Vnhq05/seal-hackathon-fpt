@@ -77,16 +77,45 @@ class EventControllerIntegrationTest extends BaseIntegrationTest {
                 .andExpect(status().isConflict());
     }
 
-    // ── BR-08: No edits after activation ──
+    // ── BR-08: No edits after completion ──
 
     @Test
-    void updateEvent_shouldReturn400_whenActive() throws Exception {
+    void updateEvent_shouldSucceed_whenActive() throws Exception {
         User admin = createAdmin();
         HackathonEvent event = createEvent("Active Event");
         event.setStartDate(LocalDate.now().minusDays(1));
         event.setEndDate(LocalDate.now().plusDays(60));
         event.setRegistrationOpenDate(LocalDate.now().minusDays(30));
         event.setRegistrationDeadline(LocalDate.now().minusDays(2));
+        eventRepository.save(event);
+
+        LocalDate start = LocalDate.now().minusDays(1);
+        LocalDate end = LocalDate.now().plusDays(60);
+        LocalDate regOpen = LocalDate.now().minusDays(30);
+        LocalDate regClose = LocalDate.now().minusDays(2);
+
+        mockMvc.perform(put("/api/events/" + event.getId())
+                        .header("Authorization", "Bearer " + tokenFor(admin))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"Changed Active","season":"Fall","year":%d,
+                                 "startDate":"%s","endDate":"%s",
+                                 "registrationOpenDate":"%s",
+                                 "registrationDeadline":"%s"}
+                                """.formatted(
+                                        LocalDate.now().getYear(), start, end, regOpen, regClose)))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void updateEvent_shouldReturn400_whenCompleted() throws Exception {
+        User admin = createAdmin();
+        HackathonEvent event = createEvent("Completed Event");
+        event.setStatus(EventStatus.COMPLETED);
+        event.setStartDate(LocalDate.now().minusDays(60));
+        event.setEndDate(LocalDate.now().minusDays(1));
+        event.setRegistrationOpenDate(LocalDate.now().minusDays(90));
+        event.setRegistrationDeadline(LocalDate.now().minusDays(70));
         eventRepository.save(event);
 
         mockMvc.perform(put("/api/events/" + event.getId())

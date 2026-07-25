@@ -28,6 +28,10 @@ import java.util.UUID;
 public class CompetitionGroup extends BaseEntity {
 
     @NotNull
+    @Column(name = "event_id", nullable = false)
+    private UUID eventId;
+
+    @NotNull
     @Column(name = "track_id", nullable = false)
     private UUID trackId;
 
@@ -35,4 +39,14 @@ public class CompetitionGroup extends BaseEntity {
     @Size(max = 255)
     @Column(name = "name", nullable = false)
     private String name;
+
+    /** Soft capacity label for the group (actual assignment may be size or size-1 when balanced). */
+    @NotNull
+    @Column(name = "max_teams", nullable = false)
+    private Integer maxTeams;
+
+    @NotNull
+    @Column(name = "sort_order", nullable = false)
+    @Builder.Default
+    private Integer sortOrder = 0;
 }

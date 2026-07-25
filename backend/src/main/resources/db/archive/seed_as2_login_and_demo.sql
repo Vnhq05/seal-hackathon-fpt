@@ -1,4 +1,4 @@
--- Rebuild login accounts + AS2 demo data after a fresh Flyway migrate.
+﻿-- Rebuild login accounts + AS2 demo data after a fresh Flyway migrate.
 -- Password for ALL accounts below: 12345678
 -- Run: sqlcmd -S localhost -U sa -P <password> -d SEAL -I -i seed_as2_login_and_demo.sql
 
@@ -257,10 +257,10 @@ INSERT INTO submissions (id, created_at, current_version_id, round_id, status, s
     (@subOk, @now, NULL, @progressRoundId, N'SUBMITTED', @p104, @teamHealthy, 0);
 
 INSERT INTO submission_versions (id, created_at, demo_url, github_url, slide_url, submitted_at, version_number, submission_id) VALUES
-    (@verStalled, @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/stalled', N'https://docs.google.com/presentation/d/stalled', DATEADD(HOUR, -30, @now), 1, @subStalled),
-    (@verLast, @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/lastmin', N'https://docs.google.com/presentation/d/last', DATEADD(MINUTE, -40, @now), 1, @subLast),
-    (@verOk1, @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/healthy', N'https://docs.google.com/presentation/d/ok-v1', DATEADD(HOUR, -40, @now), 1, @subOk),
-    (@verOk2, @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/healthy', N'https://docs.google.com/presentation/d/ok-v2', DATEADD(HOUR, -2, @now), 2, @subOk);
+    (@verStalled, @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(HOUR, -30, @now), 1, @subStalled),
+    (@verLast, @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -40, @now), 1, @subLast),
+    (@verOk1, @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(HOUR, -40, @now), 1, @subOk),
+    (@verOk2, @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(HOUR, -2, @now), 2, @subOk);
 
 INSERT INTO submission_attachments (id, created_at, file_name, file_size, file_url, page_count, submission_version_id) VALUES
     (NEWID(), @now, N'pitch.pdf', 102400, N'/uploads/demo/stalled.pdf', 2, @verStalled),
@@ -396,10 +396,10 @@ INSERT INTO submissions (id, created_at, current_version_id, round_id, status, s
     (@subB2, @now, NULL, @lockFinalId, N'SCORED', @s4, @teamBeta, 0);
 
 INSERT INTO submission_versions (id, created_at, demo_url, github_url, slide_url, submitted_at, version_number, submission_id) VALUES
-    (@verA1, @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/alpha', N'https://docs.google.com/presentation/d/alpha', DATEADD(DAY, -2, @now), 1, @subA1),
-    (@verB1, @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/beta', N'https://docs.google.com/presentation/d/beta', DATEADD(DAY, -2, @now), 1, @subB1),
-    (@verA2, @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/alpha-final', N'https://docs.google.com/presentation/d/alpha-f', DATEADD(DAY, -1, @now), 1, @subA2),
-    (@verB2, @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/beta-final', N'https://docs.google.com/presentation/d/beta-f', DATEADD(DAY, -1, @now), 1, @subB2);
+    (@verA1, @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(DAY, -2, @now), 1, @subA1),
+    (@verB1, @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(DAY, -2, @now), 1, @subB1),
+    (@verA2, @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(DAY, -1, @now), 1, @subA2),
+    (@verB2, @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(DAY, -1, @now), 1, @subB2);
 
 UPDATE submissions SET current_version_id = @verA1 WHERE id = @subA1;
 UPDATE submissions SET current_version_id = @verB1 WHERE id = @subB1;

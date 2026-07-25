@@ -31,6 +31,10 @@ export function useRespondInvitation(invitationId: string) {
         router.push("/student");
       }
     },
+    onError: () => {
+      // Team may have filled / invite expired server-side — refresh so UI drops stale PENDING.
+      queryClient.invalidateQueries({ queryKey: [TEAM_INVITATION_KEY] });
+    },
   });
 
   return {
@@ -38,5 +42,6 @@ export function useRespondInvitation(invitationId: string) {
     isPending: mutation.isPending,
     error: mutation.error,
     isError: mutation.isError,
+    reset: mutation.reset,
   };
 }

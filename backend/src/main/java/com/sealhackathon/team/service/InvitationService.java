@@ -40,6 +40,7 @@ public class InvitationService {
     private final InvitationRepository invitationRepository;
     private final InvitationStatusService invitationStatusService;
     private final JoinRequestStatusService joinRequestStatusService;
+    private final TeamCapacityCleanup teamCapacityCleanup;
     private final TeamRepository teamRepository;
     private final TeamMemberRepository teamMemberRepository;
     private final UserPublicService userPublicService;
@@ -143,9 +144,8 @@ public class InvitationService {
         int minSize = teamService.resolveMinTeamMembers(team.getEventId());
         int currentSize = teamMemberRepository.countByTeamId(team.getId());
         if (currentSize >= maxSize) {
-            // REQUIRES_NEW so status survives the throw below
-            invitationStatusService.expireAllPendingForTeam(team.getId());
-            joinRequestStatusService.rejectAllPendingForTeam(team.getId());
+            // After unlock: REQUIRES_NEW while holding team FOR UPDATE deadlocks on FK locks
+            teamCapacityCleanup.expirePendingAfterUnlock(team.getId());
             throw new BusinessException(TEAM_FULL_MESSAGE, HttpStatus.BAD_REQUEST) {};
         }
 
@@ -183,10 +183,9 @@ public class InvitationService {
         }
 
         if (newSize >= maxSize) {
-            // Same TX: accepted invite already ACCEPTED; expire leftover PENDING invites / join requests
-            invitationRepository.findByTeamIdAndStatus(team.getId(), InvitationStatus.PENDING)
-                    .forEach(pending -> pending.setStatus(InvitationStatus.EXPIRED));
-            joinRequestStatusService.rejectAllPendingForTeam(team.getId());
+            // Same TX while holding team lock — do not call REQUIRES_NEW here (FK deadlock)
+            invitationStatusService.expireAllPendingForTeamInCurrentTx(team.getId());
+            joinRequestStatusService.rejectAllPendingForTeamInCurrentTx(team.getId());
             teamService.syncRecruitingStatus(team.getId());
         }
 
@@ -203,7 +202,6 @@ public class InvitationService {
     @Transactional
     public InvitationResponse rejectInvitation(UUID userId, UUID invitationId) {
         Invitation invitation = getInvitation(invitationId);
-        validatePendingInvitation(invitation);
 
         UserSnapshot user = userPublicService.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
@@ -211,6 +209,15 @@ public class InvitationService {
         if (!user.getEmail().equals(invitation.getInviteeEmail())) {
             throw new BusinessException("This invitation is not for you", HttpStatus.FORBIDDEN) {};
         }
+
+        // Idempotent: team may have filled and expired this invite while the invitee still had the UI open
+        if (invitation.getStatus() == InvitationStatus.REJECTED
+                || invitation.getStatus() == InvitationStatus.EXPIRED
+                || invitation.getStatus() == InvitationStatus.CANCELLED) {
+            return toResponse(invitation);
+        }
+
+        validatePendingInvitation(invitation);
 
         invitation.setStatus(InvitationStatus.REJECTED);
         invitationRepository.save(invitation);

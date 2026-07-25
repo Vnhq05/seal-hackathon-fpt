@@ -78,7 +78,7 @@ export function mergeEventUpdate(
 }
 
 export function isEventEditable(status: EventStatus): boolean {
-  return status !== "ACTIVE" && status !== "COMPLETED";
+  return status !== "COMPLETED" && status !== "CANCELLED";
 }
 
 export const inputStyle: React.CSSProperties = {

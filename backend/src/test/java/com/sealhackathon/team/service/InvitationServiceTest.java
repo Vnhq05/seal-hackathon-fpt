@@ -21,7 +21,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -39,6 +38,7 @@ class InvitationServiceTest {
     @Mock private InvitationRepository invitationRepository;
     @Mock private InvitationStatusService invitationStatusService;
     @Mock private JoinRequestStatusService joinRequestStatusService;
+    @Mock private TeamCapacityCleanup teamCapacityCleanup;
     @Mock private TeamRepository teamRepository;
     @Mock private TeamMemberRepository teamMemberRepository;
     @Mock private UserPublicService userPublicService;
@@ -224,8 +224,7 @@ class InvitationServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("maximum number of members");
 
-        verify(invitationStatusService).expireAllPendingForTeam(teamId);
-        verify(joinRequestStatusService).rejectAllPendingForTeam(teamId);
+        verify(teamCapacityCleanup).expirePendingAfterUnlock(teamId);
         verify(teamMemberRepository, never()).save(any());
     }
 
@@ -260,13 +259,12 @@ class InvitationServiceTest {
         when(teamMemberRepository.findByUserIdAndEventId(userId, eventId)).thenReturn(Optional.empty());
         when(invitationRepository.save(any(Invitation.class))).thenAnswer(i -> i.getArgument(0));
         when(teamMemberRepository.save(any())).thenAnswer(i -> i.getArgument(0));
-        when(invitationRepository.findByTeamIdAndStatus(teamId, InvitationStatus.PENDING))
-                .thenReturn(List.of());
 
         InvitationResponse result = invitationService.acceptInvitation(userId, invitationId);
 
         assertThat(result.getStatus()).isEqualTo(InvitationStatus.ACCEPTED);
-        verify(joinRequestStatusService).rejectAllPendingForTeam(teamId);
+        verify(joinRequestStatusService).rejectAllPendingForTeamInCurrentTx(teamId);
+        verify(invitationStatusService).expireAllPendingForTeamInCurrentTx(teamId);
         verify(teamService).syncRecruitingStatus(teamId);
     }
 

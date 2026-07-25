@@ -3,7 +3,6 @@ package com.sealhackathon.judging.service;
 import com.sealhackathon.common.exception.BusinessException;
 import com.sealhackathon.submission.dto.snapshot.SubmissionSnapshot;
 import com.sealhackathon.submission.service.SubmissionPublicService;
-import com.sealhackathon.event.repository.MentorAssignmentRepository;
 import com.sealhackathon.team.domain.Team;
 import com.sealhackathon.team.repository.TeamRepository;
 import com.sealhackathon.team.service.TeamPublicService;
@@ -29,7 +28,6 @@ class ConflictDetectionServiceTest {
     @Mock private TeamPublicService teamPublicService;
     @Mock private SubmissionPublicService submissionPublicService;
     @Mock private ApplicationEventPublisher eventPublisher;
-    @Mock private MentorAssignmentRepository mentorAssignmentRepository;
     @Mock private TeamRepository teamRepository;
 
     @InjectMocks private ConflictDetectionService conflictDetectionService;
@@ -56,7 +54,7 @@ class ConflictDetectionServiceTest {
     }
 
     @Test
-    void shouldThrow_whenJudgeIsMentorOfTrack() {
+    void shouldPass_whenJudgeIsOnlyTrackMentorPoolMember() {
         UUID judgeId = UUID.randomUUID();
         UUID submissionId = UUID.randomUUID();
         UUID teamId = UUID.randomUUID();
@@ -71,14 +69,9 @@ class ConflictDetectionServiceTest {
                         .id(submissionId).teamId(teamId).build()));
         when(teamRepository.findById(teamId)).thenReturn(Optional.of(team));
         when(teamPublicService.isMentorOfTeam(judgeId, teamId)).thenReturn(false);
-        when(mentorAssignmentRepository.existsByHackathonEventIdAndTrackIdAndMentorUserId(
-                eventId, trackId, judgeId)).thenReturn(true);
 
-        assertThatThrownBy(() -> conflictDetectionService.checkConflict(judgeId, submissionId))
-                .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("track");
-
-        verify(eventPublisher).publishEvent(any(Object.class));
+        assertThatNoException().isThrownBy(
+                () -> conflictDetectionService.checkConflict(judgeId, submissionId));
     }
 
     @Test

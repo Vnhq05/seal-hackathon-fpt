@@ -6,6 +6,8 @@ import com.sealhackathon.notification.domain.enums.NotificationType;
 import com.sealhackathon.notification.service.EmailService;
 import com.sealhackathon.notification.service.NotificationService;
 import com.sealhackathon.ranking.event.ResultsPublishedEvent;
+import com.sealhackathon.team.event.InvitationsExpiredDueToTeamFullEvent;
+import com.sealhackathon.user.dto.snapshot.UserSnapshot;
 import com.sealhackathon.user.event.AccountApprovedEvent;
 import com.sealhackathon.user.event.AccountRejectedEvent;
 import com.sealhackathon.user.service.UserPublicService;
@@ -18,6 +20,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -98,6 +101,33 @@ class NotificationEventListenerTest {
                 eq(NotificationType.JUDGE_ASSIGNED),
                 anyString(), anyString(),
                 eq(roundId), eq("Round"), eq(List.of(judgeId)));
+    }
+
+    @Test
+    void onInvitationsExpiredDueToTeamFull_shouldNotifyInvitees() {
+        UUID teamId = UUID.randomUUID();
+        UUID inviteeId = UUID.randomUUID();
+        Notification mockNotif = Notification.builder().build();
+        mockNotif.setId(UUID.randomUUID());
+
+        when(userPublicService.findByEmail("late@test.com"))
+                .thenReturn(Optional.of(UserSnapshot.builder()
+                        .id(inviteeId).email("late@test.com").fullName("Late").build()));
+        when(notificationService.createNotification(
+                any(), anyString(), anyString(), any(), anyString(), anyList()))
+                .thenReturn(mockNotif);
+
+        listener.onInvitationsExpiredDueToTeamFull(new InvitationsExpiredDueToTeamFullEvent(
+                teamId, "Alpha", List.of("late@test.com")));
+
+        ArgumentCaptor<String> messageCaptor = ArgumentCaptor.forClass(String.class);
+        verify(notificationService).createNotification(
+                eq(NotificationType.INVITATION_EXPIRED),
+                eq("Invitation Expired"),
+                messageCaptor.capture(),
+                eq(teamId), eq("Team"), eq(List.of(inviteeId)));
+        assertThat(messageCaptor.getValue()).contains("Alpha").contains("full");
+        verify(emailService).sendEmailsForNotification(mockNotif);
     }
 
     @Test

@@ -3,6 +3,8 @@ package com.sealhackathon.event.repository;
 import com.sealhackathon.event.domain.JudgeAssignment;
 import com.sealhackathon.event.domain.enums.AssignmentScope;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -30,4 +32,20 @@ public interface JudgeAssignmentRepository extends JpaRepository<JudgeAssignment
     List<JudgeAssignment> findByGroupIdAndActiveTrue(UUID groupId);
 
     long countByJudgeUserId(UUID judgeUserId);
+
+    /**
+     * True if the judge was assigned to any other round of this event (any scope:
+     * ROUND / TRACK / GROUP), including deactivated assignments.
+     */
+    @Query("""
+            SELECT CASE WHEN COUNT(ja) > 0 THEN true ELSE false END
+            FROM JudgeAssignment ja
+            WHERE ja.judgeUserId = :judgeUserId
+              AND ja.round.hackathonEvent.id = :eventId
+              AND ja.round.id <> :excludeRoundId
+            """)
+    boolean existsPriorAssignmentInEvent(
+            @Param("judgeUserId") UUID judgeUserId,
+            @Param("eventId") UUID eventId,
+            @Param("excludeRoundId") UUID excludeRoundId);
 }

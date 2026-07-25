@@ -32,6 +32,7 @@ export interface MentorRoomResponse {
   teamId: string;
   teamName: string | null;
   eventId: string;
+  eventName: string | null;
   mentorUserId: string;
   createdAt: string;
 }

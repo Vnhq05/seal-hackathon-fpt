@@ -4,9 +4,6 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useMyTeamsAllEvents } from "@/features/teams/hooks/use-my-teams-all-events";
 import { useAuthStore } from "@/features/auth/store/auth.store";
-import { EventScheduleTimeline } from "@/features/events/components/event-schedule-timeline";
-import { useEventSchedule } from "@/features/events/hooks/use-event-schedule";
-import { findActiveMilestone } from "@/features/events/utils/schedule.utils";
 import { roundApi } from "@/lib/api";
 import { openSubmissionAttachment } from "@/lib/files";
 import { useTeamSubmission } from "@/features/submissions/hooks/use-team-submission";
@@ -17,15 +14,7 @@ import {
   roundLockMessage,
   validateAnySubmissionFile,
 } from "@/features/submissions/utils/round.utils";
-import {
-  formatCountdown,
-  isSealPreliminaryRound,
-  isValidHttpUrl,
-  msUntil,
-  resolveSealPhase,
-  sealPhaseDescription,
-  sealPhaseLabel,
-} from "@/features/submissions/utils/seal-submission.utils";
+import { isValidHttpUrl } from "@/features/submissions/utils/seal-submission.utils";
 import { validateSourceCodeUrl } from "@/features/submissions/utils/source-code-url.utils";
 import {
   countSubmissionParts,
@@ -52,15 +41,7 @@ export function StudentSubmissionPage() {
     enabled: !!event?.id,
   });
 
-  const { data: schedule } = useEventSchedule(
-    event?.id,
-    !!event?.id && event?.competitionFormat === "SEAL_RAG_2026",
-  );
-
   const currentRound = rounds ? findCurrentRound(rounds) : null;
-  const isSealPrelim =
-    !!event && !!currentRound && isSealPreliminaryRound(event.competitionFormat, currentRound);
-  const sealPhase = isSealPrelim && currentRound ? resolveSealPhase(currentRound) : null;
 
   const { data: existing } = useTeamSubmission(currentRound?.id, team?.id);
 
@@ -73,14 +54,8 @@ export function StudentSubmissionPage() {
   const [success, setSuccess] = useState<string | null>(null);
   const [savingPart, setSavingPart] = useState<SubmitPart | null>(null);
   const [viewingFile, setViewingFile] = useState(false);
-  const [now, setNow] = useState(() => Date.now());
 
   const currentFile = existing?.latestVersion?.attachments?.[0] ?? null;
-
-  useEffect(() => {
-    const id = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(id);
-  }, []);
 
   useEffect(() => {
     if (!existing?.latestVersion) return;
@@ -105,17 +80,6 @@ export function StudentSubmissionPage() {
         : !roundOpen && currentRound
           ? roundLockMessage(currentRound)
           : "";
-
-  const slideCountdown =
-    isSealPrelim && currentRound?.slideDeadline
-      ? msUntil(currentRound.slideDeadline, now)
-      : null;
-  const demoCountdown =
-    isSealPrelim && currentRound?.submissionDeadline
-      ? msUntil(currentRound.submissionDeadline, now)
-      : null;
-
-  const activeMilestone = findActiveMilestone(schedule, now);
 
   const partStatus = useMemo(
     () => submissionPartsFromVersion(existing?.latestVersion),
@@ -302,36 +266,6 @@ export function StudentSubmissionPage() {
           />
         </div>
       </div>
-
-      {isSealPrelim && sealPhase && (
-        <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
-          <p className="font-semibold">{sealPhaseLabel(sealPhase)}</p>
-          <p className="mt-1 text-xs opacity-90">{sealPhaseDescription(sealPhase)}</p>
-          {activeMilestone && <p className="mt-2 text-xs font-medium">{activeMilestone.title}</p>}
-          <div className="mt-3 flex flex-wrap gap-4 font-mono text-xs">
-            {slideCountdown !== null && slideCountdown > 0 && (
-              <span>{formatCountdown(slideCountdown)} until slide deadline</span>
-            )}
-            {demoCountdown !== null && demoCountdown > 0 && (
-              <span>{formatCountdown(demoCountdown)} until submission deadline</span>
-            )}
-          </div>
-        </div>
-      )}
-
-      {isSealPrelim && schedule && schedule.length > 0 && (
-        <div className="border-2 border-navy bg-white p-5 shadow-[4px_4px_0_0_#0c1228]">
-          <h2 className="font-mono text-base font-bold text-navy">Milestone timeline</h2>
-          <EventScheduleTimeline
-            schedules={schedule}
-            rounds={rounds}
-            variant="full"
-            highlightTypes={["MILESTONE"]}
-            showDayHeaders={false}
-            preliminaryRound={currentRound}
-          />
-        </div>
-      )}
 
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-4">

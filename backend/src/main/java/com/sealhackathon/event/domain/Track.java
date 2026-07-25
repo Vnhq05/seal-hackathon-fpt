@@ -52,9 +52,9 @@ public class Track extends BaseEntity {
     @Column(name = "topic", length = 1000)
     private String topic;
 
-    @NotNull
+    /** Null = unlimited (SEAL coordinator assignment); see V18. */
     @Min(1)
-    @Column(name = "max_teams", nullable = false)
+    @Column(name = "max_teams")
     private Integer maxTeams;
 
     @Column(name = "scoring_template_id")

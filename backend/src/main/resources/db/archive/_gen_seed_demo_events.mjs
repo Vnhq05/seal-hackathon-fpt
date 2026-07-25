@@ -989,7 +989,7 @@ function emitEvent(ev) {
         byTrack.forEach((pair) => {
           pair.forEach((r, ri) => {
             finRows.push(
-              `    ('${uid(18, ev.n, finSeq++)}', '${eventId}', '${r.team.id}', '${r.team.trackId}', ${ri + 1}, N'Top ${ri + 1} in track', @e${ev.n}_prelimScore, @now, @now, 'AUTO', 1)`
+              `    ('${uid(18, ev.n, finSeq++)}', '${eventId}', '${r.team.id}', '${r.team.trackId}', ${ri + 1}, N'Top ${ri + 1} in track', @e${ev.n}_prelimScore, @now, @now, 'TOP_PER_TRACK', 1)`
             );
           });
         });

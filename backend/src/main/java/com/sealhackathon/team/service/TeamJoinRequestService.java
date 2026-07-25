@@ -6,7 +6,6 @@ import com.sealhackathon.team.domain.Team;
 import com.sealhackathon.team.domain.TeamJoinRequest;
 import com.sealhackathon.team.domain.TeamMember;
 import com.sealhackathon.team.domain.enums.HackathonSkillRole;
-import com.sealhackathon.team.domain.enums.InvitationStatus;
 import com.sealhackathon.team.domain.enums.JoinRequestStatus;
 import com.sealhackathon.team.domain.enums.TeamMemberRole;
 import com.sealhackathon.team.domain.enums.TeamStatus;
@@ -17,7 +16,6 @@ import com.sealhackathon.team.event.JoinRequestCreatedEvent;
 import com.sealhackathon.team.event.JoinRequestResolvedEvent;
 import com.sealhackathon.team.event.MemberJoinedEvent;
 import com.sealhackathon.team.event.TeamConfirmedEvent;
-import com.sealhackathon.team.repository.InvitationRepository;
 import com.sealhackathon.team.repository.TeamJoinRequestRepository;
 import com.sealhackathon.team.repository.TeamMemberRepository;
 import com.sealhackathon.team.repository.TeamRepository;
@@ -28,6 +26,8 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -48,7 +48,7 @@ public class TeamJoinRequestService {
     private final TeamJoinRequestRepository joinRequestRepository;
     private final JoinRequestStatusService joinRequestStatusService;
     private final InvitationStatusService invitationStatusService;
-    private final InvitationRepository invitationRepository;
+    private final TeamCapacityCleanup teamCapacityCleanup;
     private final TeamRepository teamRepository;
     private final TeamMemberRepository teamMemberRepository;
     private final EventEnrollmentService enrollmentService;
@@ -185,9 +185,10 @@ public class TeamJoinRequestService {
         UUID requesterId = joinRequest.getRequesterId();
 
         if (teamMemberRepository.existsActiveByUserIdAndEventId(requesterId, eventId)) {
-            // Own transaction: the throw below would otherwise roll the rejection back, leaving a
-            // request that can never be accepted sitting PENDING in the leader's queue forever.
-            joinRequestStatusService.retire(joinRequest.getId(), JoinRequestStatus.REJECTED);
+            // Defer REQUIRES_NEW retire — calling it while holding team FOR UPDATE deadlocks on FK
+            UUID toReject = joinRequest.getId();
+            deferAfterUnlock(() ->
+                    joinRequestStatusService.retire(toReject, JoinRequestStatus.REJECTED));
             throw new BusinessException("User is already in a team for this event", HttpStatus.CONFLICT) {};
         }
         // Leftover membership on a disbanded team blocks the unique (event_id, user_id) row — clear it
@@ -199,8 +200,7 @@ public class TeamJoinRequestService {
         int minSize = teamService.resolveMinTeamMembers(eventId);
         int currentSize = teamMemberRepository.countByTeamId(team.getId());
         if (currentSize >= maxSize) {
-            joinRequestStatusService.rejectAllPendingForTeam(team.getId());
-            invitationStatusService.expireAllPendingForTeam(team.getId());
+            teamCapacityCleanup.expirePendingAfterUnlock(team.getId());
             throw new BusinessException(TEAM_FULL_MESSAGE, HttpStatus.BAD_REQUEST) {};
         }
 
@@ -228,13 +228,8 @@ public class TeamJoinRequestService {
         }
 
         if (newSize >= maxSize) {
-            joinRequestRepository.findByTeamIdAndStatus(team.getId(), JoinRequestStatus.PENDING)
-                    .forEach(pending -> {
-                        pending.setStatus(JoinRequestStatus.REJECTED);
-                        pending.setResolvedAt(LocalDateTime.now());
-                    });
-            invitationRepository.findByTeamIdAndStatus(team.getId(), InvitationStatus.PENDING)
-                    .forEach(pending -> pending.setStatus(InvitationStatus.EXPIRED));
+            joinRequestStatusService.rejectAllPendingForTeamInCurrentTx(team.getId());
+            invitationStatusService.expireAllPendingForTeamInCurrentTx(team.getId());
         }
 
         teamService.notifyTeamCountChanged(eventId);
@@ -299,6 +294,19 @@ public class TeamJoinRequestService {
         if (joinRequest.getStatus() != JoinRequestStatus.PENDING) {
             throw new BusinessException("Join request is no longer pending", HttpStatus.BAD_REQUEST) {};
         }
+    }
+
+    private void deferAfterUnlock(Runnable action) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            action.run();
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCompletion(int status) {
+                action.run();
+            }
+        });
     }
 
     private TeamJoinRequestResponse toResponse(TeamJoinRequest jr) {

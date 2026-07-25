@@ -36,9 +36,17 @@ public class JoinRequestStatusService {
     /**
      * Rejects every PENDING join request for a full team so leaders cannot accept/reject leftover
      * requests after the last slot is taken.
+     *
+     * <p>Own transaction — call only when the caller does <em>not</em> hold {@code FOR UPDATE}
+     * on the team row (see {@link TeamCapacityCleanup}).
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void rejectAllPendingForTeam(UUID teamId) {
+        rejectAllPendingForTeamInCurrentTx(teamId);
+    }
+
+    /** Same-TX variant for callers that already hold the team lock and will commit. */
+    public void rejectAllPendingForTeamInCurrentTx(UUID teamId) {
         LocalDateTime now = LocalDateTime.now();
         joinRequestRepository.findByTeamIdAndStatus(teamId, JoinRequestStatus.PENDING)
                 .forEach(request -> {

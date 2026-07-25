@@ -9,7 +9,7 @@ export interface TrackResponse {
   name: string;
   description: string | null;
   topic: string | null;
-  maxTeams: number;
+  maxTeams: number | null;
   scoringTemplateId: string | null;
   status: TrackStatus;
   assignedTeamCount: number | null;
@@ -18,7 +18,7 @@ export interface TrackResponse {
 export interface CreateTrackRequest {
   name: string;
   description?: string;
-  maxTeams: number;
+  maxTeams?: number | null;
   scoringTemplateId?: string;
 }
 

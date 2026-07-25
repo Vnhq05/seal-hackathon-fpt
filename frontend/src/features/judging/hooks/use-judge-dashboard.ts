@@ -27,7 +27,8 @@ function groupAssignmentsByRound(
 
   return Array.from(byRound.entries()).map(([roundId, items]) => {
     const first = items[0];
-    const scored = items.filter(
+    const teamItems = items.filter((i) => i.teamId);
+    const scored = teamItems.filter(
       (i) => i.scoringStatus === "COMPLETED" || i.scoringStatus === "LOCKED",
     ).length;
     const deadline = first.scoringDeadline ?? "";
@@ -39,7 +40,7 @@ function groupAssignmentsByRound(
       roundName: first.roundName ?? "",
       deadline,
       scored,
-      total: items.length,
+      total: teamItems.length,
       status: isClosed ? "closed" : "open",
       eventId: first.eventId,
     } as AssignedRoundCard;
