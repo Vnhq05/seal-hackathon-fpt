@@ -662,10 +662,8 @@ function ScheduleDashboardCard({ event }: { event: EventResponse }) {
 
       <EventScheduleTimeline
         schedules={schedules}
-        rounds={rounds}
         variant="compact"
         highlightTypes={["MILESTONE"]}
-        preliminaryRound={prelimRound}
       />
     </div>
   );

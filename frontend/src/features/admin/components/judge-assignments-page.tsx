@@ -3,7 +3,7 @@
 import { Fragment, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "@/features/auth/store/auth.store";
 import { StaffAssignmentNav } from "@/shared/components/staff-assignment-nav";
 import { useStaffPortalBase } from "@/shared/hooks/use-staff-portal-base";
@@ -17,7 +17,9 @@ import {
   type RoundResponse,
   type TrackResponse,
 } from "@/lib/api";
+import { assignmentApi } from "@/lib/api/assignment.api";
 import {
+  JUDGE_ASSIGNMENTS_KEY,
   useAssignJudge,
   useAllTrackMentorAssignments,
   useCompetitionGroups,
@@ -25,7 +27,10 @@ import {
   useJudgeAssignments,
   useJudgeWorkloadPreview,
   useMentorAssignments,
+<<<<<<< HEAD
   usePriorRoundJudgeUserIds,
+=======
+>>>>>>> 7434125a49089f7ea45fe1a5e0a51901c11f94a8
   useRemoveJudge,
   useTeamAssignmentsOverview,
   useUpdateTeamGroup,
@@ -201,7 +206,7 @@ function JudgePoolSection({
   priorRoundIds,
   minJudgesRequired,
   portalBase,
-  ungroupedTeamNames,
+  priorRoundIds,
 }: {
   eventId: string;
   roundId: string;
@@ -211,7 +216,8 @@ function JudgePoolSection({
   priorRoundIds: string[];
   minJudgesRequired: number;
   portalBase: string;
-  ungroupedTeamNames: string[];
+  /** Non-Final rounds — judges active there cannot be assigned to Final. */
+  priorRoundIds: string[];
 }) {
   const isFinal = roundType === "FINAL";
   const isPreliminary = roundType === "PRELIMINARY";
@@ -231,8 +237,11 @@ function JudgePoolSection({
   /** All active assignments in this round — used to hide judges already placed on any track. */
   const { data: roundAssignments = [] } = useJudgeAssignments(eventId, roundId);
   const { data: trackMentors = [] } = useMentorAssignments(eventId, selectedTrackId);
+<<<<<<< HEAD
   const allTrackMentorQueries = useAllTrackMentorAssignments(eventId, trackIds);
   const priorRoundJudgeIds = usePriorRoundJudgeUserIds(eventId, priorRoundIds, isFinal);
+=======
+>>>>>>> 7434125a49089f7ea45fe1a5e0a51901c11f94a8
   const { data: workload } = useJudgeWorkloadPreview(
     eventId,
     roundId,
@@ -243,12 +252,31 @@ function JudgePoolSection({
   const { data: eventJudges = [] } = useEventStaffJudges(eventId);
   const { mutate: assign, isPending } = useAssignJudge(eventId, roundId);
 
+  const priorAssignmentQueries = useQueries({
+    queries: priorRoundIds.map((priorRoundId) => ({
+      queryKey: [JUDGE_ASSIGNMENTS_KEY, eventId, priorRoundId, undefined, undefined],
+      queryFn: () => assignmentApi.listJudges(eventId, priorRoundId),
+      enabled: isFinal && !!eventId && !!priorRoundId,
+    })),
+  });
+
+  const priorRoundJudgeIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const q of priorAssignmentQueries) {
+      for (const a of q.data ?? []) {
+        if (a.active) ids.add(a.judgeUserId);
+      }
+    }
+    return ids;
+  }, [priorAssignmentQueries]);
+
   const activeJudgeCount = poolJudges.filter((j) => j.active).length;
   const incompleteFromApi = poolJudges[0]?.incompleteScopes ?? [];
 
   const assignedAnywhereIds = useMemo(
     () => new Set(roundAssignments.filter((j) => j.active).map((j) => j.judgeUserId)),
     [roundAssignments],
+<<<<<<< HEAD
   );
   /** Mentors already in Mentor Assign for the selected track (or any track when scope is ROUND). */
   const excludedMentorIds = useMemo(() => {
@@ -272,10 +300,34 @@ function JudgePoolSection({
       return true;
     });
   }, [eventJudges, assignedAnywhereIds, excludedMentorIds, isFinal, priorRoundJudgeIds]);
+=======
+  );
+  const trackMentorIds = useMemo(
+    () => new Set(trackMentors.map((m) => m.mentorUserId)),
+    [trackMentors],
+  );
+  const availableJudges = useMemo(() => {
+    return eventJudges.filter((j) => {
+      if (assignedAnywhereIds.has(j.userId)) return false;
+      // Final: hide anyone already assigned on Preliminary (or other non-Final) rounds.
+      if (isFinal && priorRoundJudgeIds.has(j.userId)) return false;
+      // For track/group scope: hide mentors of the selected track up front.
+      if (scope !== "ROUND" && selectedTrackId && trackMentorIds.has(j.userId)) return false;
+      return true;
+    });
+  }, [
+    eventJudges,
+    assignedAnywhereIds,
+    isFinal,
+    priorRoundJudgeIds,
+    scope,
+    selectedTrackId,
+    trackMentorIds,
+  ]);
+>>>>>>> 7434125a49089f7ea45fe1a5e0a51901c11f94a8
 
   const canAssign =
     !!judgeUserId &&
-    ungroupedTeamNames.length === 0 &&
     (scope === "ROUND" || (!!selectedTrackId && (scope !== "GROUP" || !!selectedGroupId)));
 
   const handleAdd = () => {
@@ -316,17 +368,16 @@ function JudgePoolSection({
       </div>
       <p className="mt-1 text-xs text-seal-text-muted">
         {isFinal
+<<<<<<< HEAD
           ? "Final judges must not have judged any previous track, group, or round in this event. Mentors of any track are also excluded."
           : scope === "ROUND"
             ? "List shows event judges who are not yet assigned in this round and are not mentors of any track."
             : "List shows event judges who are not yet assigned in this round and are not mentors of this track (from Mentor Assign)."}
+=======
+          ? "Final panel must be fresh — judges already assigned on Preliminary (or who scored it) cannot be added."
+          : "Only unassigned judges who are not mentors of this track appear in the list. Competition groups are optional — use Group scope only when you split a large track."}
+>>>>>>> 7434125a49089f7ea45fe1a5e0a51901c11f94a8
       </p>
-      {ungroupedTeamNames.length > 0 && (
-        <div className="mt-3 border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-          Assign every team to a competition group before adding judges. Missing:{" "}
-          <span className="font-semibold">{ungroupedTeamNames.join(", ")}</span>
-        </div>
-      )}
 
       <div className="mt-4 flex flex-wrap items-end gap-3">
         <div>
@@ -359,6 +410,11 @@ function JudgePoolSection({
                 <option key={g.id} value={g.id}>{g.name}</option>
               ))}
             </select>
+            {groups.length === 0 && (
+              <p className="mt-1 text-xs text-amber-700">
+                No groups yet. Generate them in Team assignments if you need Group scope.
+              </p>
+            )}
           </div>
         )}
         <div>
@@ -367,7 +423,11 @@ function JudgePoolSection({
             value={judgeUserId}
             onChange={(e) => setJudgeUserId(e.target.value)}
             className="border-2 border-navy bg-white px-3 py-2 text-sm"
+<<<<<<< HEAD
             disabled={availableJudges.length === 0 || ungroupedTeamNames.length > 0}
+=======
+            disabled={availableJudges.length === 0}
+>>>>>>> 7434125a49089f7ea45fe1a5e0a51901c11f94a8
           >
             <option value="">Select judge...</option>
             {availableJudges.map((j) => (
@@ -386,6 +446,7 @@ function JudgePoolSection({
               .
             </p>
           )}
+<<<<<<< HEAD
           {eventJudges.length > 0 && availableJudges.length === 0 && ungroupedTeamNames.length === 0 && (
             <p className="mt-1 text-xs text-amber-700">
               {isFinal
@@ -393,6 +454,13 @@ function JudgePoolSection({
                 : scope === "ROUND"
                   ? "No eligible judges left — all are already assigned in this round or are mentors of a track."
                   : "No eligible judges left — all are already assigned in this round or are mentors of this track."}
+=======
+          {eventJudges.length > 0 && availableJudges.length === 0 && (
+            <p className="mt-1 text-xs text-amber-700">
+              {isFinal
+                ? "No eligible Final judges left — add guest judges to the event roster who have not judged Preliminary."
+                : "No eligible judges left — all are already assigned in this round or are mentors of this track."}
+>>>>>>> 7434125a49089f7ea45fe1a5e0a51901c11f94a8
             </p>
           )}
         </div>
@@ -485,12 +553,15 @@ function EventAssignmentPanel({
   const isPreliminary = roundType === "PRELIMINARY";
   const showPool = !!selectedRoundId;
   const needsTrackForPool = !!selectedRoundId && isPreliminary && !selectedTrackId;
+<<<<<<< HEAD
   const priorRoundIds = rounds
     .filter((r) => r.id !== selectedRoundId)
     .map((r) => r.id);
   const ungroupedTeamNames = (overview?.teams ?? [])
     .filter((team) => team.groupId == null)
     .map((team) => team.teamName);
+=======
+>>>>>>> 7434125a49089f7ea45fe1a5e0a51901c11f94a8
   const teamCount = overview?.teams?.length ?? 0;
 
   return (
@@ -546,7 +617,7 @@ function EventAssignmentPanel({
           priorRoundIds={priorRoundIds}
           minJudgesRequired={selectedRound?.minJudgesPerRound ?? MIN_JUDGES_PER_SCOPE}
           portalBase={portalBase}
-          ungroupedTeamNames={ungroupedTeamNames}
+          priorRoundIds={rounds.filter((r) => r.roundType !== "FINAL").map((r) => r.id)}
         />
       )}
 

@@ -116,6 +116,10 @@ DELETE FROM honored_guests WHERE event_id IN (SELECT id FROM @demoEventIds);
 DELETE FROM prizes WHERE event_id IN (SELECT id FROM @demoEventIds);
 DELETE FROM event_schedules WHERE event_id IN (SELECT id FROM @demoEventIds);
 DELETE FROM allowed_email_domains WHERE event_id IN (SELECT id FROM @demoEventIds);
+IF OBJECT_ID(N'competition_groups', N'U') IS NOT NULL
+    DELETE cg FROM competition_groups cg
+    INNER JOIN tracks tr ON tr.id = cg.track_id
+    WHERE tr.event_id IN (SELECT id FROM @demoEventIds);
 DELETE FROM tracks WHERE event_id IN (SELECT id FROM @demoEventIds);
 DELETE FROM hackathon_events WHERE id IN (SELECT id FROM @demoEventIds);
 
@@ -3824,21 +3828,21 @@ INSERT INTO submissions (id, created_at, current_version_id, round_id, status, s
     ('010D0000-EEEE-4EEE-8EEE-00000000000F', @now, NULL, '01030000-EEEE-4EEE-8EEE-000000000002', 'SCORED', '01010000-EEEE-4EEE-8EEE-000000000013', '01050000-EEEE-4EEE-8EEE-000000000007', 0);
 
 INSERT INTO submission_versions (id, created_at, demo_url, github_url, slide_url, submitted_at, version_number, submission_id) VALUES
-    ('010E0000-EEEE-4EEE-8EEE-000000000001', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -30, @e1_prelimSub), 1, '010D0000-EEEE-4EEE-8EEE-000000000001'),
-    ('010E0000-EEEE-4EEE-8EEE-000000000002', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -31, @e1_prelimSub), 1, '010D0000-EEEE-4EEE-8EEE-000000000002'),
-    ('010E0000-EEEE-4EEE-8EEE-000000000003', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -32, @e1_prelimSub), 1, '010D0000-EEEE-4EEE-8EEE-000000000003'),
-    ('010E0000-EEEE-4EEE-8EEE-000000000004', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -33, @e1_prelimSub), 1, '010D0000-EEEE-4EEE-8EEE-000000000004'),
-    ('010E0000-EEEE-4EEE-8EEE-000000000005', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -34, @e1_prelimSub), 1, '010D0000-EEEE-4EEE-8EEE-000000000005'),
-    ('010E0000-EEEE-4EEE-8EEE-000000000006', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -35, @e1_prelimSub), 1, '010D0000-EEEE-4EEE-8EEE-000000000006'),
-    ('010E0000-EEEE-4EEE-8EEE-000000000007', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -36, @e1_prelimSub), 1, '010D0000-EEEE-4EEE-8EEE-000000000007'),
-    ('010E0000-EEEE-4EEE-8EEE-000000000008', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -37, @e1_prelimSub), 1, '010D0000-EEEE-4EEE-8EEE-000000000008'),
-    ('010E0000-EEEE-4EEE-8EEE-000000000009', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -38, @e1_prelimSub), 1, '010D0000-EEEE-4EEE-8EEE-000000000009'),
-    ('010E0000-EEEE-4EEE-8EEE-00000000000A', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -39, @e1_prelimSub), 1, '010D0000-EEEE-4EEE-8EEE-00000000000A'),
-    ('010E0000-EEEE-4EEE-8EEE-00000000000B', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -40, @e1_prelimSub), 1, '010D0000-EEEE-4EEE-8EEE-00000000000B'),
-    ('010E0000-EEEE-4EEE-8EEE-00000000000C', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -41, @e1_prelimSub), 1, '010D0000-EEEE-4EEE-8EEE-00000000000C'),
-    ('010E0000-EEEE-4EEE-8EEE-00000000000D', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -42, @e1_prelimSub), 1, '010D0000-EEEE-4EEE-8EEE-00000000000D'),
-    ('010E0000-EEEE-4EEE-8EEE-00000000000E', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -43, @e1_prelimSub), 1, '010D0000-EEEE-4EEE-8EEE-00000000000E'),
-    ('010E0000-EEEE-4EEE-8EEE-00000000000F', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -44, @e1_prelimSub), 1, '010D0000-EEEE-4EEE-8EEE-00000000000F');
+    ('010E0000-EEEE-4EEE-8EEE-000000000001', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/neuroretrieve', N'https://docs.google.com/presentation/d/seal-1-0', DATEADD(MINUTE, -30, @e1_prelimSub), 1, '010D0000-EEEE-4EEE-8EEE-000000000001'),
+    ('010E0000-EEEE-4EEE-8EEE-000000000002', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/citeguard', N'https://docs.google.com/presentation/d/seal-1-1', DATEADD(MINUTE, -31, @e1_prelimSub), 1, '010D0000-EEEE-4EEE-8EEE-000000000002'),
+    ('010E0000-EEEE-4EEE-8EEE-000000000003', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/hopchain', N'https://docs.google.com/presentation/d/seal-1-2', DATEADD(MINUTE, -32, @e1_prelimSub), 1, '010D0000-EEEE-4EEE-8EEE-000000000003'),
+    ('010E0000-EEEE-4EEE-8EEE-000000000004', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/docupilot', N'https://docs.google.com/presentation/d/seal-1-3', DATEADD(MINUTE, -33, @e1_prelimSub), 1, '010D0000-EEEE-4EEE-8EEE-000000000004'),
+    ('010E0000-EEEE-4EEE-8EEE-000000000005', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/ragforge', N'https://docs.google.com/presentation/d/seal-1-4', DATEADD(MINUTE, -34, @e1_prelimSub), 1, '010D0000-EEEE-4EEE-8EEE-000000000005'),
+    ('010E0000-EEEE-4EEE-8EEE-000000000006', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/contextlens', N'https://docs.google.com/presentation/d/seal-1-5', DATEADD(MINUTE, -35, @e1_prelimSub), 1, '010D0000-EEEE-4EEE-8EEE-000000000006'),
+    ('010E0000-EEEE-4EEE-8EEE-000000000007', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/vaultagent', N'https://docs.google.com/presentation/d/seal-1-6', DATEADD(MINUTE, -36, @e1_prelimSub), 1, '010D0000-EEEE-4EEE-8EEE-000000000007'),
+    ('010E0000-EEEE-4EEE-8EEE-000000000008', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/policypilot', N'https://docs.google.com/presentation/d/seal-1-7', DATEADD(MINUTE, -37, @e1_prelimSub), 1, '010D0000-EEEE-4EEE-8EEE-000000000008'),
+    ('010E0000-EEEE-4EEE-8EEE-000000000009', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/groundtruth', N'https://docs.google.com/presentation/d/seal-1-8', DATEADD(MINUTE, -38, @e1_prelimSub), 1, '010D0000-EEEE-4EEE-8EEE-000000000009'),
+    ('010E0000-EEEE-4EEE-8EEE-00000000000A', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/neuroretrieve', N'https://docs.google.com/presentation/d/seal-1-9', DATEADD(MINUTE, -39, @e1_prelimSub), 1, '010D0000-EEEE-4EEE-8EEE-00000000000A'),
+    ('010E0000-EEEE-4EEE-8EEE-00000000000B', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/citeguard', N'https://docs.google.com/presentation/d/seal-1-10', DATEADD(MINUTE, -40, @e1_prelimSub), 1, '010D0000-EEEE-4EEE-8EEE-00000000000B'),
+    ('010E0000-EEEE-4EEE-8EEE-00000000000C', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/docupilot', N'https://docs.google.com/presentation/d/seal-1-11', DATEADD(MINUTE, -41, @e1_prelimSub), 1, '010D0000-EEEE-4EEE-8EEE-00000000000C'),
+    ('010E0000-EEEE-4EEE-8EEE-00000000000D', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/contextlens', N'https://docs.google.com/presentation/d/seal-1-12', DATEADD(MINUTE, -42, @e1_prelimSub), 1, '010D0000-EEEE-4EEE-8EEE-00000000000D'),
+    ('010E0000-EEEE-4EEE-8EEE-00000000000E', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/policypilot', N'https://docs.google.com/presentation/d/seal-1-13', DATEADD(MINUTE, -43, @e1_prelimSub), 1, '010D0000-EEEE-4EEE-8EEE-00000000000E'),
+    ('010E0000-EEEE-4EEE-8EEE-00000000000F', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/vaultagent', N'https://docs.google.com/presentation/d/seal-1-14', DATEADD(MINUTE, -44, @e1_prelimSub), 1, '010D0000-EEEE-4EEE-8EEE-00000000000F');
 
 UPDATE submissions SET current_version_id = '010E0000-EEEE-4EEE-8EEE-000000000001' WHERE id = '010D0000-EEEE-4EEE-8EEE-000000000001';
 UPDATE submissions SET current_version_id = '010E0000-EEEE-4EEE-8EEE-000000000002' WHERE id = '010D0000-EEEE-4EEE-8EEE-000000000002';
@@ -4060,12 +4064,12 @@ INSERT INTO rankings (id, created_at, calculated_at, final_score, rank, round_id
     ('01110000-EEEE-4EEE-8EEE-000000000006', @now, @e1_finalScore, 3.3500, 6, '01030000-EEEE-4EEE-8EEE-000000000002', '01050000-EEEE-4EEE-8EEE-000000000007', 1, 0);
 
 INSERT INTO finalist_selections (id, event_id, team_id, track_id, preliminary_rank, selected_reason, selected_at, created_at, updated_at, selection_method, eligible) VALUES
-    ('01120000-EEEE-4EEE-8EEE-000000000001', '01020000-EEEE-4EEE-8EEE-000000000001', '01050000-EEEE-4EEE-8EEE-000000000001', '01040000-EEEE-4EEE-8EEE-000000000001', 1, N'Top 1 in track', @e1_prelimScore, @now, @now, 'TOP_PER_TRACK', 1),
-    ('01120000-EEEE-4EEE-8EEE-000000000002', '01020000-EEEE-4EEE-8EEE-000000000001', '01050000-EEEE-4EEE-8EEE-000000000002', '01040000-EEEE-4EEE-8EEE-000000000001', 2, N'Top 2 in track', @e1_prelimScore, @now, @now, 'TOP_PER_TRACK', 1),
-    ('01120000-EEEE-4EEE-8EEE-000000000003', '01020000-EEEE-4EEE-8EEE-000000000001', '01050000-EEEE-4EEE-8EEE-000000000004', '01040000-EEEE-4EEE-8EEE-000000000002', 1, N'Top 1 in track', @e1_prelimScore, @now, @now, 'TOP_PER_TRACK', 1),
-    ('01120000-EEEE-4EEE-8EEE-000000000004', '01020000-EEEE-4EEE-8EEE-000000000001', '01050000-EEEE-4EEE-8EEE-000000000006', '01040000-EEEE-4EEE-8EEE-000000000002', 2, N'Top 2 in track', @e1_prelimScore, @now, @now, 'TOP_PER_TRACK', 1),
-    ('01120000-EEEE-4EEE-8EEE-000000000005', '01020000-EEEE-4EEE-8EEE-000000000001', '01050000-EEEE-4EEE-8EEE-000000000008', '01040000-EEEE-4EEE-8EEE-000000000003', 1, N'Top 1 in track', @e1_prelimScore, @now, @now, 'TOP_PER_TRACK', 1),
-    ('01120000-EEEE-4EEE-8EEE-000000000006', '01020000-EEEE-4EEE-8EEE-000000000001', '01050000-EEEE-4EEE-8EEE-000000000007', '01040000-EEEE-4EEE-8EEE-000000000003', 2, N'Top 2 in track', @e1_prelimScore, @now, @now, 'TOP_PER_TRACK', 1);
+    ('01120000-EEEE-4EEE-8EEE-000000000001', '01020000-EEEE-4EEE-8EEE-000000000001', '01050000-EEEE-4EEE-8EEE-000000000001', '01040000-EEEE-4EEE-8EEE-000000000001', 1, N'Top 1 in track', @e1_prelimScore, @now, @now, 'AUTO', 1),
+    ('01120000-EEEE-4EEE-8EEE-000000000002', '01020000-EEEE-4EEE-8EEE-000000000001', '01050000-EEEE-4EEE-8EEE-000000000002', '01040000-EEEE-4EEE-8EEE-000000000001', 2, N'Top 2 in track', @e1_prelimScore, @now, @now, 'AUTO', 1),
+    ('01120000-EEEE-4EEE-8EEE-000000000003', '01020000-EEEE-4EEE-8EEE-000000000001', '01050000-EEEE-4EEE-8EEE-000000000004', '01040000-EEEE-4EEE-8EEE-000000000002', 1, N'Top 1 in track', @e1_prelimScore, @now, @now, 'AUTO', 1),
+    ('01120000-EEEE-4EEE-8EEE-000000000004', '01020000-EEEE-4EEE-8EEE-000000000001', '01050000-EEEE-4EEE-8EEE-000000000006', '01040000-EEEE-4EEE-8EEE-000000000002', 2, N'Top 2 in track', @e1_prelimScore, @now, @now, 'AUTO', 1),
+    ('01120000-EEEE-4EEE-8EEE-000000000005', '01020000-EEEE-4EEE-8EEE-000000000001', '01050000-EEEE-4EEE-8EEE-000000000008', '01040000-EEEE-4EEE-8EEE-000000000003', 1, N'Top 1 in track', @e1_prelimScore, @now, @now, 'AUTO', 1),
+    ('01120000-EEEE-4EEE-8EEE-000000000006', '01020000-EEEE-4EEE-8EEE-000000000001', '01050000-EEEE-4EEE-8EEE-000000000007', '01040000-EEEE-4EEE-8EEE-000000000003', 2, N'Top 2 in track', @e1_prelimScore, @now, @now, 'AUTO', 1);
 
 INSERT INTO published_results (id, created_at, dispute_deadline, published_at, published_by, round_id) VALUES
     ('01130000-EEEE-4EEE-8EEE-000000000001', @now, DATEADD(DAY, 2, @e1_prelimScore), @e1_prelimScore, @coordId, '01030000-EEEE-4EEE-8EEE-000000000001'),
@@ -4306,21 +4310,21 @@ INSERT INTO submissions (id, created_at, current_version_id, round_id, status, s
     ('020D0000-EEEE-4EEE-8EEE-00000000000F', @now, NULL, '02030000-EEEE-4EEE-8EEE-000000000002', 'SCORED', '01010000-EEEE-4EEE-8EEE-000000000013', '02050000-EEEE-4EEE-8EEE-000000000007', 0);
 
 INSERT INTO submission_versions (id, created_at, demo_url, github_url, slide_url, submitted_at, version_number, submission_id) VALUES
-    ('020E0000-EEEE-4EEE-8EEE-000000000001', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -30, @e2_prelimSub), 1, '020D0000-EEEE-4EEE-8EEE-000000000001'),
-    ('020E0000-EEEE-4EEE-8EEE-000000000002', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -31, @e2_prelimSub), 1, '020D0000-EEEE-4EEE-8EEE-000000000002'),
-    ('020E0000-EEEE-4EEE-8EEE-000000000003', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -32, @e2_prelimSub), 1, '020D0000-EEEE-4EEE-8EEE-000000000003'),
-    ('020E0000-EEEE-4EEE-8EEE-000000000004', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -33, @e2_prelimSub), 1, '020D0000-EEEE-4EEE-8EEE-000000000004'),
-    ('020E0000-EEEE-4EEE-8EEE-000000000005', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -34, @e2_prelimSub), 1, '020D0000-EEEE-4EEE-8EEE-000000000005'),
-    ('020E0000-EEEE-4EEE-8EEE-000000000006', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -35, @e2_prelimSub), 1, '020D0000-EEEE-4EEE-8EEE-000000000006'),
-    ('020E0000-EEEE-4EEE-8EEE-000000000007', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -36, @e2_prelimSub), 1, '020D0000-EEEE-4EEE-8EEE-000000000007'),
-    ('020E0000-EEEE-4EEE-8EEE-000000000008', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -37, @e2_prelimSub), 1, '020D0000-EEEE-4EEE-8EEE-000000000008'),
-    ('020E0000-EEEE-4EEE-8EEE-000000000009', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -38, @e2_prelimSub), 1, '020D0000-EEEE-4EEE-8EEE-000000000009'),
-    ('020E0000-EEEE-4EEE-8EEE-00000000000A', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -39, @e2_prelimSub), 1, '020D0000-EEEE-4EEE-8EEE-00000000000A'),
-    ('020E0000-EEEE-4EEE-8EEE-00000000000B', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -40, @e2_prelimSub), 1, '020D0000-EEEE-4EEE-8EEE-00000000000B'),
-    ('020E0000-EEEE-4EEE-8EEE-00000000000C', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -41, @e2_prelimSub), 1, '020D0000-EEEE-4EEE-8EEE-00000000000C'),
-    ('020E0000-EEEE-4EEE-8EEE-00000000000D', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -42, @e2_prelimSub), 1, '020D0000-EEEE-4EEE-8EEE-00000000000D'),
-    ('020E0000-EEEE-4EEE-8EEE-00000000000E', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -43, @e2_prelimSub), 1, '020D0000-EEEE-4EEE-8EEE-00000000000E'),
-    ('020E0000-EEEE-4EEE-8EEE-00000000000F', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -44, @e2_prelimSub), 1, '020D0000-EEEE-4EEE-8EEE-00000000000F');
+    ('020E0000-EEEE-4EEE-8EEE-000000000001', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/multihop-lab', N'https://docs.google.com/presentation/d/seal-2-0', DATEADD(MINUTE, -30, @e2_prelimSub), 1, '020D0000-EEEE-4EEE-8EEE-000000000001'),
+    ('020E0000-EEEE-4EEE-8EEE-000000000002', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/pathfinder-ai', N'https://docs.google.com/presentation/d/seal-2-1', DATEADD(MINUTE, -31, @e2_prelimSub), 1, '020D0000-EEEE-4EEE-8EEE-000000000002'),
+    ('020E0000-EEEE-4EEE-8EEE-000000000003', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/linkweaver', N'https://docs.google.com/presentation/d/seal-2-2', DATEADD(MINUTE, -32, @e2_prelimSub), 1, '020D0000-EEEE-4EEE-8EEE-000000000003'),
+    ('020E0000-EEEE-4EEE-8EEE-000000000004', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/reasonstack', N'https://docs.google.com/presentation/d/seal-2-3', DATEADD(MINUTE, -33, @e2_prelimSub), 1, '020D0000-EEEE-4EEE-8EEE-000000000004'),
+    ('020E0000-EEEE-4EEE-8EEE-000000000005', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/chainofthought', N'https://docs.google.com/presentation/d/seal-2-4', DATEADD(MINUTE, -34, @e2_prelimSub), 1, '020D0000-EEEE-4EEE-8EEE-000000000005'),
+    ('020E0000-EEEE-4EEE-8EEE-000000000006', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/queryrouter', N'https://docs.google.com/presentation/d/seal-2-5', DATEADD(MINUTE, -35, @e2_prelimSub), 1, '020D0000-EEEE-4EEE-8EEE-000000000006'),
+    ('020E0000-EEEE-4EEE-8EEE-000000000007', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/factbridge', N'https://docs.google.com/presentation/d/seal-2-6', DATEADD(MINUTE, -36, @e2_prelimSub), 1, '020D0000-EEEE-4EEE-8EEE-000000000007'),
+    ('020E0000-EEEE-4EEE-8EEE-000000000008', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/hopscout', N'https://docs.google.com/presentation/d/seal-2-7', DATEADD(MINUTE, -37, @e2_prelimSub), 1, '020D0000-EEEE-4EEE-8EEE-000000000008'),
+    ('020E0000-EEEE-4EEE-8EEE-000000000009', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/answertrail', N'https://docs.google.com/presentation/d/seal-2-8', DATEADD(MINUTE, -38, @e2_prelimSub), 1, '020D0000-EEEE-4EEE-8EEE-000000000009'),
+    ('020E0000-EEEE-4EEE-8EEE-00000000000A', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/multihop-lab', N'https://docs.google.com/presentation/d/seal-2-9', DATEADD(MINUTE, -39, @e2_prelimSub), 1, '020D0000-EEEE-4EEE-8EEE-00000000000A'),
+    ('020E0000-EEEE-4EEE-8EEE-00000000000B', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/pathfinder-ai', N'https://docs.google.com/presentation/d/seal-2-10', DATEADD(MINUTE, -40, @e2_prelimSub), 1, '020D0000-EEEE-4EEE-8EEE-00000000000B'),
+    ('020E0000-EEEE-4EEE-8EEE-00000000000C', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/reasonstack', N'https://docs.google.com/presentation/d/seal-2-11', DATEADD(MINUTE, -41, @e2_prelimSub), 1, '020D0000-EEEE-4EEE-8EEE-00000000000C'),
+    ('020E0000-EEEE-4EEE-8EEE-00000000000D', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/queryrouter', N'https://docs.google.com/presentation/d/seal-2-12', DATEADD(MINUTE, -42, @e2_prelimSub), 1, '020D0000-EEEE-4EEE-8EEE-00000000000D'),
+    ('020E0000-EEEE-4EEE-8EEE-00000000000E', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/hopscout', N'https://docs.google.com/presentation/d/seal-2-13', DATEADD(MINUTE, -43, @e2_prelimSub), 1, '020D0000-EEEE-4EEE-8EEE-00000000000E'),
+    ('020E0000-EEEE-4EEE-8EEE-00000000000F', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/factbridge', N'https://docs.google.com/presentation/d/seal-2-14', DATEADD(MINUTE, -44, @e2_prelimSub), 1, '020D0000-EEEE-4EEE-8EEE-00000000000F');
 
 UPDATE submissions SET current_version_id = '020E0000-EEEE-4EEE-8EEE-000000000001' WHERE id = '020D0000-EEEE-4EEE-8EEE-000000000001';
 UPDATE submissions SET current_version_id = '020E0000-EEEE-4EEE-8EEE-000000000002' WHERE id = '020D0000-EEEE-4EEE-8EEE-000000000002';
@@ -4542,12 +4546,12 @@ INSERT INTO rankings (id, created_at, calculated_at, final_score, rank, round_id
     ('02110000-EEEE-4EEE-8EEE-000000000006', @now, @e2_finalScore, 3.3500, 6, '02030000-EEEE-4EEE-8EEE-000000000002', '02050000-EEEE-4EEE-8EEE-000000000007', 1, 0);
 
 INSERT INTO finalist_selections (id, event_id, team_id, track_id, preliminary_rank, selected_reason, selected_at, created_at, updated_at, selection_method, eligible) VALUES
-    ('02120000-EEEE-4EEE-8EEE-000000000001', '02020000-EEEE-4EEE-8EEE-000000000001', '02050000-EEEE-4EEE-8EEE-000000000001', '02040000-EEEE-4EEE-8EEE-000000000001', 1, N'Top 1 in track', @e2_prelimScore, @now, @now, 'TOP_PER_TRACK', 1),
-    ('02120000-EEEE-4EEE-8EEE-000000000002', '02020000-EEEE-4EEE-8EEE-000000000001', '02050000-EEEE-4EEE-8EEE-000000000002', '02040000-EEEE-4EEE-8EEE-000000000001', 2, N'Top 2 in track', @e2_prelimScore, @now, @now, 'TOP_PER_TRACK', 1),
-    ('02120000-EEEE-4EEE-8EEE-000000000003', '02020000-EEEE-4EEE-8EEE-000000000001', '02050000-EEEE-4EEE-8EEE-000000000004', '02040000-EEEE-4EEE-8EEE-000000000002', 1, N'Top 1 in track', @e2_prelimScore, @now, @now, 'TOP_PER_TRACK', 1),
-    ('02120000-EEEE-4EEE-8EEE-000000000004', '02020000-EEEE-4EEE-8EEE-000000000001', '02050000-EEEE-4EEE-8EEE-000000000006', '02040000-EEEE-4EEE-8EEE-000000000002', 2, N'Top 2 in track', @e2_prelimScore, @now, @now, 'TOP_PER_TRACK', 1),
-    ('02120000-EEEE-4EEE-8EEE-000000000005', '02020000-EEEE-4EEE-8EEE-000000000001', '02050000-EEEE-4EEE-8EEE-000000000008', '02040000-EEEE-4EEE-8EEE-000000000003', 1, N'Top 1 in track', @e2_prelimScore, @now, @now, 'TOP_PER_TRACK', 1),
-    ('02120000-EEEE-4EEE-8EEE-000000000006', '02020000-EEEE-4EEE-8EEE-000000000001', '02050000-EEEE-4EEE-8EEE-000000000007', '02040000-EEEE-4EEE-8EEE-000000000003', 2, N'Top 2 in track', @e2_prelimScore, @now, @now, 'TOP_PER_TRACK', 1);
+    ('02120000-EEEE-4EEE-8EEE-000000000001', '02020000-EEEE-4EEE-8EEE-000000000001', '02050000-EEEE-4EEE-8EEE-000000000001', '02040000-EEEE-4EEE-8EEE-000000000001', 1, N'Top 1 in track', @e2_prelimScore, @now, @now, 'AUTO', 1),
+    ('02120000-EEEE-4EEE-8EEE-000000000002', '02020000-EEEE-4EEE-8EEE-000000000001', '02050000-EEEE-4EEE-8EEE-000000000002', '02040000-EEEE-4EEE-8EEE-000000000001', 2, N'Top 2 in track', @e2_prelimScore, @now, @now, 'AUTO', 1),
+    ('02120000-EEEE-4EEE-8EEE-000000000003', '02020000-EEEE-4EEE-8EEE-000000000001', '02050000-EEEE-4EEE-8EEE-000000000004', '02040000-EEEE-4EEE-8EEE-000000000002', 1, N'Top 1 in track', @e2_prelimScore, @now, @now, 'AUTO', 1),
+    ('02120000-EEEE-4EEE-8EEE-000000000004', '02020000-EEEE-4EEE-8EEE-000000000001', '02050000-EEEE-4EEE-8EEE-000000000006', '02040000-EEEE-4EEE-8EEE-000000000002', 2, N'Top 2 in track', @e2_prelimScore, @now, @now, 'AUTO', 1),
+    ('02120000-EEEE-4EEE-8EEE-000000000005', '02020000-EEEE-4EEE-8EEE-000000000001', '02050000-EEEE-4EEE-8EEE-000000000008', '02040000-EEEE-4EEE-8EEE-000000000003', 1, N'Top 1 in track', @e2_prelimScore, @now, @now, 'AUTO', 1),
+    ('02120000-EEEE-4EEE-8EEE-000000000006', '02020000-EEEE-4EEE-8EEE-000000000001', '02050000-EEEE-4EEE-8EEE-000000000007', '02040000-EEEE-4EEE-8EEE-000000000003', 2, N'Top 2 in track', @e2_prelimScore, @now, @now, 'AUTO', 1);
 
 INSERT INTO published_results (id, created_at, dispute_deadline, published_at, published_by, round_id) VALUES
     ('02130000-EEEE-4EEE-8EEE-000000000001', @now, DATEADD(DAY, 2, @e2_prelimScore), @e2_prelimScore, @coordId, '02030000-EEEE-4EEE-8EEE-000000000001'),
@@ -4788,21 +4792,21 @@ INSERT INTO submissions (id, created_at, current_version_id, round_id, status, s
     ('030D0000-EEEE-4EEE-8EEE-00000000000F', @now, NULL, '03030000-EEEE-4EEE-8EEE-000000000002', 'SCORED', '01010000-EEEE-4EEE-8EEE-000000000013', '03050000-EEEE-4EEE-8EEE-000000000007', 0);
 
 INSERT INTO submission_versions (id, created_at, demo_url, github_url, slide_url, submitted_at, version_number, submission_id) VALUES
-    ('030E0000-EEEE-4EEE-8EEE-000000000001', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -30, @e3_prelimSub), 1, '030D0000-EEEE-4EEE-8EEE-000000000001'),
-    ('030E0000-EEEE-4EEE-8EEE-000000000002', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -31, @e3_prelimSub), 1, '030D0000-EEEE-4EEE-8EEE-000000000002'),
-    ('030E0000-EEEE-4EEE-8EEE-000000000003', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -32, @e3_prelimSub), 1, '030D0000-EEEE-4EEE-8EEE-000000000003'),
-    ('030E0000-EEEE-4EEE-8EEE-000000000004', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -33, @e3_prelimSub), 1, '030D0000-EEEE-4EEE-8EEE-000000000004'),
-    ('030E0000-EEEE-4EEE-8EEE-000000000005', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -34, @e3_prelimSub), 1, '030D0000-EEEE-4EEE-8EEE-000000000005'),
-    ('030E0000-EEEE-4EEE-8EEE-000000000006', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -35, @e3_prelimSub), 1, '030D0000-EEEE-4EEE-8EEE-000000000006'),
-    ('030E0000-EEEE-4EEE-8EEE-000000000007', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -36, @e3_prelimSub), 1, '030D0000-EEEE-4EEE-8EEE-000000000007'),
-    ('030E0000-EEEE-4EEE-8EEE-000000000008', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -37, @e3_prelimSub), 1, '030D0000-EEEE-4EEE-8EEE-000000000008'),
-    ('030E0000-EEEE-4EEE-8EEE-000000000009', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -38, @e3_prelimSub), 1, '030D0000-EEEE-4EEE-8EEE-000000000009'),
-    ('030E0000-EEEE-4EEE-8EEE-00000000000A', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -39, @e3_prelimSub), 1, '030D0000-EEEE-4EEE-8EEE-00000000000A'),
-    ('030E0000-EEEE-4EEE-8EEE-00000000000B', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -40, @e3_prelimSub), 1, '030D0000-EEEE-4EEE-8EEE-00000000000B'),
-    ('030E0000-EEEE-4EEE-8EEE-00000000000C', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -41, @e3_prelimSub), 1, '030D0000-EEEE-4EEE-8EEE-00000000000C'),
-    ('030E0000-EEEE-4EEE-8EEE-00000000000D', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -42, @e3_prelimSub), 1, '030D0000-EEEE-4EEE-8EEE-00000000000D'),
-    ('030E0000-EEEE-4EEE-8EEE-00000000000E', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -43, @e3_prelimSub), 1, '030D0000-EEEE-4EEE-8EEE-00000000000E'),
-    ('030E0000-EEEE-4EEE-8EEE-00000000000F', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -44, @e3_prelimSub), 1, '030D0000-EEEE-4EEE-8EEE-00000000000F');
+    ('030E0000-EEEE-4EEE-8EEE-000000000001', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/enterprise-copilot-x', N'https://docs.google.com/presentation/d/seal-3-0', DATEADD(MINUTE, -30, @e3_prelimSub), 1, '030D0000-EEEE-4EEE-8EEE-000000000001'),
+    ('030E0000-EEEE-4EEE-8EEE-000000000002', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/policyrag', N'https://docs.google.com/presentation/d/seal-3-1', DATEADD(MINUTE, -31, @e3_prelimSub), 1, '030D0000-EEEE-4EEE-8EEE-000000000002'),
+    ('030E0000-EEEE-4EEE-8EEE-000000000003', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/knowvault', N'https://docs.google.com/presentation/d/seal-3-2', DATEADD(MINUTE, -32, @e3_prelimSub), 1, '030D0000-EEEE-4EEE-8EEE-000000000003'),
+    ('030E0000-EEEE-4EEE-8EEE-000000000004', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/secureretrieve', N'https://docs.google.com/presentation/d/seal-3-3', DATEADD(MINUTE, -33, @e3_prelimSub), 1, '030D0000-EEEE-4EEE-8EEE-000000000004'),
+    ('030E0000-EEEE-4EEE-8EEE-000000000005', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/corpagent', N'https://docs.google.com/presentation/d/seal-3-4', DATEADD(MINUTE, -34, @e3_prelimSub), 1, '030D0000-EEEE-4EEE-8EEE-000000000005'),
+    ('030E0000-EEEE-4EEE-8EEE-000000000006', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/insightdesk', N'https://docs.google.com/presentation/d/seal-3-5', DATEADD(MINUTE, -35, @e3_prelimSub), 1, '030D0000-EEEE-4EEE-8EEE-000000000006'),
+    ('030E0000-EEEE-4EEE-8EEE-000000000007', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/compliancebot', N'https://docs.google.com/presentation/d/seal-3-6', DATEADD(MINUTE, -36, @e3_prelimSub), 1, '030D0000-EEEE-4EEE-8EEE-000000000007'),
+    ('030E0000-EEEE-4EEE-8EEE-000000000008', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/datasteward', N'https://docs.google.com/presentation/d/seal-3-7', DATEADD(MINUTE, -37, @e3_prelimSub), 1, '030D0000-EEEE-4EEE-8EEE-000000000008'),
+    ('030E0000-EEEE-4EEE-8EEE-000000000009', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/opspilot', N'https://docs.google.com/presentation/d/seal-3-8', DATEADD(MINUTE, -38, @e3_prelimSub), 1, '030D0000-EEEE-4EEE-8EEE-000000000009'),
+    ('030E0000-EEEE-4EEE-8EEE-00000000000A', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/enterprise-copilot-x', N'https://docs.google.com/presentation/d/seal-3-9', DATEADD(MINUTE, -39, @e3_prelimSub), 1, '030D0000-EEEE-4EEE-8EEE-00000000000A'),
+    ('030E0000-EEEE-4EEE-8EEE-00000000000B', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/policyrag', N'https://docs.google.com/presentation/d/seal-3-10', DATEADD(MINUTE, -40, @e3_prelimSub), 1, '030D0000-EEEE-4EEE-8EEE-00000000000B'),
+    ('030E0000-EEEE-4EEE-8EEE-00000000000C', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/secureretrieve', N'https://docs.google.com/presentation/d/seal-3-11', DATEADD(MINUTE, -41, @e3_prelimSub), 1, '030D0000-EEEE-4EEE-8EEE-00000000000C'),
+    ('030E0000-EEEE-4EEE-8EEE-00000000000D', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/insightdesk', N'https://docs.google.com/presentation/d/seal-3-12', DATEADD(MINUTE, -42, @e3_prelimSub), 1, '030D0000-EEEE-4EEE-8EEE-00000000000D'),
+    ('030E0000-EEEE-4EEE-8EEE-00000000000E', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/datasteward', N'https://docs.google.com/presentation/d/seal-3-13', DATEADD(MINUTE, -43, @e3_prelimSub), 1, '030D0000-EEEE-4EEE-8EEE-00000000000E'),
+    ('030E0000-EEEE-4EEE-8EEE-00000000000F', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/compliancebot', N'https://docs.google.com/presentation/d/seal-3-14', DATEADD(MINUTE, -44, @e3_prelimSub), 1, '030D0000-EEEE-4EEE-8EEE-00000000000F');
 
 UPDATE submissions SET current_version_id = '030E0000-EEEE-4EEE-8EEE-000000000001' WHERE id = '030D0000-EEEE-4EEE-8EEE-000000000001';
 UPDATE submissions SET current_version_id = '030E0000-EEEE-4EEE-8EEE-000000000002' WHERE id = '030D0000-EEEE-4EEE-8EEE-000000000002';
@@ -5024,12 +5028,12 @@ INSERT INTO rankings (id, created_at, calculated_at, final_score, rank, round_id
     ('03110000-EEEE-4EEE-8EEE-000000000006', @now, @e3_finalScore, 3.3500, 6, '03030000-EEEE-4EEE-8EEE-000000000002', '03050000-EEEE-4EEE-8EEE-000000000007', 1, 0);
 
 INSERT INTO finalist_selections (id, event_id, team_id, track_id, preliminary_rank, selected_reason, selected_at, created_at, updated_at, selection_method, eligible) VALUES
-    ('03120000-EEEE-4EEE-8EEE-000000000001', '03020000-EEEE-4EEE-8EEE-000000000001', '03050000-EEEE-4EEE-8EEE-000000000001', '03040000-EEEE-4EEE-8EEE-000000000001', 1, N'Top 1 in track', @e3_prelimScore, @now, @now, 'TOP_PER_TRACK', 1),
-    ('03120000-EEEE-4EEE-8EEE-000000000002', '03020000-EEEE-4EEE-8EEE-000000000001', '03050000-EEEE-4EEE-8EEE-000000000002', '03040000-EEEE-4EEE-8EEE-000000000001', 2, N'Top 2 in track', @e3_prelimScore, @now, @now, 'TOP_PER_TRACK', 1),
-    ('03120000-EEEE-4EEE-8EEE-000000000003', '03020000-EEEE-4EEE-8EEE-000000000001', '03050000-EEEE-4EEE-8EEE-000000000004', '03040000-EEEE-4EEE-8EEE-000000000002', 1, N'Top 1 in track', @e3_prelimScore, @now, @now, 'TOP_PER_TRACK', 1),
-    ('03120000-EEEE-4EEE-8EEE-000000000004', '03020000-EEEE-4EEE-8EEE-000000000001', '03050000-EEEE-4EEE-8EEE-000000000006', '03040000-EEEE-4EEE-8EEE-000000000002', 2, N'Top 2 in track', @e3_prelimScore, @now, @now, 'TOP_PER_TRACK', 1),
-    ('03120000-EEEE-4EEE-8EEE-000000000005', '03020000-EEEE-4EEE-8EEE-000000000001', '03050000-EEEE-4EEE-8EEE-000000000008', '03040000-EEEE-4EEE-8EEE-000000000003', 1, N'Top 1 in track', @e3_prelimScore, @now, @now, 'TOP_PER_TRACK', 1),
-    ('03120000-EEEE-4EEE-8EEE-000000000006', '03020000-EEEE-4EEE-8EEE-000000000001', '03050000-EEEE-4EEE-8EEE-000000000007', '03040000-EEEE-4EEE-8EEE-000000000003', 2, N'Top 2 in track', @e3_prelimScore, @now, @now, 'TOP_PER_TRACK', 1);
+    ('03120000-EEEE-4EEE-8EEE-000000000001', '03020000-EEEE-4EEE-8EEE-000000000001', '03050000-EEEE-4EEE-8EEE-000000000001', '03040000-EEEE-4EEE-8EEE-000000000001', 1, N'Top 1 in track', @e3_prelimScore, @now, @now, 'AUTO', 1),
+    ('03120000-EEEE-4EEE-8EEE-000000000002', '03020000-EEEE-4EEE-8EEE-000000000001', '03050000-EEEE-4EEE-8EEE-000000000002', '03040000-EEEE-4EEE-8EEE-000000000001', 2, N'Top 2 in track', @e3_prelimScore, @now, @now, 'AUTO', 1),
+    ('03120000-EEEE-4EEE-8EEE-000000000003', '03020000-EEEE-4EEE-8EEE-000000000001', '03050000-EEEE-4EEE-8EEE-000000000004', '03040000-EEEE-4EEE-8EEE-000000000002', 1, N'Top 1 in track', @e3_prelimScore, @now, @now, 'AUTO', 1),
+    ('03120000-EEEE-4EEE-8EEE-000000000004', '03020000-EEEE-4EEE-8EEE-000000000001', '03050000-EEEE-4EEE-8EEE-000000000006', '03040000-EEEE-4EEE-8EEE-000000000002', 2, N'Top 2 in track', @e3_prelimScore, @now, @now, 'AUTO', 1),
+    ('03120000-EEEE-4EEE-8EEE-000000000005', '03020000-EEEE-4EEE-8EEE-000000000001', '03050000-EEEE-4EEE-8EEE-000000000008', '03040000-EEEE-4EEE-8EEE-000000000003', 1, N'Top 1 in track', @e3_prelimScore, @now, @now, 'AUTO', 1),
+    ('03120000-EEEE-4EEE-8EEE-000000000006', '03020000-EEEE-4EEE-8EEE-000000000001', '03050000-EEEE-4EEE-8EEE-000000000007', '03040000-EEEE-4EEE-8EEE-000000000003', 2, N'Top 2 in track', @e3_prelimScore, @now, @now, 'AUTO', 1);
 
 INSERT INTO published_results (id, created_at, dispute_deadline, published_at, published_by, round_id) VALUES
     ('03130000-EEEE-4EEE-8EEE-000000000001', @now, DATEADD(DAY, 2, @e3_prelimScore), @e3_prelimScore, @coordId, '03030000-EEEE-4EEE-8EEE-000000000001'),
@@ -5260,11 +5264,11 @@ INSERT INTO submissions (id, created_at, current_version_id, round_id, status, s
     ('040D0000-EEEE-4EEE-8EEE-000000000005', @now, NULL, '04030000-EEEE-4EEE-8EEE-000000000001', 'SUBMITTED', '04010000-EEEE-4EEE-8EEE-000000000019', '04050000-EEEE-4EEE-8EEE-000000000009', 0);
 
 INSERT INTO submission_versions (id, created_at, demo_url, github_url, slide_url, submitted_at, version_number, submission_id) VALUES
-    ('040E0000-EEEE-4EEE-8EEE-000000000001', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -30, @e4_prelimSub), 1, '040D0000-EEEE-4EEE-8EEE-000000000001'),
-    ('040E0000-EEEE-4EEE-8EEE-000000000002', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -31, @e4_prelimSub), 1, '040D0000-EEEE-4EEE-8EEE-000000000002'),
-    ('040E0000-EEEE-4EEE-8EEE-000000000003', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -32, @e4_prelimSub), 1, '040D0000-EEEE-4EEE-8EEE-000000000003'),
-    ('040E0000-EEEE-4EEE-8EEE-000000000004', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -33, @e4_prelimSub), 1, '040D0000-EEEE-4EEE-8EEE-000000000004'),
-    ('040E0000-EEEE-4EEE-8EEE-000000000005', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -34, @e4_prelimSub), 1, '040D0000-EEEE-4EEE-8EEE-000000000005');
+    ('040E0000-EEEE-4EEE-8EEE-000000000001', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/buildfast-rag', N'https://docs.google.com/presentation/d/seal-4-0', DATEADD(MINUTE, -30, @e4_prelimSub), 1, '040D0000-EEEE-4EEE-8EEE-000000000001'),
+    ('040E0000-EEEE-4EEE-8EEE-000000000002', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/liveretrieve', N'https://docs.google.com/presentation/d/seal-4-1', DATEADD(MINUTE, -31, @e4_prelimSub), 1, '040D0000-EEEE-4EEE-8EEE-000000000002'),
+    ('040E0000-EEEE-4EEE-8EEE-000000000003', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/demoforge', N'https://docs.google.com/presentation/d/seal-4-2', DATEADD(MINUTE, -32, @e4_prelimSub), 1, '040D0000-EEEE-4EEE-8EEE-000000000003'),
+    ('040E0000-EEEE-4EEE-8EEE-000000000004', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/seedpilot', N'https://docs.google.com/presentation/d/seal-4-3', DATEADD(MINUTE, -33, @e4_prelimSub), 1, '040D0000-EEEE-4EEE-8EEE-000000000004'),
+    ('040E0000-EEEE-4EEE-8EEE-000000000005', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/wireagent', N'https://docs.google.com/presentation/d/seal-4-4', DATEADD(MINUTE, -34, @e4_prelimSub), 1, '040D0000-EEEE-4EEE-8EEE-000000000005');
 
 UPDATE submissions SET current_version_id = '040E0000-EEEE-4EEE-8EEE-000000000001' WHERE id = '040D0000-EEEE-4EEE-8EEE-000000000001';
 UPDATE submissions SET current_version_id = '040E0000-EEEE-4EEE-8EEE-000000000002' WHERE id = '040D0000-EEEE-4EEE-8EEE-000000000002';
@@ -5274,9 +5278,9 @@ UPDATE submissions SET current_version_id = '040E0000-EEEE-4EEE-8EEE-00000000000
 
 -- ============================================================
 -- === SEAL Hackathon Summer Closing 2026 - Final Pitch Week ===
--- QA phase: SCORING - prelim fully scored + rankings ready, NOT published (demo publish per track/round)
--- Login: tran.thanh.ha@fpt.edu.vn (coordinator) — Publish Results on LiveScore / Demo@123456
--- View: /coordinator/livescore/05020000-EEEE-4EEE-8EEE-000000000001
+-- QA phase: SCORING - all submitted, partial judge scores
+-- Login: nguyen.van.duc@fpt.edu.vn (judge with unfinished scores) / Demo@123456
+-- View: /lecturer/scoring
 -- ============================================================
 
 DECLARE @e5_compDay DATE = CAST(DATEADD(DAY, -1, @now) AS DATE);
@@ -5298,8 +5302,7 @@ INSERT INTO hackathon_events (
     description, location, format, competition_format,
     min_team, max_team, semester_min, semester_max,
     scoring_template_id, status, leaderboard_public,
-    owner_user_id, created_by, created_at, updated_at,
-    score_scale_max
+    owner_user_id, created_by, created_at, updated_at
 ) VALUES (
     '05020000-EEEE-4EEE-8EEE-000000000001',
     N'SEAL Hackathon Summer Closing 2026 - Final Pitch Week',
@@ -5310,8 +5313,7 @@ INSERT INTO hackathon_events (
     N'FPT University HCM', 'OFFLINE', 'SEAL_RAG_2026',
     3, 5, 4, 8,
     @templateId, 'SCORING', 0,
-    @coordId, N'tran.thanh.ha@fpt.edu.vn', @now, @now,
-    100
+    @coordId, N'tran.thanh.ha@fpt.edu.vn', @now, @now
 );
 
 INSERT INTO tracks (id, event_id, name, description, max_teams, status, created_at, updated_at) VALUES
@@ -5334,16 +5336,16 @@ INSERT INTO rounds (
      6, 'FINALIST_POOL', 60, @now, @now);
 
 INSERT INTO criteria (id, round_id, name, description, weight, sort_order, min_score, max_score, created_at, updated_at) VALUES
-    ('05060000-EEEE-4EEE-8EEE-000000000001', '05030000-EEEE-4EEE-8EEE-000000000001', N'Accuracy and Domain Relevance', N'Accuracy and Domain Relevance', 30, 0, 1, 100, @now, @now),
-    ('05060000-EEEE-4EEE-8EEE-000000000002', '05030000-EEEE-4EEE-8EEE-000000000001', N'Agentic RAG Architecture & Algorithm', N'Agentic RAG Architecture & Algorithm', 30, 1, 1, 100, @now, @now),
-    ('05060000-EEEE-4EEE-8EEE-000000000003', '05030000-EEEE-4EEE-8EEE-000000000001', N'Ideas & Presentation', N'Ideas & Presentation', 15, 2, 1, 100, @now, @now),
-    ('05060000-EEEE-4EEE-8EEE-000000000004', '05030000-EEEE-4EEE-8EEE-000000000001', N'Feasibility & Creativity', N'Feasibility & Creativity', 15, 3, 1, 100, @now, @now),
-    ('05060000-EEEE-4EEE-8EEE-000000000005', '05030000-EEEE-4EEE-8EEE-000000000001', N'User Experience & Interactive Interface', N'User Experience & Interactive Interface', 10, 4, 1, 100, @now, @now),
-    ('05060000-EEEE-4EEE-8EEE-00000000000B', '05030000-EEEE-4EEE-8EEE-000000000002', N'Data Processing & Retrieval Quality', N'Data Processing & Retrieval Quality', 30, 0, 1, 100, @now, @now),
-    ('05060000-EEEE-4EEE-8EEE-00000000000C', '05030000-EEEE-4EEE-8EEE-000000000002', N'Reliability & Hallucination Resistance', N'Reliability & Hallucination Resistance', 20, 1, 1, 100, @now, @now),
-    ('05060000-EEEE-4EEE-8EEE-00000000000D', '05030000-EEEE-4EEE-8EEE-000000000002', N'Agent Reasoning & Multi-hop Processing', N'Agent Reasoning & Multi-hop Processing', 20, 2, 1, 100, @now, @now),
-    ('05060000-EEEE-4EEE-8EEE-00000000000E', '05030000-EEEE-4EEE-8EEE-000000000002', N'Practicality & Operational Optimization', N'Practicality & Operational Optimization', 20, 3, 1, 100, @now, @now),
-    ('05060000-EEEE-4EEE-8EEE-00000000000F', '05030000-EEEE-4EEE-8EEE-000000000002', N'Scalability & Innovation', N'Scalability & Innovation', 10, 4, 1, 100, @now, @now);
+    ('05060000-EEEE-4EEE-8EEE-000000000001', '05030000-EEEE-4EEE-8EEE-000000000001', N'Accuracy and Domain Relevance', N'Accuracy and Domain Relevance', 30, 0, 1, 5, @now, @now),
+    ('05060000-EEEE-4EEE-8EEE-000000000002', '05030000-EEEE-4EEE-8EEE-000000000001', N'Agentic RAG Architecture & Algorithm', N'Agentic RAG Architecture & Algorithm', 30, 1, 1, 5, @now, @now),
+    ('05060000-EEEE-4EEE-8EEE-000000000003', '05030000-EEEE-4EEE-8EEE-000000000001', N'Ideas & Presentation', N'Ideas & Presentation', 15, 2, 1, 5, @now, @now),
+    ('05060000-EEEE-4EEE-8EEE-000000000004', '05030000-EEEE-4EEE-8EEE-000000000001', N'Feasibility & Creativity', N'Feasibility & Creativity', 15, 3, 1, 5, @now, @now),
+    ('05060000-EEEE-4EEE-8EEE-000000000005', '05030000-EEEE-4EEE-8EEE-000000000001', N'User Experience & Interactive Interface', N'User Experience & Interactive Interface', 10, 4, 1, 5, @now, @now),
+    ('05060000-EEEE-4EEE-8EEE-00000000000B', '05030000-EEEE-4EEE-8EEE-000000000002', N'Data Processing & Retrieval Quality', N'Data Processing & Retrieval Quality', 30, 0, 1, 5, @now, @now),
+    ('05060000-EEEE-4EEE-8EEE-00000000000C', '05030000-EEEE-4EEE-8EEE-000000000002', N'Reliability & Hallucination Resistance', N'Reliability & Hallucination Resistance', 20, 1, 1, 5, @now, @now),
+    ('05060000-EEEE-4EEE-8EEE-00000000000D', '05030000-EEEE-4EEE-8EEE-000000000002', N'Agent Reasoning & Multi-hop Processing', N'Agent Reasoning & Multi-hop Processing', 20, 2, 1, 5, @now, @now),
+    ('05060000-EEEE-4EEE-8EEE-00000000000E', '05030000-EEEE-4EEE-8EEE-000000000002', N'Practicality & Operational Optimization', N'Practicality & Operational Optimization', 20, 3, 1, 5, @now, @now),
+    ('05060000-EEEE-4EEE-8EEE-00000000000F', '05030000-EEEE-4EEE-8EEE-000000000002', N'Scalability & Innovation', N'Scalability & Innovation', 10, 4, 1, 5, @now, @now);
 
 INSERT INTO prizes (id, event_id, rank, value, quantity, label, created_at, updated_at) VALUES
     ('05070000-EEEE-4EEE-8EEE-000000000001', '05020000-EEEE-4EEE-8EEE-000000000001', 'FIRST', '7000000', 1, N'First Prize', @now, @now),
@@ -5486,26 +5488,26 @@ INSERT INTO mentor_invitations (id, created_at, team_id, mentor_user_id, inviter
     ('05180000-EEEE-4EEE-8EEE-000000000009', @now, '05050000-EEEE-4EEE-8EEE-000000000009', @mentor3Id, '05010000-EEEE-4EEE-8EEE-000000000019', 'ACCEPTED', N'Seeded mentor assignment for QA');
 
 INSERT INTO submissions (id, created_at, current_version_id, round_id, status, submitted_by, team_id, opt_lock) VALUES
-    ('050D0000-EEEE-4EEE-8EEE-000000000001', @now, NULL, '05030000-EEEE-4EEE-8EEE-000000000001', 'SCORED', '05010000-EEEE-4EEE-8EEE-000000000001', '05050000-EEEE-4EEE-8EEE-000000000001', 0),
-    ('050D0000-EEEE-4EEE-8EEE-000000000002', @now, NULL, '05030000-EEEE-4EEE-8EEE-000000000001', 'SCORED', '05010000-EEEE-4EEE-8EEE-000000000004', '05050000-EEEE-4EEE-8EEE-000000000002', 0),
-    ('050D0000-EEEE-4EEE-8EEE-000000000003', @now, NULL, '05030000-EEEE-4EEE-8EEE-000000000001', 'SCORED', '05010000-EEEE-4EEE-8EEE-000000000007', '05050000-EEEE-4EEE-8EEE-000000000003', 0),
-    ('050D0000-EEEE-4EEE-8EEE-000000000004', @now, NULL, '05030000-EEEE-4EEE-8EEE-000000000001', 'SCORED', '05010000-EEEE-4EEE-8EEE-00000000000A', '05050000-EEEE-4EEE-8EEE-000000000004', 0),
-    ('050D0000-EEEE-4EEE-8EEE-000000000005', @now, NULL, '05030000-EEEE-4EEE-8EEE-000000000001', 'SCORED', '05010000-EEEE-4EEE-8EEE-00000000000D', '05050000-EEEE-4EEE-8EEE-000000000005', 0),
-    ('050D0000-EEEE-4EEE-8EEE-000000000006', @now, NULL, '05030000-EEEE-4EEE-8EEE-000000000001', 'SCORED', '05010000-EEEE-4EEE-8EEE-000000000010', '05050000-EEEE-4EEE-8EEE-000000000006', 0),
-    ('050D0000-EEEE-4EEE-8EEE-000000000007', @now, NULL, '05030000-EEEE-4EEE-8EEE-000000000001', 'SCORED', '05010000-EEEE-4EEE-8EEE-000000000013', '05050000-EEEE-4EEE-8EEE-000000000007', 0),
-    ('050D0000-EEEE-4EEE-8EEE-000000000008', @now, NULL, '05030000-EEEE-4EEE-8EEE-000000000001', 'SCORED', '05010000-EEEE-4EEE-8EEE-000000000016', '05050000-EEEE-4EEE-8EEE-000000000008', 0),
-    ('050D0000-EEEE-4EEE-8EEE-000000000009', @now, NULL, '05030000-EEEE-4EEE-8EEE-000000000001', 'SCORED', '05010000-EEEE-4EEE-8EEE-000000000019', '05050000-EEEE-4EEE-8EEE-000000000009', 0);
+    ('050D0000-EEEE-4EEE-8EEE-000000000001', @now, NULL, '05030000-EEEE-4EEE-8EEE-000000000001', 'SUBMITTED', '05010000-EEEE-4EEE-8EEE-000000000001', '05050000-EEEE-4EEE-8EEE-000000000001', 0),
+    ('050D0000-EEEE-4EEE-8EEE-000000000002', @now, NULL, '05030000-EEEE-4EEE-8EEE-000000000001', 'SUBMITTED', '05010000-EEEE-4EEE-8EEE-000000000004', '05050000-EEEE-4EEE-8EEE-000000000002', 0),
+    ('050D0000-EEEE-4EEE-8EEE-000000000003', @now, NULL, '05030000-EEEE-4EEE-8EEE-000000000001', 'SUBMITTED', '05010000-EEEE-4EEE-8EEE-000000000007', '05050000-EEEE-4EEE-8EEE-000000000003', 0),
+    ('050D0000-EEEE-4EEE-8EEE-000000000004', @now, NULL, '05030000-EEEE-4EEE-8EEE-000000000001', 'SUBMITTED', '05010000-EEEE-4EEE-8EEE-00000000000A', '05050000-EEEE-4EEE-8EEE-000000000004', 0),
+    ('050D0000-EEEE-4EEE-8EEE-000000000005', @now, NULL, '05030000-EEEE-4EEE-8EEE-000000000001', 'SUBMITTED', '05010000-EEEE-4EEE-8EEE-00000000000D', '05050000-EEEE-4EEE-8EEE-000000000005', 0),
+    ('050D0000-EEEE-4EEE-8EEE-000000000006', @now, NULL, '05030000-EEEE-4EEE-8EEE-000000000001', 'SUBMITTED', '05010000-EEEE-4EEE-8EEE-000000000010', '05050000-EEEE-4EEE-8EEE-000000000006', 0),
+    ('050D0000-EEEE-4EEE-8EEE-000000000007', @now, NULL, '05030000-EEEE-4EEE-8EEE-000000000001', 'SUBMITTED', '05010000-EEEE-4EEE-8EEE-000000000013', '05050000-EEEE-4EEE-8EEE-000000000007', 0),
+    ('050D0000-EEEE-4EEE-8EEE-000000000008', @now, NULL, '05030000-EEEE-4EEE-8EEE-000000000001', 'SUBMITTED', '05010000-EEEE-4EEE-8EEE-000000000016', '05050000-EEEE-4EEE-8EEE-000000000008', 0),
+    ('050D0000-EEEE-4EEE-8EEE-000000000009', @now, NULL, '05030000-EEEE-4EEE-8EEE-000000000001', 'SUBMITTED', '05010000-EEEE-4EEE-8EEE-000000000019', '05050000-EEEE-4EEE-8EEE-000000000009', 0);
 
 INSERT INTO submission_versions (id, created_at, demo_url, github_url, slide_url, submitted_at, version_number, submission_id) VALUES
-    ('050E0000-EEEE-4EEE-8EEE-000000000001', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -30, @e5_prelimSub), 1, '050D0000-EEEE-4EEE-8EEE-000000000001'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000002', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -31, @e5_prelimSub), 1, '050D0000-EEEE-4EEE-8EEE-000000000002'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000003', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -32, @e5_prelimSub), 1, '050D0000-EEEE-4EEE-8EEE-000000000003'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000004', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -33, @e5_prelimSub), 1, '050D0000-EEEE-4EEE-8EEE-000000000004'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000005', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -34, @e5_prelimSub), 1, '050D0000-EEEE-4EEE-8EEE-000000000005'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000006', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -35, @e5_prelimSub), 1, '050D0000-EEEE-4EEE-8EEE-000000000006'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000007', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -36, @e5_prelimSub), 1, '050D0000-EEEE-4EEE-8EEE-000000000007'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000008', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -37, @e5_prelimSub), 1, '050D0000-EEEE-4EEE-8EEE-000000000008'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000009', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -38, @e5_prelimSub), 1, '050D0000-EEEE-4EEE-8EEE-000000000009');
+    ('050E0000-EEEE-4EEE-8EEE-000000000001', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/finalpitch-pro', N'https://docs.google.com/presentation/d/seal-5-0', DATEADD(MINUTE, -30, @e5_prelimSub), 1, '050D0000-EEEE-4EEE-8EEE-000000000001'),
+    ('050E0000-EEEE-4EEE-8EEE-000000000002', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/stageready', N'https://docs.google.com/presentation/d/seal-5-1', DATEADD(MINUTE, -31, @e5_prelimSub), 1, '050D0000-EEEE-4EEE-8EEE-000000000002'),
+    ('050E0000-EEEE-4EEE-8EEE-000000000003', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/judgeme', N'https://docs.google.com/presentation/d/seal-5-2', DATEADD(MINUTE, -32, @e5_prelimSub), 1, '050D0000-EEEE-4EEE-8EEE-000000000003'),
+    ('050E0000-EEEE-4EEE-8EEE-000000000004', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/scoreboard-ai', N'https://docs.google.com/presentation/d/seal-5-3', DATEADD(MINUTE, -33, @e5_prelimSub), 1, '050D0000-EEEE-4EEE-8EEE-000000000004'),
+    ('050E0000-EEEE-4EEE-8EEE-000000000005', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/pitchvault', N'https://docs.google.com/presentation/d/seal-5-4', DATEADD(MINUTE, -34, @e5_prelimSub), 1, '050D0000-EEEE-4EEE-8EEE-000000000005'),
+    ('050E0000-EEEE-4EEE-8EEE-000000000006', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/closingact', N'https://docs.google.com/presentation/d/seal-5-5', DATEADD(MINUTE, -35, @e5_prelimSub), 1, '050D0000-EEEE-4EEE-8EEE-000000000006'),
+    ('050E0000-EEEE-4EEE-8EEE-000000000007', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/haloretrieve', N'https://docs.google.com/presentation/d/seal-5-6', DATEADD(MINUTE, -36, @e5_prelimSub), 1, '050D0000-EEEE-4EEE-8EEE-000000000007'),
+    ('050E0000-EEEE-4EEE-8EEE-000000000008', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/summitagent', N'https://docs.google.com/presentation/d/seal-5-7', DATEADD(MINUTE, -37, @e5_prelimSub), 1, '050D0000-EEEE-4EEE-8EEE-000000000008'),
+    ('050E0000-EEEE-4EEE-8EEE-000000000009', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/lastmile-rag', N'https://docs.google.com/presentation/d/seal-5-8', DATEADD(MINUTE, -38, @e5_prelimSub), 1, '050D0000-EEEE-4EEE-8EEE-000000000009');
 
 UPDATE submissions SET current_version_id = '050E0000-EEEE-4EEE-8EEE-000000000001' WHERE id = '050D0000-EEEE-4EEE-8EEE-000000000001';
 UPDATE submissions SET current_version_id = '050E0000-EEEE-4EEE-8EEE-000000000002' WHERE id = '050D0000-EEEE-4EEE-8EEE-000000000002';
@@ -5518,189 +5520,68 @@ UPDATE submissions SET current_version_id = '050E0000-EEEE-4EEE-8EEE-00000000000
 UPDATE submissions SET current_version_id = '050E0000-EEEE-4EEE-8EEE-000000000009' WHERE id = '050D0000-EEEE-4EEE-8EEE-000000000009';
 
 INSERT INTO judge_scores (id, created_at, completed_at, judge_user_id, round_id, started_at, status, submission_id, version) VALUES
-    ('050F0000-EEEE-4EEE-8EEE-000000000001', @now, @now, @judge1Id, '05030000-EEEE-4EEE-8EEE-000000000001', @e5_prelimSub, 'COMPLETED', '050D0000-EEEE-4EEE-8EEE-000000000001', 0),
-    ('050F0000-EEEE-4EEE-8EEE-000000000002', @now, @now, @judge2Id, '05030000-EEEE-4EEE-8EEE-000000000001', @e5_prelimSub, 'COMPLETED', '050D0000-EEEE-4EEE-8EEE-000000000001', 0),
-    ('050F0000-EEEE-4EEE-8EEE-000000000003', @now, @now, @judge3Id, '05030000-EEEE-4EEE-8EEE-000000000001', @e5_prelimSub, 'COMPLETED', '050D0000-EEEE-4EEE-8EEE-000000000001', 0),
-    ('050F0000-EEEE-4EEE-8EEE-000000000004', @now, @now, @judge1Id, '05030000-EEEE-4EEE-8EEE-000000000001', @e5_prelimSub, 'COMPLETED', '050D0000-EEEE-4EEE-8EEE-000000000002', 0),
-    ('050F0000-EEEE-4EEE-8EEE-000000000005', @now, @now, @judge2Id, '05030000-EEEE-4EEE-8EEE-000000000001', @e5_prelimSub, 'COMPLETED', '050D0000-EEEE-4EEE-8EEE-000000000002', 0),
-    ('050F0000-EEEE-4EEE-8EEE-000000000006', @now, @now, @judge3Id, '05030000-EEEE-4EEE-8EEE-000000000001', @e5_prelimSub, 'COMPLETED', '050D0000-EEEE-4EEE-8EEE-000000000002', 0),
-    ('050F0000-EEEE-4EEE-8EEE-000000000007', @now, @now, @judge1Id, '05030000-EEEE-4EEE-8EEE-000000000001', @e5_prelimSub, 'COMPLETED', '050D0000-EEEE-4EEE-8EEE-000000000003', 0),
-    ('050F0000-EEEE-4EEE-8EEE-000000000008', @now, @now, @judge2Id, '05030000-EEEE-4EEE-8EEE-000000000001', @e5_prelimSub, 'COMPLETED', '050D0000-EEEE-4EEE-8EEE-000000000003', 0),
-    ('050F0000-EEEE-4EEE-8EEE-000000000009', @now, @now, @judge3Id, '05030000-EEEE-4EEE-8EEE-000000000001', @e5_prelimSub, 'COMPLETED', '050D0000-EEEE-4EEE-8EEE-000000000003', 0),
-    ('050F0000-EEEE-4EEE-8EEE-00000000000A', @now, @now, @judge1Id, '05030000-EEEE-4EEE-8EEE-000000000001', @e5_prelimSub, 'COMPLETED', '050D0000-EEEE-4EEE-8EEE-000000000004', 0),
-    ('050F0000-EEEE-4EEE-8EEE-00000000000B', @now, @now, @judge2Id, '05030000-EEEE-4EEE-8EEE-000000000001', @e5_prelimSub, 'COMPLETED', '050D0000-EEEE-4EEE-8EEE-000000000004', 0),
-    ('050F0000-EEEE-4EEE-8EEE-00000000000C', @now, @now, @judge3Id, '05030000-EEEE-4EEE-8EEE-000000000001', @e5_prelimSub, 'COMPLETED', '050D0000-EEEE-4EEE-8EEE-000000000004', 0),
-    ('050F0000-EEEE-4EEE-8EEE-00000000000D', @now, @now, @judge1Id, '05030000-EEEE-4EEE-8EEE-000000000001', @e5_prelimSub, 'COMPLETED', '050D0000-EEEE-4EEE-8EEE-000000000005', 0),
-    ('050F0000-EEEE-4EEE-8EEE-00000000000E', @now, @now, @judge2Id, '05030000-EEEE-4EEE-8EEE-000000000001', @e5_prelimSub, 'COMPLETED', '050D0000-EEEE-4EEE-8EEE-000000000005', 0),
-    ('050F0000-EEEE-4EEE-8EEE-00000000000F', @now, @now, @judge3Id, '05030000-EEEE-4EEE-8EEE-000000000001', @e5_prelimSub, 'COMPLETED', '050D0000-EEEE-4EEE-8EEE-000000000005', 0),
-    ('050F0000-EEEE-4EEE-8EEE-000000000010', @now, @now, @judge1Id, '05030000-EEEE-4EEE-8EEE-000000000001', @e5_prelimSub, 'COMPLETED', '050D0000-EEEE-4EEE-8EEE-000000000006', 0),
-    ('050F0000-EEEE-4EEE-8EEE-000000000011', @now, @now, @judge2Id, '05030000-EEEE-4EEE-8EEE-000000000001', @e5_prelimSub, 'COMPLETED', '050D0000-EEEE-4EEE-8EEE-000000000006', 0),
-    ('050F0000-EEEE-4EEE-8EEE-000000000012', @now, @now, @judge3Id, '05030000-EEEE-4EEE-8EEE-000000000001', @e5_prelimSub, 'COMPLETED', '050D0000-EEEE-4EEE-8EEE-000000000006', 0),
-    ('050F0000-EEEE-4EEE-8EEE-000000000013', @now, @now, @judge1Id, '05030000-EEEE-4EEE-8EEE-000000000001', @e5_prelimSub, 'COMPLETED', '050D0000-EEEE-4EEE-8EEE-000000000007', 0),
-    ('050F0000-EEEE-4EEE-8EEE-000000000014', @now, @now, @judge2Id, '05030000-EEEE-4EEE-8EEE-000000000001', @e5_prelimSub, 'COMPLETED', '050D0000-EEEE-4EEE-8EEE-000000000007', 0),
-    ('050F0000-EEEE-4EEE-8EEE-000000000015', @now, @now, @judge3Id, '05030000-EEEE-4EEE-8EEE-000000000001', @e5_prelimSub, 'COMPLETED', '050D0000-EEEE-4EEE-8EEE-000000000007', 0),
-    ('050F0000-EEEE-4EEE-8EEE-000000000016', @now, @now, @judge1Id, '05030000-EEEE-4EEE-8EEE-000000000001', @e5_prelimSub, 'COMPLETED', '050D0000-EEEE-4EEE-8EEE-000000000008', 0),
-    ('050F0000-EEEE-4EEE-8EEE-000000000017', @now, @now, @judge2Id, '05030000-EEEE-4EEE-8EEE-000000000001', @e5_prelimSub, 'COMPLETED', '050D0000-EEEE-4EEE-8EEE-000000000008', 0),
-    ('050F0000-EEEE-4EEE-8EEE-000000000018', @now, @now, @judge3Id, '05030000-EEEE-4EEE-8EEE-000000000001', @e5_prelimSub, 'COMPLETED', '050D0000-EEEE-4EEE-8EEE-000000000008', 0),
-    ('050F0000-EEEE-4EEE-8EEE-000000000019', @now, @now, @judge1Id, '05030000-EEEE-4EEE-8EEE-000000000001', @e5_prelimSub, 'COMPLETED', '050D0000-EEEE-4EEE-8EEE-000000000009', 0),
-    ('050F0000-EEEE-4EEE-8EEE-00000000001A', @now, @now, @judge2Id, '05030000-EEEE-4EEE-8EEE-000000000001', @e5_prelimSub, 'COMPLETED', '050D0000-EEEE-4EEE-8EEE-000000000009', 0),
-    ('050F0000-EEEE-4EEE-8EEE-00000000001B', @now, @now, @judge3Id, '05030000-EEEE-4EEE-8EEE-000000000001', @e5_prelimSub, 'COMPLETED', '050D0000-EEEE-4EEE-8EEE-000000000009', 0);
+    ('050F0000-EEEE-4EEE-8EEE-000000000001', @now, @now, @judge1Id, '05030000-EEEE-4EEE-8EEE-000000000001', DATEADD(HOUR, -2, @now), 'COMPLETED', '050D0000-EEEE-4EEE-8EEE-000000000001', 0),
+    ('050F0000-EEEE-4EEE-8EEE-000000000002', @now, @now, @judge2Id, '05030000-EEEE-4EEE-8EEE-000000000001', DATEADD(HOUR, -2, @now), 'COMPLETED', '050D0000-EEEE-4EEE-8EEE-000000000001', 0),
+    ('050F0000-EEEE-4EEE-8EEE-000000000003', @now, @now, @judge1Id, '05030000-EEEE-4EEE-8EEE-000000000001', DATEADD(HOUR, -2, @now), 'COMPLETED', '050D0000-EEEE-4EEE-8EEE-000000000002', 0),
+    ('050F0000-EEEE-4EEE-8EEE-000000000004', @now, @now, @judge2Id, '05030000-EEEE-4EEE-8EEE-000000000001', DATEADD(HOUR, -2, @now), 'COMPLETED', '050D0000-EEEE-4EEE-8EEE-000000000002', 0),
+    ('050F0000-EEEE-4EEE-8EEE-000000000005', @now, @now, @judge1Id, '05030000-EEEE-4EEE-8EEE-000000000001', DATEADD(HOUR, -2, @now), 'COMPLETED', '050D0000-EEEE-4EEE-8EEE-000000000003', 0),
+    ('050F0000-EEEE-4EEE-8EEE-000000000006', @now, @now, @judge2Id, '05030000-EEEE-4EEE-8EEE-000000000001', DATEADD(HOUR, -2, @now), 'COMPLETED', '050D0000-EEEE-4EEE-8EEE-000000000003', 0),
+    ('050F0000-EEEE-4EEE-8EEE-000000000007', @now, @now, @judge1Id, '05030000-EEEE-4EEE-8EEE-000000000001', DATEADD(HOUR, -2, @now), 'COMPLETED', '050D0000-EEEE-4EEE-8EEE-000000000004', 0),
+    ('050F0000-EEEE-4EEE-8EEE-000000000008', @now, @now, @judge1Id, '05030000-EEEE-4EEE-8EEE-000000000001', DATEADD(HOUR, -2, @now), 'COMPLETED', '050D0000-EEEE-4EEE-8EEE-000000000005', 0),
+    ('050F0000-EEEE-4EEE-8EEE-000000000009', @now, NULL, @judge1Id, '05030000-EEEE-4EEE-8EEE-000000000001', DATEADD(HOUR, -1, @now), 'IN_PROGRESS', '050D0000-EEEE-4EEE-8EEE-000000000006', 0),
+    ('050F0000-EEEE-4EEE-8EEE-00000000000A', @now, NULL, @judge1Id, '05030000-EEEE-4EEE-8EEE-000000000001', DATEADD(HOUR, -1, @now), 'IN_PROGRESS', '050D0000-EEEE-4EEE-8EEE-000000000007', 0),
+    ('050F0000-EEEE-4EEE-8EEE-00000000000B', @now, NULL, @judge1Id, '05030000-EEEE-4EEE-8EEE-000000000001', DATEADD(HOUR, -1, @now), 'IN_PROGRESS', '050D0000-EEEE-4EEE-8EEE-000000000008', 0),
+    ('050F0000-EEEE-4EEE-8EEE-00000000000C', @now, NULL, @judge1Id, '05030000-EEEE-4EEE-8EEE-000000000001', DATEADD(HOUR, -1, @now), 'IN_PROGRESS', '050D0000-EEEE-4EEE-8EEE-000000000009', 0);
 
 INSERT INTO judge_score_details (id, created_at, criteria_id, score, judge_score_id) VALUES
-    ('050E0000-EEEE-4EEE-8EEE-000000000001', @now, '05060000-EEEE-4EEE-8EEE-000000000001', 100, '050F0000-EEEE-4EEE-8EEE-000000000001'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000002', @now, '05060000-EEEE-4EEE-8EEE-000000000002', 100, '050F0000-EEEE-4EEE-8EEE-000000000001'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000003', @now, '05060000-EEEE-4EEE-8EEE-000000000003', 100, '050F0000-EEEE-4EEE-8EEE-000000000001'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000004', @now, '05060000-EEEE-4EEE-8EEE-000000000004', 75, '050F0000-EEEE-4EEE-8EEE-000000000001'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000005', @now, '05060000-EEEE-4EEE-8EEE-000000000005', 100, '050F0000-EEEE-4EEE-8EEE-000000000001'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000006', @now, '05060000-EEEE-4EEE-8EEE-000000000001', 75, '050F0000-EEEE-4EEE-8EEE-000000000002'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000007', @now, '05060000-EEEE-4EEE-8EEE-000000000002', 100, '050F0000-EEEE-4EEE-8EEE-000000000002'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000008', @now, '05060000-EEEE-4EEE-8EEE-000000000003', 75, '050F0000-EEEE-4EEE-8EEE-000000000002'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000009', @now, '05060000-EEEE-4EEE-8EEE-000000000004', 75, '050F0000-EEEE-4EEE-8EEE-000000000002'),
-    ('050E0000-EEEE-4EEE-8EEE-00000000000A', @now, '05060000-EEEE-4EEE-8EEE-000000000005', 75, '050F0000-EEEE-4EEE-8EEE-000000000002'),
-    ('050E0000-EEEE-4EEE-8EEE-00000000000B', @now, '05060000-EEEE-4EEE-8EEE-000000000001', 100, '050F0000-EEEE-4EEE-8EEE-000000000003'),
-    ('050E0000-EEEE-4EEE-8EEE-00000000000C', @now, '05060000-EEEE-4EEE-8EEE-000000000002', 100, '050F0000-EEEE-4EEE-8EEE-000000000003'),
-    ('050E0000-EEEE-4EEE-8EEE-00000000000D', @now, '05060000-EEEE-4EEE-8EEE-000000000003', 100, '050F0000-EEEE-4EEE-8EEE-000000000003'),
-    ('050E0000-EEEE-4EEE-8EEE-00000000000E', @now, '05060000-EEEE-4EEE-8EEE-000000000004', 75, '050F0000-EEEE-4EEE-8EEE-000000000003'),
-    ('050E0000-EEEE-4EEE-8EEE-00000000000F', @now, '05060000-EEEE-4EEE-8EEE-000000000005', 100, '050F0000-EEEE-4EEE-8EEE-000000000003'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000010', @now, '05060000-EEEE-4EEE-8EEE-000000000001', 100, '050F0000-EEEE-4EEE-8EEE-000000000004'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000011', @now, '05060000-EEEE-4EEE-8EEE-000000000002', 75, '050F0000-EEEE-4EEE-8EEE-000000000004'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000012', @now, '05060000-EEEE-4EEE-8EEE-000000000003', 100, '050F0000-EEEE-4EEE-8EEE-000000000004'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000013', @now, '05060000-EEEE-4EEE-8EEE-000000000004', 75, '050F0000-EEEE-4EEE-8EEE-000000000004'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000014', @now, '05060000-EEEE-4EEE-8EEE-000000000005', 75, '050F0000-EEEE-4EEE-8EEE-000000000004'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000015', @now, '05060000-EEEE-4EEE-8EEE-000000000001', 100, '050F0000-EEEE-4EEE-8EEE-000000000005'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000016', @now, '05060000-EEEE-4EEE-8EEE-000000000002', 75, '050F0000-EEEE-4EEE-8EEE-000000000005'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000017', @now, '05060000-EEEE-4EEE-8EEE-000000000003', 100, '050F0000-EEEE-4EEE-8EEE-000000000005'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000018', @now, '05060000-EEEE-4EEE-8EEE-000000000004', 75, '050F0000-EEEE-4EEE-8EEE-000000000005'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000019', @now, '05060000-EEEE-4EEE-8EEE-000000000005', 75, '050F0000-EEEE-4EEE-8EEE-000000000005'),
-    ('050E0000-EEEE-4EEE-8EEE-00000000001A', @now, '05060000-EEEE-4EEE-8EEE-000000000001', 75, '050F0000-EEEE-4EEE-8EEE-000000000006'),
-    ('050E0000-EEEE-4EEE-8EEE-00000000001B', @now, '05060000-EEEE-4EEE-8EEE-000000000002', 75, '050F0000-EEEE-4EEE-8EEE-000000000006'),
-    ('050E0000-EEEE-4EEE-8EEE-00000000001C', @now, '05060000-EEEE-4EEE-8EEE-000000000003', 75, '050F0000-EEEE-4EEE-8EEE-000000000006'),
-    ('050E0000-EEEE-4EEE-8EEE-00000000001D', @now, '05060000-EEEE-4EEE-8EEE-000000000004', 75, '050F0000-EEEE-4EEE-8EEE-000000000006'),
-    ('050E0000-EEEE-4EEE-8EEE-00000000001E', @now, '05060000-EEEE-4EEE-8EEE-000000000005', 50, '050F0000-EEEE-4EEE-8EEE-000000000006'),
-    ('050E0000-EEEE-4EEE-8EEE-00000000001F', @now, '05060000-EEEE-4EEE-8EEE-000000000001', 75, '050F0000-EEEE-4EEE-8EEE-000000000007'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000020', @now, '05060000-EEEE-4EEE-8EEE-000000000002', 100, '050F0000-EEEE-4EEE-8EEE-000000000007'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000021', @now, '05060000-EEEE-4EEE-8EEE-000000000003', 75, '050F0000-EEEE-4EEE-8EEE-000000000007'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000022', @now, '05060000-EEEE-4EEE-8EEE-000000000004', 75, '050F0000-EEEE-4EEE-8EEE-000000000007'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000023', @now, '05060000-EEEE-4EEE-8EEE-000000000005', 75, '050F0000-EEEE-4EEE-8EEE-000000000007'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000024', @now, '05060000-EEEE-4EEE-8EEE-000000000001', 50, '050F0000-EEEE-4EEE-8EEE-000000000008'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000025', @now, '05060000-EEEE-4EEE-8EEE-000000000002', 100, '050F0000-EEEE-4EEE-8EEE-000000000008'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000026', @now, '05060000-EEEE-4EEE-8EEE-000000000003', 50, '050F0000-EEEE-4EEE-8EEE-000000000008'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000027', @now, '05060000-EEEE-4EEE-8EEE-000000000004', 75, '050F0000-EEEE-4EEE-8EEE-000000000008'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000028', @now, '05060000-EEEE-4EEE-8EEE-000000000005', 50, '050F0000-EEEE-4EEE-8EEE-000000000008'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000029', @now, '05060000-EEEE-4EEE-8EEE-000000000001', 75, '050F0000-EEEE-4EEE-8EEE-000000000009'),
-    ('050E0000-EEEE-4EEE-8EEE-00000000002A', @now, '05060000-EEEE-4EEE-8EEE-000000000002', 100, '050F0000-EEEE-4EEE-8EEE-000000000009'),
-    ('050E0000-EEEE-4EEE-8EEE-00000000002B', @now, '05060000-EEEE-4EEE-8EEE-000000000003', 75, '050F0000-EEEE-4EEE-8EEE-000000000009'),
-    ('050E0000-EEEE-4EEE-8EEE-00000000002C', @now, '05060000-EEEE-4EEE-8EEE-000000000004', 75, '050F0000-EEEE-4EEE-8EEE-000000000009'),
-    ('050E0000-EEEE-4EEE-8EEE-00000000002D', @now, '05060000-EEEE-4EEE-8EEE-000000000005', 75, '050F0000-EEEE-4EEE-8EEE-000000000009'),
-    ('050E0000-EEEE-4EEE-8EEE-00000000002E', @now, '05060000-EEEE-4EEE-8EEE-000000000001', 75, '050F0000-EEEE-4EEE-8EEE-00000000000A'),
-    ('050E0000-EEEE-4EEE-8EEE-00000000002F', @now, '05060000-EEEE-4EEE-8EEE-000000000002', 75, '050F0000-EEEE-4EEE-8EEE-00000000000A'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000030', @now, '05060000-EEEE-4EEE-8EEE-000000000003', 75, '050F0000-EEEE-4EEE-8EEE-00000000000A'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000031', @now, '05060000-EEEE-4EEE-8EEE-000000000004', 100, '050F0000-EEEE-4EEE-8EEE-00000000000A'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000032', @now, '05060000-EEEE-4EEE-8EEE-000000000005', 75, '050F0000-EEEE-4EEE-8EEE-00000000000A'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000033', @now, '05060000-EEEE-4EEE-8EEE-000000000001', 75, '050F0000-EEEE-4EEE-8EEE-00000000000B'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000034', @now, '05060000-EEEE-4EEE-8EEE-000000000002', 75, '050F0000-EEEE-4EEE-8EEE-00000000000B'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000035', @now, '05060000-EEEE-4EEE-8EEE-000000000003', 75, '050F0000-EEEE-4EEE-8EEE-00000000000B'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000036', @now, '05060000-EEEE-4EEE-8EEE-000000000004', 100, '050F0000-EEEE-4EEE-8EEE-00000000000B'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000037', @now, '05060000-EEEE-4EEE-8EEE-000000000005', 75, '050F0000-EEEE-4EEE-8EEE-00000000000B'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000038', @now, '05060000-EEEE-4EEE-8EEE-000000000001', 50, '050F0000-EEEE-4EEE-8EEE-00000000000C'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000039', @now, '05060000-EEEE-4EEE-8EEE-000000000002', 75, '050F0000-EEEE-4EEE-8EEE-00000000000C'),
-    ('050E0000-EEEE-4EEE-8EEE-00000000003A', @now, '05060000-EEEE-4EEE-8EEE-000000000003', 50, '050F0000-EEEE-4EEE-8EEE-00000000000C'),
-    ('050E0000-EEEE-4EEE-8EEE-00000000003B', @now, '05060000-EEEE-4EEE-8EEE-000000000004', 100, '050F0000-EEEE-4EEE-8EEE-00000000000C'),
-    ('050E0000-EEEE-4EEE-8EEE-00000000003C', @now, '05060000-EEEE-4EEE-8EEE-000000000005', 50, '050F0000-EEEE-4EEE-8EEE-00000000000C'),
-    ('050E0000-EEEE-4EEE-8EEE-00000000003D', @now, '05060000-EEEE-4EEE-8EEE-000000000001', 75, '050F0000-EEEE-4EEE-8EEE-00000000000D'),
-    ('050E0000-EEEE-4EEE-8EEE-00000000003E', @now, '05060000-EEEE-4EEE-8EEE-000000000002', 75, '050F0000-EEEE-4EEE-8EEE-00000000000D'),
-    ('050E0000-EEEE-4EEE-8EEE-00000000003F', @now, '05060000-EEEE-4EEE-8EEE-000000000003', 75, '050F0000-EEEE-4EEE-8EEE-00000000000D'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000040', @now, '05060000-EEEE-4EEE-8EEE-000000000004', 50, '050F0000-EEEE-4EEE-8EEE-00000000000D'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000041', @now, '05060000-EEEE-4EEE-8EEE-000000000005', 75, '050F0000-EEEE-4EEE-8EEE-00000000000D'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000042', @now, '05060000-EEEE-4EEE-8EEE-000000000001', 50, '050F0000-EEEE-4EEE-8EEE-00000000000E'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000043', @now, '05060000-EEEE-4EEE-8EEE-000000000002', 75, '050F0000-EEEE-4EEE-8EEE-00000000000E'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000044', @now, '05060000-EEEE-4EEE-8EEE-000000000003', 50, '050F0000-EEEE-4EEE-8EEE-00000000000E'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000045', @now, '05060000-EEEE-4EEE-8EEE-000000000004', 50, '050F0000-EEEE-4EEE-8EEE-00000000000E'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000046', @now, '05060000-EEEE-4EEE-8EEE-000000000005', 50, '050F0000-EEEE-4EEE-8EEE-00000000000E'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000047', @now, '05060000-EEEE-4EEE-8EEE-000000000001', 75, '050F0000-EEEE-4EEE-8EEE-00000000000F'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000048', @now, '05060000-EEEE-4EEE-8EEE-000000000002', 75, '050F0000-EEEE-4EEE-8EEE-00000000000F'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000049', @now, '05060000-EEEE-4EEE-8EEE-000000000003', 75, '050F0000-EEEE-4EEE-8EEE-00000000000F'),
-    ('050E0000-EEEE-4EEE-8EEE-00000000004A', @now, '05060000-EEEE-4EEE-8EEE-000000000004', 50, '050F0000-EEEE-4EEE-8EEE-00000000000F'),
-    ('050E0000-EEEE-4EEE-8EEE-00000000004B', @now, '05060000-EEEE-4EEE-8EEE-000000000005', 75, '050F0000-EEEE-4EEE-8EEE-00000000000F'),
-    ('050E0000-EEEE-4EEE-8EEE-00000000004C', @now, '05060000-EEEE-4EEE-8EEE-000000000001', 75, '050F0000-EEEE-4EEE-8EEE-000000000010'),
-    ('050E0000-EEEE-4EEE-8EEE-00000000004D', @now, '05060000-EEEE-4EEE-8EEE-000000000002', 50, '050F0000-EEEE-4EEE-8EEE-000000000010'),
-    ('050E0000-EEEE-4EEE-8EEE-00000000004E', @now, '05060000-EEEE-4EEE-8EEE-000000000003', 75, '050F0000-EEEE-4EEE-8EEE-000000000010'),
-    ('050E0000-EEEE-4EEE-8EEE-00000000004F', @now, '05060000-EEEE-4EEE-8EEE-000000000004', 75, '050F0000-EEEE-4EEE-8EEE-000000000010'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000050', @now, '05060000-EEEE-4EEE-8EEE-000000000005', 50, '050F0000-EEEE-4EEE-8EEE-000000000010'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000051', @now, '05060000-EEEE-4EEE-8EEE-000000000001', 75, '050F0000-EEEE-4EEE-8EEE-000000000011'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000052', @now, '05060000-EEEE-4EEE-8EEE-000000000002', 50, '050F0000-EEEE-4EEE-8EEE-000000000011'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000053', @now, '05060000-EEEE-4EEE-8EEE-000000000003', 75, '050F0000-EEEE-4EEE-8EEE-000000000011'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000054', @now, '05060000-EEEE-4EEE-8EEE-000000000004', 75, '050F0000-EEEE-4EEE-8EEE-000000000011'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000055', @now, '05060000-EEEE-4EEE-8EEE-000000000005', 50, '050F0000-EEEE-4EEE-8EEE-000000000011'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000056', @now, '05060000-EEEE-4EEE-8EEE-000000000001', 50, '050F0000-EEEE-4EEE-8EEE-000000000012'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000057', @now, '05060000-EEEE-4EEE-8EEE-000000000002', 50, '050F0000-EEEE-4EEE-8EEE-000000000012'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000058', @now, '05060000-EEEE-4EEE-8EEE-000000000003', 50, '050F0000-EEEE-4EEE-8EEE-000000000012'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000059', @now, '05060000-EEEE-4EEE-8EEE-000000000004', 75, '050F0000-EEEE-4EEE-8EEE-000000000012'),
-    ('050E0000-EEEE-4EEE-8EEE-00000000005A', @now, '05060000-EEEE-4EEE-8EEE-000000000005', 26, '050F0000-EEEE-4EEE-8EEE-000000000012'),
-    ('050E0000-EEEE-4EEE-8EEE-00000000005B', @now, '05060000-EEEE-4EEE-8EEE-000000000001', 50, '050F0000-EEEE-4EEE-8EEE-000000000013'),
-    ('050E0000-EEEE-4EEE-8EEE-00000000005C', @now, '05060000-EEEE-4EEE-8EEE-000000000002', 75, '050F0000-EEEE-4EEE-8EEE-000000000013'),
-    ('050E0000-EEEE-4EEE-8EEE-00000000005D', @now, '05060000-EEEE-4EEE-8EEE-000000000003', 50, '050F0000-EEEE-4EEE-8EEE-000000000013'),
-    ('050E0000-EEEE-4EEE-8EEE-00000000005E', @now, '05060000-EEEE-4EEE-8EEE-000000000004', 50, '050F0000-EEEE-4EEE-8EEE-000000000013'),
-    ('050E0000-EEEE-4EEE-8EEE-00000000005F', @now, '05060000-EEEE-4EEE-8EEE-000000000005', 75, '050F0000-EEEE-4EEE-8EEE-000000000013'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000060', @now, '05060000-EEEE-4EEE-8EEE-000000000001', 26, '050F0000-EEEE-4EEE-8EEE-000000000014'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000061', @now, '05060000-EEEE-4EEE-8EEE-000000000002', 75, '050F0000-EEEE-4EEE-8EEE-000000000014'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000062', @now, '05060000-EEEE-4EEE-8EEE-000000000003', 26, '050F0000-EEEE-4EEE-8EEE-000000000014'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000063', @now, '05060000-EEEE-4EEE-8EEE-000000000004', 50, '050F0000-EEEE-4EEE-8EEE-000000000014'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000064', @now, '05060000-EEEE-4EEE-8EEE-000000000005', 50, '050F0000-EEEE-4EEE-8EEE-000000000014'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000065', @now, '05060000-EEEE-4EEE-8EEE-000000000001', 50, '050F0000-EEEE-4EEE-8EEE-000000000015'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000066', @now, '05060000-EEEE-4EEE-8EEE-000000000002', 75, '050F0000-EEEE-4EEE-8EEE-000000000015'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000067', @now, '05060000-EEEE-4EEE-8EEE-000000000003', 50, '050F0000-EEEE-4EEE-8EEE-000000000015'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000068', @now, '05060000-EEEE-4EEE-8EEE-000000000004', 50, '050F0000-EEEE-4EEE-8EEE-000000000015'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000069', @now, '05060000-EEEE-4EEE-8EEE-000000000005', 75, '050F0000-EEEE-4EEE-8EEE-000000000015'),
-    ('050E0000-EEEE-4EEE-8EEE-00000000006A', @now, '05060000-EEEE-4EEE-8EEE-000000000001', 50, '050F0000-EEEE-4EEE-8EEE-000000000016'),
-    ('050E0000-EEEE-4EEE-8EEE-00000000006B', @now, '05060000-EEEE-4EEE-8EEE-000000000002', 50, '050F0000-EEEE-4EEE-8EEE-000000000016'),
-    ('050E0000-EEEE-4EEE-8EEE-00000000006C', @now, '05060000-EEEE-4EEE-8EEE-000000000003', 50, '050F0000-EEEE-4EEE-8EEE-000000000016'),
-    ('050E0000-EEEE-4EEE-8EEE-00000000006D', @now, '05060000-EEEE-4EEE-8EEE-000000000004', 75, '050F0000-EEEE-4EEE-8EEE-000000000016'),
-    ('050E0000-EEEE-4EEE-8EEE-00000000006E', @now, '05060000-EEEE-4EEE-8EEE-000000000005', 50, '050F0000-EEEE-4EEE-8EEE-000000000016'),
-    ('050E0000-EEEE-4EEE-8EEE-00000000006F', @now, '05060000-EEEE-4EEE-8EEE-000000000001', 50, '050F0000-EEEE-4EEE-8EEE-000000000017'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000070', @now, '05060000-EEEE-4EEE-8EEE-000000000002', 50, '050F0000-EEEE-4EEE-8EEE-000000000017'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000071', @now, '05060000-EEEE-4EEE-8EEE-000000000003', 50, '050F0000-EEEE-4EEE-8EEE-000000000017'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000072', @now, '05060000-EEEE-4EEE-8EEE-000000000004', 75, '050F0000-EEEE-4EEE-8EEE-000000000017'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000073', @now, '05060000-EEEE-4EEE-8EEE-000000000005', 50, '050F0000-EEEE-4EEE-8EEE-000000000017'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000074', @now, '05060000-EEEE-4EEE-8EEE-000000000001', 26, '050F0000-EEEE-4EEE-8EEE-000000000018'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000075', @now, '05060000-EEEE-4EEE-8EEE-000000000002', 50, '050F0000-EEEE-4EEE-8EEE-000000000018'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000076', @now, '05060000-EEEE-4EEE-8EEE-000000000003', 26, '050F0000-EEEE-4EEE-8EEE-000000000018'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000077', @now, '05060000-EEEE-4EEE-8EEE-000000000004', 75, '050F0000-EEEE-4EEE-8EEE-000000000018'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000078', @now, '05060000-EEEE-4EEE-8EEE-000000000005', 26, '050F0000-EEEE-4EEE-8EEE-000000000018'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000079', @now, '05060000-EEEE-4EEE-8EEE-000000000001', 50, '050F0000-EEEE-4EEE-8EEE-000000000019'),
-    ('050E0000-EEEE-4EEE-8EEE-00000000007A', @now, '05060000-EEEE-4EEE-8EEE-000000000002', 50, '050F0000-EEEE-4EEE-8EEE-000000000019'),
-    ('050E0000-EEEE-4EEE-8EEE-00000000007B', @now, '05060000-EEEE-4EEE-8EEE-000000000003', 26, '050F0000-EEEE-4EEE-8EEE-000000000019'),
-    ('050E0000-EEEE-4EEE-8EEE-00000000007C', @now, '05060000-EEEE-4EEE-8EEE-000000000004', 50, '050F0000-EEEE-4EEE-8EEE-000000000019'),
-    ('050E0000-EEEE-4EEE-8EEE-00000000007D', @now, '05060000-EEEE-4EEE-8EEE-000000000005', 50, '050F0000-EEEE-4EEE-8EEE-000000000019'),
-    ('050E0000-EEEE-4EEE-8EEE-00000000007E', @now, '05060000-EEEE-4EEE-8EEE-000000000001', 26, '050F0000-EEEE-4EEE-8EEE-00000000001A'),
-    ('050E0000-EEEE-4EEE-8EEE-00000000007F', @now, '05060000-EEEE-4EEE-8EEE-000000000002', 50, '050F0000-EEEE-4EEE-8EEE-00000000001A'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000080', @now, '05060000-EEEE-4EEE-8EEE-000000000003', 1, '050F0000-EEEE-4EEE-8EEE-00000000001A'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000081', @now, '05060000-EEEE-4EEE-8EEE-000000000004', 50, '050F0000-EEEE-4EEE-8EEE-00000000001A'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000082', @now, '05060000-EEEE-4EEE-8EEE-000000000005', 26, '050F0000-EEEE-4EEE-8EEE-00000000001A'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000083', @now, '05060000-EEEE-4EEE-8EEE-000000000001', 50, '050F0000-EEEE-4EEE-8EEE-00000000001B'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000084', @now, '05060000-EEEE-4EEE-8EEE-000000000002', 50, '050F0000-EEEE-4EEE-8EEE-00000000001B'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000085', @now, '05060000-EEEE-4EEE-8EEE-000000000003', 26, '050F0000-EEEE-4EEE-8EEE-00000000001B'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000086', @now, '05060000-EEEE-4EEE-8EEE-000000000004', 50, '050F0000-EEEE-4EEE-8EEE-00000000001B'),
-    ('050E0000-EEEE-4EEE-8EEE-000000000087', @now, '05060000-EEEE-4EEE-8EEE-000000000005', 50, '050F0000-EEEE-4EEE-8EEE-00000000001B');
+    ('050E0000-EEEE-4EEE-8EEE-000000000001', @now, '05060000-EEEE-4EEE-8EEE-000000000001', 5, '050F0000-EEEE-4EEE-8EEE-000000000001'),
+    ('050E0000-EEEE-4EEE-8EEE-000000000002', @now, '05060000-EEEE-4EEE-8EEE-000000000002', 5, '050F0000-EEEE-4EEE-8EEE-000000000001'),
+    ('050E0000-EEEE-4EEE-8EEE-000000000003', @now, '05060000-EEEE-4EEE-8EEE-000000000003', 5, '050F0000-EEEE-4EEE-8EEE-000000000001'),
+    ('050E0000-EEEE-4EEE-8EEE-000000000004', @now, '05060000-EEEE-4EEE-8EEE-000000000004', 4, '050F0000-EEEE-4EEE-8EEE-000000000001'),
+    ('050E0000-EEEE-4EEE-8EEE-000000000005', @now, '05060000-EEEE-4EEE-8EEE-000000000005', 5, '050F0000-EEEE-4EEE-8EEE-000000000001'),
+    ('050E0000-EEEE-4EEE-8EEE-000000000006', @now, '05060000-EEEE-4EEE-8EEE-000000000001', 4, '050F0000-EEEE-4EEE-8EEE-000000000002'),
+    ('050E0000-EEEE-4EEE-8EEE-000000000007', @now, '05060000-EEEE-4EEE-8EEE-000000000002', 5, '050F0000-EEEE-4EEE-8EEE-000000000002'),
+    ('050E0000-EEEE-4EEE-8EEE-000000000008', @now, '05060000-EEEE-4EEE-8EEE-000000000003', 4, '050F0000-EEEE-4EEE-8EEE-000000000002'),
+    ('050E0000-EEEE-4EEE-8EEE-000000000009', @now, '05060000-EEEE-4EEE-8EEE-000000000004', 4, '050F0000-EEEE-4EEE-8EEE-000000000002'),
+    ('050E0000-EEEE-4EEE-8EEE-00000000000A', @now, '05060000-EEEE-4EEE-8EEE-000000000005', 4, '050F0000-EEEE-4EEE-8EEE-000000000002'),
+    ('050E0000-EEEE-4EEE-8EEE-00000000000B', @now, '05060000-EEEE-4EEE-8EEE-000000000001', 5, '050F0000-EEEE-4EEE-8EEE-000000000003'),
+    ('050E0000-EEEE-4EEE-8EEE-00000000000C', @now, '05060000-EEEE-4EEE-8EEE-000000000002', 4, '050F0000-EEEE-4EEE-8EEE-000000000003'),
+    ('050E0000-EEEE-4EEE-8EEE-00000000000D', @now, '05060000-EEEE-4EEE-8EEE-000000000003', 5, '050F0000-EEEE-4EEE-8EEE-000000000003'),
+    ('050E0000-EEEE-4EEE-8EEE-00000000000E', @now, '05060000-EEEE-4EEE-8EEE-000000000004', 4, '050F0000-EEEE-4EEE-8EEE-000000000003'),
+    ('050E0000-EEEE-4EEE-8EEE-00000000000F', @now, '05060000-EEEE-4EEE-8EEE-000000000005', 4, '050F0000-EEEE-4EEE-8EEE-000000000003'),
+    ('050E0000-EEEE-4EEE-8EEE-000000000010', @now, '05060000-EEEE-4EEE-8EEE-000000000001', 4, '050F0000-EEEE-4EEE-8EEE-000000000004'),
+    ('050E0000-EEEE-4EEE-8EEE-000000000011', @now, '05060000-EEEE-4EEE-8EEE-000000000002', 4, '050F0000-EEEE-4EEE-8EEE-000000000004'),
+    ('050E0000-EEEE-4EEE-8EEE-000000000012', @now, '05060000-EEEE-4EEE-8EEE-000000000003', 4, '050F0000-EEEE-4EEE-8EEE-000000000004'),
+    ('050E0000-EEEE-4EEE-8EEE-000000000013', @now, '05060000-EEEE-4EEE-8EEE-000000000004', 4, '050F0000-EEEE-4EEE-8EEE-000000000004'),
+    ('050E0000-EEEE-4EEE-8EEE-000000000014', @now, '05060000-EEEE-4EEE-8EEE-000000000005', 3, '050F0000-EEEE-4EEE-8EEE-000000000004'),
+    ('050E0000-EEEE-4EEE-8EEE-000000000015', @now, '05060000-EEEE-4EEE-8EEE-000000000001', 4, '050F0000-EEEE-4EEE-8EEE-000000000005'),
+    ('050E0000-EEEE-4EEE-8EEE-000000000016', @now, '05060000-EEEE-4EEE-8EEE-000000000002', 5, '050F0000-EEEE-4EEE-8EEE-000000000005'),
+    ('050E0000-EEEE-4EEE-8EEE-000000000017', @now, '05060000-EEEE-4EEE-8EEE-000000000003', 4, '050F0000-EEEE-4EEE-8EEE-000000000005'),
+    ('050E0000-EEEE-4EEE-8EEE-000000000018', @now, '05060000-EEEE-4EEE-8EEE-000000000004', 4, '050F0000-EEEE-4EEE-8EEE-000000000005'),
+    ('050E0000-EEEE-4EEE-8EEE-000000000019', @now, '05060000-EEEE-4EEE-8EEE-000000000005', 4, '050F0000-EEEE-4EEE-8EEE-000000000005'),
+    ('050E0000-EEEE-4EEE-8EEE-00000000001A', @now, '05060000-EEEE-4EEE-8EEE-000000000001', 3, '050F0000-EEEE-4EEE-8EEE-000000000006'),
+    ('050E0000-EEEE-4EEE-8EEE-00000000001B', @now, '05060000-EEEE-4EEE-8EEE-000000000002', 5, '050F0000-EEEE-4EEE-8EEE-000000000006'),
+    ('050E0000-EEEE-4EEE-8EEE-00000000001C', @now, '05060000-EEEE-4EEE-8EEE-000000000003', 3, '050F0000-EEEE-4EEE-8EEE-000000000006'),
+    ('050E0000-EEEE-4EEE-8EEE-00000000001D', @now, '05060000-EEEE-4EEE-8EEE-000000000004', 4, '050F0000-EEEE-4EEE-8EEE-000000000006'),
+    ('050E0000-EEEE-4EEE-8EEE-00000000001E', @now, '05060000-EEEE-4EEE-8EEE-000000000005', 3, '050F0000-EEEE-4EEE-8EEE-000000000006'),
+    ('050E0000-EEEE-4EEE-8EEE-00000000001F', @now, '05060000-EEEE-4EEE-8EEE-000000000001', 4, '050F0000-EEEE-4EEE-8EEE-000000000007'),
+    ('050E0000-EEEE-4EEE-8EEE-000000000020', @now, '05060000-EEEE-4EEE-8EEE-000000000002', 4, '050F0000-EEEE-4EEE-8EEE-000000000007'),
+    ('050E0000-EEEE-4EEE-8EEE-000000000021', @now, '05060000-EEEE-4EEE-8EEE-000000000003', 4, '050F0000-EEEE-4EEE-8EEE-000000000007'),
+    ('050E0000-EEEE-4EEE-8EEE-000000000022', @now, '05060000-EEEE-4EEE-8EEE-000000000004', 5, '050F0000-EEEE-4EEE-8EEE-000000000007'),
+    ('050E0000-EEEE-4EEE-8EEE-000000000023', @now, '05060000-EEEE-4EEE-8EEE-000000000005', 4, '050F0000-EEEE-4EEE-8EEE-000000000007'),
+    ('050E0000-EEEE-4EEE-8EEE-000000000024', @now, '05060000-EEEE-4EEE-8EEE-000000000001', 4, '050F0000-EEEE-4EEE-8EEE-000000000008'),
+    ('050E0000-EEEE-4EEE-8EEE-000000000025', @now, '05060000-EEEE-4EEE-8EEE-000000000002', 4, '050F0000-EEEE-4EEE-8EEE-000000000008'),
+    ('050E0000-EEEE-4EEE-8EEE-000000000026', @now, '05060000-EEEE-4EEE-8EEE-000000000003', 4, '050F0000-EEEE-4EEE-8EEE-000000000008'),
+    ('050E0000-EEEE-4EEE-8EEE-000000000027', @now, '05060000-EEEE-4EEE-8EEE-000000000004', 3, '050F0000-EEEE-4EEE-8EEE-000000000008'),
+    ('050E0000-EEEE-4EEE-8EEE-000000000028', @now, '05060000-EEEE-4EEE-8EEE-000000000005', 4, '050F0000-EEEE-4EEE-8EEE-000000000008');
 
-INSERT INTO rankings (id, created_at, calculated_at, final_score, rank, round_id, team_id, version, lock_version) VALUES
-    ('05100000-EEEE-4EEE-8EEE-000000000001', @now, @now, 89.4813, 1, '05030000-EEEE-4EEE-8EEE-000000000001', '05050000-EEEE-4EEE-8EEE-000000000001', 1, 0),
-    ('05100000-EEEE-4EEE-8EEE-000000000002', @now, @now, 86.1400, 2, '05030000-EEEE-4EEE-8EEE-000000000001', '05050000-EEEE-4EEE-8EEE-000000000002', 1, 0),
-    ('05100000-EEEE-4EEE-8EEE-000000000003', @now, @now, 78.4675, 3, '05030000-EEEE-4EEE-8EEE-000000000001', '05050000-EEEE-4EEE-8EEE-000000000004', 1, 0),
-    ('05100000-EEEE-4EEE-8EEE-000000000004', @now, @now, 75.1263, 4, '05030000-EEEE-4EEE-8EEE-000000000001', '05050000-EEEE-4EEE-8EEE-000000000003', 1, 0),
-    ('05100000-EEEE-4EEE-8EEE-000000000005', @now, @now, 64.3600, 5, '05030000-EEEE-4EEE-8EEE-000000000001', '05050000-EEEE-4EEE-8EEE-000000000006', 1, 0),
-    ('05100000-EEEE-4EEE-8EEE-000000000006', @now, @now, 63.4938, 6, '05030000-EEEE-4EEE-8EEE-000000000001', '05050000-EEEE-4EEE-8EEE-000000000005', 1, 0),
-    ('05100000-EEEE-4EEE-8EEE-000000000007', @now, @now, 52.7275, 7, '05030000-EEEE-4EEE-8EEE-000000000001', '05050000-EEEE-4EEE-8EEE-000000000008', 1, 0),
-    ('05100000-EEEE-4EEE-8EEE-000000000008', @now, @now, 51.8613, 8, '05030000-EEEE-4EEE-8EEE-000000000001', '05050000-EEEE-4EEE-8EEE-000000000007', 1, 0),
-    ('05100000-EEEE-4EEE-8EEE-000000000009', @now, @now, 38.0013, 9, '05030000-EEEE-4EEE-8EEE-000000000001', '05050000-EEEE-4EEE-8EEE-000000000009', 1, 0);
-
--- No published_results / finalists / awards: coordinator demos Publish Results per track & round.
+UPDATE submissions SET status = 'SUBMITTED' WHERE round_id = '05030000-EEEE-4EEE-8EEE-000000000001';
 
 -- ============================================================
 -- === SEAL Hackathon Fall Preview 2026 - Early Access Build ===
--- QA phase: ACTIVE - deadline in ~2h, mixed progress risks (NOT_STARTED / SLIDE_ONLY / STALLED / LAST_MINUTE / OK) + alerts
+-- QA phase: ACTIVE - deadline in ~3h, no submissions, progress alerts + mentor_teams + notifications seeded
 -- Login: pham.quoc.bao@fpt.edu.vn (mentor track 1) or nguyen.hoang.minh.preview26@fpt.edu.vn (student leader) / Demo@123456
--- View: coordinator/lecturer Teams needing support · /student dashboard banner · GET .../progress
+-- View: admin/lecturer dashboard Teams needing support · /student dashboard banner · notifications
 -- ============================================================
 
 DECLARE @e6_compDay DATE = CAST(@now AS DATE);
@@ -5709,7 +5590,7 @@ DECLARE @e6_compDt DATETIME2 = CAST(@e6_compDay AS DATETIME2);
 DECLARE @e6_regOpen DATE = CAST(DATEADD(DAY, -15, @now) AS DATE);
 DECLARE @e6_regDeadline DATE = CAST(DATEADD(DAY, -1, @now) AS DATE);
 DECLARE @e6_prelimStart DATETIME2 = DATEADD(DAY, -1, @now);
-DECLARE @e6_prelimSub DATETIME2 = DATEADD(HOUR, 2, @now);
+DECLARE @e6_prelimSub DATETIME2 = DATEADD(HOUR, 3, @now);
 DECLARE @e6_prelimScore DATETIME2 = DATEADD(DAY, 2, @now);
 DECLARE @e6_finalStart DATETIME2 = DATEADD(DAY, 2, @now);
 DECLARE @e6_finalSub DATETIME2 = DATEADD(DAY, 2, @now);
@@ -5907,55 +5788,27 @@ INSERT INTO mentor_invitations (id, created_at, team_id, mentor_user_id, inviter
     ('06180000-EEEE-4EEE-8EEE-000000000008', @now, '06050000-EEEE-4EEE-8EEE-000000000008', @mentor3Id, '06010000-EEEE-4EEE-8EEE-000000000016', 'ACCEPTED', N'Seeded mentor assignment for QA'),
     ('06180000-EEEE-4EEE-8EEE-000000000009', @now, '06050000-EEEE-4EEE-8EEE-000000000009', @mentor3Id, '06010000-EEEE-4EEE-8EEE-000000000019', 'ACCEPTED', N'Seeded mentor assignment for QA');
 
-INSERT INTO submissions (id, created_at, current_version_id, round_id, status, submitted_by, team_id, opt_lock) VALUES
-    ('060D0000-EEEE-4EEE-8EEE-000000000001', @now, NULL, '06030000-EEEE-4EEE-8EEE-000000000001', 'SUBMITTED', '06010000-EEEE-4EEE-8EEE-00000000000A', '06050000-EEEE-4EEE-8EEE-000000000004', 0),
-    ('060D0000-EEEE-4EEE-8EEE-000000000002', @now, NULL, '06030000-EEEE-4EEE-8EEE-000000000001', 'SUBMITTED', '06010000-EEEE-4EEE-8EEE-00000000000D', '06050000-EEEE-4EEE-8EEE-000000000005', 0),
-    ('060D0000-EEEE-4EEE-8EEE-000000000003', @now, NULL, '06030000-EEEE-4EEE-8EEE-000000000001', 'SUBMITTED', '06010000-EEEE-4EEE-8EEE-000000000010', '06050000-EEEE-4EEE-8EEE-000000000006', 0),
-    ('060D0000-EEEE-4EEE-8EEE-000000000004', @now, NULL, '06030000-EEEE-4EEE-8EEE-000000000001', 'SUBMITTED', '06010000-EEEE-4EEE-8EEE-000000000013', '06050000-EEEE-4EEE-8EEE-000000000007', 0),
-    ('060D0000-EEEE-4EEE-8EEE-000000000005', @now, NULL, '06030000-EEEE-4EEE-8EEE-000000000001', 'SUBMITTED', '06010000-EEEE-4EEE-8EEE-000000000016', '06050000-EEEE-4EEE-8EEE-000000000008', 0),
-    ('060D0000-EEEE-4EEE-8EEE-000000000006', @now, NULL, '06030000-EEEE-4EEE-8EEE-000000000001', 'SUBMITTED', '06010000-EEEE-4EEE-8EEE-000000000019', '06050000-EEEE-4EEE-8EEE-000000000009', 0);
-
-INSERT INTO submission_versions (id, created_at, demo_url, github_url, slide_url, submitted_at, version_number, submission_id) VALUES
-    ('060E0000-EEEE-4EEE-8EEE-000000000001', @now, NULL, NULL, N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(HOUR, -6, @now), 1, '060D0000-EEEE-4EEE-8EEE-000000000001'),
-    ('060E0000-EEEE-4EEE-8EEE-000000000002', @now, NULL, NULL, N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(HOUR, -6, @now), 1, '060D0000-EEEE-4EEE-8EEE-000000000002'),
-    ('060E0000-EEEE-4EEE-8EEE-000000000003', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(HOUR, -30, @now), 1, '060D0000-EEEE-4EEE-8EEE-000000000003'),
-    ('060E0000-EEEE-4EEE-8EEE-000000000004', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(HOUR, -30, @now), 1, '060D0000-EEEE-4EEE-8EEE-000000000004'),
-    ('060E0000-EEEE-4EEE-8EEE-000000000005', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -45, @now), 1, '060D0000-EEEE-4EEE-8EEE-000000000005'),
-    ('060E0000-EEEE-4EEE-8EEE-000000000006', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(HOUR, -40, @now), 1, '060D0000-EEEE-4EEE-8EEE-000000000006'),
-    ('060E0000-EEEE-4EEE-8EEE-000000000007', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(HOUR, -3, @now), 2, '060D0000-EEEE-4EEE-8EEE-000000000006');
-
-INSERT INTO submission_attachments (id, created_at, file_name, file_size, file_url, page_count, submission_version_id) VALUES
-    ('061B0000-EEEE-4EEE-8EEE-000000000001', @now, N'pitch.pdf', 102400, N'/uploads/demo/pitch-5.pdf', 2, '060E0000-EEEE-4EEE-8EEE-000000000003'),
-    ('061B0000-EEEE-4EEE-8EEE-000000000002', @now, N'pitch.pdf', 102400, N'/uploads/demo/pitch-6.pdf', 2, '060E0000-EEEE-4EEE-8EEE-000000000004'),
-    ('061B0000-EEEE-4EEE-8EEE-000000000003', @now, N'pitch.pdf', 102400, N'/uploads/demo/pitch-7.pdf', 2, '060E0000-EEEE-4EEE-8EEE-000000000005'),
-    ('061B0000-EEEE-4EEE-8EEE-000000000004', @now, N'pitch-v2.pdf', 204800, N'/uploads/demo/pitch-8-v2.pdf', 2, '060E0000-EEEE-4EEE-8EEE-000000000007');
-
-UPDATE submissions SET current_version_id = '060E0000-EEEE-4EEE-8EEE-000000000001' WHERE id = '060D0000-EEEE-4EEE-8EEE-000000000001';
-UPDATE submissions SET current_version_id = '060E0000-EEEE-4EEE-8EEE-000000000002' WHERE id = '060D0000-EEEE-4EEE-8EEE-000000000002';
-UPDATE submissions SET current_version_id = '060E0000-EEEE-4EEE-8EEE-000000000003' WHERE id = '060D0000-EEEE-4EEE-8EEE-000000000003';
-UPDATE submissions SET current_version_id = '060E0000-EEEE-4EEE-8EEE-000000000004' WHERE id = '060D0000-EEEE-4EEE-8EEE-000000000004';
-UPDATE submissions SET current_version_id = '060E0000-EEEE-4EEE-8EEE-000000000005' WHERE id = '060D0000-EEEE-4EEE-8EEE-000000000005';
-UPDATE submissions SET current_version_id = '060E0000-EEEE-4EEE-8EEE-000000000007' WHERE id = '060D0000-EEEE-4EEE-8EEE-000000000006';
-
 INSERT INTO team_progress_alerts (id, team_id, round_id, risk_level, reasons, last_alerted_at, created_at, updated_at) VALUES
     ('06150000-EEEE-4EEE-8EEE-000000000001', '06050000-EEEE-4EEE-8EEE-000000000001', '06030000-EEEE-4EEE-8EEE-000000000001', N'CRITICAL', N'NOT_STARTED', @now, @now, @now),
     ('06150000-EEEE-4EEE-8EEE-000000000002', '06050000-EEEE-4EEE-8EEE-000000000002', '06030000-EEEE-4EEE-8EEE-000000000001', N'CRITICAL', N'NOT_STARTED', @now, @now, @now),
     ('06150000-EEEE-4EEE-8EEE-000000000003', '06050000-EEEE-4EEE-8EEE-000000000003', '06030000-EEEE-4EEE-8EEE-000000000001', N'CRITICAL', N'NOT_STARTED', @now, @now, @now),
-    ('06150000-EEEE-4EEE-8EEE-000000000004', '06050000-EEEE-4EEE-8EEE-000000000004', '06030000-EEEE-4EEE-8EEE-000000000001', N'CRITICAL', N'SLIDE_ONLY_PAST_GATE', @now, @now, @now),
-    ('06150000-EEEE-4EEE-8EEE-000000000005', '06050000-EEEE-4EEE-8EEE-000000000005', '06030000-EEEE-4EEE-8EEE-000000000001', N'CRITICAL', N'SLIDE_ONLY_PAST_GATE', @now, @now, @now),
-    ('06150000-EEEE-4EEE-8EEE-000000000006', '06050000-EEEE-4EEE-8EEE-000000000006', '06030000-EEEE-4EEE-8EEE-000000000001', N'AT_RISK', N'STALLED', @now, @now, @now),
-    ('06150000-EEEE-4EEE-8EEE-000000000007', '06050000-EEEE-4EEE-8EEE-000000000007', '06030000-EEEE-4EEE-8EEE-000000000001', N'AT_RISK', N'STALLED', @now, @now, @now),
-    ('06150000-EEEE-4EEE-8EEE-000000000008', '06050000-EEEE-4EEE-8EEE-000000000008', '06030000-EEEE-4EEE-8EEE-000000000001', N'AT_RISK', N'SINGLE_VERSION_LAST_MINUTE', @now, @now, @now);
+    ('06150000-EEEE-4EEE-8EEE-000000000004', '06050000-EEEE-4EEE-8EEE-000000000004', '06030000-EEEE-4EEE-8EEE-000000000001', N'CRITICAL', N'NOT_STARTED', @now, @now, @now),
+    ('06150000-EEEE-4EEE-8EEE-000000000005', '06050000-EEEE-4EEE-8EEE-000000000005', '06030000-EEEE-4EEE-8EEE-000000000001', N'CRITICAL', N'NOT_STARTED', @now, @now, @now),
+    ('06150000-EEEE-4EEE-8EEE-000000000006', '06050000-EEEE-4EEE-8EEE-000000000006', '06030000-EEEE-4EEE-8EEE-000000000001', N'CRITICAL', N'NOT_STARTED', @now, @now, @now),
+    ('06150000-EEEE-4EEE-8EEE-000000000007', '06050000-EEEE-4EEE-8EEE-000000000007', '06030000-EEEE-4EEE-8EEE-000000000001', N'CRITICAL', N'NOT_STARTED', @now, @now, @now),
+    ('06150000-EEEE-4EEE-8EEE-000000000008', '06050000-EEEE-4EEE-8EEE-000000000008', '06030000-EEEE-4EEE-8EEE-000000000001', N'CRITICAL', N'NOT_STARTED', @now, @now, @now),
+    ('06150000-EEEE-4EEE-8EEE-000000000009', '06050000-EEEE-4EEE-8EEE-000000000009', '06030000-EEEE-4EEE-8EEE-000000000001', N'CRITICAL', N'NOT_STARTED', @now, @now, @now);
 
 INSERT INTO notifications (id, created_at, message, reference_id, reference_type, title, type) VALUES
     ('06190000-EEEE-4EEE-8EEE-000000000001', @now, N'Team EarlyAccess has not started submission and the deadline is approaching (NOT_STARTED).', '06050000-EEEE-4EEE-8EEE-000000000001', N'Team', N'Team progress alert', N'TEAM_PROGRESS_ALERT'),
     ('06190000-EEEE-4EEE-8EEE-000000000002', @now, N'Team PreviewBot has not started submission and the deadline is approaching (NOT_STARTED).', '06050000-EEEE-4EEE-8EEE-000000000002', N'Team', N'Team progress alert', N'TEAM_PROGRESS_ALERT'),
     ('06190000-EEEE-4EEE-8EEE-000000000003', @now, N'Team DeadlineDash has not started submission and the deadline is approaching (NOT_STARTED).', '06050000-EEEE-4EEE-8EEE-000000000003', N'Team', N'Team progress alert', N'TEAM_PROGRESS_ALERT'),
-    ('06190000-EEEE-4EEE-8EEE-000000000004', @now, N'Team AlertReady only uploaded slides past the slide gate (SLIDE_ONLY_PAST_GATE).', '06050000-EEEE-4EEE-8EEE-000000000004', N'Team', N'Team progress alert', N'TEAM_PROGRESS_ALERT'),
-    ('06190000-EEEE-4EEE-8EEE-000000000005', @now, N'Team RushRetrieve only uploaded slides past the slide gate (SLIDE_ONLY_PAST_GATE).', '06050000-EEEE-4EEE-8EEE-000000000005', N'Team', N'Team progress alert', N'TEAM_PROGRESS_ALERT'),
-    ('06190000-EEEE-4EEE-8EEE-000000000006', @now, N'Team NightOwl RAG has stalled — no submission update in 24h+ (STALLED).', '06050000-EEEE-4EEE-8EEE-000000000006', N'Team', N'Team progress alert', N'TEAM_PROGRESS_ALERT'),
-    ('06190000-EEEE-4EEE-8EEE-000000000007', @now, N'Team TickTock Agent has stalled — no submission update in 24h+ (STALLED).', '06050000-EEEE-4EEE-8EEE-000000000007', N'Team', N'Team progress alert', N'TEAM_PROGRESS_ALERT'),
-    ('06190000-EEEE-4EEE-8EEE-000000000008', @now, N'Team LastCall submitted a single version in the last-minute window (SINGLE_VERSION_LAST_MINUTE).', '06050000-EEEE-4EEE-8EEE-000000000008', N'Team', N'Team progress alert', N'TEAM_PROGRESS_ALERT');
+    ('06190000-EEEE-4EEE-8EEE-000000000004', @now, N'Team AlertReady has not started submission and the deadline is approaching (NOT_STARTED).', '06050000-EEEE-4EEE-8EEE-000000000004', N'Team', N'Team progress alert', N'TEAM_PROGRESS_ALERT'),
+    ('06190000-EEEE-4EEE-8EEE-000000000005', @now, N'Team RushRetrieve has not started submission and the deadline is approaching (NOT_STARTED).', '06050000-EEEE-4EEE-8EEE-000000000005', N'Team', N'Team progress alert', N'TEAM_PROGRESS_ALERT'),
+    ('06190000-EEEE-4EEE-8EEE-000000000006', @now, N'Team NightOwl RAG has not started submission and the deadline is approaching (NOT_STARTED).', '06050000-EEEE-4EEE-8EEE-000000000006', N'Team', N'Team progress alert', N'TEAM_PROGRESS_ALERT'),
+    ('06190000-EEEE-4EEE-8EEE-000000000007', @now, N'Team TickTock Agent has not started submission and the deadline is approaching (NOT_STARTED).', '06050000-EEEE-4EEE-8EEE-000000000007', N'Team', N'Team progress alert', N'TEAM_PROGRESS_ALERT'),
+    ('06190000-EEEE-4EEE-8EEE-000000000008', @now, N'Team LastCall has not started submission and the deadline is approaching (NOT_STARTED).', '06050000-EEEE-4EEE-8EEE-000000000008', N'Team', N'Team progress alert', N'TEAM_PROGRESS_ALERT'),
+    ('06190000-EEEE-4EEE-8EEE-000000000009', @now, N'Team HourGlass AI has not started submission and the deadline is approaching (NOT_STARTED).', '06050000-EEEE-4EEE-8EEE-000000000009', N'Team', N'Team progress alert', N'TEAM_PROGRESS_ALERT');
 
 INSERT INTO notification_recipients (id, created_at, channel, read_at, sent_at, user_id, notification_id) VALUES
     ('061A0000-EEEE-4EEE-8EEE-000000000001', @now, N'IN_APP', NULL, @now, '06010000-EEEE-4EEE-8EEE-000000000001', '06190000-EEEE-4EEE-8EEE-000000000001'),
@@ -5981,7 +5834,10 @@ INSERT INTO notification_recipients (id, created_at, channel, read_at, sent_at, 
     ('061A0000-EEEE-4EEE-8EEE-000000000015', @now, N'IN_APP', NULL, @now, @coordId, '06190000-EEEE-4EEE-8EEE-000000000007'),
     ('061A0000-EEEE-4EEE-8EEE-000000000016', @now, N'IN_APP', NULL, @now, '06010000-EEEE-4EEE-8EEE-000000000016', '06190000-EEEE-4EEE-8EEE-000000000008'),
     ('061A0000-EEEE-4EEE-8EEE-000000000017', @now, N'IN_APP', NULL, @now, @mentor3Id, '06190000-EEEE-4EEE-8EEE-000000000008'),
-    ('061A0000-EEEE-4EEE-8EEE-000000000018', @now, N'IN_APP', NULL, @now, @coordId, '06190000-EEEE-4EEE-8EEE-000000000008');
+    ('061A0000-EEEE-4EEE-8EEE-000000000018', @now, N'IN_APP', NULL, @now, @coordId, '06190000-EEEE-4EEE-8EEE-000000000008'),
+    ('061A0000-EEEE-4EEE-8EEE-000000000019', @now, N'IN_APP', NULL, @now, '06010000-EEEE-4EEE-8EEE-000000000019', '06190000-EEEE-4EEE-8EEE-000000000009'),
+    ('061A0000-EEEE-4EEE-8EEE-00000000001A', @now, N'IN_APP', NULL, @now, @mentor3Id, '06190000-EEEE-4EEE-8EEE-000000000009'),
+    ('061A0000-EEEE-4EEE-8EEE-00000000001B', @now, N'IN_APP', NULL, @now, @coordId, '06190000-EEEE-4EEE-8EEE-000000000009');
 
 -- ============================================================
 -- === SEAL Hackathon Alumni Showcase 2026 - Agentic RAG Replay ===
@@ -6212,21 +6068,21 @@ INSERT INTO submissions (id, created_at, current_version_id, round_id, status, s
     ('070D0000-EEEE-4EEE-8EEE-00000000000F', @now, NULL, '07030000-EEEE-4EEE-8EEE-000000000002', 'SCORED', '01010000-EEEE-4EEE-8EEE-000000000013', '07050000-EEEE-4EEE-8EEE-000000000007', 0);
 
 INSERT INTO submission_versions (id, created_at, demo_url, github_url, slide_url, submitted_at, version_number, submission_id) VALUES
-    ('070E0000-EEEE-4EEE-8EEE-000000000001', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -30, @e7_prelimSub), 1, '070D0000-EEEE-4EEE-8EEE-000000000001'),
-    ('070E0000-EEEE-4EEE-8EEE-000000000002', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -31, @e7_prelimSub), 1, '070D0000-EEEE-4EEE-8EEE-000000000002'),
-    ('070E0000-EEEE-4EEE-8EEE-000000000003', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -32, @e7_prelimSub), 1, '070D0000-EEEE-4EEE-8EEE-000000000003'),
-    ('070E0000-EEEE-4EEE-8EEE-000000000004', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -33, @e7_prelimSub), 1, '070D0000-EEEE-4EEE-8EEE-000000000004'),
-    ('070E0000-EEEE-4EEE-8EEE-000000000005', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -34, @e7_prelimSub), 1, '070D0000-EEEE-4EEE-8EEE-000000000005'),
-    ('070E0000-EEEE-4EEE-8EEE-000000000006', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -35, @e7_prelimSub), 1, '070D0000-EEEE-4EEE-8EEE-000000000006'),
-    ('070E0000-EEEE-4EEE-8EEE-000000000007', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -36, @e7_prelimSub), 1, '070D0000-EEEE-4EEE-8EEE-000000000007'),
-    ('070E0000-EEEE-4EEE-8EEE-000000000008', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -37, @e7_prelimSub), 1, '070D0000-EEEE-4EEE-8EEE-000000000008'),
-    ('070E0000-EEEE-4EEE-8EEE-000000000009', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -38, @e7_prelimSub), 1, '070D0000-EEEE-4EEE-8EEE-000000000009'),
-    ('070E0000-EEEE-4EEE-8EEE-00000000000A', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -39, @e7_prelimSub), 1, '070D0000-EEEE-4EEE-8EEE-00000000000A'),
-    ('070E0000-EEEE-4EEE-8EEE-00000000000B', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -40, @e7_prelimSub), 1, '070D0000-EEEE-4EEE-8EEE-00000000000B'),
-    ('070E0000-EEEE-4EEE-8EEE-00000000000C', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -41, @e7_prelimSub), 1, '070D0000-EEEE-4EEE-8EEE-00000000000C'),
-    ('070E0000-EEEE-4EEE-8EEE-00000000000D', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -42, @e7_prelimSub), 1, '070D0000-EEEE-4EEE-8EEE-00000000000D'),
-    ('070E0000-EEEE-4EEE-8EEE-00000000000E', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -43, @e7_prelimSub), 1, '070D0000-EEEE-4EEE-8EEE-00000000000E'),
-    ('070E0000-EEEE-4EEE-8EEE-00000000000F', @now, N'https://www.youtube.com/watch?v=qL9bVgB0dkE', N'https://github.com/QuynhPM2706/SEAL_HACKATHON_FPT', N'https://drive.google.com/drive/folders/1GzUYLu759LGE2J4WlB4v6Xb3XtpGLwkJ', DATEADD(MINUTE, -44, @e7_prelimSub), 1, '070D0000-EEEE-4EEE-8EEE-00000000000F');
+    ('070E0000-EEEE-4EEE-8EEE-000000000001', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/alumnirag', N'https://docs.google.com/presentation/d/seal-7-0', DATEADD(MINUTE, -30, @e7_prelimSub), 1, '070D0000-EEEE-4EEE-8EEE-000000000001'),
+    ('070E0000-EEEE-4EEE-8EEE-000000000002', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/replayagent', N'https://docs.google.com/presentation/d/seal-7-1', DATEADD(MINUTE, -31, @e7_prelimSub), 1, '070D0000-EEEE-4EEE-8EEE-000000000002'),
+    ('070E0000-EEEE-4EEE-8EEE-000000000003', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/showcase-lab', N'https://docs.google.com/presentation/d/seal-7-2', DATEADD(MINUTE, -32, @e7_prelimSub), 1, '070D0000-EEEE-4EEE-8EEE-000000000003'),
+    ('070E0000-EEEE-4EEE-8EEE-000000000004', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/legacyretrieve', N'https://docs.google.com/presentation/d/seal-7-3', DATEADD(MINUTE, -33, @e7_prelimSub), 1, '070D0000-EEEE-4EEE-8EEE-000000000004'),
+    ('070E0000-EEEE-4EEE-8EEE-000000000005', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/echopilot', N'https://docs.google.com/presentation/d/seal-7-4', DATEADD(MINUTE, -34, @e7_prelimSub), 1, '070D0000-EEEE-4EEE-8EEE-000000000005'),
+    ('070E0000-EEEE-4EEE-8EEE-000000000006', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/archivehop', N'https://docs.google.com/presentation/d/seal-7-5', DATEADD(MINUTE, -35, @e7_prelimSub), 1, '070D0000-EEEE-4EEE-8EEE-000000000006'),
+    ('070E0000-EEEE-4EEE-8EEE-000000000007', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/memoryforge', N'https://docs.google.com/presentation/d/seal-7-6', DATEADD(MINUTE, -36, @e7_prelimSub), 1, '070D0000-EEEE-4EEE-8EEE-000000000007'),
+    ('070E0000-EEEE-4EEE-8EEE-000000000008', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/reunionbot', N'https://docs.google.com/presentation/d/seal-7-7', DATEADD(MINUTE, -37, @e7_prelimSub), 1, '070D0000-EEEE-4EEE-8EEE-000000000008'),
+    ('070E0000-EEEE-4EEE-8EEE-000000000009', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/goldclass-rag', N'https://docs.google.com/presentation/d/seal-7-8', DATEADD(MINUTE, -38, @e7_prelimSub), 1, '070D0000-EEEE-4EEE-8EEE-000000000009'),
+    ('070E0000-EEEE-4EEE-8EEE-00000000000A', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/alumnirag', N'https://docs.google.com/presentation/d/seal-7-9', DATEADD(MINUTE, -39, @e7_prelimSub), 1, '070D0000-EEEE-4EEE-8EEE-00000000000A'),
+    ('070E0000-EEEE-4EEE-8EEE-00000000000B', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/replayagent', N'https://docs.google.com/presentation/d/seal-7-10', DATEADD(MINUTE, -40, @e7_prelimSub), 1, '070D0000-EEEE-4EEE-8EEE-00000000000B'),
+    ('070E0000-EEEE-4EEE-8EEE-00000000000C', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/legacyretrieve', N'https://docs.google.com/presentation/d/seal-7-11', DATEADD(MINUTE, -41, @e7_prelimSub), 1, '070D0000-EEEE-4EEE-8EEE-00000000000C'),
+    ('070E0000-EEEE-4EEE-8EEE-00000000000D', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/archivehop', N'https://docs.google.com/presentation/d/seal-7-12', DATEADD(MINUTE, -42, @e7_prelimSub), 1, '070D0000-EEEE-4EEE-8EEE-00000000000D'),
+    ('070E0000-EEEE-4EEE-8EEE-00000000000E', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/reunionbot', N'https://docs.google.com/presentation/d/seal-7-13', DATEADD(MINUTE, -43, @e7_prelimSub), 1, '070D0000-EEEE-4EEE-8EEE-00000000000E'),
+    ('070E0000-EEEE-4EEE-8EEE-00000000000F', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/memoryforge', N'https://docs.google.com/presentation/d/seal-7-14', DATEADD(MINUTE, -44, @e7_prelimSub), 1, '070D0000-EEEE-4EEE-8EEE-00000000000F');
 
 UPDATE submissions SET current_version_id = '070E0000-EEEE-4EEE-8EEE-000000000001' WHERE id = '070D0000-EEEE-4EEE-8EEE-000000000001';
 UPDATE submissions SET current_version_id = '070E0000-EEEE-4EEE-8EEE-000000000002' WHERE id = '070D0000-EEEE-4EEE-8EEE-000000000002';
@@ -6448,12 +6304,12 @@ INSERT INTO rankings (id, created_at, calculated_at, final_score, rank, round_id
     ('07110000-EEEE-4EEE-8EEE-000000000006', @now, @e7_finalScore, 3.3500, 6, '07030000-EEEE-4EEE-8EEE-000000000002', '07050000-EEEE-4EEE-8EEE-000000000007', 1, 0);
 
 INSERT INTO finalist_selections (id, event_id, team_id, track_id, preliminary_rank, selected_reason, selected_at, created_at, updated_at, selection_method, eligible) VALUES
-    ('07120000-EEEE-4EEE-8EEE-000000000001', '07020000-EEEE-4EEE-8EEE-000000000001', '07050000-EEEE-4EEE-8EEE-000000000001', '07040000-EEEE-4EEE-8EEE-000000000001', 1, N'Top 1 in track', @e7_prelimScore, @now, @now, 'TOP_PER_TRACK', 1),
-    ('07120000-EEEE-4EEE-8EEE-000000000002', '07020000-EEEE-4EEE-8EEE-000000000001', '07050000-EEEE-4EEE-8EEE-000000000002', '07040000-EEEE-4EEE-8EEE-000000000001', 2, N'Top 2 in track', @e7_prelimScore, @now, @now, 'TOP_PER_TRACK', 1),
-    ('07120000-EEEE-4EEE-8EEE-000000000003', '07020000-EEEE-4EEE-8EEE-000000000001', '07050000-EEEE-4EEE-8EEE-000000000004', '07040000-EEEE-4EEE-8EEE-000000000002', 1, N'Top 1 in track', @e7_prelimScore, @now, @now, 'TOP_PER_TRACK', 1),
-    ('07120000-EEEE-4EEE-8EEE-000000000004', '07020000-EEEE-4EEE-8EEE-000000000001', '07050000-EEEE-4EEE-8EEE-000000000006', '07040000-EEEE-4EEE-8EEE-000000000002', 2, N'Top 2 in track', @e7_prelimScore, @now, @now, 'TOP_PER_TRACK', 1),
-    ('07120000-EEEE-4EEE-8EEE-000000000005', '07020000-EEEE-4EEE-8EEE-000000000001', '07050000-EEEE-4EEE-8EEE-000000000008', '07040000-EEEE-4EEE-8EEE-000000000003', 1, N'Top 1 in track', @e7_prelimScore, @now, @now, 'TOP_PER_TRACK', 1),
-    ('07120000-EEEE-4EEE-8EEE-000000000006', '07020000-EEEE-4EEE-8EEE-000000000001', '07050000-EEEE-4EEE-8EEE-000000000007', '07040000-EEEE-4EEE-8EEE-000000000003', 2, N'Top 2 in track', @e7_prelimScore, @now, @now, 'TOP_PER_TRACK', 1);
+    ('07120000-EEEE-4EEE-8EEE-000000000001', '07020000-EEEE-4EEE-8EEE-000000000001', '07050000-EEEE-4EEE-8EEE-000000000001', '07040000-EEEE-4EEE-8EEE-000000000001', 1, N'Top 1 in track', @e7_prelimScore, @now, @now, 'AUTO', 1),
+    ('07120000-EEEE-4EEE-8EEE-000000000002', '07020000-EEEE-4EEE-8EEE-000000000001', '07050000-EEEE-4EEE-8EEE-000000000002', '07040000-EEEE-4EEE-8EEE-000000000001', 2, N'Top 2 in track', @e7_prelimScore, @now, @now, 'AUTO', 1),
+    ('07120000-EEEE-4EEE-8EEE-000000000003', '07020000-EEEE-4EEE-8EEE-000000000001', '07050000-EEEE-4EEE-8EEE-000000000004', '07040000-EEEE-4EEE-8EEE-000000000002', 1, N'Top 1 in track', @e7_prelimScore, @now, @now, 'AUTO', 1),
+    ('07120000-EEEE-4EEE-8EEE-000000000004', '07020000-EEEE-4EEE-8EEE-000000000001', '07050000-EEEE-4EEE-8EEE-000000000006', '07040000-EEEE-4EEE-8EEE-000000000002', 2, N'Top 2 in track', @e7_prelimScore, @now, @now, 'AUTO', 1),
+    ('07120000-EEEE-4EEE-8EEE-000000000005', '07020000-EEEE-4EEE-8EEE-000000000001', '07050000-EEEE-4EEE-8EEE-000000000008', '07040000-EEEE-4EEE-8EEE-000000000003', 1, N'Top 1 in track', @e7_prelimScore, @now, @now, 'AUTO', 1),
+    ('07120000-EEEE-4EEE-8EEE-000000000006', '07020000-EEEE-4EEE-8EEE-000000000001', '07050000-EEEE-4EEE-8EEE-000000000007', '07040000-EEEE-4EEE-8EEE-000000000003', 2, N'Top 2 in track', @e7_prelimScore, @now, @now, 'AUTO', 1);
 
 INSERT INTO published_results (id, created_at, dispute_deadline, published_at, published_by, round_id) VALUES
     ('07130000-EEEE-4EEE-8EEE-000000000001', @now, DATEADD(DAY, 2, @e7_prelimScore), @e7_prelimScore, @coordId, '07030000-EEEE-4EEE-8EEE-000000000001'),
@@ -6470,4 +6326,3 @@ INSERT INTO team_awards (id, event_id, team_id, prize_id, awarded_at, created_at
 COMMIT TRANSACTION;
 PRINT 'seed_demo_events.sql complete: 7 SEAL seasons seeded (template 77F2A5A3-6538-4FCF-B85A-666066465E68 preserved).';
 PRINT 'Demo password for all seeded accounts: Demo@123456';
-PRINT 'AS2 demos: Event 6 (06020000-...) progress alerts | Event 5 (05020000-...) publish results | Event 1 (01020000-...) published leaderboard';

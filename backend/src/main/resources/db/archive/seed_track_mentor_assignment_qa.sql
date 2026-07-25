@@ -1,4 +1,4 @@
--- QA seed: CLOSED_REGISTRATION event with 10 unassigned teams + 2 tracks + mentor track pool.
+-- QA seed: CLOSED_REGISTRATION event with 20 unassigned teams + 2 tracks + mentor track pool.
 -- Purpose: test Team Assignments (manual/random track) and Mentor Assignments (draw mentors).
 -- State after seed:
 --   - Teams: CONFIRMED, NO track, NO mentor-team links (ready to assign / draw)
@@ -33,19 +33,19 @@ DECLARE @trackB UNIQUEIDENTIFIER = 'A1000000-AAAA-4AAA-8AAA-0000000000A2';
 DECLARE @prelimId UNIQUEIDENTIFIER = 'A1000000-AAAA-4AAA-8AAA-0000000000B1';
 DECLARE @finalId UNIQUEIDENTIFIER = 'A1000000-AAAA-4AAA-8AAA-0000000000B2';
 
-DECLARE @mentor1 UNIQUEIDENTIFIER = (SELECT id FROM users WHERE email = N'assign.mentor1@fpt.edu.vn');
-DECLARE @mentor2 UNIQUEIDENTIFIER = (SELECT id FROM users WHERE email = N'assign.mentor2@fpt.edu.vn');
-DECLARE @mentor3 UNIQUEIDENTIFIER = (SELECT id FROM users WHERE email = N'assign.mentor3@fpt.edu.vn');
--- Prefer 4th mentor; fall back to an unused lecturer if assign.mentor4 missing
-DECLARE @mentor4 UNIQUEIDENTIFIER = COALESCE(
-    (SELECT id FROM users WHERE email = N'assign.mentor4@fpt.edu.vn'),
-    (SELECT id FROM users WHERE email = N'pham.quoc.bao@fpt.edu.vn')
-);
+DECLARE @mentor1 UNIQUEIDENTIFIER = (SELECT id FROM users WHERE email = N'lecturer1@fpt.edu.vn');
+DECLARE @mentor2 UNIQUEIDENTIFIER = (SELECT id FROM users WHERE email = N'lecturer2@fpt.edu.vn');
+DECLARE @mentor3 UNIQUEIDENTIFIER = (SELECT id FROM users WHERE email = N'lecturer3@fpt.edu.vn');
+DECLARE @mentor4 UNIQUEIDENTIFIER = (SELECT id FROM users WHERE email = N'lecturer4@fpt.edu.vn');
 -- Judges separate from mentors (avoid BR-34 mentor/judge conflict)
-DECLARE @judge1 UNIQUEIDENTIFIER = (SELECT id FROM users WHERE email = N'assign.judge1@fpt.edu.vn');
-DECLARE @judge2 UNIQUEIDENTIFIER = COALESCE(
-    (SELECT id FROM users WHERE email = N'assign.judge2@fpt.edu.vn'),
-    (SELECT id FROM users WHERE email = N'assign.judge3@fpt.edu.vn')
+DECLARE @judge1 UNIQUEIDENTIFIER = (SELECT id FROM users WHERE email = N'lecturer5@fpt.edu.vn');
+DECLARE @judge2 UNIQUEIDENTIFIER = (
+    SELECT TOP 1 id FROM users
+    WHERE email IN (N'score.judge1@fpt.edu.vn', N'score.judge2@fpt.edu.vn', N'nguyen.van.duc@fpt.edu.vn')
+    ORDER BY CASE email
+        WHEN N'score.judge1@fpt.edu.vn' THEN 0
+        WHEN N'score.judge2@fpt.edu.vn' THEN 1
+        ELSE 2 END
 );
 
 IF @templateId IS NULL
@@ -64,14 +64,14 @@ END
 
 IF @mentor1 IS NULL OR @mentor2 IS NULL OR @mentor3 IS NULL OR @mentor4 IS NULL
 BEGIN
-    RAISERROR('Need assign.mentor1..3 (+ mentor4 or pham.quoc.bao) for mentor pool.', 16, 1);
+    RAISERROR('Need lecturer1..4@fpt.edu.vn accounts for mentor pool.', 16, 1);
     ROLLBACK TRANSACTION;
     RETURN;
 END
 
 IF @judge1 IS NULL
 BEGIN
-    RAISERROR('Need assign.judge1@fpt.edu.vn for event judge staff.', 16, 1);
+    RAISERROR('Need lecturer5@fpt.edu.vn for event judge staff.', 16, 1);
     ROLLBACK TRANSACTION;
     RETURN;
 END
@@ -144,9 +144,9 @@ IF OBJECT_ID(N'competition_groups', N'U') IS NOT NULL
 DELETE FROM tracks WHERE event_id = @eventId;
 DELETE FROM hackathon_events WHERE id = @eventId;
 
--- ── Ensure 30 FPT students (3 per team x 10) ──
+-- ── Ensure 60 FPT students (3 per team x 20) ──
 DECLARE @i INT = 1;
-WHILE @i <= 30
+WHILE @i <= 60
 BEGIN
     DECLARE @pad VARCHAR(12) = RIGHT(REPLICATE('0', 12) + CAST(@i AS VARCHAR(12)), 12);
     DECLARE @userId UNIQUEIDENTIFIER = CONVERT(UNIQUEIDENTIFIER, 'B1000000-AAAA-4AAA-8AAA-' + @pad);
@@ -203,28 +203,26 @@ INSERT INTO hackathon_events (
     description, location, format, competition_format,
     min_team, max_team, semester_min, semester_max,
     scoring_template_id, status, leaderboard_public,
-    owner_user_id, created_by, created_at, updated_at, avatar_url,
-    score_scale_max
+    owner_user_id, created_by, created_at, updated_at, avatar_url
 ) VALUES (
     @eventId,
     N'SEAL Assignment QA - Closed Reg',
     N'Summer', 2026,
     @compDay, @compDay,
     @regOpen, @regDeadline,
-    N'QA fixture for Team Assignments + Mentor Draw. 10 teams without track; 2 tracks; mentor pool ready.',
+    N'QA fixture for Team Assignments + Mentor Draw. 20 teams without track; 2 tracks; mentor pool ready.',
     N'FPT University HCM', N'OFFLINE', N'SEAL_RAG_2026',
     3, 20, 4, 8,
     @templateId, N'CLOSED_REGISTRATION', 0,
-    @ownerUserId, @ownerEmail, @now, @now, NULL,
-    100
+    @ownerUserId, @ownerEmail, @now, @now, NULL
 );
 
 INSERT INTO tracks (
     id, event_id, name, description, max_teams, status, topic,
-    created_at, updated_at, created_by
+    auto_generate_groups, created_at, updated_at, created_by
 ) VALUES
-    (@trackA, @eventId, N'Track Alpha', N'QA track A', NULL, N'OPEN', NULL, @now, @now, @ownerEmail),
-    (@trackB, @eventId, N'Track Beta', N'QA track B', NULL, N'OPEN', NULL, @now, @now, @ownerEmail);
+    (@trackA, @eventId, N'Track Alpha', N'QA track A', NULL, N'OPEN', NULL, 1, @now, @now, @ownerEmail),
+    (@trackB, @eventId, N'Track Beta', N'QA track B', NULL, N'OPEN', NULL, 1, @now, @now, @ownerEmail);
 
 INSERT INTO rounds (
     id, event_id, round_number, name, round_type,
@@ -273,16 +271,16 @@ VALUES
     (NEWID(), @now, @ownerEmail, @now, @mentor4, @eventId);
 
 -- Mentor pool per track (2 mentors / track) — NOT yet drawn to teams
-INSERT INTO mentor_assignments (id, created_at, created_by, assigned_at, mentor_user_id, event_id, track_id)
+INSERT INTO mentor_assignments (id, created_at, created_by, assigned_at, mentor_user_id, event_id, track_id, team_id, active)
 VALUES
-    (NEWID(), @now, @ownerEmail, @now, @mentor1, @eventId, @trackA),
-    (NEWID(), @now, @ownerEmail, @now, @mentor2, @eventId, @trackA),
-    (NEWID(), @now, @ownerEmail, @now, @mentor3, @eventId, @trackB),
-    (NEWID(), @now, @ownerEmail, @now, @mentor4, @eventId, @trackB);
+    (NEWID(), @now, @ownerEmail, @now, @mentor1, @eventId, @trackA, NULL, 1),
+    (NEWID(), @now, @ownerEmail, @now, @mentor2, @eventId, @trackA, NULL, 1),
+    (NEWID(), @now, @ownerEmail, @now, @mentor3, @eventId, @trackB, NULL, 1),
+    (NEWID(), @now, @ownerEmail, @now, @mentor4, @eventId, @trackB, NULL, 1);
 
--- ── 10 teams, no track_id ──
+-- ── 20 teams, no track_id ──
 SET @i = 1;
-WHILE @i <= 10
+WHILE @i <= 20
 BEGIN
     DECLARE @tPad VARCHAR(12) = RIGHT(REPLICATE('0', 12) + CAST(@i AS VARCHAR(12)), 12);
     DECLARE @teamId UNIQUEIDENTIFIER = CONVERT(UNIQUEIDENTIFIER, 'B2000000-AAAA-4AAA-8AAA-' + @tPad);
@@ -303,11 +301,11 @@ BEGIN
     INSERT INTO teams (
         id, created_at, created_by, event_id, leader_id, name, status,
         track_id, track_assigned_at, track_assignment_method, track_assigned_by,
-        group_id, is_recruiting, recruitment_note, version
+        group_id, is_recruiting, recruitment_note, disqualified, version
     ) VALUES (
         @teamId, @now, @ownerEmail, @eventId, @leaderId, @teamName, N'CONFIRMED',
         NULL, NULL, NULL, NULL,
-        NULL, 0, N'Ready for track assignment QA.', 0
+        NULL, 0, N'Ready for track assignment QA.', 0, 0
     );
 
     INSERT INTO team_members (id, created_at, created_by, joined_at, role, user_id, team_id, event_id) VALUES
@@ -318,20 +316,19 @@ BEGIN
     SET @i = @i + 1;
 END;
 
--- Enroll assign.student01..30 (APPROVED)
+-- Enroll all 60 students (APPROVED)
 INSERT INTO event_enrollments (id, created_at, created_by, enrolled_at, event_id, status, user_id, is_looking_for_team, is_profile_public)
 SELECT NEWID(), @now, @ownerEmail, @now, @eventId, N'APPROVED', u.id, 0, 0
 FROM users u
-WHERE u.email LIKE N'assign.student%@fpt.edu.vn'
-  AND TRY_CAST(SUBSTRING(u.email, 15, 2) AS INT) BETWEEN 1 AND 30;
+WHERE u.email LIKE N'assign.student%@fpt.edu.vn';
 
 COMMIT TRANSACTION;
 
 PRINT '=== Seed OK: SEAL Assignment QA - Closed Reg ===';
 PRINT 'Event id: A1000000-AAAA-4AAA-8AAA-000000000001';
-PRINT 'Status: CLOSED_REGISTRATION | Tracks: 2 (Alpha/Beta) | Teams: 10 (NO track, NO mentor)';
-PRINT 'Event staff judges: assign.judge1 (+ assign.judge2 if present)';
-PRINT 'Event staff mentors: assign.mentor1..3 + pham.quoc.bao (or mentor4)';
-PRINT 'Track mentor pool: mentor1+2 -> Alpha, mentor3+4 -> Beta (not drawn to teams yet)';
-PRINT 'Student login: assign.student01@fpt.edu.vn ... assign.student30 / Demo@123456';
+PRINT 'Status: CLOSED_REGISTRATION | Tracks: 2 (Alpha/Beta) | Teams: 20 (NO track, NO mentor)';
+PRINT 'Event staff judges: lecturer5 (+ score.judge1 if present)';
+PRINT 'Event staff mentors: lecturer1..4';
+PRINT 'Track mentor pool: lecturer1+2 -> Alpha, lecturer3+4 -> Beta (not drawn to teams yet)';
+PRINT 'Student login: assign.student01@fpt.edu.vn ... / Demo@123456';
 PRINT 'Test: Team assignments (random/confirm) -> then Mentor draw';

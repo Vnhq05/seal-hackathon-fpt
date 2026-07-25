@@ -357,11 +357,6 @@ function TracksSection({ event }: { event: EventResponse }) {
                   {track.description && (
                     <p className="mt-3 text-sm leading-relaxed text-seal-text-secondary">{track.description}</p>
                   )}
-                  <div className="mt-5 flex items-center gap-2">
-                    <span className="rounded bg-seal-surface-elevated px-2.5 py-1 font-mono text-[10px] font-semibold text-seal-text-secondary">
-                      Max {track.maxTeams} teams
-                    </span>
-                  </div>
                 </div>
               </article>
             );
@@ -395,7 +390,7 @@ function ScheduleSection({
 
         {schedules.length > 0 && (
           <div className="mb-10">
-            <EventScheduleTimeline schedules={schedules} rounds={rounds} variant="full" />
+            <EventScheduleTimeline schedules={schedules} variant="full" />
           </div>
         )}
 

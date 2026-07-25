@@ -101,21 +101,15 @@ public class CompetitionGroupService {
         }
 
         List<Track> tracks = trackRepository.findByHackathonEventId(eventId);
-
-        // Clear memberships once, then delete groups — flush so re-create can reuse track+name.
-        for (Team team : confirmed) {
-            team.setGroupId(null);
-        }
-        teamRepository.saveAll(confirmed);
-        teamRepository.flush();
-
         for (Track track : tracks) {
             List<CompetitionGroup> existing = groupRepository.findByTrackIdOrderByNameAsc(track.getId());
             for (CompetitionGroup group : existing) {
-                judgeAssignmentService.deactivateAssignmentsForDeletedGroup(group.getId(), ipAddress);
-                groupRepository.delete(group);
+                deleteGroupInternal(group, ipAddress);
             }
         }
+        // Flush the deletes before re-creating: otherwise Hibernate orders the new inserts
+        // first and unique (track_id, name) blocks reusing group names on a re-run.
+        teamRepository.flush();
         groupRepository.flush();
 
         List<GenerateCompetitionGroupsResponse.TrackGroupPlan> plans = new ArrayList<>();

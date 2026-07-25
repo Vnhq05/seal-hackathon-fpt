@@ -11,7 +11,6 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -52,8 +51,7 @@ public class Track extends BaseEntity {
     @Column(name = "topic", length = 1000)
     private String topic;
 
-    /** Null = unlimited (SEAL coordinator assignment); see V18. */
-    @Min(1)
+    /** Deprecated capacity field; no longer enforced. Kept nullable for schema compatibility (see V18). */
     @Column(name = "max_teams")
     private Integer maxTeams;
 

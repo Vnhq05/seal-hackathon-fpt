@@ -497,6 +497,12 @@ export function AddRoundsTab({ event }: { event: EventResponse }) {
             />
             <p style={{ fontSize: 12, color: "#8891a5", marginTop: 4 }}>
               Minimum active judges required per track/group before scoring can start.
+              Advance slots are calculated automatically from team counts (not entered here).
+              The round with the latest end time is treated as Final.
+            </p>
+            <p style={{ fontSize: 12, color: "#8891a5", marginTop: 4 }}>
+              Advance slots are calculated automatically from team counts (not entered here).
+              The round with the latest end time is treated as Final.
             </p>
             <p style={{ fontSize: 12, color: "#8891a5", marginTop: 4 }}>
               Advance slots are calculated automatically from team counts (not entered here).

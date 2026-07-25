@@ -172,12 +172,16 @@ export function TeamAssignmentPage({ defaultEventId, embedded }: { defaultEventI
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         // Assignments may already be on the server; still surface lock failure clearly.
-        return {
-          lockedTrackCount: 0,
-          assignedCount: toSend.length,
-          lockSkipped: true as const,
-          lockError: message,
-        };
+        if (toSend.length > 0) {
+          return {
+            lockedTrackCount: 0,
+            assignedCount: toSend.length,
+            lockSkipped: true as const,
+            lockError: message,
+          };
+        }
+        // Nothing was saved, so there is no partial success to report.
+        throw err;
       }
     },
     onSuccess: (result) => {

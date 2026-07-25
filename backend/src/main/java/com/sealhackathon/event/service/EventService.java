@@ -39,7 +39,6 @@ import com.sealhackathon.team.service.TeamService;
 import com.sealhackathon.user.dto.snapshot.UserSnapshot;
 import com.sealhackathon.user.service.UserPublicService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -64,15 +63,10 @@ import java.util.regex.Pattern;
 @RequiredArgsConstructor
 public class EventService {
 
-    private static final Pattern EVENT_NAME_PATTERN = Pattern.compile("^[a-zA-Z\\s]+$");
+    private static final Pattern EVENT_NAME_PATTERN =
+            Pattern.compile("^[a-zA-Z0-9][a-zA-Z0-9\\s\\-&,.'()/]*$");
     private static final List<PrizeRank> PRIZE_RANK_ORDER = List.of(
             PrizeRank.FIRST, PrizeRank.SECOND, PrizeRank.THIRD);
-
-    @Value("${app.hackathon.team.min-track-max-teams:16}")
-    private int minTrackMaxTeams;
-
-    @Value("${app.hackathon.team.max-track-max-teams:40}")
-    private int maxTrackMaxTeams;
 
     private final HackathonEventRepository eventRepository;
     private final RoundService roundService;
@@ -144,18 +138,16 @@ public class EventService {
 
         if (formatRuleEngine.isSealFormat(competitionFormat)) {
             SealSpring2026Template.apply(event,
-                    formatRuleEngine.getSealMaxTeamsPerTrack(),
                     formatRuleEngine.getSealTopPerTrack(),
                     formatRuleEngine.getSealFinalistCount());
         } else if (request.getTracks() != null) {
             request.getTracks().forEach(t -> {
-                validateTrackMaxTeams(t.getMaxTeams());
                 Track track = Track.builder()
                         .hackathonEvent(event)
                         .name(t.getName())
                         .description(t.getDescription())
                         .topic(t.getTopic())
-                        .maxTeams(t.getMaxTeams())
+                        .maxTeams(null)
                         .scoringTemplateId(t.getScoringTemplateId())
                         .build();
                 event.getTracks().add(track);
@@ -655,7 +647,7 @@ public class EventService {
     private void validateEventName(String name) {
         if (name == null || !EVENT_NAME_PATTERN.matcher(name.trim()).matches()) {
             throw new BusinessException(
-                    "Event name must contain only letters and spaces",
+                    "Event name may only contain letters, numbers, spaces, and - & , . ' ( )",
                     HttpStatus.BAD_REQUEST) {};
         }
     }
@@ -675,17 +667,6 @@ public class EventService {
         if (!close.isBefore(start)) {
             throw new BusinessException(
                     "Registration must close before event start date",
-                    HttpStatus.BAD_REQUEST) {};
-        }
-    }
-
-    private void validateTrackMaxTeams(Integer maxTeams) {
-        if (maxTeams == null) {
-            return;
-        }
-        if (maxTeams < minTrackMaxTeams || maxTeams > maxTrackMaxTeams) {
-            throw new BusinessException(
-                    "Track max teams must be between " + minTrackMaxTeams + " and " + maxTrackMaxTeams,
                     HttpStatus.BAD_REQUEST) {};
         }
     }

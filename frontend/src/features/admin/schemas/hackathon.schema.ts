@@ -42,8 +42,8 @@ export const createHackathonSchema = z
       .min(1, "Event name is required")
       .max(200, "Name too long")
       .refine(
-        (s) => /^[a-zA-Z\s]+$/.test(s.trim()),
-        "Event name must contain only letters and spaces",
+        (s) => /^[a-zA-Z0-9][a-zA-Z0-9\s\-&,.'()/]*$/.test(s.trim()),
+        "Event name may only contain letters, numbers, spaces, and - & , . ' ( )",
       ),
     startDate: z.string().min(1, "Start date is required"),
     duration: z

@@ -1,6 +1,5 @@
 package com.sealhackathon.event.dto.request;
 
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
@@ -26,8 +25,7 @@ public class CreateTrackRequest {
     @Size(max = 1000)
     private String topic;
 
-    /** Null = unlimited capacity (coordinator assigns teams). */
-    @Min(value = 1, message = "Max teams must be at least 1")
+    /** Ignored — track capacity is no longer limited. */
     private Integer maxTeams;
 
     private UUID scoringTemplateId;

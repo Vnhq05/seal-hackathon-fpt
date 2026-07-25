@@ -233,13 +233,12 @@ public class TrackDrawSessionService {
     private List<AvailableTrackSlotResponse> buildAvailableTracks(UUID eventId) {
         List<AvailableTrackSlotResponse> slots = new ArrayList<>();
         for (Track track : trackRepository.findByHackathonEventId(eventId)) {
-            int max = track.getMaxTeams() != null ? track.getMaxTeams() : formatRuleEngine.getSealMaxTeamsPerTrack();
-            long current = teamRepository.countByEventIdAndTrackId(eventId, track.getId());
             slots.add(AvailableTrackSlotResponse.builder()
                     .trackId(track.getId())
                     .name(track.getName())
                     .status(track.getStatus())
-                    .remainingSlots((int) Math.max(0, max - current))
+                    // Unlimited — BTC assigns tracks; no remaining-slot cap.
+                    .remainingSlots(Integer.MAX_VALUE)
                     .build());
         }
         return slots;

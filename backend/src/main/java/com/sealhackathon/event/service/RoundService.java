@@ -173,6 +173,7 @@ public class RoundService {
     @Transactional
     public void deleteRound(UUID roundId) {
         Round round = getRound(roundId);
+        UUID eventId = round.getHackathonEvent().getId();
         guardDraftOrActive(round.getHackathonEvent());
         UUID eventId = round.getHackathonEvent().getId();
         roundRepository.delete(round);

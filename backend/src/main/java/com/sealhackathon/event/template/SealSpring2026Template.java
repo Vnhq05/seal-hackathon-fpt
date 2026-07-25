@@ -134,14 +134,10 @@ public final class SealSpring2026Template {
 
 
 
-    public static void apply(HackathonEvent event, int maxTeamsPerTrack, int topPerTrack, int finalistCount) {
-
-        applyTracks(event, maxTeamsPerTrack);
-
+    public static void apply(HackathonEvent event, int topPerTrack, int finalistCount) {
+        applyTracks(event);
         applyRounds(event, topPerTrack, finalistCount);
-
         applyPrizes(event);
-
     }
 
 
@@ -290,24 +286,15 @@ public final class SealSpring2026Template {
 
 
 
-    private static void applyTracks(HackathonEvent event, int maxTeamsPerTrack) {
-
+    private static void applyTracks(HackathonEvent event) {
         for (String name : TRACK_NAMES) {
-
             event.getTracks().add(Track.builder()
-
                     .hackathonEvent(event)
-
                     .name(name)
-
                     .description("SEAL Spring 2026 - " + name)
-
-                    .maxTeams(maxTeamsPerTrack)
-
+                    .maxTeams(null)
                     .build());
-
         }
-
     }
 
 

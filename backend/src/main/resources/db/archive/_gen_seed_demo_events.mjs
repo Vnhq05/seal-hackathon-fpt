@@ -264,11 +264,11 @@ const EVENTS = [
     season: "Summer",
     year: 2026,
     status: "SCORING",
-    qa: "SCORING - prelim fully scored + rankings ready, NOT published (demo publish per track/round)",
-    login: "tran.thanh.ha@fpt.edu.vn (coordinator) — Publish Results on LiveScore",
-    view: "/coordinator/livescore/{eventId}",
+    qa: "SCORING - all submitted, partial judge scores",
+    login: "nguyen.van.duc@fpt.edu.vn (judge with unfinished scores)",
+    view: "/lecturer/scoring",
     pool: "e5",
-    mode: "ready_publish",
+    mode: "partial_score",
     leaderboard: 0,
   },
   {
@@ -277,9 +277,9 @@ const EVENTS = [
     season: "Fall",
     year: 2026,
     status: "ACTIVE",
-    qa: "ACTIVE - deadline in ~2h, mixed progress risks (NOT_STARTED / SLIDE_ONLY / STALLED / LAST_MINUTE / OK) + alerts",
+    qa: "ACTIVE - deadline in ~3h, no submissions, progress alerts + mentor_teams + notifications seeded",
     login: "pham.quoc.bao@fpt.edu.vn (mentor track 1) or nguyen.hoang.minh.preview26@fpt.edu.vn (student leader)",
-    view: "coordinator/lecturer Teams needing support · /student dashboard banner · GET .../progress",
+    view: "admin/lecturer dashboard Teams needing support · /student dashboard banner · notifications",
     pool: "e6",
     mode: "alert",
     leaderboard: 0,
@@ -448,6 +448,10 @@ L(`DELETE FROM honored_guests WHERE event_id IN (SELECT id FROM @demoEventIds);`
 L(`DELETE FROM prizes WHERE event_id IN (SELECT id FROM @demoEventIds);`);
 L(`DELETE FROM event_schedules WHERE event_id IN (SELECT id FROM @demoEventIds);`);
 L(`DELETE FROM allowed_email_domains WHERE event_id IN (SELECT id FROM @demoEventIds);`);
+L(`IF OBJECT_ID(N'competition_groups', N'U') IS NOT NULL`);
+L(`    DELETE cg FROM competition_groups cg`);
+L(`    INNER JOIN tracks tr ON tr.id = cg.track_id`);
+L(`    WHERE tr.event_id IN (SELECT id FROM @demoEventIds);`);
 L(`DELETE FROM tracks WHERE event_id IN (SELECT id FROM @demoEventIds);`);
 L(`DELETE FROM hackathon_events WHERE id IN (SELECT id FROM @demoEventIds);`);
 L(``);
@@ -559,8 +563,7 @@ function emitEvent(ev) {
     L(`DECLARE @e${ev.n}_finalSub DATETIME2 = DATEADD(DAY, 5, @now);`);
     L(`DECLARE @e${ev.n}_finalScore DATETIME2 = DATEADD(DAY, 6, @now);`);
     L(`DECLARE @e${ev.n}_finalEnd DATETIME2 = DATEADD(DAY, 6, @now);`);
-  } else if (ev.mode === "partial_score" || ev.mode === "ready_publish") {
-    // Submission closed; scoring window open. ready_publish = full scores + rankings, no published_results.
+  } else if (ev.mode === "partial_score") {
     L(`DECLARE @e${ev.n}_compDay DATE = CAST(DATEADD(DAY, -1, @now) AS DATE);`);
     L(`DECLARE @e${ev.n}_endDay DATE = CAST(DATEADD(DAY, 3, @now) AS DATE);`);
     L(`DECLARE @e${ev.n}_compDt DATETIME2 = CAST(@e${ev.n}_compDay AS DATETIME2);`);
@@ -581,7 +584,7 @@ function emitEvent(ev) {
     L(`DECLARE @e${ev.n}_regOpen DATE = CAST(DATEADD(DAY, -15, @now) AS DATE);`);
     L(`DECLARE @e${ev.n}_regDeadline DATE = CAST(DATEADD(DAY, -1, @now) AS DATE);`);
     L(`DECLARE @e${ev.n}_prelimStart DATETIME2 = DATEADD(DAY, -1, @now);`);
-    L(`DECLARE @e${ev.n}_prelimSub DATETIME2 = DATEADD(HOUR, 2, @now);`);
+    L(`DECLARE @e${ev.n}_prelimSub DATETIME2 = DATEADD(HOUR, 3, @now);`);
     L(`DECLARE @e${ev.n}_prelimScore DATETIME2 = DATEADD(DAY, 2, @now);`);
     L(`DECLARE @e${ev.n}_finalStart DATETIME2 = DATEADD(DAY, 2, @now);`);
     L(`DECLARE @e${ev.n}_finalSub DATETIME2 = DATEADD(DAY, 2, @now);`);
@@ -786,11 +789,10 @@ function emitEvent(ev) {
   const needCompleted = ev.mode === "completed" || ev.mode === "completed_feedback";
   const needPartialSubmit = ev.mode === "partial_submit";
   const needPartialScore = ev.mode === "partial_score";
-  const needReadyPublish = ev.mode === "ready_publish";
   const needAlert = ev.mode === "alert";
 
   // Submissions
-  if (needCompleted || needPartialScore || needPartialSubmit || needReadyPublish) {
+  if (needCompleted || needPartialScore || needPartialSubmit) {
     const submitTeams = needPartialSubmit ? teams.filter((_, i) => i % 2 === 0) : teams;
 
     let subSeq = 1;
@@ -801,13 +803,13 @@ function emitEvent(ev) {
     for (const t of submitTeams) {
       const subId = uid("D", ev.n, subSeq++);
       const verId = uid("E", ev.n, verSeq++);
-      const status = needCompleted || needReadyPublish ? "SCORED" : "SUBMITTED";
+      const status = needCompleted ? "SCORED" : "SUBMITTED";
       subMeta.push({ team: t, roundId: prelimId, subId, verId, status, round: "prelim" });
     }
 
     // For completed: compute prelim averages in JS, pick top-2/track, then add final submissions
     let rankingPrelimPreview = [];
-    if (needCompleted || needReadyPublish) {
+    if (needCompleted) {
       rankingPrelimPreview = teams.map((t) => {
         const base = PRELIM_PROFILES[t.profileIdx];
         const j1 = base;
@@ -825,27 +827,25 @@ function emitEvent(ev) {
         r.score = sc;
         r.rank = i + 1;
       });
-      if (needCompleted) {
-        const finalists = [0, 1, 2].flatMap((tr) =>
-          rankingPrelimPreview
-            .filter((r) => r.team.trackIdx === tr)
-            .sort((a, b) => b.score - a.score)
-            .slice(0, 2)
-        );
-        finalists.forEach((f, fi) => {
-          const subId = uid("D", ev.n, subSeq++);
-          const verId = uid("E", ev.n, verSeq++);
-          subMeta.push({
-            team: f.team,
-            roundId: finalId,
-            subId,
-            verId,
-            status: "SCORED",
-            round: "final",
-            finalistRank: fi + 1,
-          });
+      const finalists = [0, 1, 2].flatMap((tr) =>
+        rankingPrelimPreview
+          .filter((r) => r.team.trackIdx === tr)
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 2)
+      );
+      finalists.forEach((f, fi) => {
+        const subId = uid("D", ev.n, subSeq++);
+        const verId = uid("E", ev.n, verSeq++);
+        subMeta.push({
+          team: f.team,
+          roundId: finalId,
+          subId,
+          verId,
+          status: "SCORED",
+          round: "final",
+          finalistRank: fi + 1,
         });
-      }
+      });
     }
 
     L(`INSERT INTO submissions (id, created_at, current_version_id, round_id, status, submitted_by, team_id, opt_lock) VALUES`);
@@ -873,7 +873,7 @@ function emitEvent(ev) {
     }
     L(``);
 
-    if (needCompleted || needReadyPublish) {
+    if (needCompleted) {
       let jsSeq = 1;
       let jsdSeq = 1;
       const scoreRows = [];
@@ -882,21 +882,13 @@ function emitEvent(ev) {
       const prelimByTeam = new Map(rankingPrelimPreview.map((r) => [r.team.id, r]));
       for (const s of subMeta.filter((x) => x.round === "prelim")) {
         const pre = prelimByTeam.get(s.team.id);
-        const judgePairs = needReadyPublish
-          ? [
-              ["@judge1Id", pre.j1],
-              ["@judge2Id", pre.j2],
-              ["@judge3Id", nudge(pre.j1, pre.team.profileIdx % 2 === 0 ? 0 : -1)],
-            ]
-          : [
-              ["@judge1Id", pre.j1],
-              ["@judge2Id", pre.j2],
-            ];
-        for (const [judgeVar, scores] of judgePairs) {
+        for (const [judgeVar, scores] of [
+          ["@judge1Id", pre.j1],
+          ["@judge2Id", pre.j2],
+        ]) {
           const jsId = uid("F", ev.n, jsSeq++);
-          const completedAt = needReadyPublish ? "@now" : `@e${ev.n}_prelimScore`;
           scoreRows.push(
-            `    ('${jsId}', @now, ${completedAt}, ${judgeVar}, '${prelimId}', @e${ev.n}_prelimSub, 'COMPLETED', '${s.subId}', 0)`
+            `    ('${jsId}', @now, @e${ev.n}_prelimScore, ${judgeVar}, '${prelimId}', @e${ev.n}_prelimSub, 'COMPLETED', '${s.subId}', 0)`
           );
           prelimCrit.forEach((c, ci) => {
             detailRows.push(`    ('${uid(0xE, ev.n, jsdSeq++)}', @now, '${c.id}', ${scores[ci]}, '${jsId}')`);
@@ -905,29 +897,27 @@ function emitEvent(ev) {
       }
 
       const rankingFinal = [];
-      if (needCompleted) {
-        subMeta
-          .filter((x) => x.round === "final")
-          .forEach((s, fi) => {
-            const base = FINAL_PROFILES[fi];
-            const j1 = base;
-            const j2 = nudge(base, fi % 2 === 0 ? 0 : -1);
-            const avg = Math.round(((weighted(j1, FINAL_W) + weighted(j2, FINAL_W)) / 2) * 10000) / 10000;
-            rankingFinal.push({ team: s.team, score: avg, sub: s, fi, j1, j2 });
-            for (const [judgeVar, scores] of [
-              ["@judge1Id", j1],
-              ["@judge2Id", j2],
-            ]) {
-              const jsId = uid("F", ev.n, jsSeq++);
-              scoreRows.push(
-                `    ('${jsId}', @now, @e${ev.n}_finalScore, ${judgeVar}, '${finalId}', @e${ev.n}_finalSub, 'COMPLETED', '${s.subId}', 0)`
-              );
-              finalCrit.forEach((c, ci) => {
-                detailRows.push(`    ('${uid(0xE, ev.n, jsdSeq++)}', @now, '${c.id}', ${scores[ci]}, '${jsId}')`);
-              });
-            }
-          });
-      }
+      subMeta
+        .filter((x) => x.round === "final")
+        .forEach((s, fi) => {
+          const base = FINAL_PROFILES[fi];
+          const j1 = base;
+          const j2 = nudge(base, fi % 2 === 0 ? 0 : -1);
+          const avg = Math.round(((weighted(j1, FINAL_W) + weighted(j2, FINAL_W)) / 2) * 10000) / 10000;
+          rankingFinal.push({ team: s.team, score: avg, sub: s, fi, j1, j2 });
+          for (const [judgeVar, scores] of [
+            ["@judge1Id", j1],
+            ["@judge2Id", j2],
+          ]) {
+            const jsId = uid("F", ev.n, jsSeq++);
+            scoreRows.push(
+              `    ('${jsId}', @now, @e${ev.n}_finalScore, ${judgeVar}, '${finalId}', @e${ev.n}_finalSub, 'COMPLETED', '${s.subId}', 0)`
+            );
+            finalCrit.forEach((c, ci) => {
+              detailRows.push(`    ('${uid(0xE, ev.n, jsdSeq++)}', @now, '${c.id}', ${scores[ci]}, '${jsId}')`);
+            });
+          }
+        });
 
       L(`INSERT INTO judge_scores (id, created_at, completed_at, judge_user_id, round_id, started_at, status, submission_id, version) VALUES`);
       L(scoreRows.map((r, i) => `${r}${i < scoreRows.length - 1 ? "," : ";"}`).join("\n"));
@@ -937,82 +927,74 @@ function emitEvent(ev) {
       L(``);
 
       const rankingPrelim = [...rankingPrelimPreview].sort((a, b) => a.rank - b.rank);
-      const rankingCalcAt = needReadyPublish ? "@now" : `@e${ev.n}_prelimScore`;
 
       L(`INSERT INTO rankings (id, created_at, calculated_at, final_score, rank, round_id, team_id, version, lock_version) VALUES`);
       L(
         rankingPrelim
           .map(
             (r, i) =>
-              `    ('${uid(16, ev.n, i + 1)}', @now, ${rankingCalcAt}, ${r.score.toFixed(4)}, ${r.rank}, '${prelimId}', '${r.team.id}', 1, 0)${i < rankingPrelim.length - 1 ? "," : ";"}`
+              `    ('${uid(16, ev.n, i + 1)}', @now, @e${ev.n}_prelimScore, ${r.score.toFixed(4)}, ${r.rank}, '${prelimId}', '${r.team.id}', 1, 0)${i < rankingPrelim.length - 1 ? "," : ";"}`
           )
           .join("\n")
       );
       L(``);
 
-      if (needReadyPublish) {
-        L(`-- No published_results / finalists / awards: coordinator demos Publish Results per track & round.`);
-        L(``);
-      }
+      rankingFinal.sort((a, b) => b.score - a.score);
+      const seenF = new Set();
+      rankingFinal.forEach((r, i) => {
+        let sc = Math.round((r.score - i * 0.01) * 10000) / 10000;
+        while (seenF.has(sc)) sc = Math.round((sc - 0.0001) * 10000) / 10000;
+        seenF.add(sc);
+        r.score = sc;
+        r.rank = i + 1;
+      });
 
-      if (needCompleted) {
-        rankingFinal.sort((a, b) => b.score - a.score);
-        const seenF = new Set();
-        rankingFinal.forEach((r, i) => {
-          let sc = Math.round((r.score - i * 0.01) * 10000) / 10000;
-          while (seenF.has(sc)) sc = Math.round((sc - 0.0001) * 10000) / 10000;
-          seenF.add(sc);
-          r.score = sc;
-          r.rank = i + 1;
+      L(`INSERT INTO rankings (id, created_at, calculated_at, final_score, rank, round_id, team_id, version, lock_version) VALUES`);
+      L(
+        rankingFinal
+          .map(
+            (r, i) =>
+              `    ('${uid(17, ev.n, i + 1)}', @now, @e${ev.n}_finalScore, ${r.score.toFixed(4)}, ${r.rank}, '${finalId}', '${r.team.id}', 1, 0)${i < rankingFinal.length - 1 ? "," : ";"}`
+          )
+          .join("\n")
+      );
+      L(``);
+
+      const byTrack = [0, 1, 2].map((tr) =>
+        rankingPrelimPreview
+          .filter((r) => r.team.trackIdx === tr)
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 2)
+      );
+      L(`INSERT INTO finalist_selections (id, event_id, team_id, track_id, preliminary_rank, selected_reason, selected_at, created_at, updated_at, selection_method, eligible) VALUES`);
+      const finRows = [];
+      let finSeq = 1;
+      byTrack.forEach((pair) => {
+        pair.forEach((r, ri) => {
+          finRows.push(
+            `    ('${uid(18, ev.n, finSeq++)}', '${eventId}', '${r.team.id}', '${r.team.trackId}', ${ri + 1}, N'Top ${ri + 1} in track', @e${ev.n}_prelimScore, @now, @now, 'AUTO', 1)`
+          );
         });
+      });
+      L(finRows.map((r, i) => `${r}${i < finRows.length - 1 ? "," : ";"}`).join("\n"));
+      L(``);
 
-        L(`INSERT INTO rankings (id, created_at, calculated_at, final_score, rank, round_id, team_id, version, lock_version) VALUES`);
-        L(
-          rankingFinal
-            .map(
-              (r, i) =>
-                `    ('${uid(17, ev.n, i + 1)}', @now, @e${ev.n}_finalScore, ${r.score.toFixed(4)}, ${r.rank}, '${finalId}', '${r.team.id}', 1, 0)${i < rankingFinal.length - 1 ? "," : ";"}`
-            )
-            .join("\n")
-        );
-        L(``);
+      L(`INSERT INTO published_results (id, created_at, dispute_deadline, published_at, published_by, round_id) VALUES`);
+      L(`    ('${uid(19, ev.n, 1)}', @now, DATEADD(DAY, 2, @e${ev.n}_prelimScore), @e${ev.n}_prelimScore, @coordId, '${prelimId}'),`);
+      L(`    ('${uid(19, ev.n, 2)}', @now, DATEADD(DAY, 2, @e${ev.n}_finalScore), @e${ev.n}_finalScore, @coordId, '${finalId}');`);
+      L(``);
 
-        const byTrack = [0, 1, 2].map((tr) =>
-          rankingPrelimPreview
-            .filter((r) => r.team.trackIdx === tr)
-            .sort((a, b) => b.score - a.score)
-            .slice(0, 2)
-        );
-        L(`INSERT INTO finalist_selections (id, event_id, team_id, track_id, preliminary_rank, selected_reason, selected_at, created_at, updated_at, selection_method, eligible) VALUES`);
-        const finRows = [];
-        let finSeq = 1;
-        byTrack.forEach((pair) => {
-          pair.forEach((r, ri) => {
-            finRows.push(
-              `    ('${uid(18, ev.n, finSeq++)}', '${eventId}', '${r.team.id}', '${r.team.trackId}', ${ri + 1}, N'Top ${ri + 1} in track', @e${ev.n}_prelimScore, @now, @now, 'TOP_PER_TRACK', 1)`
-            );
-          });
-        });
-        L(finRows.map((r, i) => `${r}${i < finRows.length - 1 ? "," : ";"}`).join("\n"));
-        L(``);
-
-        L(`INSERT INTO published_results (id, created_at, dispute_deadline, published_at, published_by, round_id) VALUES`);
-        L(`    ('${uid(19, ev.n, 1)}', @now, DATEADD(DAY, 2, @e${ev.n}_prelimScore), @e${ev.n}_prelimScore, @coordId, '${prelimId}'),`);
-        L(`    ('${uid(19, ev.n, 2)}', @now, DATEADD(DAY, 2, @e${ev.n}_finalScore), @e${ev.n}_finalScore, @coordId, '${finalId}');`);
-        L(``);
-
-        const awardOrder = [...rankingFinal].sort((a, b) => a.rank - b.rank);
-        L(`INSERT INTO team_awards (id, event_id, team_id, prize_id, awarded_at, created_at, updated_at) VALUES`);
-        L(
-          [0, 1, 2, 3]
-            .map(
-              (i) =>
-                `    ('${uid(20, ev.n, i + 1)}', '${eventId}', '${awardOrder[i].team.id}', '${prizes[i].id}', @e${ev.n}_finalEnd, @now, @now)${i < 3 ? "," : ";"}`
-            )
-            .join("\n")
-        );
-        L(``);
-      }
+      const awardOrder = [...rankingFinal].sort((a, b) => a.rank - b.rank);
+      L(`INSERT INTO team_awards (id, event_id, team_id, prize_id, awarded_at, created_at, updated_at) VALUES`);
+      L(
+        [0, 1, 2, 3]
+          .map(
+            (i) =>
+              `    ('${uid(20, ev.n, i + 1)}', '${eventId}', '${awardOrder[i].team.id}', '${prizes[i].id}', @e${ev.n}_finalEnd, @now, @now)${i < 3 ? "," : ";"}`
+          )
+          .join("\n")
+      );
+      L(``);
     }
 
     if (needPartialScore) {
@@ -1062,153 +1044,33 @@ function emitEvent(ev) {
   }
 
   if (needAlert) {
-    // Mixed progress scenarios so coordinator/mentor/student dashboards show real risk diversity.
-    // Indices: 0-2 NOT_STARTED | 3-4 SLIDE_ONLY | 5-6 STALLED | 7 LAST_MINUTE | 8 OK (2 versions)
-    const alertKinds = [
-      "NOT_STARTED",
-      "NOT_STARTED",
-      "NOT_STARTED",
-      "SLIDE_ONLY",
-      "SLIDE_ONLY",
-      "STALLED",
-      "STALLED",
-      "LAST_MINUTE",
-      "OK",
-    ];
-    const alertRisk = {
-      NOT_STARTED: ["CRITICAL", "NOT_STARTED"],
-      SLIDE_ONLY: ["CRITICAL", "SLIDE_ONLY_PAST_GATE"],
-      STALLED: ["AT_RISK", "STALLED"],
-      LAST_MINUTE: ["AT_RISK", "SINGLE_VERSION_LAST_MINUTE"],
-      OK: ["OK", ""],
-    };
-
-    let subSeq = 1;
-    let verSeq = 1;
-    let attSeq = 1;
-    const subRows = [];
-    const verRows = [];
-    const attRows = [];
-    const updateCurrent = [];
-    const alertRows = [];
-    const notifRows = [];
-
-    for (let i = 0; i < teams.length; i++) {
-      const t = teams[i];
-      const kind = alertKinds[i];
-      const [riskLevel, reason] = alertRisk[kind];
-      if (kind !== "OK") {
-        alertRows.push(
-          `    ('${uid(21, ev.n, i + 1)}', '${t.id}', '${prelimId}', N'${riskLevel}', N'${reason}', @now, @now, @now)`
-        );
-      }
-      if (kind === "NOT_STARTED") {
-        notifRows.push({
-          team: t,
-          msg: `Team ${esc(t.name)} has not started submission and the deadline is approaching (NOT_STARTED).`,
-        });
-        continue;
-      }
-
-      const subId = uid("D", ev.n, subSeq++);
-      const verId = uid("E", ev.n, verSeq++);
-      const slug = t.name.toLowerCase().replace(/\s+/g, "-");
-      subRows.push(
-        `    ('${subId}', @now, NULL, '${prelimId}', 'SUBMITTED', '${t.leader.id}', '${t.id}', 0)`
-      );
-
-      if (kind === "SLIDE_ONLY") {
-        verRows.push(
-          `    ('${verId}', @now, NULL, NULL, N'https://docs.google.com/presentation/d/seal-alert-${ev.n}-${i}', DATEADD(HOUR, -6, @now), 1, '${subId}')`
-        );
-        notifRows.push({
-          team: t,
-          msg: `Team ${esc(t.name)} only uploaded slides past the slide gate (SLIDE_ONLY_PAST_GATE).`,
-        });
-      } else if (kind === "STALLED") {
-        verRows.push(
-          `    ('${verId}', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/${esc(slug)}', N'https://docs.google.com/presentation/d/seal-alert-${ev.n}-${i}', DATEADD(HOUR, -30, @now), 1, '${subId}')`
-        );
-        attRows.push(
-          `    ('${uid(27, ev.n, attSeq++)}', @now, N'pitch.pdf', 102400, N'/uploads/demo/pitch-${i}.pdf', 2, '${verId}')`
-        );
-        notifRows.push({
-          team: t,
-          msg: `Team ${esc(t.name)} has stalled — no submission update in 24h+ (STALLED).`,
-        });
-      } else if (kind === "LAST_MINUTE") {
-        verRows.push(
-          `    ('${verId}', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/${esc(slug)}', N'https://docs.google.com/presentation/d/seal-alert-${ev.n}-${i}', DATEADD(MINUTE, -45, @now), 1, '${subId}')`
-        );
-        attRows.push(
-          `    ('${uid(27, ev.n, attSeq++)}', @now, N'pitch.pdf', 102400, N'/uploads/demo/pitch-${i}.pdf', 2, '${verId}')`
-        );
-        notifRows.push({
-          team: t,
-          msg: `Team ${esc(t.name)} submitted a single version in the last-minute window (SINGLE_VERSION_LAST_MINUTE).`,
-        });
-      } else {
-        // OK: two healthy versions; latest within stalled window
-        const verId1 = verId;
-        const verId2 = uid("E", ev.n, verSeq++);
-        verRows.push(
-          `    ('${verId1}', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/${esc(slug)}', N'https://docs.google.com/presentation/d/seal-alert-${ev.n}-${i}-v1', DATEADD(HOUR, -40, @now), 1, '${subId}'),`
-        );
-        verRows.push(
-          `    ('${verId2}', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/${esc(slug)}', N'https://docs.google.com/presentation/d/seal-alert-${ev.n}-${i}-v2', DATEADD(HOUR, -3, @now), 2, '${subId}')`
-        );
-        attRows.push(
-          `    ('${uid(27, ev.n, attSeq++)}', @now, N'pitch-v2.pdf', 204800, N'/uploads/demo/pitch-${i}-v2.pdf', 2, '${verId2}')`
-        );
-        updateCurrent.push(`UPDATE submissions SET current_version_id = '${verId2}' WHERE id = '${subId}';`);
-        continue;
-      }
-      updateCurrent.push(`UPDATE submissions SET current_version_id = '${verId}' WHERE id = '${subId}';`);
-    }
-
-    if (subRows.length) {
-      L(`INSERT INTO submissions (id, created_at, current_version_id, round_id, status, submitted_by, team_id, opt_lock) VALUES`);
-      L(subRows.map((r, i) => `${r}${i < subRows.length - 1 ? "," : ";"}`).join("\n"));
-      L(``);
-      L(`INSERT INTO submission_versions (id, created_at, demo_url, github_url, slide_url, submitted_at, version_number, submission_id) VALUES`);
-      // verRows for OK already has trailing comma on first line; normalize
-      const normalizedVer = verRows.map((r, i) => {
-        const base = r.replace(/,\s*$/, "");
-        return `${base}${i < verRows.length - 1 ? "," : ";"}`;
-      });
-      L(normalizedVer.join("\n"));
-      L(``);
-      if (attRows.length) {
-        L(`INSERT INTO submission_attachments (id, created_at, file_name, file_size, file_url, page_count, submission_version_id) VALUES`);
-        L(attRows.map((r, i) => `${r}${i < attRows.length - 1 ? "," : ";"}`).join("\n"));
-        L(``);
-      }
-      for (const u of updateCurrent) L(u);
-      L(``);
-    }
-
-    if (alertRows.length) {
-      L(`INSERT INTO team_progress_alerts (id, team_id, round_id, risk_level, reasons, last_alerted_at, created_at, updated_at) VALUES`);
-      L(alertRows.map((r, i) => `${r}${i < alertRows.length - 1 ? "," : ";"}`).join("\n"));
-      L(``);
-    }
-
-    // In-app notifications so student/mentor/coord see alerts without waiting for the scheduler.
+    L(`INSERT INTO team_progress_alerts (id, team_id, round_id, risk_level, reasons, last_alerted_at, created_at, updated_at) VALUES`);
+    L(
+      teams
+        .map(
+          (t, i) =>
+            `    ('${uid(21, ev.n, i + 1)}', '${t.id}', '${prelimId}', N'CRITICAL', N'NOT_STARTED', @now, @now, @now)${i < 8 ? "," : ";"}`
+        )
+        .join("\n")
+    );
+    L(``);
+    // In-app notifications so student/mentor/coord see the alert without waiting for the scheduler.
     L(`INSERT INTO notifications (id, created_at, message, reference_id, reference_type, title, type) VALUES`);
     L(
-      notifRows
+      teams
         .map(
-          (n, i) =>
-            `    ('${uid(25, ev.n, i + 1)}', @now, N'${n.msg}', '${n.team.id}', N'Team', N'Team progress alert', N'TEAM_PROGRESS_ALERT')${i < notifRows.length - 1 ? "," : ";"}`
+          (t, i) =>
+            `    ('${uid(25, ev.n, i + 1)}', @now, N'Team ${esc(t.name)} has not started submission and the deadline is approaching (NOT_STARTED).', '${t.id}', N'Team', N'Team progress alert', N'TEAM_PROGRESS_ALERT')${i < teams.length - 1 ? "," : ";"}`
         )
         .join("\n")
     );
     L(``);
     const recipRows = [];
     let recipSeq = 1;
-    for (let i = 0; i < notifRows.length; i++) {
-      const t = notifRows[i].team;
+    for (let i = 0; i < teams.length; i++) {
+      const t = teams[i];
       const notifId = uid(25, ev.n, i + 1);
+      // leader (fixed uuid) + mentor + coordinator
       recipRows.push(
         `    ('${uid(26, ev.n, recipSeq++)}', @now, N'IN_APP', NULL, @now, '${t.leader.id}', '${notifId}')`
       );
@@ -1237,7 +1099,6 @@ for (const ev of EVENTS) {
 L(`COMMIT TRANSACTION;`);
 L(`PRINT 'seed_demo_events.sql complete: 7 SEAL seasons seeded (template ${TEMPLATE_ID} preserved).';`);
 L(`PRINT 'Demo password for all seeded accounts: Demo@123456';`);
-L(`PRINT 'AS2 demos: Event 6 (06020000-...) progress alerts | Event 5 (05020000-...) publish results | Event 1 (01020000-...) published leaderboard';`);
 
 const out = path.join(__dirname, "seed_demo_events.sql");
 fs.writeFileSync(out, lines.join("\n"), "utf8");

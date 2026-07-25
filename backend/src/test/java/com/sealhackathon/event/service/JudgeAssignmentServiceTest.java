@@ -211,7 +211,7 @@ class JudgeAssignmentServiceTest {
     }
 
     @Test
-    void assignJudge_shouldReject_whenTeamHasNoCompetitionGroup() {
+    void assignJudge_shouldAllow_whenTeamHasNoCompetitionGroup() {
         UUID eventId = UUID.randomUUID();
         UUID roundId = UUID.randomUUID();
         UUID trackId = UUID.randomUUID();
@@ -222,25 +222,35 @@ class JudgeAssignmentServiceTest {
         Track track = Track.builder().name("Track A").hackathonEvent(round.getHackathonEvent()).build();
         track.setId(trackId);
 
-        when(roundService.getRound(roundId)).thenReturn(round);
-        when(publishedResultRepository.existsByRoundId(roundId)).thenReturn(false);
-        when(userPublicService.findById(judgeUserId)).thenReturn(Optional.of(
-                UserSnapshot.builder().userType(UserType.LECTURER).email("judge@fpt.edu.vn").build()));
-        when(eventJudgeService.isEventJudge(eventId, judgeUserId)).thenReturn(true);
-        when(trackRepository.findById(trackId)).thenReturn(Optional.of(track));
-        when(teamRepository.findByEventIdAndTrackId(eventId, trackId)).thenReturn(List.of(team));
-
         AssignJudgeRequest request = AssignJudgeRequest.builder()
                 .judgeUserId(judgeUserId)
                 .scope(AssignmentScope.TRACK)
                 .trackId(trackId)
                 .build();
 
-        assertThatThrownBy(() -> judgeAssignmentService.assignJudge(eventId, roundId, request, "127.0.0.1"))
-                .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("competition group")
-                .hasMessageContaining("Ungrouped");
-        verify(judgeAssignmentRepository, never()).save(any());
+        when(roundService.getRound(roundId)).thenReturn(round);
+        when(publishedResultRepository.existsByRoundId(roundId)).thenReturn(false);
+        when(userPublicService.findById(judgeUserId)).thenReturn(Optional.of(
+                UserSnapshot.builder().userType(UserType.LECTURER).email("judge@fpt.edu.vn").build()));
+        when(eventJudgeService.isEventJudge(eventId, judgeUserId)).thenReturn(true);
+        when(trackRepository.findById(trackId)).thenReturn(Optional.of(track));
+        when(judgeAssignmentRepository.findByRoundIdAndJudgeUserIdAndActiveTrue(roundId, judgeUserId))
+                .thenReturn(List.of());
+        when(teamRepository.findByEventIdAndTrackId(eventId, trackId)).thenReturn(List.of(team));
+        when(mentorAssignmentRepository.existsByHackathonEventIdAndTrackIdAndMentorUserId(
+                eventId, trackId, judgeUserId)).thenReturn(false);
+        when(judgeAssignmentRepository.save(any(JudgeAssignment.class))).thenAnswer(invocation -> {
+            JudgeAssignment saved = invocation.getArgument(0);
+            saved.setId(UUID.randomUUID());
+            return saved;
+        });
+        when(authPublicService.getCurrentUserId()).thenReturn(UUID.randomUUID());
+
+        JudgeAssignmentResponse response =
+                judgeAssignmentService.assignJudge(eventId, roundId, request, "127.0.0.1");
+
+        assertThat(response.getJudgeUserId()).isEqualTo(judgeUserId);
+        verify(judgeAssignmentRepository).save(any(JudgeAssignment.class));
     }
 
     @Test
@@ -441,6 +451,88 @@ class JudgeAssignmentServiceTest {
 
         verify(judgeAssignmentRepository, never()).save(any());
         verifyNoInteractions(notificationService);
+    }
+
+    @Test
+    void assignJudge_final_shouldReject_whenJudgeHasPriorRoundAssignment() {
+        UUID eventId = UUID.randomUUID();
+        UUID roundId = UUID.randomUUID();
+        UUID judgeUserId = UUID.randomUUID();
+
+        HackathonEvent event = HackathonEvent.builder().name("SEAL Final QA").build();
+        event.setId(eventId);
+        Round finalRound = Round.builder()
+                .name("Finals")
+                .roundType(RoundType.FINAL)
+                .startDate(LocalDateTime.now().plusDays(1))
+                .scoringDeadline(LocalDateTime.now().plusDays(7))
+                .hackathonEvent(event)
+                .build();
+        finalRound.setId(roundId);
+
+        AssignJudgeRequest request = AssignJudgeRequest.builder()
+                .judgeUserId(judgeUserId)
+                .scope(AssignmentScope.ROUND)
+                .build();
+
+        when(roundService.getRound(roundId)).thenReturn(finalRound);
+        when(publishedResultRepository.existsByRoundId(roundId)).thenReturn(false);
+        when(userPublicService.findById(judgeUserId)).thenReturn(Optional.of(
+                UserSnapshot.builder().userType(UserType.LECTURER).email("guest@fpt.edu.vn").build()));
+        when(eventJudgeService.isEventJudge(eventId, judgeUserId)).thenReturn(true);
+        when(teamRepository.findByEventId(eventId)).thenReturn(List.of());
+        when(judgeAssignmentRepository.findByRoundIdAndJudgeUserIdAndActiveTrue(roundId, judgeUserId))
+                .thenReturn(List.of());
+        when(mentorAssignmentRepository.findByHackathonEventId(eventId)).thenReturn(List.of());
+        when(judgeAssignmentRepository.existsActiveNonFinalAssignmentInEvent(
+                judgeUserId, eventId, RoundType.FINAL)).thenReturn(true);
+
+        assertThatThrownBy(() -> judgeAssignmentService.assignJudge(eventId, roundId, request, "127.0.0.1"))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("prior round");
+        verify(judgeAssignmentRepository, never()).save(any());
+    }
+
+    @Test
+    void assignJudge_final_shouldReject_whenJudgeHasPriorRoundScore() {
+        UUID eventId = UUID.randomUUID();
+        UUID roundId = UUID.randomUUID();
+        UUID judgeUserId = UUID.randomUUID();
+
+        HackathonEvent event = HackathonEvent.builder().name("SEAL Final QA").build();
+        event.setId(eventId);
+        Round finalRound = Round.builder()
+                .name("Finals")
+                .roundType(RoundType.FINAL)
+                .startDate(LocalDateTime.now().plusDays(1))
+                .scoringDeadline(LocalDateTime.now().plusDays(7))
+                .hackathonEvent(event)
+                .build();
+        finalRound.setId(roundId);
+
+        AssignJudgeRequest request = AssignJudgeRequest.builder()
+                .judgeUserId(judgeUserId)
+                .scope(AssignmentScope.ROUND)
+                .build();
+
+        when(roundService.getRound(roundId)).thenReturn(finalRound);
+        when(publishedResultRepository.existsByRoundId(roundId)).thenReturn(false);
+        when(userPublicService.findById(judgeUserId)).thenReturn(Optional.of(
+                UserSnapshot.builder().userType(UserType.LECTURER).email("guest@fpt.edu.vn").build()));
+        when(eventJudgeService.isEventJudge(eventId, judgeUserId)).thenReturn(true);
+        when(teamRepository.findByEventId(eventId)).thenReturn(List.of());
+        when(judgeAssignmentRepository.findByRoundIdAndJudgeUserIdAndActiveTrue(roundId, judgeUserId))
+                .thenReturn(List.of());
+        when(mentorAssignmentRepository.findByHackathonEventId(eventId)).thenReturn(List.of());
+        when(judgeAssignmentRepository.existsActiveNonFinalAssignmentInEvent(
+                judgeUserId, eventId, RoundType.FINAL)).thenReturn(false);
+        when(judgeScoreRepository.existsScoreOnNonFinalRoundInEvent(
+                judgeUserId, eventId, RoundType.FINAL)).thenReturn(true);
+
+        assertThatThrownBy(() -> judgeAssignmentService.assignJudge(eventId, roundId, request, "127.0.0.1"))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("scored any prior round");
+        verify(judgeAssignmentRepository, never()).save(any());
     }
 
     private Round preliminaryRound(UUID roundId, UUID eventId) {

@@ -6,8 +6,6 @@ import com.sealhackathon.event.domain.HackathonEvent;
 import com.sealhackathon.event.domain.enums.CompetitionFormat;
 import com.sealhackathon.event.domain.enums.EventStatus;
 import com.sealhackathon.event.repository.HackathonEventRepository;
-import com.sealhackathon.event.repository.TrackRepository;
-import com.sealhackathon.team.repository.TeamRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -22,9 +20,6 @@ public class FormatRuleEngine {
     @Value("${app.hackathon.seal.max-tracks:3}")
     private int sealMaxTracks;
 
-    @Value("${app.hackathon.seal.max-teams-per-track:8}")
-    private int sealMaxTeamsPerTrack;
-
     @Value("${app.hackathon.seal.finalist-count:6}")
     private int sealFinalistCount;
 
@@ -32,16 +27,10 @@ public class FormatRuleEngine {
     private int sealTopPerTrack;
 
     private final HackathonEventRepository eventRepository;
-    private final TrackRepository trackRepository;
-    private final TeamRepository teamRepository;
     private final EventStatusResolver eventStatusResolver;
 
     public int getSealMaxTracks() {
         return sealMaxTracks;
-    }
-
-    public int getSealMaxTeamsPerTrack() {
-        return sealMaxTeamsPerTrack;
     }
 
     public int getSealFinalistCount() {
@@ -70,27 +59,22 @@ public class FormatRuleEngine {
         return isSealFormat(getFormat(eventId));
     }
 
+    /**
+     * No-op: track team limits were removed after BTC-led assignment replaced self-select.
+     * Kept so existing callers compile without capacity checks.
+     */
     public void validateTrackCapacity(UUID eventId, UUID trackId) {
-        if (!isSealFormat(eventId)) {
-            return;
-        }
-        var track = trackRepository.findById(trackId)
-                .orElseThrow(() -> new BusinessException("Track not found", HttpStatus.NOT_FOUND));
-        long count = teamRepository.countByEventIdAndTrackId(eventId, trackId);
-        int max = track.getMaxTeams() != null ? track.getMaxTeams() : sealMaxTeamsPerTrack;
-        if (count >= max) {
-            throw new BusinessException(
-                    "Track '" + track.getName() + "' is full (max " + max + " teams)",
-                    HttpStatus.CONFLICT);
-        }
+        // intentionally empty
     }
 
     public void validateLeaderCannotSelectTrack(UUID eventId) {
-        if (isSealFormat(eventId)) {
-            throw new BusinessException(
-                    "Track assignment for SEAL events is managed by coordinators. Contact BTC.",
-                    HttpStatus.FORBIDDEN);
+        // Tracks are assigned by BTC (manual or external draw); leaders never self-select.
+        if (eventRepository.findById(eventId).isEmpty()) {
+            throw new ResourceNotFoundException("Event", "id", eventId);
         }
+        throw new BusinessException(
+                "Track assignment is managed by coordinators. Contact BTC.",
+                HttpStatus.FORBIDDEN);
     }
 
     public boolean canCreateTeam(EventStatus status) {

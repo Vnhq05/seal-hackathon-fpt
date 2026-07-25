@@ -9,6 +9,7 @@ export interface TrackResponse {
   name: string;
   description: string | null;
   topic: string | null;
+  /** Deprecated — track capacity is no longer limited. */
   maxTeams: number | null;
   scoringTemplateId: string | null;
   status: TrackStatus;
@@ -18,6 +19,7 @@ export interface TrackResponse {
 export interface CreateTrackRequest {
   name: string;
   description?: string;
+  /** Ignored by API — capacity removed. */
   maxTeams?: number | null;
   scoringTemplateId?: string;
 }
