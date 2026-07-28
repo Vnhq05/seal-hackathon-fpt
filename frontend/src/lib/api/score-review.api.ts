@@ -17,6 +17,9 @@ export interface ScoreReviewJudgeScore {
   judgeFullName: string | null;
   weightedScore: number;
   percentScore: number;
+  gapFromMaxPct?: number | null;
+  cohenD?: number | null;
+  flagged?: boolean;
   status: string;
 }
 
@@ -31,6 +34,9 @@ export interface ScoreReviewResponse {
   deviationValue: number;
   minJudgeScore: number;
   maxJudgeScore: number;
+  scoreScaleMax?: number | null;
+  consensusIndex?: number | null;
+  cohenDThreshold?: number;
   status: ScoreReviewStatus;
   adjustmentType?: ScoreAdjustmentType;
   requestedBy?: string | null;
@@ -54,6 +60,9 @@ export interface ScoreReviewContextResponse {
   adjustmentType?: ScoreAdjustmentType | null;
   deviationValue: number;
   deviationThreshold: number;
+  scoreScaleMax?: number | null;
+  consensusIndex?: number | null;
+  cohenDThreshold?: number;
   canRequestAdjustment: boolean;
   canEditForAdjustment: boolean;
   requestNote?: string | null;

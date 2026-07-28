@@ -21,5 +21,11 @@ public class ScoreReviewJudgeScoreResponse {
     private String judgeFullName;
     private BigDecimal weightedScore;
     private BigDecimal percentScore;
+    /** Distance from highest judge percent on the event scale (0–100). */
+    private BigDecimal gapFromMaxPct;
+    /** Leave-one-out Cohen's d vs other judges' percent scores; null when undefined. */
+    private BigDecimal cohenD;
+    /** True when gapFromMaxPct &gt; deviation threshold or |cohenD| &gt;= cohen-d threshold. */
+    private boolean flagged;
     private ScoreStatus status;
 }

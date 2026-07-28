@@ -200,6 +200,7 @@ public class EventPublicServiceImpl implements EventPublicService {
                 .semesterMax(event.getSemesterMax())
                 .leaderboardPublic(event.isLeaderboardPublic())
                 .scoringTemplateId(event.getScoringTemplateId())
+                .scoreScaleMax(event.getScoreScaleMax() != null ? event.getScoreScaleMax() : 100)
                 .tiebreakerCriteria(event.getTiebreakerCriteria())
                 .tiebreakerCriterionIds(List.copyOf(event.getTiebreakerCriterionIds()))
                 .build();
