@@ -81,7 +81,7 @@ app:
     judging:
       judge-trim-threshold: 5
       deviation-threshold: 25
-      percent-scale: 20
+      cohen-d-threshold: 0.8
     team:
       invitation-expiry-days: 7
       max-skill-roles: 5

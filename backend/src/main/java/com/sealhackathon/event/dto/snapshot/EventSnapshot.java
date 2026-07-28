@@ -31,6 +31,7 @@ public class EventSnapshot {
     private Integer semesterMax;
     private boolean leaderboardPublic;
     private UUID scoringTemplateId;
+    private Integer scoreScaleMax;
     private String tiebreakerCriteria;
     private List<UUID> tiebreakerCriterionIds;
 

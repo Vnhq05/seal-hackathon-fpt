@@ -25,6 +25,9 @@ public class ScoreReviewContextResponse {
     private ScoreAdjustmentType adjustmentType;
     private BigDecimal deviationValue;
     private int deviationThreshold;
+    private Integer scoreScaleMax;
+    private BigDecimal consensusIndex;
+    private double cohenDThreshold;
     private boolean canRequestAdjustment;
     private boolean canEditForAdjustment;
     private String requestNote;
