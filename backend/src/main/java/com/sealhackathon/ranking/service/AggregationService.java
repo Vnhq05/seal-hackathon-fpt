@@ -94,6 +94,7 @@ public class AggregationService {
 
         int nextVersion = rankingRepository.findMaxVersionByRoundId(roundId) + 1;
         LocalDateTime now = LocalDateTime.now();
+        Comparator<TeamScore> fullComparator = buildComparator(orderedCriteria);
 
         List<Ranking> rankings = new ArrayList<>();
         for (int i = 0; i < teamScores.size(); i++) {
@@ -103,7 +104,8 @@ public class AggregationService {
                 rank = 1;
             } else {
                 TeamScore prev = teamScores.get(i - 1);
-                rank = ts.roundScore.compareTo(prev.roundScore) == 0
+                // Same rank only when still tied after full tiebreak (score + criteria + deviation + submit time).
+                rank = fullComparator.compare(ts, prev) == 0
                         ? rankings.get(i - 1).getRank()
                         : i + 1;
             }

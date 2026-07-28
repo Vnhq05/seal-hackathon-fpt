@@ -3,8 +3,11 @@ package com.sealhackathon.common.util;
 import java.time.LocalDate;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 public final class SeasonUtils {
+
+    public static final Set<String> VALID_SEASONS = Set.of("Spring", "Summer", "Fall");
 
     private static final Map<String, String> ALIASES = Map.of(
             "fail", "Fall",
@@ -16,6 +19,7 @@ public final class SeasonUtils {
     private SeasonUtils() {
     }
 
+    /** Spring: Jan–Apr · Summer: May–Aug · Fall: Sep–Dec (no Winter). */
     public static String deriveCurrentSeason(LocalDate date) {
         int month = date.getMonthValue();
         if (month <= 4) {
@@ -42,5 +46,12 @@ public final class SeasonUtils {
         }
         return trimmed.substring(0, 1).toUpperCase(Locale.ROOT)
                 + trimmed.substring(1).toLowerCase(Locale.ROOT);
+    }
+
+    public static boolean isValid(String season) {
+        if (season == null || season.isBlank()) {
+            return false;
+        }
+        return VALID_SEASONS.contains(normalize(season));
     }
 }

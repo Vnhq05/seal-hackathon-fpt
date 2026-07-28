@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "@/features/auth/store/auth.store";
 import { StaffAssignmentNav } from "@/shared/components/staff-assignment-nav";
+import { AssignmentWorkflowBanner } from "@/shared/components/assignment-workflow-banner";
 import { useAdminEvents, useAdminEvent } from "@/features/admin/hooks/use-admin-hackathons";
 import {
   useMentorAssignments,
@@ -210,19 +211,20 @@ export function MentorAssignmentPage({ defaultEventId, embedded }: { defaultEven
       {!embedded && (
         <>
           <StaffAssignmentNav />
+          <AssignmentWorkflowBanner step="mentors" />
           <div style={{ marginBottom: 24 }}>
             <h1 style={{ fontSize: 32, fontWeight: 700, color: "#0e1528", letterSpacing: "-0.64px", lineHeight: "38.4px" }}>
               Mentor Assignment
             </h1>
             <p style={{ fontSize: 14, color: "#8891a5", lineHeight: "21px", marginTop: 4 }}>
-              Build the mentor pool per track, then randomly assign mentors to teams.
+              Build the mentor list per track, then randomly assign mentors to teams.
             </p>
           </div>
         </>
       )}
 
       {/* Pool assignment */}
-      <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0e1528", marginBottom: 12 }}>1. Mentor pool (per track)</h2>
+      <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0e1528", marginBottom: 12 }}>1. Mentors (per track)</h2>
       <div className="flex flex-wrap items-end gap-3 p-5 mb-4 border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]">
         <div className="flex flex-col">
           <label style={{ fontSize: 12, fontWeight: 600, color: "#8891a5", marginBottom: 4 }}>Event</label>
@@ -274,7 +276,7 @@ export function MentorAssignmentPage({ defaultEventId, embedded }: { defaultEven
           disabled={isPending || !mentorUserId || !eventId || !trackId}
           className="border-2 border-navy bg-seal-yellow px-6 py-2.5 text-sm text-navy font-mono font-bold cursor-pointer disabled:opacity-50"
         >
-          Add to pool
+          Add mentor
         </button>
         {eventId && eventMentors.length === 0 && (
           <p style={{ fontSize: 12, color: "#92400e", width: "100%", margin: 0 }}>
@@ -283,7 +285,7 @@ export function MentorAssignmentPage({ defaultEventId, embedded }: { defaultEven
         )}
         {eventId && eventMentors.length > 0 && availableEventMentors.length === 0 && trackId && (
           <p style={{ fontSize: 12, color: "#8891a5", width: "100%", margin: 0 }}>
-            All event mentors are already in this track pool.
+            All event mentors are already assigned to this track.
           </p>
         )}
       </div>
@@ -311,7 +313,7 @@ export function MentorAssignmentPage({ defaultEventId, embedded }: { defaultEven
             {!isLoading && mentorList.length === 0 && (
               <tr>
                 <td colSpan={5} style={{ ...bodyCell, textAlign: "center", color: "#8891a5", padding: "32px 16px" }}>
-                  {eventId && trackId ? "No mentors in this track pool." : "Select an event and track to view the pool."}
+                  {eventId && trackId ? "No mentors assigned to this track." : "Select an event and track to view mentors."}
                 </td>
               </tr>
             )}
@@ -378,7 +380,7 @@ export function MentorAssignmentPage({ defaultEventId, embedded }: { defaultEven
           {assigningTeam ? "Assigning..." : "Assign manually"}
         </button>
         <span style={{ fontSize: 12, color: "#8891a5", alignSelf: "center" }}>
-          Pool size (selected track): {mentorsInSelectedTrack.length}
+          Mentors on selected track: {mentorsInSelectedTrack.length}
         </span>
       </div>
 
@@ -407,7 +409,7 @@ export function MentorAssignmentPage({ defaultEventId, embedded }: { defaultEven
               <tr>
                 <td colSpan={6} style={{ ...bodyCell, textAlign: "center", color: "#8891a5", padding: "32px 16px" }}>
                   {eventId
-                    ? "No mentor–team links yet. Add mentors to track pools, then click Draw mentors."
+                    ? "No mentor–team links yet. Add mentors to tracks, then click Draw mentors."
                     : "Select an event to view mentor–team assignments."}
                 </td>
               </tr>

@@ -17,6 +17,7 @@ import com.sealhackathon.event.domain.ScoringTemplateCriterion;
 import com.sealhackathon.event.domain.Track;
 import com.sealhackathon.event.domain.enums.CompetitionFormat;
 import com.sealhackathon.event.domain.enums.EventStatus;
+import com.sealhackathon.event.domain.enums.PrizeAssignmentMode;
 import com.sealhackathon.event.domain.enums.PrizeRank;
 import com.sealhackathon.event.dto.request.CreateEventRequest;
 import com.sealhackathon.event.dto.request.PrizeRequest;
@@ -213,6 +214,7 @@ public class EventService {
         String oldName = event.getName();
 
         event.setName(request.getName());
+        validateSeason(request.getSeason());
         event.setSeason(SeasonUtils.normalize(request.getSeason()));
         event.setYear(request.getYear());
         event.setStartDate(request.getStartDate());
@@ -652,6 +654,14 @@ public class EventService {
         }
     }
 
+    private void validateSeason(String season) {
+        if (!SeasonUtils.isValid(season)) {
+            throw new BusinessException(
+                    "Season must be Spring, Summer, or Fall",
+                    HttpStatus.BAD_REQUEST) {};
+        }
+    }
+
     private void validateRegistrationDates(LocalDate open, LocalDate close, LocalDate start) {
         if (open == null) {
             throw new BusinessException("Registration open date is required", HttpStatus.BAD_REQUEST) {};
@@ -675,13 +685,29 @@ public class EventService {
         Map<String, Map<PrizeRank, Long>> grouped = new HashMap<>();
 
         for (PrizeRequest prize : prizes) {
+            // Legacy free-text blob from old admin UI — skip structured amount checks
+            if (prize.getRank() == PrizeRank.CONSOLATION
+                    && "Prizes".equals(prize.getLabel())) {
+                continue;
+            }
+
+            Long amount = PrizeAmountUtils.parsePrizeAmount(prize.getValue());
+            if (amount == null || amount <= 0) {
+                throw new BusinessException(
+                        "Prize amounts must be positive numbers (VND).",
+                        HttpStatus.BAD_REQUEST) {};
+            }
+            if (prize.getRank() == PrizeRank.CONSOLATION) {
+                if (prize.getLabel() == null || prize.getLabel().isBlank()) {
+                    throw new BusinessException(
+                            "Additional prizes require a name.",
+                            HttpStatus.BAD_REQUEST) {};
+                }
+                continue;
+            }
             String groupKey = prize.getTrackIndex() != null
                     ? "track-" + prize.getTrackIndex()
                     : "shared";
-            Long amount = PrizeAmountUtils.parsePrizeAmount(prize.getValue());
-            if (amount == null || prize.getRank() == PrizeRank.CONSOLATION) {
-                continue;
-            }
             grouped.computeIfAbsent(groupKey, k -> new HashMap<>()).put(prize.getRank(), amount);
         }
 
@@ -712,7 +738,20 @@ public class EventService {
                 .value(request.getValue())
                 .quantity(request.getQuantity())
                 .label(normalizePrizeLabel(request))
+                .assignmentMode(resolveAssignmentMode(request))
                 .build();
+    }
+
+    private PrizeAssignmentMode resolveAssignmentMode(PrizeRequest request) {
+        if (request.getRank() == PrizeRank.FIRST
+                || request.getRank() == PrizeRank.SECOND
+                || request.getRank() == PrizeRank.THIRD) {
+            return PrizeAssignmentMode.RANK_BASED;
+        }
+        if (request.getAssignmentMode() == PrizeAssignmentMode.MANUAL) {
+            return PrizeAssignmentMode.MANUAL;
+        }
+        return PrizeAssignmentMode.RANK_BASED;
     }
 
     private String normalizePrizeLabel(PrizeRequest request) {
@@ -828,6 +867,9 @@ public class EventService {
                                 .value(p.getValue())
                                 .quantity(p.getQuantity())
                                 .label(p.getLabel())
+                                .assignmentMode(p.getAssignmentMode() != null
+                                        ? p.getAssignmentMode()
+                                        : PrizeAssignmentMode.RANK_BASED)
                                 .build())
                         .toList())
                 .honoredGuests(event.getHonoredGuests().stream()

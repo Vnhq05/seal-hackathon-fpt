@@ -57,6 +57,7 @@ legacy DB at dump time.
 | `seed_assignment_demo.sql` | **Assignment QA:** 1 event `CLOSED_REGISTRATION` + **10 CONFIRMED teams** (no track / judge / mentor yet). Password `12345678`. Regenerate: `node _gen_seed_assignment_demo.mjs`. |
 | `seed_final_advancement_qa.sql` | **Final advancement QA**: prelim fully scored + rankings, 2 groups, **no Final submissions**. Select Finalists → carry-over → score Final. See `FINAL_ADVANCEMENT_CHANGES.md`. |
 | `seed_feature_demo_pack.sql` | **7 feature demos** (OPEN → Assignment → Submission → Scoring deviation → Final → Feedback). Password `Demo@123456`. Regenerate: `node _gen_seed_feature_demo_pack.mjs`. |
+| `reset_demo6_before_advance.sql` | **Reset Demo 6 only** to pre-Advance (keep prelim scores/rankings; clear advancements/finalists/Final carry-over). Then: Advance → Final judges score → Assign Awards. |
 | `seed_summer_track_relation_mock.sql` | One **Summer 2026** event + **2 tracks** + **2 teams** (already on tracks). Demo: kì on event, tracks via `event_id`. |
 
 ### AS2 full demo cheat sheet (`seed_as2_full_demo.sql`)

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/features/auth/store/auth.store";
 import { StaffAssignmentNav } from "@/shared/components/staff-assignment-nav";
+import { AssignmentWorkflowBanner } from "@/shared/components/assignment-workflow-banner";
 import { useAdminEvents, useAdminEvent } from "@/features/admin/hooks/use-admin-hackathons";
 import { trackApi } from "@/lib/api/track.api";
 import { teamApi, type TeamResponse } from "@/lib/api/team.api";
@@ -12,6 +13,10 @@ import {
   assignmentApi,
   type GenerateCompetitionGroupsResponse,
 } from "@/lib/api/assignment.api";
+import {
+  RequiredDigitsInput,
+  parseRequiredPositiveInt,
+} from "@/shared/ui/required-digits-input";
 
 const headerCell: React.CSSProperties = {
   fontSize: 12, fontWeight: 600, color: "#8891a5",
@@ -41,7 +46,7 @@ export function TeamAssignmentPage({ defaultEventId, embedded }: { defaultEventI
   /** Local draft: teamId → trackId (empty string = unassigned). */
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [draftEventId, setDraftEventId] = useState<string>("");
-  const [teamsPerGroup, setTeamsPerGroup] = useState(5);
+  const [teamsPerGroupInput, setTeamsPerGroupInput] = useState("");
   const [groupPlan, setGroupPlan] = useState<GenerateCompetitionGroupsResponse | null>(null);
 
   const { data: eventsPage } = useAdminEvents();
@@ -114,6 +119,8 @@ export function TeamAssignmentPage({ defaultEventId, embedded }: { defaultEventI
   const canConfirm = !!eventId && !tracksLocked && allDraftAssigned;
   const allTeamsHaveTrackOnServer = teams.length > 0 && teams.every((t) => !!t.trackId);
   const canGenerateGroups = !!eventId && allTeamsHaveTrackOnServer;
+
+  const teamsPerGroup = parseRequiredPositiveInt(teamsPerGroupInput);
 
   const groupPreview = useMemo(() => {
     const k = teamsPerGroup;
@@ -200,8 +207,13 @@ export function TeamAssignmentPage({ defaultEventId, embedded }: { defaultEventI
   });
 
   const generateGroupsMutation = useMutation({
-    mutationFn: () =>
-      assignmentApi.generateCompetitionGroups(eventId, { teamsPerGroup }),
+    mutationFn: () => {
+      const k = parseRequiredPositiveInt(teamsPerGroupInput);
+      if (k == null) {
+        return Promise.reject(new Error("Teams per group (K) is required and must be at least 1"));
+      }
+      return assignmentApi.generateCompetitionGroups(eventId, { teamsPerGroup: k });
+    },
     onSuccess: (result) => {
       setError(null);
       setGroupPlan(result);
@@ -296,6 +308,7 @@ export function TeamAssignmentPage({ defaultEventId, embedded }: { defaultEventI
       {!embedded && (
         <>
           <StaffAssignmentNav />
+          <AssignmentWorkflowBanner step="teams" />
           <div style={{ marginBottom: 24 }}>
             <h1 style={{ fontSize: 32, fontWeight: 700, color: "#0e1528", letterSpacing: "-0.64px", lineHeight: "38.4px" }}>
               Team Assignments
@@ -507,12 +520,11 @@ export function TeamAssignmentPage({ defaultEventId, embedded }: { defaultEventI
               <label style={{ fontSize: 12, fontWeight: 600, color: "#8891a5", marginBottom: 4 }}>
                 Teams per group (K)
               </label>
-              <input
-                type="number"
-                min={1}
-                max={100}
-                value={teamsPerGroup}
-                onChange={(e) => setTeamsPerGroup(Math.max(1, parseInt(e.target.value, 10) || 1))}
+              <RequiredDigitsInput
+                value={teamsPerGroupInput}
+                onValueChange={setTeamsPerGroupInput}
+                emptyMessage="Teams per group cannot be empty"
+                placeholder="e.g. 5"
                 style={{ ...inputStyle, width: 140 }}
                 disabled={generateGroupsMutation.isPending}
               />
@@ -520,6 +532,11 @@ export function TeamAssignmentPage({ defaultEventId, embedded }: { defaultEventI
             <button
               type="button"
               onClick={() => {
+                const k = parseRequiredPositiveInt(teamsPerGroupInput);
+                if (k == null) {
+                  setError("Teams per group (K) is required and must be at least 1");
+                  return;
+                }
                 const lines = groupPreview
                   .map((p) => `${p.trackName}: ${p.teamCount} teams → ${p.groupCount} groups (${p.sizes.join(", ")})`)
                   .join("\n");
@@ -529,7 +546,7 @@ export function TeamAssignmentPage({ defaultEventId, embedded }: { defaultEventI
                 setError(null);
                 generateGroupsMutation.mutate();
               }}
-              disabled={generateGroupsMutation.isPending || teamsPerGroup < 1}
+              disabled={generateGroupsMutation.isPending || teamsPerGroup == null}
               className="border-2 border-navy bg-seal-yellow px-6 py-2.5 text-sm text-navy font-mono font-bold cursor-pointer disabled:opacity-50"
             >
               {generateGroupsMutation.isPending ? "Generating..." : "Generate groups"}

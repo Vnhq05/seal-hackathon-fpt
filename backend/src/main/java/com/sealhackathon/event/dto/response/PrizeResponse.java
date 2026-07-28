@@ -1,5 +1,6 @@
 package com.sealhackathon.event.dto.response;
 
+import com.sealhackathon.event.domain.enums.PrizeAssignmentMode;
 import com.sealhackathon.event.domain.enums.PrizeRank;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -20,4 +21,5 @@ public class PrizeResponse {
     private String value;
     private Integer quantity;
     private String label;
+    private PrizeAssignmentMode assignmentMode;
 }

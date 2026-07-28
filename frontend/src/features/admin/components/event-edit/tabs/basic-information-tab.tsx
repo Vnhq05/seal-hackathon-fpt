@@ -24,8 +24,7 @@ import {
   mergeEventUpdate,
   toDateInput,
 } from "@/features/admin/components/event-edit/event-edit.utils";
-
-const SEASONS = ["Spring", "Summer", "Fall", "Winter"] as const;
+import { SEASONS } from "@/shared/lib/season";
 
 const readOnlyStyle: React.CSSProperties = {
   ...inputStyle,

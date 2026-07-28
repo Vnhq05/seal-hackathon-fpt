@@ -44,24 +44,29 @@ export function useStompWebSocket(eventId: string | undefined) {
   const wsRef = useRef<WebSocket | null>(null);
   const [connected, setConnected] = useState(false);
   const listenersRef = useRef<Map<string, Set<(data: unknown) => void>>>(new Map());
+  const stompSubscribedRef = useRef<Set<string>>(new Set());
   const subIdRef = useRef(0);
   const retryCountRef = useRef(0);
+
+  const ensureStompSubscribe = useCallback((destination: string) => {
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
+    if (stompSubscribedRef.current.has(destination)) return;
+    const id = `sub-${subIdRef.current++}`;
+    wsRef.current.send(buildStompFrame("SUBSCRIBE", { id, destination }));
+    stompSubscribedRef.current.add(destination);
+  }, []);
 
   const subscribe = useCallback((destination: string, callback: (data: unknown) => void) => {
     if (!listenersRef.current.has(destination)) {
       listenersRef.current.set(destination, new Set());
     }
     listenersRef.current.get(destination)!.add(callback);
-
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      const id = `sub-${subIdRef.current++}`;
-      wsRef.current.send(buildStompFrame("SUBSCRIBE", { id, destination }));
-    }
+    ensureStompSubscribe(destination);
 
     return () => {
       listenersRef.current.get(destination)?.delete(callback);
     };
-  }, []);
+  }, [ensureStompSubscribe]);
 
   useEffect(() => {
     if (!eventId) return;
@@ -95,17 +100,13 @@ export function useStompWebSocket(eventId: string | undefined) {
 
         if (frame.command === "CONNECTED") {
           retryCountRef.current = 0;
-          setConnected(true);
           subIdRef.current = 0;
-          const topics = [
-            `/topic/events/${eventId}/leaderboard`,
-            `/topic/events/${eventId}/ranking-events`,
-            `/topic/events/${eventId}/final-results`,
-          ];
-          topics.forEach((dest) => {
-            const id = `sub-${subIdRef.current++}`;
-            ws.send(buildStompFrame("SUBSCRIBE", { id, destination: dest }));
-          });
+          stompSubscribedRef.current.clear();
+          setConnected(true);
+          // One STOMP subscription per destination that has app listeners (no hardcoded dupes)
+          for (const [dest, listeners] of listenersRef.current.entries()) {
+            if (listeners.size > 0) ensureStompSubscribe(dest);
+          }
 
           heartbeatInterval = setInterval(() => {
             if (ws.readyState === WebSocket.OPEN) ws.send("\n");
@@ -125,6 +126,7 @@ export function useStompWebSocket(eventId: string | undefined) {
 
       ws.onclose = () => {
         setConnected(false);
+        stompSubscribedRef.current.clear();
         clearInterval(heartbeatInterval);
         if (!aborted && retryCountRef.current < MAX_RETRIES) {
           const delay = Math.min(1000 * Math.pow(2, retryCountRef.current), 30000);
@@ -144,6 +146,7 @@ export function useStompWebSocket(eventId: string | undefined) {
       aborted = true;
       clearTimeout(reconnectTimeout);
       clearInterval(heartbeatInterval);
+      stompSubscribedRef.current.clear();
       if (wsRef.current) {
         wsRef.current.onclose = null;
         wsRef.current.close();
@@ -151,7 +154,7 @@ export function useStompWebSocket(eventId: string | undefined) {
       }
       setConnected(false);
     };
-  }, [eventId]);
+  }, [eventId, ensureStompSubscribe]);
 
   return { connected, subscribe };
 }

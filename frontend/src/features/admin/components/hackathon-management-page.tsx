@@ -11,8 +11,7 @@ import {
 } from "@/features/admin/hooks/use-admin-hackathons";
 import type { EventResponse, EventStatus } from "@/lib/api";
 import { useStaffPortalBase } from "@/shared/hooks/use-staff-portal-base";
-
-const SEASONS = ["Spring", "Summer", "Fall", "Winter"] as const;
+import { SEASONS } from "@/shared/lib/season";
 
 const headerCell: React.CSSProperties = {
   fontSize: 12, fontWeight: 600, color: "#8891a5",

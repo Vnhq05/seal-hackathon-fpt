@@ -4082,7 +4082,7 @@ INSERT INTO team_awards (id, event_id, team_id, prize_id, awarded_at, created_at
     ('01140000-EEEE-4EEE-8EEE-000000000004', '01020000-EEEE-4EEE-8EEE-000000000001', '01050000-EEEE-4EEE-8EEE-000000000006', '01070000-EEEE-4EEE-8EEE-000000000004', @e1_finalEnd, @now, @now);
 
 -- ============================================================
--- === SEAL Hackathon Winter 2025 - Multi-hop RAG Agents ===
+-- === SEAL Hackathon Fall 2025 - Multi-hop RAG Agents ===
 -- QA phase: COMPLETED end-to-end
 -- Login: tran.thanh.ha@fpt.edu.vn or nguyen.hoang.minh@fpt.edu.vn / Demo@123456
 -- View: /hackathons/02020000-EEEE-4EEE-8EEE-000000000001/livescore
@@ -4110,11 +4110,11 @@ INSERT INTO hackathon_events (
     owner_user_id, created_by, created_at, updated_at
 ) VALUES (
     '02020000-EEEE-4EEE-8EEE-000000000001',
-    N'SEAL Hackathon Winter 2025 - Multi-hop RAG Agents',
-    N'Winter', 2025,
+    N'SEAL Hackathon Fall 2025 - Multi-hop RAG Agents',
+    N'Fall', 2025,
     @e2_compDay, @e2_endDay,
     @e2_regOpen, @e2_regDeadline,
-    N'SEAL Hackathon Winter 2025 focuses on Agentic RAG systems: grounded retrieval, multi-step agent orchestration, and enterprise-ready copilots built by FPT University teams.',
+    N'SEAL Hackathon Fall 2025 focuses on Agentic RAG systems: grounded retrieval, multi-step agent orchestration, and enterprise-ready copilots built by FPT University teams.',
     N'FPT University HCM', 'OFFLINE', 'SEAL_RAG_2026',
     3, 5, 4, 8,
     @templateId, 'COMPLETED', 1,

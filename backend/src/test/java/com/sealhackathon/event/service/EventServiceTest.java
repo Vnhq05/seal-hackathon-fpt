@@ -168,7 +168,7 @@ class EventServiceTest {
 
         UpdateEventRequest request = UpdateEventRequest.builder()
                 .name("Updated")
-                .season("Winter")
+                .season("Fall")
                 .year(2026)
                 .startDate(EVENT_START)
                 .endDate(EVENT_END)

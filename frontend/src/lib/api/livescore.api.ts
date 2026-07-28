@@ -52,7 +52,7 @@ export interface LiveScoreBoard {
 }
 
 export interface RankingEvent {
-  type: "LEADERBOARD_UPDATED" | "RANK_CHANGED" | "NEW_LEADER" | "FINAL_RESULTS_PUBLISHED";
+  type: "LEADERBOARD_UPDATED" | "RANK_CHANGED" | "NEW_LEADER" | "FINAL_RESULTS_PUBLISHED" | "RESULTS_PUBLISHED";
   eventId: string;
   roundId: string;
   teamId: string | null;

@@ -112,14 +112,16 @@ public class LiveScoreBroadcastListener {
         UUID eventId = round.getEventId();
 
         RankingEventDto dto = RankingEventDto.builder()
-                .type("FINAL_RESULTS_PUBLISHED")
+                .type("RESULTS_PUBLISHED")
                 .eventId(eventId)
                 .roundId(roundId)
                 .timestamp(event.publishedAt())
                 .build();
 
+        // Refresh boards; notify Live Updates once (avoid duplicate topic fan-out)
         messagingTemplate.convertAndSend(
-                "/topic/events/" + eventId + "/leaderboard", dto);
+                "/topic/events/" + eventId + "/leaderboard",
+                Map.of("type", "LEADERBOARD_UPDATED", "roundId", roundId));
         messagingTemplate.convertAndSend(
                 "/topic/events/" + eventId + "/ranking-events", dto);
         messagingTemplate.convertAndSend(

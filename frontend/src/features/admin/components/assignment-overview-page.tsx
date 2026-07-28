@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "@/features/auth/store/auth.store";
 import { StaffAssignmentNav } from "@/shared/components/staff-assignment-nav";
+import { AssignmentWorkflowBanner } from "@/shared/components/assignment-workflow-banner";
 import { useAdminEvents } from "@/features/admin/hooks/use-admin-hackathons";
 import { useAdminRounds } from "@/features/admin/hooks/use-admin-rounds";
 import {
@@ -54,16 +55,20 @@ const STATUS_LABELS: Partial<Record<EventStatus, string>> = {
 function PersonChips({
   names,
   emptyLabel,
+  maxVisible = 4,
 }: {
   names: string[];
   emptyLabel: string;
+  maxVisible?: number;
 }) {
   if (names.length === 0) {
     return <span className="text-sm text-seal-text-muted">{emptyLabel}</span>;
   }
+  const visible = names.slice(0, maxVisible);
+  const rest = names.length - visible.length;
   return (
     <div className="flex flex-wrap gap-1.5">
-      {names.map((name, index) => (
+      {visible.map((name, index) => (
         <span
           key={`${name}-${index}`}
           className="inline-flex border border-navy/20 bg-seal-surface-elevated px-2 py-0.5 text-xs font-medium text-navy"
@@ -71,7 +76,27 @@ function PersonChips({
           {name}
         </span>
       ))}
+      {rest > 0 && (
+        <span className="inline-flex px-1.5 py-0.5 text-xs font-medium text-seal-text-muted">
+          +{rest}
+        </span>
+      )}
     </div>
+  );
+}
+
+function CompactNames({ names, emptyLabel }: { names: string[]; emptyLabel: string }) {
+  if (names.length === 0) {
+    return <span className="text-amber-700">{emptyLabel}</span>;
+  }
+  if (names.length <= 2) {
+    return <span className="font-medium text-navy">{names.join(", ")}</span>;
+  }
+  return (
+    <span className="font-medium text-navy" title={names.join(", ")}>
+      {names.slice(0, 2).join(", ")}
+      <span className="ml-1 text-seal-text-muted">+{names.length - 2}</span>
+    </span>
   );
 }
 
@@ -121,6 +146,10 @@ function TrackCard({
   );
 }
 
+type TeamGapFilter = "all" | "no-mentor" | "no-judge";
+
+const PAGE_SIZE = 10;
+
 function TrackDetailPanel({
   eventId,
   track,
@@ -133,6 +162,12 @@ function TrackDetailPanel({
   roundType?: string;
 }) {
   const isFinal = roundType === "FINAL";
+  const [teamQuery, setTeamQuery] = useState("");
+  const [gapFilter, setGapFilter] = useState<TeamGapFilter>("all");
+  const [page, setPage] = useState(0);
+  const [showMentorPool, setShowMentorPool] = useState(false);
+  const [showJudgePool, setShowJudgePool] = useState(false);
+
   const { data: mentors = [], isLoading: loadingMentors } = useMentorAssignments(
     eventId,
     track.id,
@@ -168,14 +203,46 @@ function TrackDetailPanel({
     return Array.from(map.values());
   }, [teams]);
 
+  const filteredTeams = useMemo(() => {
+    const q = teamQuery.trim().toLowerCase();
+    return teams.filter((team) => {
+      if (gapFilter === "no-mentor" && team.mentorUserId) return false;
+      if (gapFilter === "no-judge" && team.judgeCount > 0) return false;
+      if (!q) return true;
+      const haystack = [
+        team.teamName,
+        team.groupName,
+        team.mentorFullName,
+        ...team.judges.map((j) => j.judgeFullName),
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [teams, teamQuery, gapFilter]);
+
+  const pageCount = Math.max(1, Math.ceil(filteredTeams.length / PAGE_SIZE));
+  const safePage = Math.min(page, pageCount - 1);
+  const pagedTeams = filteredTeams.slice(
+    safePage * PAGE_SIZE,
+    safePage * PAGE_SIZE + PAGE_SIZE,
+  );
+
+  useEffect(() => {
+    setPage(0);
+  }, [teamQuery, gapFilter, track.id]);
+
   const loading = loadingMentors || loadingJudges || loadingTeams;
+  const missingMentorCount = teams.filter((t) => !t.mentorUserId).length;
+  const missingJudgeCount = teams.filter((t) => t.judgeCount === 0).length;
 
   return (
     <div className="flex flex-col gap-5 border-2 border-navy bg-white p-6 shadow-[4px_4px_0_0_#0c1228]">
       <div>
         <h3 className="font-mono text-lg font-bold text-navy">{track.name}</h3>
         <p className="mt-1 text-sm text-seal-text-secondary">
-          Tổng hợp mentor, judge và team trong track này
+          Mentors, judges, and teams for this track
           {track.description ? ` — ${track.description}` : ""}.
         </p>
       </div>
@@ -193,13 +260,14 @@ function TrackDetailPanel({
               <div className="mt-3">
                 <PersonChips
                   names={mentors.map((m) => m.mentorFullName ?? m.mentorEmail ?? "Unknown")}
-                  emptyLabel="Chưa gán mentor track"
+                  emptyLabel="No track mentors assigned"
+                  maxVisible={3}
                 />
               </div>
             </div>
             <div className="border border-navy/15 bg-seal-surface-elevated p-4">
               <p className="font-mono text-[11px] font-bold uppercase tracking-wide text-seal-text-muted">
-                Judges (pool)
+                Judges
               </p>
               <p className="mt-1 font-mono text-2xl font-bold text-navy">{activeJudges.length}</p>
               <div className="mt-3">
@@ -207,12 +275,16 @@ function TrackDetailPanel({
                   names={activeJudges.map(
                     (j) => j.judgeFullName ?? j.judgeEmail ?? "Unknown",
                   )}
-                  emptyLabel="Chưa gán judge cho track/round"
+                  emptyLabel="No judges assigned"
+                  maxVisible={3}
                 />
               </div>
               {uniqueJudgesFromTeams.length > 0 && activeJudges.length === 0 && (
                 <p className="mt-2 text-xs text-seal-text-muted">
-                  Judges hiệu lực theo team: {uniqueJudgesFromTeams.join(", ")}
+                  Effective judges by team: {uniqueJudgesFromTeams.slice(0, 3).join(", ")}
+                  {uniqueJudgesFromTeams.length > 3
+                    ? ` +${uniqueJudgesFromTeams.length - 3}`
+                    : ""}
                 </p>
               )}
             </div>
@@ -222,139 +294,232 @@ function TrackDetailPanel({
               </p>
               <p className="mt-1 font-mono text-2xl font-bold text-navy">{teams.length}</p>
               <p className="mt-3 text-xs text-seal-text-secondary">
-                {teams.filter((t) => t.mentorUserId).length} có mentor ·{" "}
-                {teams.filter((t) => t.judgeCount > 0).length} có judge
+                {teams.filter((t) => t.mentorUserId).length} with mentor ·{" "}
+                {teams.filter((t) => t.judgeCount > 0).length} with judges
               </p>
             </div>
           </section>
 
           <section>
-            <h4 className="mb-3 font-mono text-sm font-bold text-navy">Teams trong track</h4>
+            <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
+              <h4 className="font-mono text-sm font-bold text-navy">Teams in track</h4>
+              <p className="text-xs text-seal-text-muted">
+                {filteredTeams.length}/{teams.length} shown · page {safePage + 1}/{pageCount}
+              </p>
+            </div>
+
             {teams.length === 0 ? (
-              <p className="text-sm text-seal-text-muted">Chưa có team nào trong track này.</p>
+              <p className="text-sm text-seal-text-muted">No teams in this track yet.</p>
             ) : (
-              <div className="overflow-x-auto border border-navy/15">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="border-b border-navy/10 bg-seal-surface-elevated">
-                      <th style={headerCell}>Team</th>
-                      <th style={headerCell}>Group</th>
-                      <th style={headerCell}>Members</th>
-                      <th style={headerCell}>Mentor</th>
-                      <th style={headerCell}>Judges</th>
-                      <th style={headerCell}>Submission</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {teams.map((team) => {
-                      const judgeNames = team.judges.map(
-                        (j) => j.judgeFullName ?? "Unknown",
-                      );
-                      return (
-                        <tr
-                          key={team.teamId}
-                          className="border-t border-navy/10 align-top"
-                        >
-                          <td style={{ ...bodyCell, fontWeight: 600 }}>{team.teamName}</td>
-                          <td style={{ ...bodyCell, color: "#8891a5" }}>
-                            {team.groupName ?? "—"}
-                          </td>
-                          <td style={bodyCell}>{team.memberCount}</td>
-                          <td style={bodyCell}>
-                            {team.mentorFullName ? (
-                              <span className="font-medium text-navy">
-                                {team.mentorFullName}
-                              </span>
-                            ) : (
-                              <span className="text-amber-700">Chưa assign</span>
-                            )}
-                          </td>
-                          <td style={bodyCell}>
-                            {judgeNames.length > 0 ? (
-                              <PersonChips names={judgeNames} emptyLabel="" />
-                            ) : (
-                              <span className="text-amber-700">Chưa assign</span>
-                            )}
-                          </td>
-                          <td style={{ ...bodyCell, color: "#8891a5" }}>
-                            {team.submissionStatus ?? "—"}
+              <>
+                <div className="mb-3 flex flex-wrap gap-2">
+                  <input
+                    type="search"
+                    value={teamQuery}
+                    onChange={(e) => setTeamQuery(e.target.value)}
+                    placeholder="Search team, mentor, judge…"
+                    style={{ ...inputStyle, minWidth: 220, flex: "1 1 220px" }}
+                  />
+                  <select
+                    value={gapFilter}
+                    onChange={(e) => setGapFilter(e.target.value as TeamGapFilter)}
+                    style={inputStyle}
+                  >
+                    <option value="all">All teams</option>
+                    <option value="no-mentor">
+                      Missing mentor ({missingMentorCount})
+                    </option>
+                    <option value="no-judge">
+                      Missing judge ({missingJudgeCount})
+                    </option>
+                  </select>
+                </div>
+
+                <div className="max-h-[420px] overflow-auto border border-navy/15">
+                  <table className="w-full border-collapse">
+                    <thead className="sticky top-0 z-10">
+                      <tr className="border-b border-navy/10 bg-seal-surface-elevated">
+                        <th style={headerCell}>Team</th>
+                        <th style={headerCell}>Group</th>
+                        <th style={headerCell}>Members</th>
+                        <th style={headerCell}>Mentor</th>
+                        <th style={headerCell}>Judges</th>
+                        <th style={headerCell}>Submission</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pagedTeams.map((team) => {
+                        const judgeNames = team.judges.map(
+                          (j) => j.judgeFullName ?? "Unknown",
+                        );
+                        return (
+                          <tr
+                            key={team.teamId}
+                            className="border-t border-navy/10 align-middle"
+                          >
+                            <td
+                              style={{
+                                ...bodyCell,
+                                fontWeight: 600,
+                                padding: "10px 16px",
+                              }}
+                            >
+                              {team.teamName}
+                            </td>
+                            <td
+                              style={{
+                                ...bodyCell,
+                                color: "#8891a5",
+                                padding: "10px 16px",
+                              }}
+                            >
+                              {team.groupName ?? "—"}
+                            </td>
+                            <td style={{ ...bodyCell, padding: "10px 16px" }}>
+                              {team.memberCount}
+                            </td>
+                            <td style={{ ...bodyCell, padding: "10px 16px" }}>
+                              {team.mentorFullName ? (
+                                <span className="font-medium text-navy">
+                                  {team.mentorFullName}
+                                </span>
+                              ) : (
+                                <span className="text-amber-700">Unassigned</span>
+                              )}
+                            </td>
+                            <td style={{ ...bodyCell, padding: "10px 16px" }}>
+                              <CompactNames
+                                names={judgeNames}
+                                emptyLabel="Unassigned"
+                              />
+                            </td>
+                            <td
+                              style={{
+                                ...bodyCell,
+                                color: "#8891a5",
+                                padding: "10px 16px",
+                              }}
+                            >
+                              {team.submissionStatus ?? "—"}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {pagedTeams.length === 0 && (
+                        <tr>
+                          <td
+                            colSpan={6}
+                            className="px-4 py-8 text-center text-sm text-seal-text-muted"
+                          >
+                            No teams match this filter.
                           </td>
                         </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {pageCount > 1 && (
+                  <div className="mt-3 flex items-center justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPage((p) => Math.max(0, safePage - 1))}
+                      disabled={safePage === 0}
+                      className="border border-navy/30 bg-white px-3 py-1.5 text-xs font-mono font-bold text-navy disabled:opacity-40"
+                    >
+                      Prev
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setPage((p) => Math.min(pageCount - 1, safePage + 1))
+                      }
+                      disabled={safePage >= pageCount - 1}
+                      className="border border-navy/30 bg-white px-3 py-1.5 text-xs font-mono font-bold text-navy disabled:opacity-40"
+                    >
+                      Next
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </section>
 
-          {mentors.length > 0 && (
-            <section>
-              <h4 className="mb-3 font-mono text-sm font-bold text-navy">
-                Mentor pool (track)
-              </h4>
-              <div className="overflow-x-auto border border-navy/15">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="border-b border-navy/10 bg-seal-surface-elevated">
-                      <th style={headerCell}>Name</th>
-                      <th style={headerCell}>Email</th>
-                      <th style={headerCell}>Assigned</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {mentors.map((m) => (
-                      <tr key={m.id} className="border-t border-navy/10">
-                        <td style={{ ...bodyCell, fontWeight: 600 }}>
-                          {m.mentorFullName ?? "Unknown"}
-                        </td>
-                        <td style={{ ...bodyCell, color: "#8891a5" }}>
-                          {m.mentorEmail ?? "—"}
-                        </td>
-                        <td style={{ ...bodyCell, color: "#8891a5" }}>
-                          {new Date(m.assignedAt).toLocaleDateString()}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          )}
-
-          {activeJudges.length > 0 && (
-            <section>
-              <h4 className="mb-3 font-mono text-sm font-bold text-navy">
-                Judge pool (round · track)
-              </h4>
-              <div className="overflow-x-auto border border-navy/15">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="border-b border-navy/10 bg-seal-surface-elevated">
-                      <th style={headerCell}>Name</th>
-                      <th style={headerCell}>Email</th>
-                      <th style={headerCell}>Scope</th>
-                      <th style={headerCell}>Group</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {activeJudges.map((j) => (
-                      <tr key={j.id} className="border-t border-navy/10">
-                        <td style={{ ...bodyCell, fontWeight: 600 }}>
-                          {j.judgeFullName ?? "Unknown"}
-                        </td>
-                        <td style={{ ...bodyCell, color: "#8891a5" }}>
-                          {j.judgeEmail ?? "—"}
-                        </td>
-                        <td style={{ ...bodyCell, color: "#8891a5" }}>{j.scope}</td>
-                        <td style={{ ...bodyCell, color: "#8891a5" }}>
-                          {j.groupName ?? "—"}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+          {(mentors.length > 0 || activeJudges.length > 0) && (
+            <section className="flex flex-col gap-2 border-t border-navy/10 pt-4">
+              <p className="font-mono text-xs font-bold uppercase tracking-wide text-seal-text-muted">
+                Assignment details (optional)
+              </p>
+              {mentors.length > 0 && (
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setShowMentorPool((v) => !v)}
+                    className="text-sm font-semibold text-navy underline-offset-2 hover:underline"
+                  >
+                    {showMentorPool ? "Hide" : "Show"} mentors ({mentors.length})
+                  </button>
+                  {showMentorPool && (
+                    <div className="mt-2 max-h-48 overflow-auto border border-navy/15">
+                      <table className="w-full border-collapse">
+                        <thead className="sticky top-0">
+                          <tr className="border-b border-navy/10 bg-seal-surface-elevated">
+                            <th style={headerCell}>Name</th>
+                            <th style={headerCell}>Email</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {mentors.map((m) => (
+                            <tr key={m.id} className="border-t border-navy/10">
+                              <td style={{ ...bodyCell, fontWeight: 600, padding: "10px 16px" }}>
+                                {m.mentorFullName ?? "Unknown"}
+                              </td>
+                              <td style={{ ...bodyCell, color: "#8891a5", padding: "10px 16px" }}>
+                                {m.mentorEmail ?? "—"}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
+              {activeJudges.length > 0 && (
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setShowJudgePool((v) => !v)}
+                    className="text-sm font-semibold text-navy underline-offset-2 hover:underline"
+                  >
+                    {showJudgePool ? "Hide" : "Show"} judges ({activeJudges.length})
+                  </button>
+                  {showJudgePool && (
+                    <div className="mt-2 max-h-48 overflow-auto border border-navy/15">
+                      <table className="w-full border-collapse">
+                        <thead className="sticky top-0">
+                          <tr className="border-b border-navy/10 bg-seal-surface-elevated">
+                            <th style={headerCell}>Name</th>
+                            <th style={headerCell}>Email</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {activeJudges.map((j) => (
+                            <tr key={j.id} className="border-t border-navy/10">
+                              <td style={{ ...bodyCell, fontWeight: 600, padding: "10px 16px" }}>
+                                {j.judgeFullName ?? "Unknown"}
+                              </td>
+                              <td style={{ ...bodyCell, color: "#8891a5", padding: "10px 16px" }}>
+                                {j.judgeEmail ?? "—"}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
             </section>
           )}
         </>
@@ -423,11 +588,13 @@ export function AssignmentOverviewPage() {
   return (
     <div>
       <StaffAssignmentNav />
+      <AssignmentWorkflowBanner step="overview" />
 
       <div className="mb-6">
         <h1 className="font-mono text-2xl font-bold text-navy">Assignment Overview</h1>
         <p className="mt-1 text-sm text-seal-text-secondary">
-          Lọc theo event, chọn track để xem mentor, judge và team (kèm ai mentor / ai chấm nếu đã assign).
+          Filter by event, then select a track to see mentors, judges, and teams
+          (including who mentors / who judges when already assigned).
         </p>
       </div>
 
@@ -452,7 +619,7 @@ export function AssignmentOverviewPage() {
 
         {eventId && rounds.length > 0 && (
           <label className="flex min-w-[220px] flex-col gap-1.5">
-            <span className="text-sm font-semibold text-navy">Round (cho judge)</span>
+            <span className="text-sm font-semibold text-navy">Round (for judges)</span>
             <select
               value={roundId}
               onChange={(e) => setRoundId(e.target.value)}
@@ -478,13 +645,13 @@ export function AssignmentOverviewPage() {
 
       {!eventId ? (
         <div className="border-2 border-dashed border-navy/20 bg-white p-10 text-center text-sm text-seal-text-muted">
-          Chọn event để xem danh sách track.
+          Select an event to view its tracks.
         </div>
       ) : loadingTracks ? (
         <p className="text-sm text-seal-text-muted">Loading tracks…</p>
       ) : tracks.length === 0 ? (
         <div className="border-2 border-dashed border-navy/20 bg-white p-10 text-center text-sm text-seal-text-muted">
-          Event này chưa có track.
+          This event has no tracks yet.
         </div>
       ) : (
         <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
@@ -503,7 +670,7 @@ export function AssignmentOverviewPage() {
             ))}
             {confirmedTeams.some((t) => !t.trackId) && (
               <p className="text-xs text-amber-700">
-                {confirmedTeams.filter((t) => !t.trackId).length} team chưa gán track.
+                {confirmedTeams.filter((t) => !t.trackId).length} team(s) not assigned to a track.
               </p>
             )}
           </aside>
@@ -511,14 +678,15 @@ export function AssignmentOverviewPage() {
           <div>
             {!trackId ? (
               <div className="border-2 border-dashed border-navy/20 bg-white p-10 text-center text-sm text-seal-text-muted">
-                Bấm vào một track bên trái để xem tổng hợp mentor / judge / team.
+                Select a track on the left to view mentors, judges, and teams.
               </div>
             ) : !roundId ? (
               <div className="border-2 border-dashed border-navy/20 bg-white p-10 text-center text-sm text-seal-text-muted">
-                Event chưa có round — không thể hiển thị judge theo team.
+                This event has no rounds — judges cannot be shown per team.
               </div>
             ) : selectedTrack ? (
               <TrackDetailPanel
+                key={`${selectedTrack.id}-${roundId}`}
                 eventId={eventId}
                 track={selectedTrack}
                 roundId={roundId}

@@ -1,9 +1,23 @@
 "use client";
 
-import { useState } from "react";
-import type { EventResponse, HonoredGuestRequest, PrizeRequest } from "@/lib/api";
+import { useId, useState } from "react";
+import type {
+  EventResponse,
+  HonoredGuestRequest,
+  PrizeAssignmentMode,
+  PrizeRank,
+  PrizeRequest,
+} from "@/lib/api";
 import { useUpdateEvent } from "@/features/admin/hooks/use-admin-hackathons";
-import { getPrizeLabel } from "@/lib/prize.utils";
+import {
+  FREE_TEXT_PRIZE_LABEL,
+  isLegacyFreeTextPrize,
+  parsePrizeAmount,
+  PRIZE_RANK_LABELS,
+  resolveAssignmentMode,
+  validatePrizeOrdering,
+} from "@/lib/prize.utils";
+import { RequiredDigitsInput } from "@/shared/ui/required-digits-input";
 import {
   bannerErrorStyle,
   inputStyle,
@@ -12,53 +26,144 @@ import {
   mergeEventUpdate,
 } from "@/features/admin/components/event-edit/event-edit.utils";
 
-const FREE_TEXT_PRIZE_LABEL = "Prizes";
+type ExtraPrizeRow = {
+  key: string;
+  label: string;
+  amount: string;
+  assignmentMode: PrizeAssignmentMode;
+};
 
-function isFreeTextPrize(p: Pick<PrizeRequest, "rank" | "label">): boolean {
-  return p.rank === "CONSOLATION" && (!p.label || p.label === FREE_TEXT_PRIZE_LABEL);
+function amountDigitsFromValue(value: string): string {
+  const n = parsePrizeAmount(value);
+  return n != null ? String(n) : "";
 }
 
-function prizesToText(prizes: PrizeRequest[]): string {
-  if (prizes.length === 0) return "";
-  if (prizes.length === 1 && isFreeTextPrize(prizes[0])) {
-    return prizes[0].value;
-  }
+function loadFixedAmount(prizes: EventResponse["prizes"], rank: PrizeRank): string {
+  const prize = prizes.find((p) => p.rank === rank);
+  return prize ? amountDigitsFromValue(prize.value) : "";
+}
+
+function loadExtras(prizes: EventResponse["prizes"]): ExtraPrizeRow[] {
   return prizes
-    .map((p) => {
-      const label = getPrizeLabel(p.rank, p.label);
-      const qty = p.quantity > 1 ? ` × ${p.quantity}` : "";
-      return `${label}: ${p.value}${qty}`;
-    })
-    .join("\n");
+    .filter((p) => p.rank === "CONSOLATION" && !isLegacyFreeTextPrize(p))
+    .map((p, idx) => ({
+      key: p.id ?? `extra-${idx}`,
+      label: (p.label ?? "").trim() === FREE_TEXT_PRIZE_LABEL ? "" : (p.label ?? "").trim(),
+      amount: amountDigitsFromValue(p.value),
+      assignmentMode: resolveAssignmentMode(p.rank, p.assignmentMode),
+    }));
 }
 
-function textToPrizes(text: string): PrizeRequest[] {
-  const trimmed = text.trim();
-  if (!trimmed) return [];
-  return [
-    {
-      rank: "CONSOLATION",
-      value: trimmed,
-      quantity: 1,
-      label: FREE_TEXT_PRIZE_LABEL,
-    },
+function buildPrizePayload(
+  first: string,
+  second: string,
+  third: string,
+  extras: ExtraPrizeRow[],
+): PrizeRequest[] {
+  const fixed: { rank: PrizeRank; amount: string; label: string }[] = [
+    { rank: "FIRST", amount: first, label: PRIZE_RANK_LABELS.FIRST },
+    { rank: "SECOND", amount: second, label: PRIZE_RANK_LABELS.SECOND },
+    { rank: "THIRD", amount: third, label: PRIZE_RANK_LABELS.THIRD },
   ];
+
+  const payload: PrizeRequest[] = fixed.map((p) => ({
+    rank: p.rank,
+    value: p.amount,
+    quantity: 1,
+    label: p.label,
+    assignmentMode: "RANK_BASED" as const,
+  }));
+
+  for (const extra of extras) {
+    payload.push({
+      rank: "CONSOLATION",
+      value: extra.amount,
+      quantity: 1,
+      label: extra.label.trim(),
+      assignmentMode: extra.assignmentMode,
+    });
+  }
+
+  return payload;
+}
+
+function validatePrizeForm(
+  first: string,
+  second: string,
+  third: string,
+  extras: ExtraPrizeRow[],
+): string | null {
+  const fields: { name: string; amount: string }[] = [
+    { name: "First Prize", amount: first },
+    { name: "Second Prize", amount: second },
+    { name: "Third Prize", amount: third },
+  ];
+
+  for (const field of fields) {
+    const amount = parsePrizeAmount(field.amount);
+    if (amount == null || amount <= 0) {
+      return `${field.name} amount must be a positive number (VND).`;
+    }
+  }
+
+  for (let i = 0; i < extras.length; i++) {
+    const extra = extras[i];
+    if (!extra.label.trim()) {
+      return `Additional prize #${i + 1} requires a name.`;
+    }
+    const amount = parsePrizeAmount(extra.amount);
+    if (amount == null || amount <= 0) {
+      return `Additional prize "${extra.label.trim()}" amount must be a positive number (VND).`;
+    }
+  }
+
+  return validatePrizeOrdering(buildPrizePayload(first, second, third, extras));
+}
+
+function AmountField({
+  label,
+  value,
+  onChange,
+  disabled,
+  required,
+}: {
+  label: string;
+  value: string;
+  onChange: (digits: string) => void;
+  disabled: boolean;
+  required?: boolean;
+}) {
+  return (
+    <div className="flex flex-col gap-1">
+      <label style={labelStyle}>{label}</label>
+      <div className="flex items-center gap-2">
+        <div className="flex-1">
+          <RequiredDigitsInput
+            value={value}
+            onValueChange={onChange}
+            disabled={disabled}
+            emptyMessage={required ? "Amount is required" : undefined}
+            placeholder="e.g. 7000000"
+            style={inputStyle}
+          />
+        </div>
+        <span style={{ fontSize: 13, fontWeight: 600, color: "#8891a5", minWidth: 36 }}>VND</span>
+      </div>
+    </div>
+  );
 }
 
 export function PrizesHonoredGuestTab({ event }: { event: EventResponse }) {
   const eventId = event.id;
   const editable = isEventEditable(event.status);
   const { mutate: update, isPending } = useUpdateEvent();
+  const idPrefix = useId();
 
-  const existingPrizes: PrizeRequest[] = event.prizes.map((p) => ({
-    trackId: p.trackId ?? undefined,
-    rank: p.rank,
-    value: p.value,
-    quantity: p.quantity,
-    label: p.label ?? undefined,
-  }));
+  const [firstAmount, setFirstAmount] = useState(() => loadFixedAmount(event.prizes, "FIRST"));
+  const [secondAmount, setSecondAmount] = useState(() => loadFixedAmount(event.prizes, "SECOND"));
+  const [thirdAmount, setThirdAmount] = useState(() => loadFixedAmount(event.prizes, "THIRD"));
+  const [extras, setExtras] = useState<ExtraPrizeRow[]>(() => loadExtras(event.prizes));
 
-  const [prizeText, setPrizeText] = useState(() => prizesToText(existingPrizes));
   const [guests, setGuests] = useState<HonoredGuestRequest[]>(
     event.honoredGuests.map((g) => ({ fullName: g.fullName, title: g.title ?? undefined })),
   );
@@ -71,11 +176,17 @@ export function PrizesHonoredGuestTab({ event }: { event: EventResponse }) {
     setSaveError(null);
     setSaveSuccess(false);
 
+    const validationError = validatePrizeForm(firstAmount, secondAmount, thirdAmount, extras);
+    if (validationError) {
+      setSaveError(validationError);
+      return;
+    }
+
     update(
       {
         eventId,
         ...mergeEventUpdate(event, {
-          prizes: textToPrizes(prizeText),
+          prizes: buildPrizePayload(firstAmount, secondAmount, thirdAmount, extras),
           honoredGuests: guests,
         }),
       },
@@ -84,6 +195,29 @@ export function PrizesHonoredGuestTab({ event }: { event: EventResponse }) {
         onError: (err) => setSaveError(err instanceof Error ? err.message : "Failed to save prizes"),
       },
     );
+  };
+
+  const addExtra = () => {
+    setExtras((prev) => [
+      ...prev,
+      {
+        key: `${idPrefix}-extra-${Date.now()}-${prev.length}`,
+        label: "",
+        amount: "",
+        assignmentMode: "RANK_BASED",
+      },
+    ]);
+  };
+
+  const updateExtra = (
+    key: string,
+    patch: Partial<Pick<ExtraPrizeRow, "label" | "amount" | "assignmentMode">>,
+  ) => {
+    setExtras((prev) => prev.map((row) => (row.key === key ? { ...row, ...patch } : row)));
+  };
+
+  const removeExtra = (key: string) => {
+    setExtras((prev) => prev.filter((row) => row.key !== key));
   };
 
   const addGuest = () => {
@@ -106,16 +240,144 @@ export function PrizesHonoredGuestTab({ event }: { event: EventResponse }) {
       )}
 
       <div className="flex flex-col gap-5 p-8 border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228]">
-        <div className="flex flex-col">
-          <label style={labelStyle}>Prizes</label>
-          <textarea
-            value={prizeText}
-            onChange={(e) => setPrizeText(e.target.value)}
+        <div className="flex flex-col gap-4">
+          <div>
+            <label style={labelStyle}>Prizes</label>
+            <p style={{ fontSize: 12, color: "#8891a5", marginTop: 2, marginBottom: 0 }}>
+              Enter First, Second, and Third Prize amounts in VND. Additional prizes are optional.
+            </p>
+          </div>
+
+          <AmountField
+            label="First Prize"
+            value={firstAmount}
+            onChange={setFirstAmount}
             disabled={!editable}
-            rows={8}
-            style={{ ...inputStyle, resize: "vertical" }}
-            placeholder={"Enter prize details (e.g. First Prize: 5,000,000 VND\nSecond Prize: 3,000,000 VND)"}
+            required
           />
+          <AmountField
+            label="Second Prize"
+            value={secondAmount}
+            onChange={setSecondAmount}
+            disabled={!editable}
+            required
+          />
+          <AmountField
+            label="Third Prize"
+            value={thirdAmount}
+            onChange={setThirdAmount}
+            disabled={!editable}
+            required
+          />
+
+          <div className="flex flex-col gap-3" style={{ marginTop: 4 }}>
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <label style={{ ...labelStyle, marginBottom: 0 }}>Additional prizes (optional)</label>
+                <p style={{ fontSize: 12, color: "#8891a5", margin: 0 }}>
+                  Encouragement = auto by ranking. Other = pick team manually when assigning awards.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={addExtra}
+                disabled={!editable}
+                style={{
+                  backgroundColor: "#38bdf8",
+                  color: "#fff",
+                  padding: "8px 14px",
+                  borderRadius: 8,
+                  border: "none",
+                  cursor: editable ? "pointer" : "not-allowed",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                Add prize
+              </button>
+            </div>
+
+            {extras.length === 0 && (
+              <p style={{ fontSize: 12, color: "#8891a5", margin: 0 }}>No additional prizes yet.</p>
+            )}
+
+            {extras.map((row, idx) => (
+              <div
+                key={row.key}
+                className="flex flex-col gap-2"
+                style={{
+                  padding: 12,
+                  backgroundColor: "#f8f9fc",
+                  borderRadius: 8,
+                  border: "1px solid rgba(223,226,236,0.9)",
+                }}
+              >
+                <div className="flex items-center justify-between">
+                  <span style={{ fontSize: 12, fontWeight: 600, color: "#8891a5" }}>
+                    Additional prize #{idx + 1}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removeExtra(row.key)}
+                    disabled={!editable}
+                    style={{
+                      color: "#991b1b",
+                      background: "none",
+                      border: "none",
+                      cursor: editable ? "pointer" : "not-allowed",
+                      fontSize: 13,
+                      fontWeight: 600,
+                    }}
+                  >
+                    Remove
+                  </button>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label style={{ fontSize: 12, fontWeight: 600, color: "#8891a5" }}>Type</label>
+                  <select
+                    value={row.assignmentMode}
+                    onChange={(e) =>
+                      updateExtra(row.key, {
+                        assignmentMode: e.target.value as PrizeAssignmentMode,
+                      })
+                    }
+                    disabled={!editable}
+                    style={inputStyle}
+                  >
+                    <option value="RANK_BASED">Encouragement (by ranking)</option>
+                    <option value="MANUAL">Other (manual team)</option>
+                  </select>
+                </div>
+                <input
+                  value={row.label}
+                  onChange={(e) => updateExtra(row.key, { label: e.target.value })}
+                  disabled={!editable}
+                  style={inputStyle}
+                  placeholder={
+                    row.assignmentMode === "MANUAL"
+                      ? "e.g. Most Liked on Social Media"
+                      : "e.g. Encouragement Prize"
+                  }
+                />
+                <div className="flex items-center gap-2">
+                  <div className="flex-1">
+                    <RequiredDigitsInput
+                      value={row.amount}
+                      onValueChange={(digits) => updateExtra(row.key, { amount: digits })}
+                      disabled={!editable}
+                      emptyMessage="Amount is required"
+                      placeholder="e.g. 1500000"
+                      style={inputStyle}
+                    />
+                  </div>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "#8891a5", minWidth: 36 }}>
+                    VND
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div>

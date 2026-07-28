@@ -55,3 +55,28 @@ export function useRecalculateRankings(eventId?: string) {
     },
   });
 }
+
+export function usePreviewAdvancement(roundId: string | undefined) {
+  return useMutation({
+    mutationFn: (body: import("@/lib/api/ranking.api").AdvancementSelectionRequest) =>
+      rankingApi.previewAdvancement(roundId!, body),
+  });
+}
+
+export function useConfirmAdvancement(eventId?: string, roundId?: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: import("@/lib/api/ranking.api").AdvancementSelectionRequest) =>
+      rankingApi.confirmAdvancement(roundId!, body),
+    onSuccess: () => {
+      if (roundId) {
+        queryClient.invalidateQueries({ queryKey: [ROUND_ADVANCEMENTS_KEY, roundId] });
+      }
+      queryClient.invalidateQueries({ queryKey: ["finalists"] });
+      queryClient.invalidateQueries({ queryKey: ["finalists-contested"] });
+      if (eventId) {
+        queryClient.invalidateQueries({ queryKey: ["livescore", eventId] });
+      }
+    },
+  });
+}

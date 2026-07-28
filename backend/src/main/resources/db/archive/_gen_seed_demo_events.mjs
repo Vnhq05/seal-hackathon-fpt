@@ -215,8 +215,8 @@ const EVENTS = [
   },
   {
     n: 2,
-    name: "SEAL Hackathon Winter 2025 - Multi-hop RAG Agents",
-    season: "Winter",
+    name: "SEAL Hackathon Fall 2025 - Multi-hop RAG Agents",
+    season: "Fall",
     year: 2025,
     status: "COMPLETED",
     qa: "COMPLETED end-to-end",

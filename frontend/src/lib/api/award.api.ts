@@ -34,9 +34,18 @@ export interface AwardAssignmentResultResponse {
   participationCertificates: ParticipationCertificateResponse[];
 }
 
+export interface ManualPrizeAssignment {
+  prizeId: string;
+  teamId: string;
+}
+
+export interface AssignAwardsRequest {
+  manualAssignments?: ManualPrizeAssignment[];
+}
+
 export const awardApi = {
-  assign(eventId: string): Promise<AwardAssignmentResultResponse> {
-    return api.post<AwardAssignmentResultResponse>(`/events/${eventId}/awards/assign`);
+  assign(eventId: string, body?: AssignAwardsRequest): Promise<AwardAssignmentResultResponse> {
+    return api.post<AwardAssignmentResultResponse>(`/events/${eventId}/awards/assign`, body ?? {});
   },
 
   list(eventId: string): Promise<TeamAwardResponse[]> {

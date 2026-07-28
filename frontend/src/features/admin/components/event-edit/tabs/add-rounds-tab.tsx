@@ -29,6 +29,10 @@ import {
   type ScoreScaleMax,
   isScoreScaleMax,
 } from "@/features/judging/constants/scoring-scale";
+import {
+  RequiredDigitsInput,
+  parseRequiredPositiveInt,
+} from "@/shared/ui/required-digits-input";
 
 function toDateTimeLocalBounds(date: string, endOfDay = false): string | undefined {
   if (!date) return undefined;
@@ -359,7 +363,7 @@ export function AddRoundsTab({ event }: { event: EventResponse }) {
   const [roundStart, setRoundStart] = useState("");
   const [roundEnd, setRoundEnd] = useState("");
   const [submissionDeadline, setSubmissionDeadline] = useState("");
-  const [minJudgesPerRound, setMinJudgesPerRound] = useState(2);
+  const [minJudgesPerRoundInput, setMinJudgesPerRoundInput] = useState("");
   const [addRoundErrors, setAddRoundErrors] = useState<string[]>([]);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -378,9 +382,13 @@ export function AddRoundsTab({ event }: { event: EventResponse }) {
     if (!roundEnd) errors.push("Round end is required");
     if (!submissionDeadline) errors.push("Submission deadline is required");
     if (roundStart && roundEnd && roundStart >= roundEnd) errors.push("Round end must be after start");
+    const minJudgesPerRound = parseRequiredPositiveInt(minJudgesPerRoundInput);
+    if (minJudgesPerRound == null) {
+      errors.push("Min judges per scope is required and must be at least 1");
+    }
 
     setAddRoundErrors(errors);
-    if (errors.length > 0) return;
+    if (errors.length > 0 || minJudgesPerRound == null) return;
 
     setActionError(null);
     const resolvedStart = toApiDateTime(roundStart);
@@ -405,7 +413,7 @@ export function AddRoundsTab({ event }: { event: EventResponse }) {
           setRoundStart("");
           setRoundEnd("");
           setSubmissionDeadline("");
-          setMinJudgesPerRound(2);
+          setMinJudgesPerRoundInput("");
           setAddRoundErrors([]);
         },
         onError: (err) => setActionError(err instanceof Error ? err.message : "Failed to add round"),
@@ -485,14 +493,12 @@ export function AddRoundsTab({ event }: { event: EventResponse }) {
 
           <div className="flex flex-col">
             <label style={labelStyle}>Min judges per scope</label>
-            <input
-              type="number"
-              value={minJudgesPerRound}
-              onChange={(e) => setMinJudgesPerRound(parseInt(e.target.value, 10) || 2)}
+            <RequiredDigitsInput
+              value={minJudgesPerRoundInput}
+              onValueChange={setMinJudgesPerRoundInput}
+              emptyMessage="Min judges cannot be empty"
               disabled={!editable}
               style={inputStyle}
-              min={1}
-              max={20}
               placeholder="e.g. 2"
             />
             <p style={{ fontSize: 12, color: "#8891a5", marginTop: 4 }}>

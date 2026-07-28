@@ -5,6 +5,10 @@ import { useSystemConfig, useUpdateSystemConfig } from "@/features/admin/hooks/u
 import type { SystemConfigResponse } from "@/lib/api/system-config.api";
 import { SealButton } from "@/shared/ui/seal-button";
 import { SealCard } from "@/shared/ui/seal-card";
+import {
+  RequiredDigitsInput,
+  parseRequiredPositiveInt,
+} from "@/shared/ui/required-digits-input";
 
 const inputClass =
   "w-full rounded-lg border border-seal-border/80 bg-white px-4 py-2.5 text-sm text-navy outline-none transition-colors focus:border-navy focus:ring-2 focus:ring-royal/20";
@@ -13,8 +17,8 @@ const sectionTitleClass =
   "mb-3 text-[11px] font-bold uppercase tracking-[0.08em] text-seal-text-muted";
 
 interface SystemConfigForm {
-  minTeamMembers: number;
-  maxTeamMembers: number;
+  minTeamMembers: string;
+  maxTeamMembers: string;
   defaultRules: string;
   minTeams: string;
   maxTeams: string;
@@ -24,8 +28,8 @@ interface SystemConfigForm {
 
 function formFromConfig(data: SystemConfigResponse): SystemConfigForm {
   return {
-    minTeamMembers: data.minTeamMembers ?? 3,
-    maxTeamMembers: data.maxTeamMembers ?? 5,
+    minTeamMembers: String(data.minTeamMembers ?? 3),
+    maxTeamMembers: String(data.maxTeamMembers ?? 5),
     defaultRules: data.defaultRules ?? "",
     minTeams: data.minTeams != null ? String(data.minTeams) : "",
     maxTeams: data.maxTeams != null ? String(data.maxTeams) : "",
@@ -41,7 +45,7 @@ function SystemConfigForm({ data }: { data: SystemConfigResponse }) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const handleChange = (key: keyof SystemConfigForm, value: string | number) => {
+  const handleChange = (key: keyof SystemConfigForm, value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }));
     setError(null);
     setSuccess(null);
@@ -60,11 +64,13 @@ function SystemConfigForm({ data }: { data: SystemConfigResponse }) {
   };
 
   const handleSave = () => {
-    if (form.minTeamMembers < 1 || form.maxTeamMembers < 1) {
-      setError("Team members must be at least 1");
+    const minTeamMembers = parseRequiredPositiveInt(form.minTeamMembers);
+    const maxTeamMembers = parseRequiredPositiveInt(form.maxTeamMembers);
+    if (minTeamMembers == null || maxTeamMembers == null) {
+      setError("Min and max team members are required and must be at least 1");
       return;
     }
-    if (form.minTeamMembers > form.maxTeamMembers) {
+    if (minTeamMembers > maxTeamMembers) {
       setError("Minimum members cannot exceed maximum members");
       return;
     }
@@ -119,8 +125,8 @@ function SystemConfigForm({ data }: { data: SystemConfigResponse }) {
 
     update(
       {
-        minTeamMembers: form.minTeamMembers,
-        maxTeamMembers: form.maxTeamMembers,
+        minTeamMembers,
+        maxTeamMembers,
         defaultRules: form.defaultRules,
         minTeams,
         maxTeams,
@@ -159,22 +165,22 @@ function SystemConfigForm({ data }: { data: SystemConfigResponse }) {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="flex flex-col">
             <label className={labelClass}>Min Team Members</label>
-            <input
-              type="number"
+            <RequiredDigitsInput
               value={form.minTeamMembers}
-              onChange={(e) => handleChange("minTeamMembers", Math.max(1, parseInt(e.target.value) || 1))}
+              onValueChange={(v) => handleChange("minTeamMembers", v)}
+              emptyMessage="Min team members cannot be empty"
               className={inputClass}
-              min={1}
+              placeholder="e.g. 3"
             />
           </div>
           <div className="flex flex-col">
             <label className={labelClass}>Max Team Members</label>
-            <input
-              type="number"
+            <RequiredDigitsInput
               value={form.maxTeamMembers}
-              onChange={(e) => handleChange("maxTeamMembers", Math.max(1, parseInt(e.target.value) || 1))}
+              onValueChange={(v) => handleChange("maxTeamMembers", v)}
+              emptyMessage="Max team members cannot be empty"
               className={inputClass}
-              min={1}
+              placeholder="e.g. 5"
             />
           </div>
         </div>

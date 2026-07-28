@@ -1,6 +1,7 @@
 package com.sealhackathon.ranking.controller;
 
 import com.sealhackathon.common.response.ApiResponse;
+import com.sealhackathon.ranking.dto.request.FinalistSelectRequest;
 import com.sealhackathon.ranking.dto.response.ContestedSlotResponse;
 import com.sealhackathon.ranking.dto.response.FinalistResponse;
 import com.sealhackathon.ranking.dto.response.FinalistSelectResultResponse;
@@ -8,12 +9,14 @@ import com.sealhackathon.ranking.service.FinalistSelectionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -31,9 +34,12 @@ public class FinalistController {
 
     @PostMapping("/select")
     @PreAuthorize("hasAnyRole('SYSTEM_ADMIN', 'EVENT_COORDINATOR')")
-    @Operation(summary = "Select finalists (Top 2 per track for SEAL format)")
-    public ResponseEntity<ApiResponse<FinalistSelectResultResponse>> selectFinalists(@PathVariable UUID eventId) {
-        FinalistSelectResultResponse result = finalistSelectionService.selectFinalists(eventId);
+    @Operation(summary = "Select finalists (Top N per group/track — prefer round advancement/confirm)")
+    public ResponseEntity<ApiResponse<FinalistSelectResultResponse>> selectFinalists(
+            @PathVariable UUID eventId,
+            @Valid @RequestBody(required = false) FinalistSelectRequest request) {
+        Integer topN = request != null ? request.getTopN() : null;
+        FinalistSelectResultResponse result = finalistSelectionService.selectFinalists(eventId, topN);
         return ResponseEntity.ok(ApiResponse.success("Finalists selected", result));
     }
 
