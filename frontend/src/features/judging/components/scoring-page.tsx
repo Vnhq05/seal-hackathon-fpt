@@ -578,9 +578,6 @@ function ScoringPageContent({
               {adjustmentContext.scoreScaleMax != null
                 ? `, scale 1–${adjustmentContext.scoreScaleMax}`
                 : ""}
-              {adjustmentContext.consensusIndex != null
-                ? `, consensus ${(adjustmentContext.consensusIndex * 100).toFixed(0)}%`
-                : ""}
               )
             </p>
           )}

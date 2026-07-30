@@ -60,6 +60,8 @@ public class ScoreReviewService {
             "A score adjustment request is already active for this submission.";
     public static final String DEVIATION_TOO_LOW_MESSAGE =
             "Score deviation is below the threshold required for an adjustment request.";
+    public static final String EVENT_COMPLETED_MESSAGE =
+            "This competition has ended. Score adjustment requests are no longer accepted.";
 
     private static final List<ScoreReviewStatus> ACTIVE_STATUSES =
             List.of(ScoreReviewStatus.OPEN, ScoreReviewStatus.APPROVED);
@@ -102,6 +104,14 @@ public class ScoreReviewService {
         Submission submission = submissionRepository.findById(submissionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Submission", "id", submissionId));
 
+        RoundSnapshot round = eventPublicService.getRound(submission.getRoundId()).orElse(null);
+        if (round != null && eventPublicService.isStaffCompleted(round.getEventId())) {
+            return;
+        }
+        if (publishedResultRepository.existsByRoundId(submission.getRoundId())) {
+            return;
+        }
+
         Optional<DeviationStats> stats = computeDeviationStats(submission);
         if (stats.isEmpty() || stats.get().deviation().compareTo(deviationThreshold) < 0) {
             return;
@@ -124,6 +134,7 @@ public class ScoreReviewService {
         }
 
         assertNotPublished(submission.getRoundId());
+        assertEventNotCompleted(eventId);
 
         if (!isJudgeInPoolForTeam(submission.getTeamId(), submission.getRoundId(), judgeId)) {
             throw new BusinessException(
@@ -306,6 +317,7 @@ public class ScoreReviewService {
                 && judgeCompleted
                 && deviationHigh
                 && !publishedResultRepository.existsByRoundId(submission.getRoundId())
+                && !eventPublicService.isStaffCompleted(eventId)
                 && (review == null
                         || !ACTIVE_STATUSES.contains(status)
                         || (status == ScoreReviewStatus.OPEN
@@ -519,6 +531,12 @@ public class ScoreReviewService {
             throw new BusinessException(
                     "Results have been published for this round",
                     HttpStatus.BAD_REQUEST) {};
+        }
+    }
+
+    private void assertEventNotCompleted(UUID eventId) {
+        if (eventPublicService.isStaffCompleted(eventId)) {
+            throw new BusinessException(EVENT_COMPLETED_MESSAGE, HttpStatus.BAD_REQUEST) {};
         }
     }
 

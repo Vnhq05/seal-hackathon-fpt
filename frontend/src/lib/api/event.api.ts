@@ -43,6 +43,14 @@ export interface EventResponse {
   registrationDeadline: string;
   registrationOpenDate: string | null;
   status: EventStatus;
+  /** Admin/coordinator set sticky COMPLETED (not only end-date derived). */
+  staffCompleted?: boolean;
+  /** Admin/coordinator made results/leaderboard public. */
+  leaderboardPublic?: boolean;
+  /** Score-deviation reviews still OPEN or APPROVED. */
+  hasActiveScoreReviews?: boolean;
+  /** Students may see Results & Awards (closed + public + consensus). */
+  studentResultsVisible?: boolean;
   description: string | null;
   location: string | null;
   format: string;

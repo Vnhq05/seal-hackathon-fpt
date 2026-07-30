@@ -18,10 +18,14 @@ export function AwardsResultsPage() {
 
   const sealEvent = events?.find((e) => e.competitionFormat === "SEAL_RAG_2026") ?? events?.[0];
   const eventId = sealEvent?.id;
+  const resultsVisible = sealEvent?.studentResultsVisible === true;
+  const hasActiveReviews = sealEvent?.hasActiveScoreReviews === true;
+  const isPublic = sealEvent?.leaderboardPublic === true;
+  const staffClosed = sealEvent?.staffCompleted === true;
 
-  const { data: awards, isLoading } = usePublicAwards(eventId, !!eventId);
-  const { data: participationSummary } = useParticipationSummary(eventId, !!eventId);
-  const { data: myCertificate } = useMyParticipationCertificate(eventId, !!eventId);
+  const { data: awards, isLoading } = usePublicAwards(eventId, !!eventId && resultsVisible);
+  const { data: participationSummary } = useParticipationSummary(eventId, !!eventId && resultsVisible);
+  const { data: myCertificate } = useMyParticipationCertificate(eventId, !!eventId && resultsVisible);
   const { data: myEventTeams = [] } = useMyTeamsAllEvents();
 
   const myTeamId = myEventTeams.find((t) => t.event.id === eventId)?.team?.id;
@@ -36,6 +40,21 @@ export function AwardsResultsPage() {
     });
   }, [awards, myTeamId]);
 
+  const pendingMessage = (() => {
+    if (!sealEvent) return null;
+    if (resultsVisible) return null;
+    if (hasActiveReviews) {
+      return "Results will appear after the judging panel reaches consensus on scores.";
+    }
+    if (!staffClosed) {
+      return "Results are available after the competition is closed by an admin or coordinator.";
+    }
+    if (!isPublic) {
+      return "Results are ready for release once an admin or coordinator makes them public.";
+    }
+    return "Results are not available yet.";
+  })();
+
   return (
     <div className="mx-auto max-w-2xl space-y-6 p-6">
       <div>
@@ -43,15 +62,21 @@ export function AwardsResultsPage() {
         {sealEvent && <p className="text-sm text-seal-text-secondary">{sealEvent.name}</p>}
       </div>
 
-      {isLoading && <p className="text-sm text-seal-text-muted">Loading...</p>}
+      {pendingMessage && (
+        <p className="rounded-lg border border-navy/20 bg-white p-6 text-sm text-seal-text-secondary">
+          {pendingMessage}
+        </p>
+      )}
 
-      {!isLoading && (!awards || awards.length === 0) && (
+      {resultsVisible && isLoading && <p className="text-sm text-seal-text-muted">Loading...</p>}
+
+      {resultsVisible && !isLoading && (!awards || awards.length === 0) && (
         <p className="rounded-lg border border-navy/20 bg-white p-6 text-sm text-seal-text-secondary">
           Awards have not been announced yet.
         </p>
       )}
 
-      {sortedAwards.length > 0 && (
+      {resultsVisible && sortedAwards.length > 0 && (
         <ul className="space-y-3">
           {sortedAwards.map((a) => (
             <li
@@ -77,14 +102,14 @@ export function AwardsResultsPage() {
         </ul>
       )}
 
-      {participationSummary && participationSummary.issuedCount > 0 && (
+      {resultsVisible && participationSummary && participationSummary.issuedCount > 0 && (
         <p className="rounded-lg border border-navy/20 bg-white p-4 text-sm text-seal-text-secondary">
           Issued {participationSummary.issuedCount.toLocaleString("vi-VN")} participation certificates
           to confirmed team members.
         </p>
       )}
 
-      {myCertificate && (
+      {resultsVisible && myCertificate && (
         <div className="rounded-lg border-2 border-royal bg-white p-5 shadow-[3px_3px_0_0_#0c1228]">
           <p className="font-mono text-xs font-bold uppercase text-royal">
             Your participation certificate
