@@ -50,7 +50,7 @@ public class AwardController {
     @GetMapping("/api/public/events/{eventId}/awards")
     @Operation(summary = "Public list of team awards")
     public ResponseEntity<ApiResponse<List<TeamAwardResponse>>> getPublicAwards(@PathVariable UUID eventId) {
-        return ResponseEntity.ok(ApiResponse.success(awardService.getAwards(eventId)));
+        return ResponseEntity.ok(ApiResponse.success(awardService.getPublicAwards(eventId)));
     }
 
     @GetMapping("/api/events/{eventId}/awards/participation")

@@ -5,6 +5,7 @@ import com.sealhackathon.common.exception.ResourceNotFoundException;
 import com.sealhackathon.event.domain.Round;
 import com.sealhackathon.event.domain.enums.RoundType;
 import com.sealhackathon.event.repository.RoundRepository;
+import com.sealhackathon.judging.service.JudgingPublicService;
 import com.sealhackathon.ranking.domain.PublishedResult;
 import com.sealhackathon.ranking.domain.Ranking;
 import com.sealhackathon.ranking.dto.FinalRankResult;
@@ -40,6 +41,7 @@ public class RankingService {
     private final AdvancementService advancementService;
     private final TeamPublicService teamPublicService;
     private final ApplicationEventPublisher eventPublisher;
+    private final JudgingPublicService judgingPublicService;
 
     private static final int DISPUTE_WINDOW_HOURS = 24;
 
@@ -94,6 +96,13 @@ public class RankingService {
         if (publishedResultRepository.existsByRoundId(roundId)) {
             throw new BusinessException("Results for this round are already published",
                     HttpStatus.CONFLICT) {};
+        }
+
+        if (judgingPublicService.hasActiveScoreReviewsForRound(roundId)) {
+            throw new BusinessException(
+                    "Cannot publish results while score deviation reviews are still open or approved. "
+                            + "Resolve all score reviews first so the judging panel reaches consensus.",
+                    HttpStatus.BAD_REQUEST) {};
         }
 
         int version = rankingRepository.findMaxVersionByRoundId(roundId);

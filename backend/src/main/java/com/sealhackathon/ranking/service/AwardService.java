@@ -2,14 +2,18 @@ package com.sealhackathon.ranking.service;
 
 import com.sealhackathon.common.exception.BusinessException;
 import com.sealhackathon.common.exception.ResourceNotFoundException;
+import com.sealhackathon.common.enums.UserType;
+import com.sealhackathon.auth.service.AuthPublicService;
 import com.sealhackathon.event.domain.HackathonEvent;
 import com.sealhackathon.event.domain.Prize;
 import com.sealhackathon.event.domain.Round;
+import com.sealhackathon.event.domain.enums.EventStatus;
 import com.sealhackathon.event.domain.enums.PrizeRank;
 import com.sealhackathon.event.domain.enums.RoundType;
 import com.sealhackathon.event.repository.HackathonEventRepository;
 import com.sealhackathon.event.repository.PrizeRepository;
 import com.sealhackathon.event.repository.RoundRepository;
+import com.sealhackathon.judging.service.JudgingPublicService;
 import com.sealhackathon.ranking.domain.ParticipationCertificate;
 import com.sealhackathon.ranking.domain.Ranking;
 import com.sealhackathon.ranking.domain.TeamAward;
@@ -64,6 +68,8 @@ public class AwardService {
     private final TeamMemberRepository teamMemberRepository;
     private final TeamRepository teamRepository;
     private final UserPublicService userPublicService;
+    private final JudgingPublicService judgingPublicService;
+    private final AuthPublicService authPublicService;
 
     @Transactional
     public AwardAssignmentResultResponse assignAwardsFromFinalRanking(UUID eventId) {
@@ -126,6 +132,21 @@ public class AwardService {
 
     @Transactional(readOnly = true)
     public List<TeamAwardResponse> getAwards(UUID eventId) {
+        if (!canViewerSeeAwards(eventId)) {
+            return List.of();
+        }
+        return listAwardsUngated(eventId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<TeamAwardResponse> getPublicAwards(UUID eventId) {
+        if (!isStudentResultsVisible(eventId)) {
+            return List.of();
+        }
+        return listAwardsUngated(eventId);
+    }
+
+    private List<TeamAwardResponse> listAwardsUngated(UUID eventId) {
         List<Prize> prizes = prizeRepository.findByHackathonEventId(eventId);
         Map<UUID, Prize> prizeMap = prizes.stream()
                 .collect(Collectors.toMap(Prize::getId, Function.identity()));
@@ -181,15 +202,22 @@ public class AwardService {
         List<UUID> eventIds = new ArrayList<>();
         awards.forEach(award -> eventIds.add(award.getEventId()));
         certificates.forEach(certificate -> eventIds.add(certificate.getEventId()));
-        Map<UUID, String> eventNames = eventRepository.findAllById(eventIds).stream()
+        Map<UUID, HackathonEvent> eventsById = eventRepository.findAllById(eventIds).stream()
+                .collect(Collectors.toMap(HackathonEvent::getId, Function.identity()));
+        Map<UUID, String> eventNames = eventsById.values().stream()
                 .collect(Collectors.toMap(HackathonEvent::getId, HackathonEvent::getName));
 
         Map<UUID, Prize> prizes = new HashMap<>();
         prizeRepository.findAllById(awards.stream().map(TeamAward::getPrizeId).toList())
                 .forEach(prize -> prizes.put(prize.getId(), prize));
 
+        boolean staffViewer = isStaffViewer();
+
         List<UserAchievementResponse> achievements = new ArrayList<>();
         for (TeamAward award : awards) {
+            if (!staffViewer && !isStudentResultsVisible(eventsById.get(award.getEventId()))) {
+                continue;
+            }
             Prize prize = prizes.get(award.getPrizeId());
             achievements.add(UserAchievementResponse.builder()
                     .id(award.getId())
@@ -205,6 +233,9 @@ public class AwardService {
                     .build());
         }
         for (ParticipationCertificate certificate : certificates) {
+            if (!staffViewer && !isStudentResultsVisible(eventsById.get(certificate.getEventId()))) {
+                continue;
+            }
             achievements.add(UserAchievementResponse.builder()
                     .id(certificate.getId())
                     .type("PARTICIPATION_CERTIFICATE")
@@ -227,6 +258,10 @@ public class AwardService {
 
     @Transactional(readOnly = true)
     public ParticipationCertificateResponse getMyParticipationCertificate(UUID eventId, UUID userId) {
+        if (!isStudentResultsVisible(eventId) && !isStaffViewer()) {
+            throw new ResourceNotFoundException(
+                    "Participation certificate", "eventId/userId", eventId + "/" + userId);
+        }
         eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Event", "id", eventId));
 
@@ -243,10 +278,49 @@ public class AwardService {
         eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Event", "id", eventId));
 
+        if (!isStudentResultsVisible(eventId) && !isStaffViewer()) {
+            return ParticipationCertificateSummaryResponse.builder()
+                    .eventId(eventId)
+                    .issuedCount(0)
+                    .build();
+        }
+
         return ParticipationCertificateSummaryResponse.builder()
                 .eventId(eventId)
                 .issuedCount(participationCertificateRepository.countByEventId(eventId))
                 .build();
+    }
+
+    /**
+     * Students see Results & Awards only when the event is staff-COMPLETED,
+     * results are public, and there are no active score-deviation reviews.
+     */
+    boolean isStudentResultsVisible(UUID eventId) {
+        return eventRepository.findById(eventId)
+                .map(this::isStudentResultsVisible)
+                .orElse(false);
+    }
+
+    boolean isStudentResultsVisible(HackathonEvent event) {
+        if (event == null) {
+            return false;
+        }
+        return event.getStatus() == EventStatus.COMPLETED
+                && event.isLeaderboardPublic()
+                && !judgingPublicService.hasActiveScoreReviews(event.getId());
+    }
+
+    private boolean canViewerSeeAwards(UUID eventId) {
+        return isStaffViewer() || isStudentResultsVisible(eventId);
+    }
+
+    private boolean isStaffViewer() {
+        try {
+            UserType role = authPublicService.getCurrentUserRole();
+            return role == UserType.SYSTEM_ADMIN || role == UserType.EVENT_COORDINATOR;
+        } catch (Exception ignored) {
+            return false;
+        }
     }
 
     private List<ParticipationCertificateResponse> issueParticipationCertificates(

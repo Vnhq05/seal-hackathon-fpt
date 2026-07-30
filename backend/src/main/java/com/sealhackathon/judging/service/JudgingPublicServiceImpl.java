@@ -1,12 +1,14 @@
 package com.sealhackathon.judging.service;
 
 import com.sealhackathon.judging.domain.JudgeScore;
+import com.sealhackathon.judging.domain.enums.ScoreReviewStatus;
 import com.sealhackathon.judging.domain.enums.ScoreStatus;
 import com.sealhackathon.judging.dto.snapshot.JudgeScoreSnapshot;
 import com.sealhackathon.judging.dto.snapshot.ScoreDetailSnapshot;
 import com.sealhackathon.event.repository.RoundRepository;
 import com.sealhackathon.event.service.JudgeAssignmentService;
 import com.sealhackathon.judging.repository.JudgeScoreRepository;
+import com.sealhackathon.judging.repository.ScoreReviewRequestRepository;
 import com.sealhackathon.team.domain.Team;
 import com.sealhackathon.team.repository.TeamRepository;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +24,11 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class JudgingPublicServiceImpl implements JudgingPublicService {
 
+    private static final List<ScoreReviewStatus> ACTIVE_REVIEW_STATUSES =
+            List.of(ScoreReviewStatus.OPEN, ScoreReviewStatus.APPROVED);
+
     private final JudgeScoreRepository judgeScoreRepository;
+    private final ScoreReviewRequestRepository scoreReviewRequestRepository;
     private final JudgeAssignmentService judgeAssignmentService;
     private final RoundRepository roundRepository;
     private final TeamRepository teamRepository;
@@ -111,6 +117,18 @@ public class JudgingPublicServiceImpl implements JudgingPublicService {
                     return judgeAssignmentService.countEffectiveJudgesByTeam(roundId, teams);
                 })
                 .orElseGet(Map::of);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean hasActiveScoreReviews(UUID eventId) {
+        return scoreReviewRequestRepository.existsByEventIdAndStatusIn(eventId, ACTIVE_REVIEW_STATUSES);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean hasActiveScoreReviewsForRound(UUID roundId) {
+        return scoreReviewRequestRepository.existsByRoundIdAndStatusIn(roundId, ACTIVE_REVIEW_STATUSES);
     }
 
     private JudgeScoreSnapshot toSnapshot(JudgeScore score) {

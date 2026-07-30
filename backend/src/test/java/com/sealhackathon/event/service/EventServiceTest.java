@@ -64,6 +64,7 @@ class EventServiceTest {
     @Mock private EventScheduleService eventScheduleService;
     @Mock private AllowedEmailDomainService allowedEmailDomainService;
     @Mock private TrackDrawSessionService trackDrawSessionService;
+    @Mock private com.sealhackathon.judging.service.JudgingPublicService judgingPublicService;
     @Spy private EventStatusResolver eventStatusResolver = new EventStatusResolver();
 
     @InjectMocks private EventService eventService;
@@ -86,6 +87,7 @@ class EventServiceTest {
         when(teamRepository.countByEventId(any())).thenReturn(0L);
         when(eventMentorAssignmentRepository.findByHackathonEventId(any())).thenReturn(List.of());
         when(userPublicService.findAllByIds(any())).thenReturn(List.of());
+        when(judgingPublicService.hasActiveScoreReviews(any())).thenReturn(false);
     }
 
     private static final LocalDate REG_OPEN = LocalDate.now().minusDays(1);
