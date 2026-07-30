@@ -78,10 +78,6 @@ export type {
   TeamAssignmentOverview,
   EventJudgeOption,
   TeamJudgeAssignmentResponse,
-  MentorTeamAssignmentResponse,
-  MentorDrawResultResponse,
-  AssignMentorTeamBody,
-  GenerateCompetitionGroupsResponse,
 } from "./assignment.api";
 
 export { teamApi } from "./team.api";
