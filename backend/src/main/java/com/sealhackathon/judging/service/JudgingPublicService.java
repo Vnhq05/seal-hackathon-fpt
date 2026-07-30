@@ -28,4 +28,10 @@ public interface JudgingPublicService {
     Map<UUID, Integer> countCompletedScoresByRound(UUID roundId);
 
     Map<UUID, Long> countAssignedJudgesByRound(UUID roundId);
+
+    /** True when the event still has OPEN or APPROVED score-deviation reviews. */
+    boolean hasActiveScoreReviews(UUID eventId);
+
+    /** True when the round still has OPEN or APPROVED score-deviation reviews. */
+    boolean hasActiveScoreReviewsForRound(UUID roundId);
 }

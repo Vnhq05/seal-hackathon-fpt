@@ -158,12 +158,8 @@ function ReviewDetailModal({
               <div><span className="text-seal-text-muted">Team:</span> {review.teamName}</div>
               <div><span className="text-seal-text-muted">Round:</span> {review.roundType ?? review.roundId}</div>
               <div><span className="text-seal-text-muted">Deviation:</span> {review.deviationValue.toFixed(1)}%</div>
-              <div><span className="text-seal-text-muted">Range:</span> {review.minJudgeScore.toFixed(1)}% – {review.maxJudgeScore.toFixed(1)}%</div>
               {review.scoreScaleMax != null && (
                 <div><span className="text-seal-text-muted">Scale:</span> 0–{review.scoreScaleMax}</div>
-              )}
-              {review.consensusIndex != null && (
-                <div><span className="text-seal-text-muted">Consensus:</span> {(review.consensusIndex * 100).toFixed(0)}%</div>
               )}
             </div>
 

@@ -160,6 +160,14 @@ public class EventPublicServiceImpl implements EventPublicService {
 
     @Override
     @Transactional(readOnly = true)
+    public boolean isStaffCompleted(UUID eventId) {
+        return eventRepository.findById(eventId)
+                .map(e -> e.getStatus() == EventStatus.COMPLETED)
+                .orElse(false);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public UUID getEventIdByRoundId(UUID roundId) {
         return roundRepository.findById(roundId)
                 .map(r -> r.getHackathonEvent().getId())
