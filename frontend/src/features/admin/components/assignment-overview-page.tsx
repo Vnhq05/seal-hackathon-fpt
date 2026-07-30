@@ -13,7 +13,7 @@ import {
 } from "@/features/admin/hooks/use-admin-assignments";
 import { trackApi } from "@/lib/api/track.api";
 import { teamApi } from "@/lib/api/team.api";
-import type { EventStatus, TrackResponse } from "@/lib/api";
+import type { EventStatus, RoundType, TrackResponse } from "@/lib/api";
 
 const inputStyle: React.CSSProperties = {
   border: "1px solid rgba(223,226,236,0.8)",
@@ -130,7 +130,7 @@ function TrackDetailPanel({
   eventId: string;
   track: TrackResponse;
   roundId: string;
-  roundType?: string;
+  roundType?: RoundType | null;
 }) {
   const isFinal = roundType === "FINAL";
   const { data: mentors = [], isLoading: loadingMentors } = useMentorAssignments(

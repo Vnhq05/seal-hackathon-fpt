@@ -101,7 +101,7 @@ export function SubmissionPartsForm({
     ) => {
       setSavingPart(part);
       submit(
-        { roundId: round.id, teamId, request, pdfFile: pdf ?? null },
+        { roundId: round.id, teamId, request, file: pdf ?? null },
         {
           onSuccess: () => {
             setSuccess(okMessage ?? "Saved!");

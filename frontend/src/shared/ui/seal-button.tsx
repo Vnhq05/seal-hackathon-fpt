@@ -64,7 +64,7 @@ export function SealButton(props: SealButtonProps) {
   ) =>
     `inline-flex items-center justify-center transition-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-royal/40 focus-visible:ring-offset-2 ${variantClasses[variant]} ${sizeClasses[size]} ${className}`;
 
-  if ("href" in props && props.href) {
+  if (props.href !== undefined) {
     const {
       href,
       external,
