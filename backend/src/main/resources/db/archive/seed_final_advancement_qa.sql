@@ -417,12 +417,13 @@ BEGIN
     );
 
     INSERT INTO submission_versions (
-        id, created_at, created_by, demo_url, github_url, slide_url, submitted_at, version_number, submission_id
+        id, created_at, created_by, demo_url, github_url, slide_url, other_url, submitted_at, version_number, submission_id
     ) VALUES (
         @verId, @now, @ownerEmail,
         N'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
         N'https://github.com/seal-fpt/final-qa-' + CAST(@i AS NVARCHAR(2)),
         N'https://docs.google.com/presentation/d/final-qa-' + CAST(@i AS NVARCHAR(2)),
+        N'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
         DATEADD(MINUTE, -30 - @i, @prelimSub),
         1, @subId
     );

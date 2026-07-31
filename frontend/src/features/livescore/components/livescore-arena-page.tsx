@@ -15,6 +15,7 @@ import {
   useSelectFinalists,
 } from "@/features/coordinator/hooks/use-finalists";
 import { useTeamAwards, useAssignAwards } from "@/features/coordinator/hooks/use-awards";
+import { formatPrizeAmount, getPrizeLabel } from "@/lib/prize.utils";
 import type { LiveScoreEntry, LiveScoreBoard, RankingEvent, LiveScoreStatus, TrackInfo } from "@/lib/api/livescore.api";
 import type { RoundType } from "@/lib/api/types";
 
@@ -563,10 +564,14 @@ function AwardsPanel({ eventId, rankings }: { eventId: string; rankings: LiveSco
               className="flex items-center justify-between"
               style={{ fontSize: 12, marginBottom: 4, gap: 4 }}
             >
-              <span style={{ color: "#8891a5", flex: 1 }}>{a.prizeLabel}</span>
-              <span style={{ fontWeight: 500, color: "#0e1528", flex: 1 }}>{a.teamName}</span>
-              <span style={{ color: "#0e1528", whiteSpace: "nowrap" }}>
-                {Number(a.prizeValue).toLocaleString("vi-VN")} ₫
+              <span style={{ color: "#8891a5", flex: 1 }}>
+                {getPrizeLabel(a.prizeRank, a.prizeLabel)}
+              </span>
+              <span style={{ fontWeight: 500, color: "#0e1528", flex: 1 }}>
+                {a.teamName ?? "Unknown team"}
+              </span>
+              <span style={{ color: "#0e1528", textAlign: "right" }}>
+                {formatPrizeAmount(a.prizeValue)}
               </span>
             </div>
           ))}

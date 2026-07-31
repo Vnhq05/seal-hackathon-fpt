@@ -13,9 +13,10 @@ export const DEFAULT_CONSOLATION_LABEL = PRIZE_RANK_LABELS.CONSOLATION;
 
 const PRIZE_RANK_ORDER: PrizeRank[] = ["FIRST", "SECOND", "THIRD"];
 
-export function getPrizeLabel(rank: PrizeRank, label?: string | null): string {
+export function getPrizeLabel(rank?: PrizeRank | null, label?: string | null): string {
   if (label?.trim()) return label.trim();
-  return PRIZE_RANK_LABELS[rank];
+  if (!rank) return "Team Award";
+  return PRIZE_RANK_LABELS[rank] ?? "Team Award";
 }
 
 /** Strip non-digits and parse prize amount (mirrors backend PrizeAmountUtils). */
@@ -26,10 +27,31 @@ export function parsePrizeAmount(value: string): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-export function formatPrizeAmount(value: string): string {
-  const amount = parsePrizeAmount(value);
-  if (amount == null) return value;
-  return `${new Intl.NumberFormat("en-US").format(amount)} ₫`;
+/** Leading cash amount + optional currency token, e.g. "10,000,000 VND + Trophy". */
+const LEADING_AMOUNT_PATTERN = /^(\d[\d.,\s]*\d|\d)\s*(vn[dđ]|đ|₫)?\s*/i;
+
+/**
+ * Prize values are free-form text in the DB ("7000000", "10,000,000 VND + Trophy",
+ * "Trip to Singapore"), so never coerce them with Number(). Formats the leading cash
+ * amount when there is one and keeps the rest of the description intact.
+ */
+export function formatPrizeAmount(value: string | null | undefined): string {
+  const raw = value?.trim() ?? "";
+  if (!raw) return "";
+
+  const match = LEADING_AMOUNT_PATTERN.exec(raw);
+  if (!match) return raw;
+
+  const amount = parsePrizeAmount(match[1]);
+  if (amount == null) return raw;
+
+  const hasCurrencyToken = Boolean(match[2]);
+  const rest = raw.slice(match[0].length).trim();
+  // "2 laptops" is a quantity, not a cash prize.
+  if (rest && !hasCurrencyToken && amount < 1000) return raw;
+
+  const money = `${new Intl.NumberFormat("en-US").format(amount)} ₫`;
+  return rest ? `${money} ${rest}` : money;
 }
 
 export function validatePrizeOrdering(prizes: PrizeOrderingInput[]): string | null {

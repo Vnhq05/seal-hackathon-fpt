@@ -34,11 +34,11 @@ export function sealPhaseLabel(phase: SealSubmissionPhase): string {
     case "SLIDE_ONLY":
       return "Milestone 1 — Submit slides (before 10:00)";
     case "FULL":
-      return "Milestone 2 — Full submission (source + slide + demo, before 14:00)";
+      return "Milestone 2 — Full submission (source + slide + other, before 14:00)";
     case "SLIDE_CLOSED":
       return "Slide gate closed (after 10:00)";
     case "DEMO_CLOSED":
-      return "Demo submission deadline passed (after 14:00)";
+      return "Submission deadline passed (after 14:00)";
     default:
       return "";
   }
@@ -49,7 +49,7 @@ export function sealPhaseDescription(phase: SealSubmissionPhase): string {
     case "SLIDE_ONLY":
       return "This phase only requires a slide link (Google Slides, online PowerPoint, etc.).";
     case "FULL":
-      return "Add source code (GitHub/Jira/Notion) and demo video before the 14:00 deadline.";
+      return "Add source code (GitHub/Jira/Notion) and Other (any link and/or file under 5MB) before the 14:00 deadline.";
     case "SLIDE_CLOSED":
       return "Slide-only submissions are no longer accepted. Submit a full entry if still within Milestone 2.";
     case "DEMO_CLOSED":

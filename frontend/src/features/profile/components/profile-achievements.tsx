@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import { useMyAchievements } from "@/features/profile/hooks/use-my-achievements";
 import { useProfile } from "@/features/profile/hooks/use-profile";
 import { useMyTeamsAllEvents } from "@/features/teams/hooks/use-my-teams-all-events";
@@ -42,7 +41,6 @@ type DisplayEvent = {
   startDate: string | null;
   endDate: string | null;
   teamName: string | null;
-  canViewEvent: boolean;
 };
 
 function Card({ children }: { children: React.ReactNode }) {
@@ -195,7 +193,6 @@ export function ProfileAchievements() {
         startDate: event.startDate,
         endDate: event.endDate,
         teamName: team?.name ?? null,
-        canViewEvent: true,
       });
     }
 
@@ -211,7 +208,6 @@ export function ProfileAchievements() {
         startDate: null,
         endDate: null,
         teamName: achievement.teamName,
-        canViewEvent: true,
       });
     }
 
@@ -381,26 +377,9 @@ export function ProfileAchievements() {
                       borderTop: "1px solid #e2e8f0",
                     }}
                   >
-                    <div className="flex flex-wrap items-center justify-between gap-2 pt-3">
-                      <p style={{ fontSize: 12, fontWeight: 700, color: "#475569" }}>
-                        Achievements
-                      </p>
-                      {event.canViewEvent ? (
-                        <Link
-                          href={`/student/projects/${event.id}`}
-                          style={{
-                            fontSize: 12,
-                            fontWeight: 700,
-                            color: "#1a2b56",
-                            textDecoration: "underline",
-                            whiteSpace: "nowrap",
-                          }}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          View event
-                        </Link>
-                      ) : null}
-                    </div>
+                    <p className="pt-3" style={{ fontSize: 12, fontWeight: 700, color: "#475569" }}>
+                      Achievements
+                    </p>
 
                     {achievementsError ? (
                       <p style={{ marginTop: 10, fontSize: 13, color: "#991b1b" }}>

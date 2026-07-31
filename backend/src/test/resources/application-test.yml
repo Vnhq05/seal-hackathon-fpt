@@ -44,3 +44,5 @@ app:
   submission:
     pdf:
       max-size-bytes: 5242880
+    file:
+      max-size-bytes: 5242880

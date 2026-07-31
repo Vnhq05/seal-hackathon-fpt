@@ -70,12 +70,16 @@ public class FinalSubmissionCarryOverService {
                 .status(SubmissionStatus.SUBMITTED)
                 .build());
 
+        String otherUrl = sourceVersion.getOtherUrl() != null && !sourceVersion.getOtherUrl().isBlank()
+                ? sourceVersion.getOtherUrl()
+                : sourceVersion.getDemoUrl();
         SubmissionVersion copy = versionRepository.save(SubmissionVersion.builder()
                 .submission(carried)
                 .versionNumber(1)
                 .githubUrl(sourceVersion.getGithubUrl())
                 .slideUrl(sourceVersion.getSlideUrl())
-                .demoUrl(sourceVersion.getDemoUrl())
+                .otherUrl(otherUrl)
+                .demoUrl(otherUrl)
                 .submittedAt(sourceVersion.getSubmittedAt() != null
                         ? sourceVersion.getSubmittedAt()
                         : LocalDateTime.now())

@@ -420,7 +420,7 @@ function ScoringPageContent({
       {submission.pdfFileUrl && (
         <div className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-4">
           <div className="mb-2 text-xs font-medium text-seal-text-muted">
-            PDF: {submission.pdfFileName ?? "Submission"}
+            File: {submission.pdfFileName ?? "Submission"}
           </div>
           <SubmissionPdfViewer fileUrl={submission.pdfFileUrl} fileName={submission.pdfFileName} />
         </div>

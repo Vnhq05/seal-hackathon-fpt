@@ -858,12 +858,12 @@ function emitEvent(ev) {
         .join("\n")
     );
     L(``);
-    L(`INSERT INTO submission_versions (id, created_at, demo_url, github_url, slide_url, submitted_at, version_number, submission_id) VALUES`);
+    L(`INSERT INTO submission_versions (id, created_at, demo_url, github_url, slide_url, other_url, submitted_at, version_number, submission_id) VALUES`);
     L(
       subMeta
         .map((s, i) => {
           const slug = s.team.name.toLowerCase().replace(/\s+/g, "-");
-          return `    ('${s.verId}', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/${esc(slug)}', N'https://docs.google.com/presentation/d/seal-${ev.n}-${i}', DATEADD(MINUTE, -${30 + i}, @e${ev.n}_prelimSub), 1, '${s.subId}')${i < subMeta.length - 1 ? "," : ";"}`;
+          return `    ('${s.verId}', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/${esc(slug)}', N'https://docs.google.com/presentation/d/seal-${ev.n}-${i}', N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', DATEADD(MINUTE, -${30 + i}, @e${ev.n}_prelimSub), 1, '${s.subId}')${i < subMeta.length - 1 ? "," : ";"}`;
         })
         .join("\n")
     );

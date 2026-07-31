@@ -5,11 +5,11 @@ export interface TeamAwardResponse {
   id: string;
   eventId: string;
   teamId: string;
-  teamName: string;
+  teamName: string | null;
   prizeId: string;
-  prizeRank: PrizeRank;
+  prizeRank: PrizeRank | null;
   prizeLabel: string | null;
-  prizeValue: string;
+  prizeValue: string | null;
   awardedAt: string;
 }
 

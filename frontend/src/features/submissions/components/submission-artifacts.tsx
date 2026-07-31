@@ -9,8 +9,8 @@ const ARTIFACT_CONFIG: Record<
   { bg: string; buttonLabel: string }
 > = {
   repository: { bg: "#0e1528", buttonLabel: "Open Repository" },
-  demo: { bg: "rgba(99,102,241,0.1)", buttonLabel: "Launch Demo" },
-  presentation: { bg: "rgba(245,158,11,0.1)", buttonLabel: "View PDF" },
+  demo: { bg: "rgba(99,102,241,0.1)", buttonLabel: "Open Other link" },
+  presentation: { bg: "rgba(245,158,11,0.1)", buttonLabel: "View file" },
 };
 
 function ArtifactIcon({ type }: { type: SubmissionArtifact["type"] }) {

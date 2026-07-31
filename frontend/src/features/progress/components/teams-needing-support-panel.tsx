@@ -7,7 +7,10 @@ import {
   formatRealtimeDeadlineDetail,
   progressReasonLabel,
 } from "@/features/progress/lib/progress.utils";
-import { SubmissionProgressBar } from "@/features/progress/components/submission-progress-bar";
+import {
+  REQUIRED_SUBMISSION_PARTS,
+  SubmissionProgressBar,
+} from "@/features/progress/components/submission-progress-bar";
 import type {
   AtRiskTeamEntry,
   EventAtRiskGroup,
@@ -16,7 +19,7 @@ import type {
 import type { ProgressRiskLevel } from "@/lib/api/progress.api";
 
 const DEFAULT_EVENTS_VISIBLE = 2;
-const DEFAULT_TEAMS_VISIBLE = 5;
+const DEFAULT_TEAMS_VISIBLE = 2;
 
 const RISK_ORDER: Record<ProgressRiskLevel, number> = {
   CRITICAL: 0,
@@ -83,7 +86,7 @@ function TeamProgressRow({ team }: { team: AtRiskTeamEntry }) {
         <SubmissionProgressBar
           percent={team.submissionProgressPercent ?? 0}
           submittedParts={team.submittedParts}
-          requiredParts={team.requiredParts ?? 4}
+          requiredParts={team.requiredParts ?? REQUIRED_SUBMISSION_PARTS}
           size="sm"
         />
       </div>

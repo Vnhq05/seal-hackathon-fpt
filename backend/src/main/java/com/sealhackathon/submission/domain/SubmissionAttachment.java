@@ -20,7 +20,7 @@ import lombok.Setter;
 
 /**
  * Child entity of SubmissionVersion — arbitrary file under the Other submission part.
- * Max size 25 MB; no MIME / page-count restriction.
+ * Max size 5 MB; no MIME / page-count restriction.
  */
 @Entity
 @Table(name = "submission_attachments")

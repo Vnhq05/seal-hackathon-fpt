@@ -2,8 +2,8 @@ import { api } from "./api-client";
 import { apiClient } from "@/lib/axios";
 import type { ApiResponse, SubmissionStatus } from "./types";
 
-/** Max size for Other-section file uploads (25 MB). */
-export const SUBMISSION_MAX_FILE_BYTES = 25 * 1024 * 1024;
+/** Max size for Other-section file uploads (5 MB). */
+export const SUBMISSION_MAX_FILE_BYTES = 5 * 1024 * 1024;
 
 /** @deprecated Use SUBMISSION_MAX_FILE_BYTES */
 export const SUBMISSION_MAX_PDF_BYTES = SUBMISSION_MAX_FILE_BYTES;

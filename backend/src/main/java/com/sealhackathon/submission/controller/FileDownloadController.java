@@ -26,7 +26,7 @@ public class FileDownloadController {
     private final FileStorageService fileStorageService;
 
     @GetMapping("/submissions/**")
-    @Operation(summary = "Download a submission PDF by stored path")
+    @Operation(summary = "Download a submission file by stored path")
     public ResponseEntity<Resource> downloadSubmissionFile(
             jakarta.servlet.http.HttpServletRequest request) throws Exception {
         String prefix = request.getContextPath() + "/api/files/";
@@ -37,9 +37,13 @@ public class FileDownloadController {
         Resource resource = new UrlResource(filePath.toUri());
 
         String filename = filePath.getFileName().toString();
+        String probed = java.nio.file.Files.probeContentType(filePath);
+        MediaType mediaType = probed != null
+                ? MediaType.parseMediaType(probed)
+                : MediaType.APPLICATION_OCTET_STREAM;
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + filename + "\"")
-                .contentType(MediaType.APPLICATION_PDF)
+                .contentType(mediaType)
                 .body(resource);
     }
 }

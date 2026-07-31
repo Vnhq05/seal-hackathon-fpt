@@ -209,14 +209,15 @@ export function SubmissionDetailPage({
             </div>
             {submission.latestVersion.attachments.map((attachment) => (
                 <div key={attachment.id} className="flex items-center gap-2">
-                  <span style={{ fontSize: 12, fontWeight: 600, color: "#8891a5" }}>PDF:</span>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: "#8891a5" }}>File:</span>
                   <button
                     type="button"
                     onClick={() => void openSubmissionAttachment(attachment.fileUrl)}
                     style={{ fontSize: 14, color: "#38bdf8", textDecoration: "underline" }}
                     className="bg-transparent p-0"
                   >
-                    {attachment.fileName} ({attachment.pageCount} pages)
+                    {attachment.fileName}
+                    {attachment.pageCount != null ? ` (${attachment.pageCount} pages)` : ""}
                   </button>
                 </div>
               ))}
@@ -301,7 +302,8 @@ export function SubmissionDetailPage({
                       style={{ fontSize: 12, color: "#38bdf8", textDecoration: "underline", textAlign: "left" }}
                       className="bg-transparent p-0"
                     >
-                      PDF: {attachment.fileName} ({attachment.pageCount} pages)
+                      File: {attachment.fileName}
+                      {attachment.pageCount != null ? ` (${attachment.pageCount} pages)` : ""}
                     </button>
                   ))}
                 </div>

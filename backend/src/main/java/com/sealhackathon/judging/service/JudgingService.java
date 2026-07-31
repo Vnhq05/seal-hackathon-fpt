@@ -373,13 +373,6 @@ public class JudgingService {
                     .orElse(null);
         }
 
-        // Only finalists get lazy carry-over — never invent Final submissions for eliminated teams
-        if (submission == null && round != null && round.getRoundType() == RoundType.FINAL
-                && team != null && isSelectedFinalist(team.getEventId(), teamId)) {
-            submission = finalSubmissionCarryOverService.ensureFinalSubmission(teamId, roundId)
-                    .orElse(null);
-        }
-
         Optional<JudgeScore> myScore = submission != null
                 ? judgeScoreRepository.findByJudgeUserIdAndSubmissionId(judgeId, submission.getId())
                 : Optional.empty();
@@ -597,65 +590,6 @@ public class JudgingService {
         }
 
         return null;
-    }
-
-    /**
-     * Round-level placeholder (no team) so Assigned Rounds still lists Finals
-     * when finalists are not selected yet or none match the judge scope.
-     */
-    private JudgeScoringAssignmentResponse buildRoundShellAssignment(
-            Round round, JudgeAssignment coveringAssignment) {
-        HackathonEvent event = round.getHackathonEvent();
-        String denied = round.getRoundType() == RoundType.FINAL
-                ? "Finalists have not been selected yet"
-                : "No teams in your assignment scope";
-        return JudgeScoringAssignmentResponse.builder()
-                .roundId(round.getId())
-                .roundName(round.getName())
-                .eventId(event != null ? event.getId() : null)
-                .eventName(event != null ? event.getName() : null)
-                .assignmentScope(coveringAssignment != null ? coveringAssignment.getScope() : null)
-                .scoringStatus("NOT_STARTED")
-                .scoringDeadline(round.getScoringDeadline())
-                .scoringAllowed(false)
-                .scoringDeniedReason(denied)
-                .build();
-    }
-
-    /**
-     * Final round is only for selected finalists. Before selection, hide the full pool
-     * so eliminated prelim teams are not offered for scoring.
-     */
-    private List<Team> filterTeamsForRound(Round round, UUID eventId, List<Team> teams) {
-        if (round.getRoundType() != RoundType.FINAL) {
-            return teams;
-        }
-        List<FinalistSelection> finalists =
-                finalistSelectionRepository.findByEventIdOrderByPreliminaryRankAsc(eventId);
-        if (finalists.isEmpty()) {
-            return List.of();
-        }
-        Set<UUID> finalistIds = finalists.stream()
-                .map(FinalistSelection::getTeamId)
-                .collect(Collectors.toSet());
-        return teams.stream().filter(t -> finalistIds.contains(t.getId())).toList();
-    }
-
-    private boolean isSelectedFinalist(UUID eventId, UUID teamId) {
-        return finalistSelectionRepository.existsByEventIdAndTeamId(eventId, teamId);
-    }
-
-    private void assertFinalistIfFinalRound(UUID roundId, UUID eventId, UUID teamId) {
-        Round round = roundRepository.findById(roundId)
-                .orElseThrow(() -> new ResourceNotFoundException("Round", "id", roundId));
-        if (round.getRoundType() != RoundType.FINAL) {
-            return;
-        }
-        if (!finalistSelectionRepository.findByEventIdOrderByPreliminaryRankAsc(eventId).isEmpty()
-                && !isSelectedFinalist(eventId, teamId)) {
-            throw new BusinessException("Team is not a finalist for this round",
-                    HttpStatus.FORBIDDEN) {};
-        }
     }
 
     private void assertScoringNotLocked(UUID roundId, UUID eventId) {

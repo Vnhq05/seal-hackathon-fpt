@@ -27,7 +27,10 @@ import { useMyTeamProgress } from "@/features/dashboard/hooks/use-my-team-progre
 import { progressReasonLabel, formatRealtimeDeadlineDetail } from "@/features/progress/lib/progress.utils";
 import { useRealtimeCountdown } from "@/features/progress/hooks/use-realtime-countdown";
 import { StudentParticipationCountdownCard } from "@/features/progress/components/student-participation-countdown-card";
-import { SubmissionProgressBar } from "@/features/progress/components/submission-progress-bar";
+import {
+  REQUIRED_SUBMISSION_PARTS,
+  SubmissionProgressBar,
+} from "@/features/progress/components/submission-progress-bar";
 import type { TeamProgressResponse } from "@/lib/api/progress.api";
 
 function ArrowRightIcon() {
@@ -137,7 +140,7 @@ function ProgressAlertBanner({
         <SubmissionProgressBar
           percent={progress.submissionProgressPercent ?? 0}
           submittedParts={progress.submittedParts}
-          requiredParts={progress.requiredParts ?? 4}
+          requiredParts={progress.requiredParts ?? REQUIRED_SUBMISSION_PARTS}
           size="sm"
         />
       </div>
@@ -654,7 +657,7 @@ function ScheduleDashboardCard({ event }: { event: EventResponse }) {
           {countdownMs !== null && countdownMs > 0 && (
             <p className="mt-1 font-mono text-xs text-seal-text-secondary">
               {formatCountdown(countdownMs)}
-              {activeMilestone?.gate === "SLIDE_SUBMISSION" ? " until slide deadline" : activeMilestone?.gate === "DEMO_SUBMISSION" ? " until demo deadline" : " until next milestone"}
+              {activeMilestone?.gate === "SLIDE_SUBMISSION" ? " until slide deadline" : activeMilestone?.gate === "DEMO_SUBMISSION" ? " until submission deadline" : " until next milestone"}
             </p>
           )}
         </div>

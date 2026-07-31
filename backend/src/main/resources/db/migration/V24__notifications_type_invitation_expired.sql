@@ -52,3 +52,6 @@ BEGIN
     ));
 END
 GO
+
+SET NOCOUNT OFF;
+GO
