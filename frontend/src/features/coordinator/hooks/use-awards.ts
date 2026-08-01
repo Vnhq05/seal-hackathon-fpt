@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { awardApi } from "@/lib/api/award.api";
+import { awardApi, type AssignAwardsRequest } from "@/lib/api/award.api";
 
 export const AWARDS_KEY = "awards" as const;
 export const AWARDS_PARTICIPATION_KEY = "awards-participation" as const;
@@ -52,7 +52,8 @@ export function useAssignAwards(eventId: string | undefined) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: () => awardApi.assign(eventId!),
+    mutationFn: (body: AssignAwardsRequest = { manualAssignments: [] }) =>
+      awardApi.assign(eventId!, body),
     onSuccess: () => {
       if (!eventId) return;
       queryClient.invalidateQueries({ queryKey: [AWARDS_KEY, eventId] });

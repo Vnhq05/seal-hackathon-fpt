@@ -2,6 +2,7 @@ package com.sealhackathon.judging.service;
 
 import com.sealhackathon.common.exception.BusinessException;
 import com.sealhackathon.common.exception.ResourceNotFoundException;
+import com.sealhackathon.common.util.SeasonUtils;
 import com.sealhackathon.event.domain.HackathonEvent;
 import com.sealhackathon.event.domain.Round;
 import com.sealhackathon.event.domain.Track;
@@ -59,7 +60,8 @@ public class AssignmentOverviewService {
         HackathonEvent event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Event", "id", eventId));
 
-        if (season != null && !season.equalsIgnoreCase(event.getSeason())) {
+        if (season != null
+                && !SeasonUtils.normalize(season).equalsIgnoreCase(SeasonUtils.normalize(event.getSeason()))) {
             throw new BusinessException("Event does not match the requested season", HttpStatus.BAD_REQUEST) {};
         }
         if (year != null && !year.equals(event.getYear())) {

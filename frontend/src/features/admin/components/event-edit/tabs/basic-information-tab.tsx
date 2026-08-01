@@ -25,7 +25,7 @@ import {
   toDateInput,
 } from "@/features/admin/components/event-edit/event-edit.utils";
 
-const SEASONS = ["Spring", "Summer", "Fall", "Winter"] as const;
+import { SEASONS, normalizeSeason } from "@/lib/season.utils";
 
 const readOnlyStyle: React.CSSProperties = {
   ...inputStyle,
@@ -52,7 +52,7 @@ export function BasicInformationTab({ event }: { event: EventResponse }) {
     resolver: zodResolver(basicInformationSchema),
     values: {
       name: event.name,
-      season: event.season,
+      season: normalizeSeason(event.season) || event.season,
       year: event.year,
       startDate: toDateInput(event.startDate),
       endDate: toDateInput(event.endDate),

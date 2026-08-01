@@ -10,9 +10,9 @@ import {
   useDeleteEvent,
 } from "@/features/admin/hooks/use-admin-hackathons";
 import type { EventResponse, EventStatus } from "@/lib/api";
+import { SEASONS, normalizeSeason } from "@/lib/season.utils";
 import { useStaffPortalBase } from "@/shared/hooks/use-staff-portal-base";
 
-const SEASONS = ["Spring", "Summer", "Fall", "Winter"] as const;
 
 const headerCell: React.CSSProperties = {
   fontSize: 12, fontWeight: 600, color: "#8891a5",
@@ -261,7 +261,7 @@ function HackathonRow({ h, onError }: { h: EventResponse; onError: (msg: string)
         )}
       </td>
       <td style={bodyCell}><StatusBadge status={h.status} /></td>
-      <td style={{ ...bodyCell, color: "#8891a5" }}>{h.season}</td>
+      <td style={{ ...bodyCell, color: "#8891a5" }}>{normalizeSeason(h.season) || h.season}</td>
       <td style={{ ...bodyCell, color: "#8891a5" }}>{h.year}</td>
       <td style={{ ...bodyCell, color: "#8891a5" }}>{h.format ?? "OFFLINE"}</td>
       <td style={{ ...bodyCell, color: "#8891a5" }}>{h.startDate}</td>

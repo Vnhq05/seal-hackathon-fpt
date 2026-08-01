@@ -110,6 +110,78 @@ ELSE
   VALUES ('FE000000-EEEE-4EEE-8EEE-000000000002',N'test.mentor1@fpt.edu.vn',@pwd,N'Test Mentor One',NULL,NULL,NULL,N'FPT University',
     N'LECTURER',N'ACTIVE',0,NULL,NULL,N'ENROLLED',0,@now,@now,@ownerEmail,@ownerEmail);
 
+IF EXISTS (SELECT 1 FROM users WHERE email = N'test.mentor2@fpt.edu.vn')
+  UPDATE users SET password_hash=@pwd, full_name=N'Test Mentor Two', user_type=N'LECTURER', status=N'ACTIVE',
+    failed_login_attempts=0, locked_until=NULL, student_id=NULL, university_name=N'FPT University',
+    semester=NULL, student_standing=N'ENROLLED', temporary_account=0, updated_at=@now, updated_by=@ownerEmail
+  WHERE email=N'test.mentor2@fpt.edu.vn';
+ELSE
+  INSERT INTO users (id,email,password_hash,full_name,phone,avatar_url,student_id,university_name,
+    user_type,status,failed_login_attempts,locked_until,semester,student_standing,temporary_account,
+    created_at,updated_at,created_by,updated_by)
+  VALUES ('FE000000-EEEE-4EEE-8EEE-000000000008',N'test.mentor2@fpt.edu.vn',@pwd,N'Test Mentor Two',NULL,NULL,NULL,N'FPT University',
+    N'LECTURER',N'ACTIVE',0,NULL,NULL,N'ENROLLED',0,@now,@now,@ownerEmail,@ownerEmail);
+
+IF EXISTS (SELECT 1 FROM users WHERE email = N'test.mentor3@fpt.edu.vn')
+  UPDATE users SET password_hash=@pwd, full_name=N'Test Mentor Three', user_type=N'LECTURER', status=N'ACTIVE',
+    failed_login_attempts=0, locked_until=NULL, student_id=NULL, university_name=N'FPT University',
+    semester=NULL, student_standing=N'ENROLLED', temporary_account=0, updated_at=@now, updated_by=@ownerEmail
+  WHERE email=N'test.mentor3@fpt.edu.vn';
+ELSE
+  INSERT INTO users (id,email,password_hash,full_name,phone,avatar_url,student_id,university_name,
+    user_type,status,failed_login_attempts,locked_until,semester,student_standing,temporary_account,
+    created_at,updated_at,created_by,updated_by)
+  VALUES ('FE000000-EEEE-4EEE-8EEE-000000000009',N'test.mentor3@fpt.edu.vn',@pwd,N'Test Mentor Three',NULL,NULL,NULL,N'FPT University',
+    N'LECTURER',N'ACTIVE',0,NULL,NULL,N'ENROLLED',0,@now,@now,@ownerEmail,@ownerEmail);
+
+IF EXISTS (SELECT 1 FROM users WHERE email = N'test.mentor4@fpt.edu.vn')
+  UPDATE users SET password_hash=@pwd, full_name=N'Test Mentor Four', user_type=N'LECTURER', status=N'ACTIVE',
+    failed_login_attempts=0, locked_until=NULL, student_id=NULL, university_name=N'FPT University',
+    semester=NULL, student_standing=N'ENROLLED', temporary_account=0, updated_at=@now, updated_by=@ownerEmail
+  WHERE email=N'test.mentor4@fpt.edu.vn';
+ELSE
+  INSERT INTO users (id,email,password_hash,full_name,phone,avatar_url,student_id,university_name,
+    user_type,status,failed_login_attempts,locked_until,semester,student_standing,temporary_account,
+    created_at,updated_at,created_by,updated_by)
+  VALUES ('FE000000-EEEE-4EEE-8EEE-00000000000A',N'test.mentor4@fpt.edu.vn',@pwd,N'Test Mentor Four',NULL,NULL,NULL,N'FPT University',
+    N'LECTURER',N'ACTIVE',0,NULL,NULL,N'ENROLLED',0,@now,@now,@ownerEmail,@ownerEmail);
+
+IF EXISTS (SELECT 1 FROM users WHERE email = N'test.mentor5@fpt.edu.vn')
+  UPDATE users SET password_hash=@pwd, full_name=N'Test Mentor Five', user_type=N'LECTURER', status=N'ACTIVE',
+    failed_login_attempts=0, locked_until=NULL, student_id=NULL, university_name=N'FPT University',
+    semester=NULL, student_standing=N'ENROLLED', temporary_account=0, updated_at=@now, updated_by=@ownerEmail
+  WHERE email=N'test.mentor5@fpt.edu.vn';
+ELSE
+  INSERT INTO users (id,email,password_hash,full_name,phone,avatar_url,student_id,university_name,
+    user_type,status,failed_login_attempts,locked_until,semester,student_standing,temporary_account,
+    created_at,updated_at,created_by,updated_by)
+  VALUES ('FE000000-EEEE-4EEE-8EEE-00000000000B',N'test.mentor5@fpt.edu.vn',@pwd,N'Test Mentor Five',NULL,NULL,NULL,N'FPT University',
+    N'LECTURER',N'ACTIVE',0,NULL,NULL,N'ENROLLED',0,@now,@now,@ownerEmail,@ownerEmail);
+
+IF EXISTS (SELECT 1 FROM users WHERE email = N'test.mentor6@fpt.edu.vn')
+  UPDATE users SET password_hash=@pwd, full_name=N'Test Mentor Six', user_type=N'LECTURER', status=N'ACTIVE',
+    failed_login_attempts=0, locked_until=NULL, student_id=NULL, university_name=N'FPT University',
+    semester=NULL, student_standing=N'ENROLLED', temporary_account=0, updated_at=@now, updated_by=@ownerEmail
+  WHERE email=N'test.mentor6@fpt.edu.vn';
+ELSE
+  INSERT INTO users (id,email,password_hash,full_name,phone,avatar_url,student_id,university_name,
+    user_type,status,failed_login_attempts,locked_until,semester,student_standing,temporary_account,
+    created_at,updated_at,created_by,updated_by)
+  VALUES ('FE000000-EEEE-4EEE-8EEE-00000000000C',N'test.mentor6@fpt.edu.vn',@pwd,N'Test Mentor Six',NULL,NULL,NULL,N'FPT University',
+    N'LECTURER',N'ACTIVE',0,NULL,NULL,N'ENROLLED',0,@now,@now,@ownerEmail,@ownerEmail);
+
+IF EXISTS (SELECT 1 FROM users WHERE email = N'test.mentor7@fpt.edu.vn')
+  UPDATE users SET password_hash=@pwd, full_name=N'Test Mentor Seven', user_type=N'LECTURER', status=N'ACTIVE',
+    failed_login_attempts=0, locked_until=NULL, student_id=NULL, university_name=N'FPT University',
+    semester=NULL, student_standing=N'ENROLLED', temporary_account=0, updated_at=@now, updated_by=@ownerEmail
+  WHERE email=N'test.mentor7@fpt.edu.vn';
+ELSE
+  INSERT INTO users (id,email,password_hash,full_name,phone,avatar_url,student_id,university_name,
+    user_type,status,failed_login_attempts,locked_until,semester,student_standing,temporary_account,
+    created_at,updated_at,created_by,updated_by)
+  VALUES ('FE000000-EEEE-4EEE-8EEE-00000000000D',N'test.mentor7@fpt.edu.vn',@pwd,N'Test Mentor Seven',NULL,NULL,NULL,N'FPT University',
+    N'LECTURER',N'ACTIVE',0,NULL,NULL,N'ENROLLED',0,@now,@now,@ownerEmail,@ownerEmail);
+
 IF EXISTS (SELECT 1 FROM users WHERE email = N'test.judge1@fpt.edu.vn')
   UPDATE users SET password_hash=@pwd, full_name=N'Test Judge One', user_type=N'LECTURER', status=N'ACTIVE',
     failed_login_attempts=0, locked_until=NULL, student_id=NULL, university_name=N'FPT University',
@@ -144,6 +216,54 @@ ELSE
     user_type,status,failed_login_attempts,locked_until,semester,student_standing,temporary_account,
     created_at,updated_at,created_by,updated_by)
   VALUES ('FE000000-EEEE-4EEE-8EEE-000000000005',N'test.judge3@fpt.edu.vn',@pwd,N'Test Judge Three (Pending)',NULL,NULL,NULL,N'FPT University',
+    N'LECTURER',N'ACTIVE',0,NULL,NULL,N'ENROLLED',0,@now,@now,@ownerEmail,@ownerEmail);
+
+IF EXISTS (SELECT 1 FROM users WHERE email = N'test.judge4@fpt.edu.vn')
+  UPDATE users SET password_hash=@pwd, full_name=N'Test Judge Four', user_type=N'LECTURER', status=N'ACTIVE',
+    failed_login_attempts=0, locked_until=NULL, student_id=NULL, university_name=N'FPT University',
+    semester=NULL, student_standing=N'ENROLLED', temporary_account=0, updated_at=@now, updated_by=@ownerEmail
+  WHERE email=N'test.judge4@fpt.edu.vn';
+ELSE
+  INSERT INTO users (id,email,password_hash,full_name,phone,avatar_url,student_id,university_name,
+    user_type,status,failed_login_attempts,locked_until,semester,student_standing,temporary_account,
+    created_at,updated_at,created_by,updated_by)
+  VALUES ('FE000000-EEEE-4EEE-8EEE-00000000000E',N'test.judge4@fpt.edu.vn',@pwd,N'Test Judge Four',NULL,NULL,NULL,N'FPT University',
+    N'LECTURER',N'ACTIVE',0,NULL,NULL,N'ENROLLED',0,@now,@now,@ownerEmail,@ownerEmail);
+
+IF EXISTS (SELECT 1 FROM users WHERE email = N'test.judge5@fpt.edu.vn')
+  UPDATE users SET password_hash=@pwd, full_name=N'Test Judge Five', user_type=N'LECTURER', status=N'ACTIVE',
+    failed_login_attempts=0, locked_until=NULL, student_id=NULL, university_name=N'FPT University',
+    semester=NULL, student_standing=N'ENROLLED', temporary_account=0, updated_at=@now, updated_by=@ownerEmail
+  WHERE email=N'test.judge5@fpt.edu.vn';
+ELSE
+  INSERT INTO users (id,email,password_hash,full_name,phone,avatar_url,student_id,university_name,
+    user_type,status,failed_login_attempts,locked_until,semester,student_standing,temporary_account,
+    created_at,updated_at,created_by,updated_by)
+  VALUES ('FE000000-EEEE-4EEE-8EEE-00000000000F',N'test.judge5@fpt.edu.vn',@pwd,N'Test Judge Five',NULL,NULL,NULL,N'FPT University',
+    N'LECTURER',N'ACTIVE',0,NULL,NULL,N'ENROLLED',0,@now,@now,@ownerEmail,@ownerEmail);
+
+IF EXISTS (SELECT 1 FROM users WHERE email = N'test.judge6@fpt.edu.vn')
+  UPDATE users SET password_hash=@pwd, full_name=N'Test Judge Six', user_type=N'LECTURER', status=N'ACTIVE',
+    failed_login_attempts=0, locked_until=NULL, student_id=NULL, university_name=N'FPT University',
+    semester=NULL, student_standing=N'ENROLLED', temporary_account=0, updated_at=@now, updated_by=@ownerEmail
+  WHERE email=N'test.judge6@fpt.edu.vn';
+ELSE
+  INSERT INTO users (id,email,password_hash,full_name,phone,avatar_url,student_id,university_name,
+    user_type,status,failed_login_attempts,locked_until,semester,student_standing,temporary_account,
+    created_at,updated_at,created_by,updated_by)
+  VALUES ('FE000000-EEEE-4EEE-8EEE-000000000010',N'test.judge6@fpt.edu.vn',@pwd,N'Test Judge Six',NULL,NULL,NULL,N'FPT University',
+    N'LECTURER',N'ACTIVE',0,NULL,NULL,N'ENROLLED',0,@now,@now,@ownerEmail,@ownerEmail);
+
+IF EXISTS (SELECT 1 FROM users WHERE email = N'test.judge7@fpt.edu.vn')
+  UPDATE users SET password_hash=@pwd, full_name=N'Test Judge Seven', user_type=N'LECTURER', status=N'ACTIVE',
+    failed_login_attempts=0, locked_until=NULL, student_id=NULL, university_name=N'FPT University',
+    semester=NULL, student_standing=N'ENROLLED', temporary_account=0, updated_at=@now, updated_by=@ownerEmail
+  WHERE email=N'test.judge7@fpt.edu.vn';
+ELSE
+  INSERT INTO users (id,email,password_hash,full_name,phone,avatar_url,student_id,university_name,
+    user_type,status,failed_login_attempts,locked_until,semester,student_standing,temporary_account,
+    created_at,updated_at,created_by,updated_by)
+  VALUES ('FE000000-EEEE-4EEE-8EEE-000000000011',N'test.judge7@fpt.edu.vn',@pwd,N'Test Judge Seven',NULL,NULL,NULL,N'FPT University',
     N'LECTURER',N'ACTIVE',0,NULL,NULL,N'ENROLLED',0,@now,@now,@ownerEmail,@ownerEmail);
 
 IF EXISTS (SELECT 1 FROM users WHERE email = N'test.final.judge1@fpt.edu.vn')
@@ -2483,8 +2603,6 @@ INSERT INTO criteria (id, round_id, name, description, weight, sort_order, min_s
   ('FE030600-EEEE-4EEE-8EEE-000000000004', 'FE030300-EEEE-4EEE-8EEE-000000000002', N'Technical', N'Technical', 40, 0, 1, 100, @now, @now, N'test.coord@fpt.edu.vn'),
   ('FE030600-EEEE-4EEE-8EEE-000000000005', 'FE030300-EEEE-4EEE-8EEE-000000000002', N'Innovation', N'Innovation', 30, 1, 1, 100, @now, @now, N'test.coord@fpt.edu.vn'),
   ('FE030600-EEEE-4EEE-8EEE-000000000006', 'FE030300-EEEE-4EEE-8EEE-000000000002', N'Presentation', N'Presentation', 30, 2, 1, 100, @now, @now, N'test.coord@fpt.edu.vn');
-INSERT INTO event_mentor_assignments (id, event_id, mentor_user_id, assigned_at, created_at, created_by)
-VALUES (NEWID(), 'FE030100-EEEE-4EEE-8EEE-000000000001', @mentor1Id, @now, @now, N'test.coord@fpt.edu.vn');
 INSERT INTO mentor_assignments (id, created_at, created_by, assigned_at, mentor_user_id, track_id, event_id)
 VALUES (NEWID(), @now, N'test.coord@fpt.edu.vn', @now, @mentor1Id, 'FE030400-EEEE-4EEE-8EEE-000000000001', 'FE030100-EEEE-4EEE-8EEE-000000000001');
 INSERT INTO event_enrollments (id, created_at, created_by, enrolled_at, event_id, status, user_id, is_looking_for_team, is_profile_public)
@@ -2699,8 +2817,6 @@ INSERT INTO team_members (id, created_at, created_by, joined_at, role, user_id, 
   (NEWID(), @now, N'test.coord@fpt.edu.vn', @now, N'LEADER', @L_FE040200EEEE4EEE8EEE00000000000A, 'FE040200-EEEE-4EEE-8EEE-00000000000A', 'FE040100-EEEE-4EEE-8EEE-000000000001'),
   (NEWID(), @now, N'test.coord@fpt.edu.vn', @now, N'MEMBER', @M2_FE040200EEEE4EEE8EEE00000000000A, 'FE040200-EEEE-4EEE-8EEE-00000000000A', 'FE040100-EEEE-4EEE-8EEE-000000000001'),
   (NEWID(), @now, N'test.coord@fpt.edu.vn', @now, N'MEMBER', @M3_FE040200EEEE4EEE8EEE00000000000A, 'FE040200-EEEE-4EEE-8EEE-00000000000A', 'FE040100-EEEE-4EEE-8EEE-000000000001');
-INSERT INTO event_mentor_assignments (id, event_id, mentor_user_id, assigned_at, created_at, created_by)
-VALUES (NEWID(), 'FE040100-EEEE-4EEE-8EEE-000000000001', @mentor1Id, @now, @now, N'test.coord@fpt.edu.vn');
 INSERT INTO submissions (id, created_at, created_by, current_version_id, round_id, status, submitted_by, team_id, opt_lock)
 VALUES ('FE040500-EEEE-4EEE-8EEE-000000000001', @now, N'test.coord@fpt.edu.vn', NULL, 'FE040300-EEEE-4EEE-8EEE-000000000001', N'SUBMITTED', (SELECT id FROM users WHERE email=N'test.sub.s01@fpt.edu.vn'), 'FE040200-EEEE-4EEE-8EEE-000000000001', 0);
 INSERT INTO submission_versions (id, created_at, created_by, demo_url, github_url, slide_url, other_url, submitted_at, version_number, submission_id)
@@ -2860,8 +2976,6 @@ INSERT INTO team_members (id, created_at, created_by, joined_at, role, user_id, 
   (NEWID(), @now, N'test.coord@fpt.edu.vn', @now, N'LEADER', @L_FE050200EEEE4EEE8EEE00000000000A, 'FE050200-EEEE-4EEE-8EEE-00000000000A', 'FE050100-EEEE-4EEE-8EEE-000000000001'),
   (NEWID(), @now, N'test.coord@fpt.edu.vn', @now, N'MEMBER', @M2_FE050200EEEE4EEE8EEE00000000000A, 'FE050200-EEEE-4EEE-8EEE-00000000000A', 'FE050100-EEEE-4EEE-8EEE-000000000001'),
   (NEWID(), @now, N'test.coord@fpt.edu.vn', @now, N'MEMBER', @M3_FE050200EEEE4EEE8EEE00000000000A, 'FE050200-EEEE-4EEE-8EEE-00000000000A', 'FE050100-EEEE-4EEE-8EEE-000000000001');
-INSERT INTO event_mentor_assignments (id, event_id, mentor_user_id, assigned_at, created_at, created_by)
-VALUES (NEWID(), 'FE050100-EEEE-4EEE-8EEE-000000000001', @mentor1Id, @now, @now, N'test.coord@fpt.edu.vn');
 INSERT INTO mentor_teams (id, created_at, created_by, assigned_at, mentor_user_id, team_id)
 VALUES (NEWID(), @now, N'test.coord@fpt.edu.vn', @now, @mentor1Id, 'FE050200-EEEE-4EEE-8EEE-000000000007');
 INSERT INTO submissions (id, created_at, created_by, current_version_id, round_id, status, submitted_by, team_id, opt_lock)
@@ -2939,10 +3053,6 @@ INSERT INTO criteria (id, round_id, name, description, weight, sort_order, min_s
   ('FE060600-EEEE-4EEE-8EEE-000000000004', 'FE060300-EEEE-4EEE-8EEE-000000000002', N'Technical', N'Technical', 40, 0, 1, 100, @now, @now, N'test.coord@fpt.edu.vn'),
   ('FE060600-EEEE-4EEE-8EEE-000000000005', 'FE060300-EEEE-4EEE-8EEE-000000000002', N'Innovation', N'Innovation', 30, 1, 1, 100, @now, @now, N'test.coord@fpt.edu.vn'),
   ('FE060600-EEEE-4EEE-8EEE-000000000006', 'FE060300-EEEE-4EEE-8EEE-000000000002', N'Presentation', N'Presentation', 30, 2, 1, 100, @now, @now, N'test.coord@fpt.edu.vn');
-INSERT INTO event_judge_assignments (id, created_at, assigned_at, judge_user_id, event_id, created_by) VALUES
-  (NEWID(), @now, @now, @j1, 'FE060100-EEEE-4EEE-8EEE-000000000001', N'test.coord@fpt.edu.vn'),
-  (NEWID(), @now, @now, @j2, 'FE060100-EEEE-4EEE-8EEE-000000000001', N'test.coord@fpt.edu.vn'),
-  (NEWID(), @now, @now, @j3, 'FE060100-EEEE-4EEE-8EEE-000000000001', N'test.coord@fpt.edu.vn');
 INSERT INTO judge_assignments (id, created_at, assigned_at, judge_user_id, round_id, scope, active, created_by) VALUES
   (NEWID(), @now, @now, @j1, 'FE060300-EEEE-4EEE-8EEE-000000000001', N'ROUND', 1, N'test.coord@fpt.edu.vn'),
   (NEWID(), @now, @now, @j2, 'FE060300-EEEE-4EEE-8EEE-000000000001', N'ROUND', 1, N'test.coord@fpt.edu.vn'),
@@ -3257,11 +3367,6 @@ INSERT INTO criteria (id, round_id, name, description, weight, sort_order, min_s
   ('FE070600-EEEE-4EEE-8EEE-000000000004', 'FE070300-EEEE-4EEE-8EEE-000000000002', N'Technical', N'Technical', 40, 0, 1, 100, @now, @now, N'test.coord@fpt.edu.vn'),
   ('FE070600-EEEE-4EEE-8EEE-000000000005', 'FE070300-EEEE-4EEE-8EEE-000000000002', N'Innovation', N'Innovation', 30, 1, 1, 100, @now, @now, N'test.coord@fpt.edu.vn'),
   ('FE070600-EEEE-4EEE-8EEE-000000000006', 'FE070300-EEEE-4EEE-8EEE-000000000002', N'Presentation', N'Presentation', 30, 2, 1, 100, @now, @now, N'test.coord@fpt.edu.vn');
-INSERT INTO event_judge_assignments (id, created_at, assigned_at, judge_user_id, event_id, created_by) VALUES
-  (NEWID(), @now, @now, @j1, 'FE070100-EEEE-4EEE-8EEE-000000000001', N'test.coord@fpt.edu.vn'),
-  (NEWID(), @now, @now, @j2, 'FE070100-EEEE-4EEE-8EEE-000000000001', N'test.coord@fpt.edu.vn'),
-  (NEWID(), @now, @now, @fj1, 'FE070100-EEEE-4EEE-8EEE-000000000001', N'test.coord@fpt.edu.vn'),
-  (NEWID(), @now, @now, @fj2, 'FE070100-EEEE-4EEE-8EEE-000000000001', N'test.coord@fpt.edu.vn');
 INSERT INTO judge_assignments (id, created_at, assigned_at, judge_user_id, round_id, scope, active, created_by) VALUES
   (NEWID(), @now, @now, @j1, 'FE070300-EEEE-4EEE-8EEE-000000000001', N'ROUND', 1, N'test.coord@fpt.edu.vn'),
   (NEWID(), @now, @now, @j2, 'FE070300-EEEE-4EEE-8EEE-000000000001', N'ROUND', 1, N'test.coord@fpt.edu.vn'),
@@ -3584,9 +3689,6 @@ INSERT INTO prizes (id, created_at, created_by, quantity, [rank], value, event_i
   ('FE080700-EEEE-4EEE-8EEE-000000000001', @now, N'test.coord@fpt.edu.vn', 1, N'FIRST', N'10,000,000 VND + Trophy', 'FE080100-EEEE-4EEE-8EEE-000000000001', N'First Prize', NULL),
   ('FE080700-EEEE-4EEE-8EEE-000000000002', @now, N'test.coord@fpt.edu.vn', 1, N'SECOND', N'5,000,000 VND', 'FE080100-EEEE-4EEE-8EEE-000000000001', N'Second Prize', NULL),
   ('FE080700-EEEE-4EEE-8EEE-000000000003', @now, N'test.coord@fpt.edu.vn', 1, N'THIRD', N'2,000,000 VND', 'FE080100-EEEE-4EEE-8EEE-000000000001', N'Third Prize', NULL);
-INSERT INTO event_judge_assignments (id, created_at, assigned_at, judge_user_id, event_id, created_by) VALUES
-  (NEWID(), @now, @now, @j1, 'FE080100-EEEE-4EEE-8EEE-000000000001', N'test.coord@fpt.edu.vn'),
-  (NEWID(), @now, @now, @j2, 'FE080100-EEEE-4EEE-8EEE-000000000001', N'test.coord@fpt.edu.vn');
 INSERT INTO judge_assignments (id, created_at, assigned_at, judge_user_id, round_id, scope, active, created_by) VALUES
   (NEWID(), @now, @now, @j1, 'FE080300-EEEE-4EEE-8EEE-000000000001', N'ROUND', 1, N'test.coord@fpt.edu.vn'),
   (NEWID(), @now, @now, @j2, 'FE080300-EEEE-4EEE-8EEE-000000000001', N'ROUND', 1, N'test.coord@fpt.edu.vn'),
@@ -3972,14 +4074,214 @@ END
 INSERT INTO participant_feedbacks (id, created_at, created_by, comment, event_id, overall_rating, submitted_at, team_id, user_id)
 VALUES ('FE081000-EEEE-4EEE-8EEE-000000000001', @now, N'test.coord@fpt.edu.vn', N'Clear rounds and fair judging — great for feedback QA.', 'FE080100-EEEE-4EEE-8EEE-000000000001', 5, DATEADD(DAY,-32,@now), 'FE080200-EEEE-4EEE-8EEE-000000000001', (SELECT id FROM users WHERE email=N'test.fb.s01@fpt.edu.vn'));
 
+-- ========== Default Add Lecture pools (7 judges + 7 mentors on every pack event) ==========
+INSERT INTO event_judge_assignments (id, created_at, assigned_at, judge_user_id, event_id, created_by)
+SELECT NEWID(), @now, @now, j.id, 'FE010100-EEEE-4EEE-8EEE-000000000001', N'test.coord@fpt.edu.vn'
+FROM (VALUES
+  (N'test.judge1@fpt.edu.vn'),
+  (N'test.judge2@fpt.edu.vn'),
+  (N'test.judge3@fpt.edu.vn'),
+  (N'test.judge4@fpt.edu.vn'),
+  (N'test.judge5@fpt.edu.vn'),
+  (N'test.judge6@fpt.edu.vn'),
+  (N'test.judge7@fpt.edu.vn')
+) v(email) INNER JOIN users j ON j.email = v.email
+WHERE NOT EXISTS (SELECT 1 FROM event_judge_assignments x WHERE x.event_id = 'FE010100-EEEE-4EEE-8EEE-000000000001' AND x.judge_user_id = j.id);
+INSERT INTO event_mentor_assignments (id, event_id, mentor_user_id, assigned_at, created_at, created_by)
+SELECT NEWID(), 'FE010100-EEEE-4EEE-8EEE-000000000001', m.id, @now, @now, N'test.coord@fpt.edu.vn'
+FROM (VALUES
+  (N'test.mentor1@fpt.edu.vn'),
+  (N'test.mentor2@fpt.edu.vn'),
+  (N'test.mentor3@fpt.edu.vn'),
+  (N'test.mentor4@fpt.edu.vn'),
+  (N'test.mentor5@fpt.edu.vn'),
+  (N'test.mentor6@fpt.edu.vn'),
+  (N'test.mentor7@fpt.edu.vn')
+) v(email) INNER JOIN users m ON m.email = v.email
+WHERE NOT EXISTS (SELECT 1 FROM event_mentor_assignments x WHERE x.event_id = 'FE010100-EEEE-4EEE-8EEE-000000000001' AND x.mentor_user_id = m.id);
+INSERT INTO event_judge_assignments (id, created_at, assigned_at, judge_user_id, event_id, created_by)
+SELECT NEWID(), @now, @now, j.id, 'FE020100-EEEE-4EEE-8EEE-000000000001', N'test.coord@fpt.edu.vn'
+FROM (VALUES
+  (N'test.judge1@fpt.edu.vn'),
+  (N'test.judge2@fpt.edu.vn'),
+  (N'test.judge3@fpt.edu.vn'),
+  (N'test.judge4@fpt.edu.vn'),
+  (N'test.judge5@fpt.edu.vn'),
+  (N'test.judge6@fpt.edu.vn'),
+  (N'test.judge7@fpt.edu.vn')
+) v(email) INNER JOIN users j ON j.email = v.email
+WHERE NOT EXISTS (SELECT 1 FROM event_judge_assignments x WHERE x.event_id = 'FE020100-EEEE-4EEE-8EEE-000000000001' AND x.judge_user_id = j.id);
+INSERT INTO event_mentor_assignments (id, event_id, mentor_user_id, assigned_at, created_at, created_by)
+SELECT NEWID(), 'FE020100-EEEE-4EEE-8EEE-000000000001', m.id, @now, @now, N'test.coord@fpt.edu.vn'
+FROM (VALUES
+  (N'test.mentor1@fpt.edu.vn'),
+  (N'test.mentor2@fpt.edu.vn'),
+  (N'test.mentor3@fpt.edu.vn'),
+  (N'test.mentor4@fpt.edu.vn'),
+  (N'test.mentor5@fpt.edu.vn'),
+  (N'test.mentor6@fpt.edu.vn'),
+  (N'test.mentor7@fpt.edu.vn')
+) v(email) INNER JOIN users m ON m.email = v.email
+WHERE NOT EXISTS (SELECT 1 FROM event_mentor_assignments x WHERE x.event_id = 'FE020100-EEEE-4EEE-8EEE-000000000001' AND x.mentor_user_id = m.id);
+INSERT INTO event_judge_assignments (id, created_at, assigned_at, judge_user_id, event_id, created_by)
+SELECT NEWID(), @now, @now, j.id, 'FE030100-EEEE-4EEE-8EEE-000000000001', N'test.coord@fpt.edu.vn'
+FROM (VALUES
+  (N'test.judge1@fpt.edu.vn'),
+  (N'test.judge2@fpt.edu.vn'),
+  (N'test.judge3@fpt.edu.vn'),
+  (N'test.judge4@fpt.edu.vn'),
+  (N'test.judge5@fpt.edu.vn'),
+  (N'test.judge6@fpt.edu.vn'),
+  (N'test.judge7@fpt.edu.vn')
+) v(email) INNER JOIN users j ON j.email = v.email
+WHERE NOT EXISTS (SELECT 1 FROM event_judge_assignments x WHERE x.event_id = 'FE030100-EEEE-4EEE-8EEE-000000000001' AND x.judge_user_id = j.id);
+INSERT INTO event_mentor_assignments (id, event_id, mentor_user_id, assigned_at, created_at, created_by)
+SELECT NEWID(), 'FE030100-EEEE-4EEE-8EEE-000000000001', m.id, @now, @now, N'test.coord@fpt.edu.vn'
+FROM (VALUES
+  (N'test.mentor1@fpt.edu.vn'),
+  (N'test.mentor2@fpt.edu.vn'),
+  (N'test.mentor3@fpt.edu.vn'),
+  (N'test.mentor4@fpt.edu.vn'),
+  (N'test.mentor5@fpt.edu.vn'),
+  (N'test.mentor6@fpt.edu.vn'),
+  (N'test.mentor7@fpt.edu.vn')
+) v(email) INNER JOIN users m ON m.email = v.email
+WHERE NOT EXISTS (SELECT 1 FROM event_mentor_assignments x WHERE x.event_id = 'FE030100-EEEE-4EEE-8EEE-000000000001' AND x.mentor_user_id = m.id);
+INSERT INTO event_judge_assignments (id, created_at, assigned_at, judge_user_id, event_id, created_by)
+SELECT NEWID(), @now, @now, j.id, 'FE040100-EEEE-4EEE-8EEE-000000000001', N'test.coord@fpt.edu.vn'
+FROM (VALUES
+  (N'test.judge1@fpt.edu.vn'),
+  (N'test.judge2@fpt.edu.vn'),
+  (N'test.judge3@fpt.edu.vn'),
+  (N'test.judge4@fpt.edu.vn'),
+  (N'test.judge5@fpt.edu.vn'),
+  (N'test.judge6@fpt.edu.vn'),
+  (N'test.judge7@fpt.edu.vn')
+) v(email) INNER JOIN users j ON j.email = v.email
+WHERE NOT EXISTS (SELECT 1 FROM event_judge_assignments x WHERE x.event_id = 'FE040100-EEEE-4EEE-8EEE-000000000001' AND x.judge_user_id = j.id);
+INSERT INTO event_mentor_assignments (id, event_id, mentor_user_id, assigned_at, created_at, created_by)
+SELECT NEWID(), 'FE040100-EEEE-4EEE-8EEE-000000000001', m.id, @now, @now, N'test.coord@fpt.edu.vn'
+FROM (VALUES
+  (N'test.mentor1@fpt.edu.vn'),
+  (N'test.mentor2@fpt.edu.vn'),
+  (N'test.mentor3@fpt.edu.vn'),
+  (N'test.mentor4@fpt.edu.vn'),
+  (N'test.mentor5@fpt.edu.vn'),
+  (N'test.mentor6@fpt.edu.vn'),
+  (N'test.mentor7@fpt.edu.vn')
+) v(email) INNER JOIN users m ON m.email = v.email
+WHERE NOT EXISTS (SELECT 1 FROM event_mentor_assignments x WHERE x.event_id = 'FE040100-EEEE-4EEE-8EEE-000000000001' AND x.mentor_user_id = m.id);
+INSERT INTO event_judge_assignments (id, created_at, assigned_at, judge_user_id, event_id, created_by)
+SELECT NEWID(), @now, @now, j.id, 'FE050100-EEEE-4EEE-8EEE-000000000001', N'test.coord@fpt.edu.vn'
+FROM (VALUES
+  (N'test.judge1@fpt.edu.vn'),
+  (N'test.judge2@fpt.edu.vn'),
+  (N'test.judge3@fpt.edu.vn'),
+  (N'test.judge4@fpt.edu.vn'),
+  (N'test.judge5@fpt.edu.vn'),
+  (N'test.judge6@fpt.edu.vn'),
+  (N'test.judge7@fpt.edu.vn')
+) v(email) INNER JOIN users j ON j.email = v.email
+WHERE NOT EXISTS (SELECT 1 FROM event_judge_assignments x WHERE x.event_id = 'FE050100-EEEE-4EEE-8EEE-000000000001' AND x.judge_user_id = j.id);
+INSERT INTO event_mentor_assignments (id, event_id, mentor_user_id, assigned_at, created_at, created_by)
+SELECT NEWID(), 'FE050100-EEEE-4EEE-8EEE-000000000001', m.id, @now, @now, N'test.coord@fpt.edu.vn'
+FROM (VALUES
+  (N'test.mentor1@fpt.edu.vn'),
+  (N'test.mentor2@fpt.edu.vn'),
+  (N'test.mentor3@fpt.edu.vn'),
+  (N'test.mentor4@fpt.edu.vn'),
+  (N'test.mentor5@fpt.edu.vn'),
+  (N'test.mentor6@fpt.edu.vn'),
+  (N'test.mentor7@fpt.edu.vn')
+) v(email) INNER JOIN users m ON m.email = v.email
+WHERE NOT EXISTS (SELECT 1 FROM event_mentor_assignments x WHERE x.event_id = 'FE050100-EEEE-4EEE-8EEE-000000000001' AND x.mentor_user_id = m.id);
+INSERT INTO event_judge_assignments (id, created_at, assigned_at, judge_user_id, event_id, created_by)
+SELECT NEWID(), @now, @now, j.id, 'FE060100-EEEE-4EEE-8EEE-000000000001', N'test.coord@fpt.edu.vn'
+FROM (VALUES
+  (N'test.judge1@fpt.edu.vn'),
+  (N'test.judge2@fpt.edu.vn'),
+  (N'test.judge3@fpt.edu.vn'),
+  (N'test.judge4@fpt.edu.vn'),
+  (N'test.judge5@fpt.edu.vn'),
+  (N'test.judge6@fpt.edu.vn'),
+  (N'test.judge7@fpt.edu.vn')
+) v(email) INNER JOIN users j ON j.email = v.email
+WHERE NOT EXISTS (SELECT 1 FROM event_judge_assignments x WHERE x.event_id = 'FE060100-EEEE-4EEE-8EEE-000000000001' AND x.judge_user_id = j.id);
+INSERT INTO event_mentor_assignments (id, event_id, mentor_user_id, assigned_at, created_at, created_by)
+SELECT NEWID(), 'FE060100-EEEE-4EEE-8EEE-000000000001', m.id, @now, @now, N'test.coord@fpt.edu.vn'
+FROM (VALUES
+  (N'test.mentor1@fpt.edu.vn'),
+  (N'test.mentor2@fpt.edu.vn'),
+  (N'test.mentor3@fpt.edu.vn'),
+  (N'test.mentor4@fpt.edu.vn'),
+  (N'test.mentor5@fpt.edu.vn'),
+  (N'test.mentor6@fpt.edu.vn'),
+  (N'test.mentor7@fpt.edu.vn')
+) v(email) INNER JOIN users m ON m.email = v.email
+WHERE NOT EXISTS (SELECT 1 FROM event_mentor_assignments x WHERE x.event_id = 'FE060100-EEEE-4EEE-8EEE-000000000001' AND x.mentor_user_id = m.id);
+INSERT INTO event_judge_assignments (id, created_at, assigned_at, judge_user_id, event_id, created_by)
+SELECT NEWID(), @now, @now, j.id, 'FE070100-EEEE-4EEE-8EEE-000000000001', N'test.coord@fpt.edu.vn'
+FROM (VALUES
+  (N'test.judge1@fpt.edu.vn'),
+  (N'test.judge2@fpt.edu.vn'),
+  (N'test.judge3@fpt.edu.vn'),
+  (N'test.judge4@fpt.edu.vn'),
+  (N'test.judge5@fpt.edu.vn'),
+  (N'test.judge6@fpt.edu.vn'),
+  (N'test.judge7@fpt.edu.vn')
+) v(email) INNER JOIN users j ON j.email = v.email
+WHERE NOT EXISTS (SELECT 1 FROM event_judge_assignments x WHERE x.event_id = 'FE070100-EEEE-4EEE-8EEE-000000000001' AND x.judge_user_id = j.id);
+INSERT INTO event_mentor_assignments (id, event_id, mentor_user_id, assigned_at, created_at, created_by)
+SELECT NEWID(), 'FE070100-EEEE-4EEE-8EEE-000000000001', m.id, @now, @now, N'test.coord@fpt.edu.vn'
+FROM (VALUES
+  (N'test.mentor1@fpt.edu.vn'),
+  (N'test.mentor2@fpt.edu.vn'),
+  (N'test.mentor3@fpt.edu.vn'),
+  (N'test.mentor4@fpt.edu.vn'),
+  (N'test.mentor5@fpt.edu.vn'),
+  (N'test.mentor6@fpt.edu.vn'),
+  (N'test.mentor7@fpt.edu.vn')
+) v(email) INNER JOIN users m ON m.email = v.email
+WHERE NOT EXISTS (SELECT 1 FROM event_mentor_assignments x WHERE x.event_id = 'FE070100-EEEE-4EEE-8EEE-000000000001' AND x.mentor_user_id = m.id);
+INSERT INTO event_judge_assignments (id, created_at, assigned_at, judge_user_id, event_id, created_by)
+SELECT NEWID(), @now, @now, j.id, 'FE080100-EEEE-4EEE-8EEE-000000000001', N'test.coord@fpt.edu.vn'
+FROM (VALUES
+  (N'test.judge1@fpt.edu.vn'),
+  (N'test.judge2@fpt.edu.vn'),
+  (N'test.judge3@fpt.edu.vn'),
+  (N'test.judge4@fpt.edu.vn'),
+  (N'test.judge5@fpt.edu.vn'),
+  (N'test.judge6@fpt.edu.vn'),
+  (N'test.judge7@fpt.edu.vn')
+) v(email) INNER JOIN users j ON j.email = v.email
+WHERE NOT EXISTS (SELECT 1 FROM event_judge_assignments x WHERE x.event_id = 'FE080100-EEEE-4EEE-8EEE-000000000001' AND x.judge_user_id = j.id);
+INSERT INTO event_mentor_assignments (id, event_id, mentor_user_id, assigned_at, created_at, created_by)
+SELECT NEWID(), 'FE080100-EEEE-4EEE-8EEE-000000000001', m.id, @now, @now, N'test.coord@fpt.edu.vn'
+FROM (VALUES
+  (N'test.mentor1@fpt.edu.vn'),
+  (N'test.mentor2@fpt.edu.vn'),
+  (N'test.mentor3@fpt.edu.vn'),
+  (N'test.mentor4@fpt.edu.vn'),
+  (N'test.mentor5@fpt.edu.vn'),
+  (N'test.mentor6@fpt.edu.vn'),
+  (N'test.mentor7@fpt.edu.vn')
+) v(email) INNER JOIN users m ON m.email = v.email
+WHERE NOT EXISTS (SELECT 1 FROM event_mentor_assignments x WHERE x.event_id = 'FE080100-EEEE-4EEE-8EEE-000000000001' AND x.mentor_user_id = m.id);
+INSERT INTO event_judge_assignments (id, created_at, assigned_at, judge_user_id, event_id, created_by)
+SELECT NEWID(), @now, @now, j.id, 'FE070100-EEEE-4EEE-8EEE-000000000001', N'test.coord@fpt.edu.vn'
+FROM (VALUES (N'test.final.judge1@fpt.edu.vn'), (N'test.final.judge2@fpt.edu.vn')) v(email)
+INNER JOIN users j ON j.email = v.email
+WHERE NOT EXISTS (SELECT 1 FROM event_judge_assignments x WHERE x.event_id = 'FE070100-EEEE-4EEE-8EEE-000000000001' AND x.judge_user_id = j.id);
+
 COMMIT TRANSACTION;
 
 PRINT '=== Feature demo pack ready (password Demo@123456) ===';
 PRINT 'Admin:           admin@seal.com';
 PRINT 'Coordinator:     test.coord@fpt.edu.vn';
+PRINT 'Lecture pool:    test.judge1..7 + test.mentor1..7 on every Test event (Add Lecture default)';
 PRINT '1 OPEN empty:    Test 1 - Open Registration (Join Me)';
 PRINT '2 OPEN 5 students: test.open.s01..s05@fpt.edu.vn';
-PRINT '3 Assignment:    test.assign.s01 (leader Alpha) | mentor test.mentor1@fpt.edu.vn';
+PRINT '3 Assignment:    test.assign.s01 (leader Alpha) | mentor1 pre-linked to Team 01';
 PRINT '4 Submission:    test.sub.s01@fpt.edu.vn (leader Submit Alpha) | 6/10 teams submitted';
 PRINT '5 Near deadline: test.alert.s01@fpt.edu.vn | 6/10 submitted; alert on Eta';
 PRINT '6 Scoring:       test.judge3 PENDING | test.judge1/2 HIGH done | 10 teams';

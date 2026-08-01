@@ -1,12 +1,13 @@
-import type { PrizeRank, PrizeRequest } from "@/lib/api/event.api";
+import type { PrizeAssignmentMode, PrizeRank, PrizeRequest } from "@/lib/api/event.api";
 
-type PrizeOrderingInput = Pick<PrizeRequest, "rank" | "value" | "trackIndex">;
+type PrizeOrderingInput = Pick<PrizeRequest, "rank" | "value" | "trackIndex" | "assignmentMode" | "label">;
 
 export const PRIZE_RANK_LABELS: Record<PrizeRank, string> = {
   FIRST: "First Prize",
   SECOND: "Second Prize",
   THIRD: "Third Prize",
-  CONSOLATION: "Consolation Prize",
+  CONSOLATION: "Encouragement Prize",
+  OTHER: "Special Prize",
 };
 
 export const DEFAULT_CONSOLATION_LABEL = PRIZE_RANK_LABELS.CONSOLATION;
@@ -17,6 +18,17 @@ export function getPrizeLabel(rank?: PrizeRank | null, label?: string | null): s
   if (label?.trim()) return label.trim();
   if (!rank) return "Team Award";
   return PRIZE_RANK_LABELS[rank] ?? "Team Award";
+}
+
+export function resolveAssignmentMode(
+  rank: PrizeRank,
+  mode?: PrizeAssignmentMode | null,
+): PrizeAssignmentMode {
+  if (rank === "OTHER") return "MANUAL";
+  if (rank === "FIRST" || rank === "SECOND" || rank === "THIRD" || rank === "CONSOLATION") {
+    return "RANK_BASED";
+  }
+  return mode ?? "RANK_BASED";
 }
 
 /** Strip non-digits and parse prize amount (mirrors backend PrizeAmountUtils). */
@@ -50,8 +62,29 @@ export function formatPrizeAmount(value: string | null | undefined): string {
   // "2 laptops" is a quantity, not a cash prize.
   if (rest && !hasCurrencyToken && amount < 1000) return raw;
 
-  const money = `${new Intl.NumberFormat("en-US").format(amount)} ₫`;
+  const money = `${new Intl.NumberFormat("en-US").format(amount)} VND`;
   return rest ? `${money} ${rest}` : money;
+}
+
+export function validateStructuredPrizes(prizes: PrizeOrderingInput[]): string | null {
+  const first = prizes.find((p) => p.rank === "FIRST");
+  const second = prizes.find((p) => p.rank === "SECOND");
+  const third = prizes.find((p) => p.rank === "THIRD");
+  if (!first || !second || !third) {
+    return "First, Second, and Third prizes are required";
+  }
+
+  for (const p of prizes) {
+    const amount = parsePrizeAmount(p.value);
+    if (amount == null || amount <= 0) {
+      return "Prize amount must be a positive number (VND)";
+    }
+    if (p.rank === "OTHER" && !p.label?.trim()) {
+      return "Other (manual) prizes require a name";
+    }
+  }
+
+  return validatePrizeOrdering(prizes);
 }
 
 export function validatePrizeOrdering(prizes: PrizeOrderingInput[]): string | null {
@@ -67,7 +100,7 @@ export function validatePrizeOrdering(prizes: PrizeOrderingInput[]): string | nu
     for (const p of group) {
       const amount = parsePrizeAmount(p.value);
       if (amount == null) continue;
-      if (p.rank !== "CONSOLATION") {
+      if (p.rank === "FIRST" || p.rank === "SECOND" || p.rank === "THIRD") {
         byRank.set(p.rank, amount);
       }
     }
