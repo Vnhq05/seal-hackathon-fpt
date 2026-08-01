@@ -35,6 +35,8 @@ import {
 } from "@/features/admin/hooks/use-admin-assignments";
 import type { AssignmentScope, JudgeAssignmentResponse } from "@/lib/api/assignment.api";
 
+import { SEASONS } from "@/lib/season.utils";
+
 const STATUS_STYLES: Record<EventStatus, { backgroundColor: string; color: string }> = {
   UPCOMING: { backgroundColor: "#f0f9ff", color: "#0369a1" },
   OPEN: { backgroundColor: "#e0f2fe", color: "#0284c7" },
@@ -54,6 +56,15 @@ const STATUS_LABELS: Record<EventStatus, string> = {
   COMPLETED: "Closed",
   CANCELLED: "Cancelled",
 };
+
+
+/** FPT seasons: Spring Feb–May, Summer Jun–Sep, Fall Oct–Jan. getMonth() is 0-based. */
+function getCurrentSeason(): string {
+  const month = new Date().getMonth();
+  if (month === 0 || month >= 9) return "Fall";
+  if (month <= 4) return "Spring";
+  return "Summer";
+}
 
 function EventStatusBadge({ status }: { status: EventStatus }) {
   const style = STATUS_STYLES[status];

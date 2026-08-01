@@ -28,7 +28,7 @@ export interface UserAchievement {
   eventName: string | null;
   teamId: string;
   teamName: string | null;
-  prizeRank: "FIRST" | "SECOND" | "THIRD" | "CONSOLATION" | null;
+  prizeRank: "FIRST" | "SECOND" | "THIRD" | "CONSOLATION" | "OTHER" | null;
   title: string;
   description: string | null;
   achievedAt: string;

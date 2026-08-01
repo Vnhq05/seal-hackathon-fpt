@@ -54,7 +54,8 @@ const RANKING_LABELS = {
   FIRST: "1st",
   SECOND: "2nd",
   THIRD: "3rd",
-  CONSOLATION: "Consolation",
+  CONSOLATION: "Encouragement",
+  OTHER: "Special",
 } as const;
 
 type InternalRole = CreateInternalAccountRequest["userType"];

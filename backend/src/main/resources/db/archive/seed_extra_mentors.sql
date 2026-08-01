@@ -1,0 +1,5 @@
+-- Deprecated wrapper.
+-- Use seed_default_lectures.sql instead (creates/restores 7 judges + 7 mentors
+-- and attaches them to every feature-demo Test event Add Lecture pool).
+--
+--   sqlcmd ... -i seed_default_lectures.sql

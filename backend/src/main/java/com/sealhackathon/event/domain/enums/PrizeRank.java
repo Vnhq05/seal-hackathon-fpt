@@ -4,5 +4,6 @@ public enum PrizeRank {
     FIRST,
     SECOND,
     THIRD,
-    CONSOLATION
+    CONSOLATION,
+    OTHER
 }

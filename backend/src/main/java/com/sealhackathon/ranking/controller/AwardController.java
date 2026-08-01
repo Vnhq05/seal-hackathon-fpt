@@ -35,11 +35,13 @@ public class AwardController {
 
     @PostMapping("/api/events/{eventId}/awards/assign")
     @PreAuthorize("hasAnyRole('SYSTEM_ADMIN', 'EVENT_COORDINATOR')")
-    @Operation(summary = "Assign team awards from final ranking and issue participation certificates")
+    @Operation(summary = "Assign RANK_BASED prizes from final ranking and MANUAL prizes from request body")
     @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<ApiResponse<AwardAssignmentResultResponse>> assignAwards(
             @PathVariable UUID eventId,
             @Valid @RequestBody(required = false) AssignAwardsRequest request) {
+
+            @RequestBody(required = false) @Valid AssignAwardsRequest request) {
         AwardAssignmentResultResponse result = awardService.assignAwardsFromFinalRanking(
                 eventId, request != null ? request : AssignAwardsRequest.builder().build());
         return ResponseEntity.ok(ApiResponse.success("Awards assigned", result));

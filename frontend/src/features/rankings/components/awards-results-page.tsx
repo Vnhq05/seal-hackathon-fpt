@@ -10,6 +10,7 @@ import {
 } from "@/features/coordinator/hooks/use-awards";
 import { useMyTeamsAllEvents } from "@/features/teams/hooks/use-my-teams-all-events";
 import { formatPrizeAmount, getPrizeLabel } from "@/lib/prize.utils";
+import { normalizeSeason, uniqueCanonicalSeasons } from "@/lib/season.utils";
 
 const filterSelectClass =
   "border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] px-3 py-2 text-sm text-seal-text outline-none focus:border-royal/40";
@@ -46,7 +47,7 @@ export function AwardsResultsPage() {
   }, [myEventTeams]);
 
   const seasons = useMemo(
-    () => [...new Set(events.map((e) => e.season).filter(Boolean))].sort(),
+    () => uniqueCanonicalSeasons(events.map((e) => e.season)),
     [events],
   );
 
@@ -57,7 +58,7 @@ export function AwardsResultsPage() {
 
   const filteredEvents = useMemo(() => {
     return events.filter((e) => {
-      if (season && e.season !== season) return false;
+      if (season && normalizeSeason(e.season) !== season) return false;
       if (year && String(e.year) !== year) return false;
       return true;
     });
@@ -101,6 +102,11 @@ export function AwardsResultsPage() {
       return 0;
     });
   }, [awards, myTeamId]);
+
+  const myAwards = useMemo(
+    () => (myTeamId ? sortedAwards.filter((a) => a.teamId === myTeamId) : []),
+    [sortedAwards, myTeamId],
+  );
 
   const pendingMessage = (() => {
     if (!selectedEvent) return null;
@@ -177,7 +183,8 @@ export function AwardsResultsPage() {
 
       {selectedEvent && (
         <p className="text-sm text-seal-text-secondary">
-          {selectedEvent.season} {selectedEvent.year} &middot; {selectedEvent.name}
+          {normalizeSeason(selectedEvent.season) || selectedEvent.season}{" "}
+          {selectedEvent.year} &middot; {selectedEvent.name}
         </p>
       )}
 
@@ -239,6 +246,26 @@ export function AwardsResultsPage() {
         </p>
       )}
 
+      {resultsVisible && myAwards.length > 0 && (
+        <div className="rounded-lg border-2 border-seal-yellow bg-white p-5 shadow-[3px_3px_0_0_#0c1228]">
+          <p className="font-mono text-xs font-bold uppercase text-navy">Your award</p>
+          {myAwards.map((a) => (
+            <div key={a.id} className="mt-2">
+              <p className="text-lg font-semibold text-navy">
+                {getPrizeLabel(a.prizeRank, a.prizeLabel)}
+              </p>
+              <p className="text-sm text-seal-text-secondary">
+                {a.teamName}
+                {a.prizeValue ? ` · ${formatPrizeAmount(a.prizeValue)}` : ""}
+              </p>
+            </div>
+          ))}
+          <p className="mt-3 text-xs text-seal-text-muted">
+            Open Profile → Achievements to view or download your prize certificate.
+          </p>
+        </div>
+      )}
+
       {resultsVisible && myCertificate && (
         <div className="rounded-lg border-2 border-royal bg-white p-5 shadow-[3px_3px_0_0_#0c1228]">
           <p className="font-mono text-xs font-bold uppercase text-royal">
@@ -246,6 +273,14 @@ export function AwardsResultsPage() {
           </p>
           <p className="mt-2 text-lg font-semibold text-navy">{myCertificate.userFullName}</p>
           <p className="mt-1 text-sm text-seal-text-secondary">Team: {myCertificate.teamName}</p>
+          {myAwards[0] && (
+            <p className="mt-1 text-sm font-medium text-navy">
+              Prize: {getPrizeLabel(myAwards[0].prizeRank, myAwards[0].prizeLabel)}
+              {myAwards[0].prizeValue
+                ? ` · ${formatPrizeAmount(myAwards[0].prizeValue)}`
+                : ""}
+            </p>
+          )}
           <p className="mt-3 text-xs text-seal-text-muted">
             Issued on{" "}
             {new Date(myCertificate.issuedAt).toLocaleDateString("vi-VN", {

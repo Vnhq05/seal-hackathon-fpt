@@ -12,6 +12,7 @@ import type { CreateRoundRequest } from "./round.api";
 // ═══ Types ═══
 
 export type PrizeRank = "FIRST" | "SECOND" | "THIRD" | "CONSOLATION";
+export type PrizeRank = "FIRST" | "SECOND" | "THIRD" | "CONSOLATION" | "OTHER";
 export type PrizeAssignmentMode = "RANK_BASED" | "MANUAL";
 
 export interface PrizeResponse {

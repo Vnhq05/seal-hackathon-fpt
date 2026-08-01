@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { SEASONS } from "@/lib/season.utils";
 
 /**
  * Schema aligned with CreateEventRequest:
@@ -6,7 +7,7 @@ import { z } from "zod";
  */
 const hackathonBaseSchema = z.object({
   name: z.string().min(1, "Name is required").max(200, "Name too long"),
-  season: z.string().min(1, "Season is required"),
+  season: z.enum(SEASONS, { message: "Season must be Spring, Summer, or Fall" }),
   year: z.number().min(2000, "Year must be valid"),
   startDate: z.string().min(1, "Start date is required"),
   endDate: z.string().min(1, "End date is required"),

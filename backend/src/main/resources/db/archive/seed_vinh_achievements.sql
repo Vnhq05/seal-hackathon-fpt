@@ -862,7 +862,7 @@ INSERT INTO hackathon_events (
   scoring_template_id, status, leaderboard_public, owner_user_id, created_by, created_at, updated_at,
   avatar_url, score_scale_max
 ) VALUES (
-  'B1020100-EEEE-4EEE-8EEE-000000000001', N'Vinh Showcase 2 - Multi-hop Arena', N'Winter', 2025,
+  'B1020100-EEEE-4EEE-8EEE-000000000001', N'Vinh Showcase 2 - Multi-hop Arena', N'Fall', 2025,
   DATEADD(DAY,-80,@today), DATEADD(DAY,-50,@today),
   DATEADD(DAY,-110,@today), DATEADD(DAY,-90,@today),
   N'Full COMPLETED showcase for achievements QA.', N'FPT University HCM', N'OFFLINE', N'SEAL_RAG_2026',

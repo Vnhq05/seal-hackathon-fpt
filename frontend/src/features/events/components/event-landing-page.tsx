@@ -46,6 +46,7 @@ const PRIZE_STYLES: Record<PrizeRank, { ring: string; text: string; height: stri
   FIRST: { ring: "border-seal-yellow/40", text: "text-seal-yellow", height: "h-36" },
   THIRD: { ring: "border-seal-orange/30", text: "text-seal-orange", height: "h-24" },
   CONSOLATION: { ring: "border-seal-border", text: "text-seal-text-secondary", height: "h-20" },
+  OTHER: { ring: "border-seal-blue/30", text: "text-seal-blue", height: "h-20" },
 };
 
 interface EventLandingPageProps {

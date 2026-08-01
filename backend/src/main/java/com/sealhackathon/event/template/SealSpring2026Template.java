@@ -18,6 +18,7 @@ import com.sealhackathon.event.domain.Track;
 
 import com.sealhackathon.event.domain.enums.AdvancementRule;
 
+import com.sealhackathon.event.domain.enums.PrizeAssignmentMode;
 import com.sealhackathon.event.domain.enums.PrizeRank;
 
 import com.sealhackathon.event.domain.enums.RoundType;
@@ -450,6 +451,7 @@ public final class SealSpring2026Template {
                     .label(prizeLabels().get(pd.rank()))
 
                     .assignmentMode(com.sealhackathon.event.domain.enums.PrizeAssignmentMode.RANK_BASED)
+                    .assignmentMode(PrizeAssignmentMode.RANK_BASED)
 
                     .build());
 

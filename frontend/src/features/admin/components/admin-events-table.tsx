@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActiveEvents } from "@/features/admin/hooks/use-admin-dashboard";
 import type { EventResponse } from "@/lib/api";
+import { normalizeSeason } from "@/lib/season.utils";
 
 const statusColors: Record<string, { bg: string; color: string }> = {
   ACTIVE: { bg: "#f0fdf4", color: "#166534" },
@@ -97,7 +98,7 @@ export function AdminEventsTable({ viewAllHref = "/admin/hackathons" }: { viewAl
                   </Link>
                 </td>
                 <td style={bodyCell}><StatusBadge status={event.status} /></td>
-                <td style={{ ...bodyCell, color: "#8891a5" }}>{event.season}</td>
+                <td style={{ ...bodyCell, color: "#8891a5" }}>{normalizeSeason(event.season) || event.season}</td>
                 <td style={{ ...bodyCell, color: "#8891a5" }}>{event.year}</td>
                 <td style={bodyCell}>{event.roundCount}</td>
               </tr>
