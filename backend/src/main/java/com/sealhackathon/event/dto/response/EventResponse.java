@@ -27,6 +27,17 @@ public class EventResponse {
     private LocalDate registrationDeadline;
     private LocalDate registrationOpenDate;
     private EventStatus status;
+    /** True when admin/coordinator set sticky COMPLETED (not date-derived). */
+    private boolean staffCompleted;
+    /** True when admin/coordinator made the live leaderboard / results public. */
+    private boolean leaderboardPublic;
+    /** True while OPEN or APPROVED score-deviation reviews remain on the event. */
+    private boolean hasActiveScoreReviews;
+    /**
+     * Students (leader/member) may see Results & Awards only when staff closed the event,
+     * made results public, and score reviews have reached consensus.
+     */
+    private boolean studentResultsVisible;
     private String description;
     private String location;
     private String format;

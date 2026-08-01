@@ -6,7 +6,6 @@ import com.sealhackathon.team.domain.TeamJoinRequest;
 import com.sealhackathon.team.domain.enums.JoinRequestStatus;
 import com.sealhackathon.team.domain.enums.TeamStatus;
 import com.sealhackathon.team.dto.request.CreateJoinRequestRequest;
-import com.sealhackathon.team.repository.InvitationRepository;
 import com.sealhackathon.team.repository.TeamJoinRequestRepository;
 import com.sealhackathon.team.repository.TeamMemberRepository;
 import com.sealhackathon.team.repository.TeamRepository;
@@ -37,7 +36,7 @@ class TeamJoinRequestServiceTest {
     @Mock private TeamJoinRequestRepository joinRequestRepository;
     @Mock private JoinRequestStatusService joinRequestStatusService;
     @Mock private InvitationStatusService invitationStatusService;
-    @Mock private InvitationRepository invitationRepository;
+    @Mock private TeamCapacityCleanup teamCapacityCleanup;
     @Mock private TeamRepository teamRepository;
     @Mock private TeamMemberRepository teamMemberRepository;
     @Mock private EventEnrollmentService enrollmentService;
@@ -153,8 +152,7 @@ class TeamJoinRequestServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("maximum number of members");
 
-        verify(joinRequestStatusService).rejectAllPendingForTeam(teamId);
-        verify(invitationStatusService).expireAllPendingForTeam(teamId);
+        verify(teamCapacityCleanup).expirePendingAfterUnlock(teamId);
         verify(teamMemberRepository, never()).save(any());
     }
 }

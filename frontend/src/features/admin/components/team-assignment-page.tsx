@@ -178,6 +178,7 @@ export function TeamAssignmentPage({ defaultEventId, embedded }: { defaultEventI
         return { lockedTrackCount: lock.lockedTrackCount, assignedCount: toSend.length, lockSkipped: false as const };
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
+        // Assignments may already be on the server; still surface lock failure clearly.
         if (toSend.length > 0) {
           return {
             lockedTrackCount: 0,
@@ -186,15 +187,17 @@ export function TeamAssignmentPage({ defaultEventId, embedded }: { defaultEventI
             lockError: message,
           };
         }
+        // Nothing was saved, so there is no partial success to report.
         throw err;
       }
     },
     onSuccess: (result) => {
       setError(null);
       if (result.lockSkipped) {
-        setSuccessMessage(
-          `Saved ${result.assignedCount} assignment(s). Tracks were not locked (${result.lockError}).`,
+        setError(
+          `Saved ${result.assignedCount} assignment(s), but tracks were not locked: ${result.lockError}`,
         );
+        setSuccessMessage(null);
       } else {
         setSuccessMessage(
           `Track assignment confirmed. ${result.lockedTrackCount} track(s) locked.`,

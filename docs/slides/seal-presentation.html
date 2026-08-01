@@ -1,0 +1,1120 @@
+<title>SEAL Hackathon Management System — Capstone Presentation</title>
+
+<style>
+  /* ============ tokens ============ */
+  :root {
+    --paper:   #FAF9F7;
+    --surface: #FFFFFF;
+    --ink:     #12161C;
+    --ink-2:   #39414C;
+    --muted:   #6C7178;
+    --line:    #DCD8D1;
+    --line-2:  #EFEDE8;
+    --accent:  #E9601C;
+    --steel:   #1F6F8B;
+    --good:    #2E7D5B;
+    --warn:    #9A6B12;
+    --shadow:  0 1px 2px rgba(18,22,28,.06), 0 12px 32px rgba(18,22,28,.07);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper:   #0E1218;
+      --surface: #161B22;
+      --ink:     #E9E7E3;
+      --ink-2:   #C2C6CC;
+      --muted:   #9097A1;
+      --line:    #2B323B;
+      --line-2:  #212831;
+      --accent:  #FF7B3E;
+      --steel:   #5FA9C6;
+      --good:    #55B98C;
+      --warn:    #D6A03C;
+      --shadow:  0 1px 2px rgba(0,0,0,.4), 0 14px 36px rgba(0,0,0,.34);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper:#0E1218; --surface:#161B22; --ink:#E9E7E3; --ink-2:#C2C6CC;
+    --muted:#9097A1; --line:#2B323B; --line-2:#212831;
+    --accent:#FF7B3E; --steel:#5FA9C6; --good:#55B98C; --warn:#D6A03C;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 14px 36px rgba(0,0,0,.34);
+  }
+  :root[data-theme="light"] {
+    --paper:#FAF9F7; --surface:#FFFFFF; --ink:#12161C; --ink-2:#39414C;
+    --muted:#6C7178; --line:#DCD8D1; --line-2:#EFEDE8;
+    --accent:#E9601C; --steel:#1F6F8B; --good:#2E7D5B; --warn:#9A6B12;
+    --shadow:0 1px 2px rgba(18,22,28,.06), 0 12px 32px rgba(18,22,28,.07);
+  }
+
+  /* ============ base ============ */
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .display {
+    font-family: "Bahnschrift", "DIN Alternate", "Franklin Gothic Medium",
+                 "Arial Narrow", "Segoe UI", system-ui, sans-serif;
+    font-stretch: 87.5%;
+    letter-spacing: -.005em;
+  }
+  .mono {
+    font-family: "Cascadia Mono", "Consolas", ui-monospace, "SF Mono", monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ============ deck shell ============ */
+  .deck {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 28px 20px 72px;
+    display: flex;
+    flex-direction: column;
+    gap: 26px;
+  }
+  .toolbar {
+    position: sticky; top: 0; z-index: 30;
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    padding: 10px 14px;
+    margin-bottom: 4px;
+    background: color-mix(in srgb, var(--paper) 88%, transparent);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--line);
+    border-radius: 2px;
+  }
+  .toolbar .brandmark {
+    font-size: 12px; letter-spacing: .16em; text-transform: uppercase;
+    color: var(--muted); margin-right: auto;
+  }
+  .toolbar button {
+    font: inherit; font-size: 12.5px;
+    letter-spacing: .09em; text-transform: uppercase;
+    padding: 7px 14px;
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    cursor: pointer;
+  }
+  .toolbar button:hover { border-color: var(--accent); color: var(--accent); }
+  .toolbar button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ============ slide ============ */
+  .slide {
+    container-type: inline-size;
+    position: relative;
+    aspect-ratio: 16 / 9;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  /* top rail */
+  .rail {
+    flex: 0 0 auto;
+    display: flex; align-items: center; gap: 1.4cqw;
+    padding: 2.1cqw 4.4cqw 0;
+    color: var(--muted);
+    font-size: 1.15cqw;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+  }
+  .rail .tick { width: 2.6cqw; height: 1px; background: var(--accent); }
+  .rail .no { margin-left: auto; color: var(--ink-2); letter-spacing: .1em; }
+  .body {
+    flex: 1 1 auto;
+    padding: 1.6cqw 4.4cqw 4.2cqw;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  h2.title {
+    margin: 0 0 .3cqw;
+    font-size: 4.1cqw;
+    line-height: 1.04;
+    font-weight: 600;
+    text-wrap: balance;
+  }
+  h2.title .thin { font-weight: 350; color: var(--ink-2); }
+  .sub {
+    margin: 0 0 2.4cqw;
+    font-size: 1.55cqw;
+    color: var(--muted);
+    max-width: 74ch;
+    line-height: 1.5;
+  }
+  .hr { height: 1px; background: var(--line); margin: 0 0 2.2cqw; }
+
+  ul.pts { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 1.05cqw; }
+  ul.pts li {
+    position: relative;
+    padding-left: 1.9cqw;
+    font-size: 1.62cqw;
+    line-height: 1.42;
+    color: var(--ink);
+  }
+  ul.pts li::before {
+    content: ""; position: absolute; left: 0; top: .62em;
+    width: .62cqw; height: .62cqw; background: var(--accent);
+  }
+  ul.pts li small { display: block; font-size: .82em; color: var(--muted); margin-top: .18em; line-height: 1.4; }
+  ul.pts.tight li { font-size: 1.45cqw; }
+
+  .cols { display: grid; gap: 2.4cqw; min-height: 0; }
+  .c2 { grid-template-columns: 1fr 1fr; }
+  .c3 { grid-template-columns: repeat(3, 1fr); }
+  .c4 { grid-template-columns: repeat(4, 1fr); }
+  .c23 { grid-template-columns: 1.05fr 1fr; }
+
+  .card {
+    border: 1px solid var(--line);
+    border-top: 2px solid var(--accent);
+    padding: 1.7cqw 1.7cqw 1.9cqw;
+    display: flex; flex-direction: column; gap: .8cqw;
+    background: var(--surface);
+  }
+  .card.steel { border-top-color: var(--steel); }
+  .card h3 {
+    margin: 0; font-size: 1.72cqw; font-weight: 600; line-height: 1.2;
+  }
+  .card p { margin: 0; font-size: 1.4cqw; line-height: 1.45; color: var(--ink-2); }
+  .kicker {
+    font-size: 1.1cqw; letter-spacing: .17em; text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* stat strip */
+  .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0; border-top: 1px solid var(--line); }
+  .stats div { padding: 1.3cqw 0 0; border-right: 1px solid var(--line-2); }
+  .stats div:last-child { border-right: 0; }
+  .stats b { display: block; font-size: 3.1cqw; font-weight: 600; line-height: 1; letter-spacing: -.02em; }
+  .stats span { display: block; font-size: 1.05cqw; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-top: .55cqw; }
+
+  /* agenda list */
+  .agenda { display: flex; flex-direction: column; }
+  .agenda .row {
+    display: flex; align-items: baseline; gap: 1.4cqw;
+    padding: 1.35cqw 0;
+    border-bottom: 1px solid var(--line);
+    font-size: 2.05cqw;
+  }
+  .agenda .row .n { margin-left: auto; font-size: 1.7cqw; color: var(--accent); font-weight: 600; }
+  .agenda .row .hint { font-size: 1.25cqw; color: var(--muted); }
+
+  /* flow chain */
+  .flow { display: flex; flex-direction: column; gap: 1.5cqw; }
+  .chain { display: flex; align-items: stretch; gap: .75cqw; }
+  .step {
+    flex: 1 1 0; min-width: 0;
+    border: 1px solid var(--line);
+    padding: 1.05cqw 1.05cqw 1.2cqw;
+    display: flex; flex-direction: column; gap: .45cqw;
+    position: relative;
+  }
+  .step .idx {
+    font-size: 1.05cqw; letter-spacing: .1em; color: var(--accent); font-weight: 600;
+  }
+  .step b { font-size: 1.32cqw; font-weight: 600; line-height: 1.24; }
+  .step span { font-size: 1.12cqw; color: var(--muted); line-height: 1.36; }
+  .step.alt .idx { color: var(--steel); }
+  .chain .arrow {
+    flex: 0 0 auto; align-self: center;
+    color: var(--line); font-size: 1.5cqw; line-height: 1;
+  }
+  .lane {
+    display: flex; align-items: center; gap: 1.1cqw;
+  }
+  .lane .who {
+    flex: 0 0 11cqw;
+    font-size: 1.18cqw; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--ink-2); text-align: right; padding-top: .2cqw;
+  }
+  .lane .who em { display: block; font-style: normal; font-size: .82em; color: var(--muted); letter-spacing: .06em; text-transform: none; }
+
+  /* actor slide */
+  .actor { display: grid; grid-template-columns: 15cqw 1fr; gap: 2.6cqw; min-height: 0; }
+  .actor .glyph {
+    border: 1px solid var(--line);
+    border-top: 2px solid var(--accent);
+    padding: 1.4cqw;
+    display: flex; flex-direction: column; gap: .8cqw;
+    align-self: start;
+  }
+  .actor .glyph .role {
+    font-size: 1.6cqw; font-weight: 600; line-height: 1.16;
+  }
+  .actor .glyph .enumv { font-size: 1.02cqw; color: var(--muted); word-break: break-word; }
+  .quote {
+    font-size: 1.75cqw; font-style: italic; color: var(--ink-2);
+    margin: 0 0 1.5cqw;
+  }
+  .split2 { columns: 2; column-gap: 2.6cqw; }
+  .split2 ul.pts { break-inside: avoid; }
+
+  /* module map */
+  .modmap { display: grid; grid-template-columns: repeat(4, 1fr); gap: .7cqw; }
+  .mod {
+    border: 1px solid var(--line);
+    padding: .95cqw 1cqw;
+    display: flex; flex-direction: column; gap: .25cqw;
+  }
+  .mod b { font-size: 1.35cqw; font-weight: 600; }
+  .mod span { font-size: 1.05cqw; color: var(--muted); line-height: 1.35; }
+  .mod.k { border-left: 2px solid var(--accent); }
+  .mod.s { border-left: 2px solid var(--steel); }
+
+  .tbl { width: 100%; border-collapse: collapse; font-size: 1.3cqw; }
+  .tbl th, .tbl td { text-align: left; padding: .85cqw .9cqw; border-bottom: 1px solid var(--line-2); vertical-align: top; }
+  .tbl th {
+    font-size: 1.05cqw; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--muted); font-weight: 500; border-bottom: 1px solid var(--line);
+  }
+  .tbl td.n { color: var(--ink-2); }
+  .tag {
+    display: inline-block; font-size: 1cqw; letter-spacing: .1em; text-transform: uppercase;
+    padding: .18cqw .6cqw; border: 1px solid var(--line); color: var(--muted);
+  }
+  .tag.on { border-color: var(--accent); color: var(--accent); }
+
+  code.k {
+    font-family: "Cascadia Mono", "Consolas", ui-monospace, monospace;
+    font-size: .88em; background: var(--line-2); padding: .08em .35em;
+    color: var(--ink-2);
+  }
+
+  /* ---- cover ---- */
+  .cover { justify-content: center; }
+  .cover .eyebrow {
+    font-size: 1.2cqw; letter-spacing: .28em; text-transform: uppercase; color: var(--accent);
+    margin-bottom: 1.6cqw;
+  }
+  .cover h1 {
+    margin: 0;
+    font-size: 8.4cqw;
+    line-height: .92;
+    font-weight: 600;
+    letter-spacing: -.02em;
+  }
+  .cover h1 .o { color: var(--accent); }
+  .cover .tag2 {
+    margin: 1.9cqw 0 0; font-size: 2cqw; color: var(--ink-2); font-weight: 350; max-width: 60ch;
+  }
+  .cover .meta {
+    margin-top: auto; padding-top: 2.4cqw; border-top: 1px solid var(--line);
+    display: flex; gap: 4cqw; font-size: 1.25cqw; color: var(--muted);
+  }
+  .cover .meta b { display: block; color: var(--ink); font-weight: 600; margin-top: .35cqw; font-size: 1.35cqw; }
+
+  /* ---- team ---- */
+  .team { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1.2cqw; }
+  .member {
+    border: 1px solid var(--line);
+    border-bottom: 2px solid var(--accent);
+    padding: 1.3cqw 1.2cqw 1.5cqw;
+    display: flex; flex-direction: column; gap: .5cqw;
+  }
+  .member .init {
+    font-size: 3cqw; font-weight: 600; color: var(--accent); line-height: 1; letter-spacing: -.02em;
+  }
+  .member b { font-size: 1.4cqw; font-weight: 600; line-height: 1.22; }
+  .member span { font-size: 1.05cqw; color: var(--muted); }
+
+  /* ---- closing ---- */
+  .closing { justify-content: center; }
+  .closing h1 { margin: 0; font-size: 9cqw; font-weight: 600; line-height: .95; letter-spacing: -.02em; }
+  .closing .line { margin-top: 1.6cqw; font-size: 1.9cqw; color: var(--ink-2); font-weight: 350; }
+  .closing .foot {
+    margin-top: auto; padding-top: 2.4cqw; border-top: 1px solid var(--line);
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 2cqw; font-size: 1.2cqw; color: var(--muted);
+  }
+  .closing .foot b { display: block; color: var(--ink); font-weight: 600; margin-top: .3cqw; }
+
+  .note {
+    margin-top: auto; padding-top: 1.4cqw;
+    font-size: 1.08cqw; color: var(--muted); line-height: 1.45;
+    border-top: 1px solid var(--line-2);
+  }
+
+  /* ============ present mode ============ */
+  body.presenting { overflow: hidden; }
+  body.presenting .toolbar { display: none; }
+  body.presenting .deck { max-width: none; padding: 0; gap: 0; }
+  body.presenting .slide { display: none; }
+  body.presenting .slide.current {
+    display: flex;
+    position: fixed; inset: 0; margin: auto;
+    width: min(100vw, calc(100vh * 16 / 9));
+    height: min(100vh, calc(100vw * 9 / 16));
+    aspect-ratio: auto;
+    border: 0; border-radius: 0; box-shadow: none;
+  }
+  .hud {
+    display: none;
+    position: fixed; right: 16px; bottom: 14px; z-index: 40;
+    font-size: 12px; letter-spacing: .14em; color: var(--muted);
+    font-family: "Cascadia Mono", "Consolas", ui-monospace, monospace;
+  }
+  body.presenting .hud { display: block; }
+
+  @media (max-width: 720px) {
+    .deck { padding: 14px 10px 40px; gap: 14px; }
+  }
+  @media print {
+    .toolbar, .hud { display: none; }
+    .deck { max-width: none; padding: 0; gap: 0; }
+    .slide { break-after: page; border: 0; box-shadow: none; border-radius: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<div class="toolbar">
+  <span class="brandmark mono">SWP391 · FPT University · Summer 2026</span>
+  <button type="button" id="present">Present</button>
+  <button type="button" id="prev">◀</button>
+  <button type="button" id="next">▶</button>
+</div>
+
+<div class="deck" id="deck">
+
+  <!-- 1 · COVER -->
+  <section class="slide">
+    <div class="body cover">
+      <div class="eyebrow mono">Capstone Project — SWP391</div>
+      <h1 class="display">SEAL<span class="o">.</span></h1>
+      <p class="tag2">Hackathon Management System — end-to-end platform for running the SEAL Hackathon at FPT University: registration, teams, tracks, submissions, judging, rankings and awards.</p>
+      <div class="meta mono">
+        <div>Repository<b>seal-hackathon-fpt</b></div>
+        <div>Backend<b>Spring Boot 3.5 · Spring Modulith</b></div>
+        <div>Frontend<b>Next.js 16 · React 19</b></div>
+        <div>Database<b>SQL Server · Flyway</b></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 · TEAM -->
+  <section class="slide">
+    <div class="rail mono"><span class="tick"></span><span>Team</span><span class="no">02</span></div>
+    <div class="body">
+      <h2 class="title display">SEAL <span class="thin">TEAM</span></h2>
+      <p class="sub">Contributors on the <code class="k">main</code> branch, taken from the repository's commit history.</p>
+      <div class="team">
+        <div class="member"><div class="init display">NV</div><b>Nguyễn Trường Vinh</b><span class="mono">97 commits</span></div>
+        <div class="member"><div class="init display">PK</div><b>Phan Nguyễn Đình Khôi</b><span class="mono">58 commits</span></div>
+        <div class="member"><div class="init display">PQ</div><b>Phạm Mạnh Quỳnh</b><span class="mono">18 commits</span></div>
+        <div class="member"><div class="init display">TV</div><b>Trần Trúc Vỹ</b><span class="mono">13 commits</span></div>
+        <div class="member"><div class="init display">PP</div><b>Phan Lại Phong</b><span class="mono">5 commits</span></div>
+      </div>
+      <p class="note">Commit counts merge duplicate git identities (same person, different e-mail). Individual roles and the supervisor are not recorded anywhere in the repository, so they are left out rather than guessed.</p>
+    </div>
+  </section>
+
+  <!-- 3 · AGENDA -->
+  <section class="slide">
+    <div class="rail mono"><span class="tick"></span><span>Agenda</span><span class="no">03</span></div>
+    <div class="body">
+      <h2 class="title display">AGENDA</h2>
+      <div class="hr"></div>
+      <div class="agenda">
+        <div class="row"><span>Context</span><span class="hint">what running a hackathon by hand costs</span><span class="n mono">1</span></div>
+        <div class="row"><span>Proposed Solutions</span><span class="hint">pillars, tech stack, architecture, scoring model</span><span class="n mono">2</span></div>
+        <div class="row"><span>Main Actors &amp; Features</span><span class="hint">5 account types + guest</span><span class="n mono">3</span></div>
+        <div class="row"><span>Flows</span><span class="hint">5 end-to-end scenarios</span><span class="n mono">4</span></div>
+        <div class="row"><span>Limitations</span><span class="hint">what the system does not do yet</span><span class="n mono">5</span></div>
+        <div class="row"><span>Q &amp; A</span><span class="hint"></span><span class="n mono">6</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 · CONTEXT -->
+  <section class="slide">
+    <div class="rail mono"><span class="tick"></span><span>1 · Context</span><span class="no">04</span></div>
+    <div class="body">
+      <h2 class="title display">Context</h2>
+      <p class="sub">A hackathon touches a hundred small decisions — who may enter, who is on which team, who judges what, whose score counts. Run on forms and spreadsheets, each one is a place where the event loses time or loses trust.</p>
+      <div class="cols c4" style="align-content:start">
+        <div class="card">
+          <div class="kicker mono">Entry</div>
+          <h3>Eligibility is manual</h3>
+          <p>FPT students and external students enter through different doors, and someone has to verify each of them by hand.</p>
+        </div>
+        <div class="card">
+          <div class="kicker mono">Teams</div>
+          <h3>Team-building is ad hoc</h3>
+          <p>Size limits, one-team-per-event, invitations, join and leave requests — all tracked in chat threads.</p>
+        </div>
+        <div class="card">
+          <div class="kicker mono">Judging</div>
+          <h3>Scoring is a spreadsheet</h3>
+          <p>Weighted rubrics across several judges, with no conflict-of-interest check and no history of who changed what.</p>
+        </div>
+        <div class="card">
+          <div class="kicker mono">Results</div>
+          <h3>Results are hard to defend</h3>
+          <p>Judges disagree, ties happen at the cut-off, and teams have no channel to contest a score.</p>
+        </div>
+      </div>
+      <p class="note">Framing derived from the business rules the system actually enforces (registration &amp; verification, team constraints, conflict detection, deviation review, disputes, tie-break). No external market research was carried out for this project.</p>
+    </div>
+  </section>
+
+  <!-- 5 · SOLUTIONS -->
+  <section class="slide">
+    <div class="rail mono"><span class="tick"></span><span>2 · Proposed Solutions</span><span class="no">05</span></div>
+    <div class="body">
+      <h2 class="title display">Proposed Solutions</h2>
+      <p class="sub">One platform covering the full lifecycle of an event, with the competition rules encoded in the backend rather than in a coordinator's head.</p>
+      <div class="cols c3" style="align-content:start">
+        <div class="card">
+          <div class="kicker mono">Pillar 01</div>
+          <h3>Run the whole event</h3>
+          <ul class="pts tight">
+            <li>Event phases <code class="k">UPCOMING → OPEN → CLOSED_REGISTRATION → ACTIVE → SCORING → COMPLETED</code></li>
+            <li>Rounds (preliminary / final), tracks, schedule and milestone gates</li>
+            <li>Enrolment, magic-link registration, external-student verification</li>
+            <li>Team creation, invitations, join / leave requests, auto team matching</li>
+          </ul>
+        </div>
+        <div class="card steel">
+          <div class="kicker mono">Pillar 02</div>
+          <h3>Score it defensibly</h3>
+          <ul class="pts tight">
+            <li>Scoring templates and criteria whose weights must total 100%</li>
+            <li>Conflict-of-interest detection — a mentor cannot judge their own team</li>
+            <li>Automatic deviation review when judges disagree past a threshold</li>
+            <li>Weighted aggregation, tie-break, finalist selection, awards, disputes</li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="kicker mono">Pillar 03</div>
+          <h3>Keep it accountable</h3>
+          <ul class="pts tight">
+            <li>Five account types with method-level role checks on every endpoint</li>
+            <li>Append-only audit log — no update, no delete, exportable by admin</li>
+            <li>Domain events drive e-mail and in-app notifications</li>
+            <li>Live scoreboard and public event pages for spectators</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 · TECH STACK -->
+  <section class="slide">
+    <div class="rail mono"><span class="tick"></span><span>2 · Proposed Solutions | Tech Stack</span><span class="no">06</span></div>
+    <div class="body">
+      <h2 class="title display">Tech <span class="thin">Stack</span></h2>
+      <div class="cols c4" style="align-content:start">
+        <div class="card">
+          <div class="kicker mono">Backend</div>
+          <h3>Java 21 · Spring Boot 3.5</h3>
+          <ul class="pts tight">
+            <li>Spring Modulith — modular monolith</li>
+            <li>Spring Security 6 + JWT (jjwt)</li>
+            <li>Spring Data JPA / Hibernate</li>
+            <li>SpringDoc OpenAPI · WebSocket</li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="kicker mono">Frontend</div>
+          <h3>Next.js 16 · React 19</h3>
+          <ul class="pts tight">
+            <li>TypeScript · Tailwind CSS v4</li>
+            <li>TanStack Query · Zustand</li>
+            <li>React Hook Form + Zod</li>
+            <li>Axios API layer — 33 clients</li>
+          </ul>
+        </div>
+        <div class="card steel">
+          <div class="kicker mono">Data</div>
+          <h3>SQL Server</h3>
+          <ul class="pts tight">
+            <li>Flyway — 25 versioned migrations</li>
+            <li><code class="k">ddl-auto: validate</code></li>
+            <li>UUID keys, optimistic locking</li>
+            <li>Local disk storage for uploads</li>
+          </ul>
+        </div>
+        <div class="card steel">
+          <div class="kicker mono">Quality</div>
+          <h3>Testing &amp; Ops</h3>
+          <ul class="pts tight">
+            <li>JUnit 5 + Mockito — 471 tests</li>
+            <li>Testcontainers (SQL Server)</li>
+            <li>GreenMail for mail tests</li>
+            <li>Playwright end-to-end suite</li>
+          </ul>
+        </div>
+      </div>
+      <div class="stats mono" style="margin-top:auto">
+        <div><b>540</b><span>Java files</span></div>
+        <div><b>238</b><span>API endpoints</span></div>
+        <div><b>56</b><span>Entities</span></div>
+        <div><b>95</b><span>Frontend pages</span></div>
+        <div><b>471</b><span>Backend tests</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 · ARCHITECTURE -->
+  <section class="slide">
+    <div class="rail mono"><span class="tick"></span><span>2 · Proposed Solutions | Architecture</span><span class="no">07</span></div>
+    <div class="body">
+      <h2 class="title display">System <span class="thin">Architecture</span></h2>
+      <p class="sub">A modular monolith: eleven business modules inside one deployable, isolated by Spring Modulith. Modules never touch each other's repositories or entities — only public service interfaces and domain events.</p>
+      <div class="modmap">
+        <div class="mod k"><b>auth</b><span>JWT, refresh tokens, OTP, magic link, account locking</span></div>
+        <div class="mod k"><b>user</b><span>Single source of truth for accounts, approval, profiles</span></div>
+        <div class="mod k"><b>event</b><span>Events, rounds, tracks, criteria, schedule, staff, awards</span></div>
+        <div class="mod k"><b>team</b><span>Teams, invitations, join/leave, matching, mentor chat</span></div>
+        <div class="mod k"><b>submission</b><span>Versioned submissions, attachments, deadline gates</span></div>
+        <div class="mod k"><b>judging</b><span>Scores per criterion, conflicts, review, locking</span></div>
+        <div class="mod k"><b>ranking</b><span>Aggregation, finalists, results, disputes, season ranking</span></div>
+        <div class="mod k"><b>progress</b><span>Team progress tracking and risk flags</span></div>
+        <div class="mod s"><b>feedback</b><span>Post-event participant feedback</span></div>
+        <div class="mod s"><b>notification</b><span>E-mail + in-app, driven by domain events</span></div>
+        <div class="mod s"><b>audit</b><span>Append-only log, admin export</span></div>
+        <div class="mod s"><b>common / infrastructure</b><span>Base entity, enums, config, SMTP sender</span></div>
+      </div>
+      <div class="cols c2" style="margin-top:2cqw">
+        <div>
+          <div class="kicker mono" style="margin-bottom:.7cqw">Synchronous — public service interfaces</div>
+          <p style="margin:0;font-size:1.3cqw;line-height:1.5;color:var(--ink-2)">A consumer injects <code class="k">*PublicService</code>, never a repository or entity from another module. Boundaries are enforced by a Spring Modulith verification test.</p>
+        </div>
+        <div>
+          <div class="kicker mono" style="margin-bottom:.7cqw">Asynchronous — domain events</div>
+          <p style="margin:0;font-size:1.3cqw;line-height:1.5;color:var(--ink-2)">42 event types. Score changes trigger ranking recalculation; every mutation reaches the audit listener; selected events reach notifications.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8 · SCORING MODEL -->
+  <section class="slide">
+    <div class="rail mono"><span class="tick"></span><span>2 · Proposed Solutions | Scoring Model</span><span class="no">08</span></div>
+    <div class="body">
+      <h2 class="title display">Scoring <span class="thin">&amp; Ranking Model</span></h2>
+      <p class="sub">How a set of judge opinions turns into a defensible ranking.</p>
+      <div class="cols c23" style="min-height:0">
+        <div>
+          <table class="tbl">
+            <thead><tr><th>Stage</th><th>Rule in the system</th></tr></thead>
+            <tbody>
+              <tr><td class="n">Criteria</td><td>Weights per round must sum to 100%; scoring templates are seeded and reusable.</td></tr>
+              <tr><td class="n">Entry</td><td>Score per criterion on the configured scale; a comment is mandatory for extreme scores.</td></tr>
+              <tr><td class="n">Conflict</td><td>A judge assigned as mentor to a team cannot score that team.</td></tr>
+              <tr><td class="n">Deviation</td><td><code class="k">max(percent) − min(percent) ≥ 25</code> opens a review request for the coordinator.</td></tr>
+              <tr><td class="n">Aggregate</td><td>Weighted score per judge, then the mean across judges.</td></tr>
+              <tr><td class="n">Advance</td><td><code class="k">PER_TRACK_TOP_N</code> for the preliminary round, <code class="k">FINALIST_POOL</code> for the final.</td></tr>
+              <tr><td class="n">Publish</td><td>Rankings are published by a coordinator; teams may dispute within the dispute window.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:1.4cqw">
+          <div class="card steel">
+            <div class="kicker mono">Deviation formula</div>
+            <p class="mono" style="font-size:1.25cqw;line-height:1.7">weighted<sub>i</sub> = Σ (criterion × weight / 100)<br>percent<sub>i</sub> = weighted<sub>i</sub> × 20<br>deviation = max(percent) − min(percent)</p>
+            <p>One open review record per submission — the check is idempotent, and both creation and resolution are audited.</p>
+          </div>
+          <div class="card">
+            <div class="kicker mono">Contested slots</div>
+            <p>Ties are typed, not silent: <code class="k">PER_TRACK_CUTOFF</code> when teams tie at the top-N line of a track, <code class="k">OVERFLOW_FILL</code> when filling the remaining finalist slots.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9 · ACTOR: GUEST -->
+  <section class="slide">
+    <div class="rail mono"><span class="tick"></span><span>3 · Main Actors &amp; Features</span><span class="no">09</span></div>
+    <div class="body">
+      <h2 class="title display">Main Actors <span class="thin">&amp; Features</span></h2>
+      <div class="hr"></div>
+      <div class="actor">
+        <div class="glyph">
+          <div class="kicker mono">Actor</div>
+          <div class="role">Guest</div>
+          <div class="enumv mono">unauthenticated</div>
+        </div>
+        <div>
+          <p class="quote">“As a guest, I can …”</p>
+          <div class="split2">
+            <ul class="pts">
+              <li>Browse the landing page and public hackathon list</li>
+              <li>Open a hackathon detail page — schedule, tracks, rules</li>
+              <li>Watch the public live scoreboard of an event</li>
+              <li>Register for an event through the public registration page</li>
+              <li>Self-register as an FPT student or an external student</li>
+              <li>Verify my e-mail with a one-time code</li>
+              <li>Sign in with a magic link sent to my inbox</li>
+              <li>Request a password reset</li>
+              <li>Read the terms of service and privacy policy</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10 · ACTOR: STUDENT -->
+  <section class="slide">
+    <div class="rail mono"><span class="tick"></span><span>3 · Main Actors &amp; Features</span><span class="no">10</span></div>
+    <div class="body">
+      <h2 class="title display">Main Actors <span class="thin">&amp; Features</span></h2>
+      <div class="hr"></div>
+      <div class="actor">
+        <div class="glyph">
+          <div class="kicker mono">Actor</div>
+          <div class="role">Participant</div>
+          <div class="enumv mono">FPT_STUDENT<br>EXTERNAL_STUDENT</div>
+        </div>
+        <div>
+          <p class="quote">“As a participant, I can …”</p>
+          <div class="split2">
+            <ul class="pts tight">
+              <li>Enrol in a hackathon and track my enrolment status</li>
+              <li>Create a team, or ask to join an existing one</li>
+              <li>Invite members and answer invitations I receive</li>
+              <li>Use team matching to find a team that needs my skills</li>
+              <li>Leave a team through a leave request</li>
+              <li>Draw my team's track when the draw session is open</li>
+              <li>Submit deliverables per round, with version history</li>
+              <li>Talk to my mentor in the mentor hub</li>
+              <li>See my team's progress and risk flags</li>
+              <li>Follow the live scoreboard and published results</li>
+              <li>Read my awards and season ranking</li>
+              <li>File a dispute and send post-event feedback</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11 · ACTOR: MENTOR -->
+  <section class="slide">
+    <div class="rail mono"><span class="tick"></span><span>3 · Main Actors &amp; Features</span><span class="no">11</span></div>
+    <div class="body">
+      <h2 class="title display">Main Actors <span class="thin">&amp; Features</span></h2>
+      <div class="hr"></div>
+      <div class="actor">
+        <div class="glyph">
+          <div class="kicker mono">Actor</div>
+          <div class="role">Lecturer as Mentor</div>
+          <div class="enumv mono">LECTURER</div>
+        </div>
+        <div>
+          <p class="quote">“As a mentor, I can …”</p>
+          <div class="split2">
+            <ul class="pts">
+              <li>Accept or decline a mentor invitation for an event</li>
+              <li>See the teams assigned to me and their members</li>
+              <li>Open the mentor hub and chat with a team in real time</li>
+              <li>Read my teams' submissions for each round</li>
+              <li>Write structured feedback and keep a feedback history</li>
+              <li>Watch progress risk flags raised on my teams</li>
+              <li>Receive in-app notifications about my teams</li>
+            </ul>
+          </div>
+          <p class="note">A mentor relationship is what triggers conflict-of-interest detection on the judging side.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 12 · ACTOR: JUDGE -->
+  <section class="slide">
+    <div class="rail mono"><span class="tick"></span><span>3 · Main Actors &amp; Features</span><span class="no">12</span></div>
+    <div class="body">
+      <h2 class="title display">Main Actors <span class="thin">&amp; Features</span></h2>
+      <div class="hr"></div>
+      <div class="actor">
+        <div class="glyph">
+          <div class="kicker mono">Actor</div>
+          <div class="role">Lecturer as Judge</div>
+          <div class="enumv mono">LECTURER</div>
+        </div>
+        <div>
+          <p class="quote">“As a judge, I can …”</p>
+          <div class="split2">
+            <ul class="pts">
+              <li>See the rounds, tracks and groups I am assigned to</li>
+              <li>Open a team's submission for a round and score it</li>
+              <li>Score each criterion and leave comments</li>
+              <li>Be blocked from scoring a team I mentor</li>
+              <li>Revise a score while the scoring window is open</li>
+              <li>Open a deviation review raised on a submission I scored</li>
+              <li>Lose write access once scores are locked for the round</li>
+            </ul>
+          </div>
+          <p class="note">Assignment scope is one of <code class="k">ROUND</code>, <code class="k">TRACK</code> or <code class="k">GROUP</code>.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 13 · ACTOR: COORDINATOR -->
+  <section class="slide">
+    <div class="rail mono"><span class="tick"></span><span>3 · Main Actors &amp; Features</span><span class="no">13</span></div>
+    <div class="body">
+      <h2 class="title display">Main Actors <span class="thin">&amp; Features</span></h2>
+      <div class="hr"></div>
+      <div class="actor">
+        <div class="glyph">
+          <div class="kicker mono">Actor</div>
+          <div class="role">Event Coordinator</div>
+          <div class="enumv mono">EVENT_COORDINATOR</div>
+        </div>
+        <div>
+          <p class="quote">“As a coordinator, I can …”</p>
+          <div class="split2">
+            <ul class="pts tight">
+              <li>Create a hackathon and move it through its phases</li>
+              <li>Configure rounds, tracks, topics and the schedule</li>
+              <li>Build the scoring rubric from a template and set weights</li>
+              <li>Open the track draw session and lock tracks afterwards</li>
+              <li>Review enrolments and manage participant accounts</li>
+              <li>Assign staff, judges and mentors, and see an assignment overview</li>
+              <li>Assign teams to tracks and groups</li>
+              <li>Read every submission for the event</li>
+              <li>Resolve or ignore score deviation reviews</li>
+              <li>Watch the live scoreboard while judging is running</li>
+              <li>Publish results and hand out awards</li>
+              <li>Read participant feedback and support requests</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 14 · ACTOR: ADMIN -->
+  <section class="slide">
+    <div class="rail mono"><span class="tick"></span><span>3 · Main Actors &amp; Features</span><span class="no">14</span></div>
+    <div class="body">
+      <h2 class="title display">Main Actors <span class="thin">&amp; Features</span></h2>
+      <div class="hr"></div>
+      <div class="actor">
+        <div class="glyph">
+          <div class="kicker mono">Actor</div>
+          <div class="role">System Administrator</div>
+          <div class="enumv mono">SYSTEM_ADMIN</div>
+        </div>
+        <div>
+          <p class="quote">“As an administrator, I can …”</p>
+          <div class="split2">
+            <ul class="pts tight">
+              <li>Everything a coordinator can do, across every event</li>
+              <li>Create internal accounts — lecturers, coordinators, admins</li>
+              <li>Approve, reject, lock and delete user accounts</li>
+              <li>Configure the platform: allowed e-mail domains, password policy</li>
+              <li>Manage system configuration and platform settings</li>
+              <li>Open the analytics area — variance, calibration, research views</li>
+              <li>Read the immutable audit log and export it</li>
+              <li>Export event data</li>
+              <li>Monitor system status</li>
+            </ul>
+          </div>
+          <p class="note">The first admin is created by a bootstrap SQL script — the application itself refuses to create one, so an empty database cannot be self-elevated.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 15 · FLOW 1 -->
+  <section class="slide">
+    <div class="rail mono"><span class="tick"></span><span>4 · Flows</span><span class="no">15</span></div>
+    <div class="body">
+      <h2 class="title display"><span class="thin">Scenario 1 |</span> Registration &amp; Verification</h2>
+      <div class="flow" style="margin-top:1.4cqw">
+        <div class="lane">
+          <div class="who mono">FPT student<em>internal domain</em></div>
+          <div class="chain" style="flex:1">
+            <div class="step"><span class="idx mono">01</span><b>Register</b><span>E-mail on an allowed domain</span></div>
+            <span class="arrow">→</span>
+            <div class="step"><span class="idx mono">02</span><b>Verify OTP</b><span>One-time code, attempts counted</span></div>
+            <span class="arrow">→</span>
+            <div class="step"><span class="idx mono">03</span><b>Account active</b><span>Status transitions on approval</span></div>
+            <span class="arrow">→</span>
+            <div class="step"><span class="idx mono">04</span><b>Enrol in event</b><span>Enrolment record per event</span></div>
+            <span class="arrow">→</span>
+            <div class="step"><span class="idx mono">05</span><b>Dashboard</b><span>Sees schedule and next gate</span></div>
+          </div>
+        </div>
+        <div class="lane">
+          <div class="who mono">External student<em>outside FPT</em></div>
+          <div class="chain" style="flex:1">
+            <div class="step alt"><span class="idx mono">06</span><b>Public registration</b><span>Opens the event's public page</span></div>
+            <span class="arrow">→</span>
+            <div class="step alt"><span class="idx mono">07</span><b>Magic link</b><span>Sign-in link mailed, no password</span></div>
+            <span class="arrow">→</span>
+            <div class="step alt"><span class="idx mono">08</span><b>Submit proof</b><span>University and student standing</span></div>
+            <span class="arrow">→</span>
+            <div class="step alt"><span class="idx mono">09</span><b>Staff verification</b><span>Coordinator confirms eligibility</span></div>
+            <span class="arrow">→</span>
+            <div class="step alt"><span class="idx mono">10</span><b>Enrolment approved</b><span>Notification sent by e-mail</span></div>
+          </div>
+        </div>
+      </div>
+      <p class="note">Login hardening applies to both paths: failed attempts lock the account, a password reset invalidates every existing session, and access tokens are short-lived with rotating refresh tokens.</p>
+    </div>
+  </section>
+
+  <!-- 16 · FLOW 2 -->
+  <section class="slide">
+    <div class="rail mono"><span class="tick"></span><span>4 · Flows</span><span class="no">16</span></div>
+    <div class="body">
+      <h2 class="title display"><span class="thin">Scenario 2 |</span> Team Formation</h2>
+      <div class="flow" style="margin-top:1.4cqw">
+        <div class="lane">
+          <div class="who mono">Has a team<em>leader path</em></div>
+          <div class="chain" style="flex:1">
+            <div class="step"><span class="idx mono">01</span><b>Create team</b><span>Name unique within the event</span></div>
+            <span class="arrow">→</span>
+            <div class="step"><span class="idx mono">02</span><b>Invite members</b><span>Invitation expires if ignored</span></div>
+            <span class="arrow">→</span>
+            <div class="step"><span class="idx mono">03</span><b>Members accept</b><span>One team per participant per event</span></div>
+            <span class="arrow">→</span>
+            <div class="step"><span class="idx mono">04</span><b>Team confirmed</b><span>Size within the configured range</span></div>
+            <span class="arrow">→</span>
+            <div class="step"><span class="idx mono">05</span><b>Mentor paired</b><span>Mentor accepts the invitation</span></div>
+          </div>
+        </div>
+        <div class="lane">
+          <div class="who mono">Solo<em>looking for members</em></div>
+          <div class="chain" style="flex:1">
+            <div class="step alt"><span class="idx mono">06</span><b>Open matching</b><span>Declares skill role wanted</span></div>
+            <span class="arrow">→</span>
+            <div class="step alt"><span class="idx mono">07</span><b>Browse teams</b><span>Teams that still need people</span></div>
+            <span class="arrow">→</span>
+            <div class="step alt"><span class="idx mono">08</span><b>Join request</b><span>Pending until the leader answers</span></div>
+            <span class="arrow">→</span>
+            <div class="step alt"><span class="idx mono">09</span><b>Leader decides</b><span>Accept or reject</span></div>
+            <span class="arrow">→</span>
+            <div class="step alt"><span class="idx mono">10</span><b>Leave request</b><span>Exit is recorded, not silent</span></div>
+          </div>
+        </div>
+      </div>
+      <p class="note">Team state is a first-class enum, and every transition — invitation, join, leave, disband — raises a domain event that reaches the audit log and, where relevant, the notification module.</p>
+    </div>
+  </section>
+
+  <!-- 17 · FLOW 3 -->
+  <section class="slide">
+    <div class="rail mono"><span class="tick"></span><span>4 · Flows</span><span class="no">17</span></div>
+    <div class="body">
+      <h2 class="title display"><span class="thin">Scenario 3 |</span> Competition Day</h2>
+      <p class="sub">The <code class="k">SEAL_RAG_2026</code> competition format, as encoded in the backend.</p>
+      <div class="flow">
+        <div class="lane">
+          <div class="who mono">Day 1<em>track draw</em></div>
+          <div class="chain" style="flex:1">
+            <div class="step"><span class="idx mono">01</span><b>Coordinator opens draw</b><span>Draw order over the teams</span></div>
+            <span class="arrow">→</span>
+            <div class="step"><span class="idx mono">02</span><b>Leader draws in turn</b><span>Only the team whose turn it is</span></div>
+            <span class="arrow">→</span>
+            <div class="step"><span class="idx mono">03</span><b>Track filled</b><span>Full track rejects further teams</span></div>
+            <span class="arrow">→</span>
+            <div class="step"><span class="idx mono">04</span><b>Topic assigned</b><span>Coordinator sets each track's topic</span></div>
+            <span class="arrow">→</span>
+            <div class="step"><span class="idx mono">05</span><b>Tracks locked</b><span>No further changes</span></div>
+          </div>
+        </div>
+        <div class="lane">
+          <div class="who mono">Day 2<em>milestone gates</em></div>
+          <div class="chain" style="flex:1">
+            <div class="step alt"><span class="idx mono">06</span><b>Opening</b><span>Schedule drives the dashboard</span></div>
+            <span class="arrow">→</span>
+            <div class="step alt"><span class="idx mono">07</span><b>Milestone 1</b><span>Slide submission gate closes</span></div>
+            <span class="arrow">→</span>
+            <div class="step alt"><span class="idx mono">08</span><b>Milestone 2</b><span>Demo submission gate closes</span></div>
+            <span class="arrow">→</span>
+            <div class="step alt"><span class="idx mono">09</span><b>Preliminary round</b><span>Judges score per track</span></div>
+            <span class="arrow">→</span>
+            <div class="step alt"><span class="idx mono">10</span><b>Final round</b><span>Only finalists may submit</span></div>
+          </div>
+        </div>
+      </div>
+      <p class="note">Submissions are versioned and append-only, so a late edit never overwrites what the judges saw.</p>
+    </div>
+  </section>
+
+  <!-- 18 · FLOW 4 -->
+  <section class="slide">
+    <div class="rail mono"><span class="tick"></span><span>4 · Flows</span><span class="no">18</span></div>
+    <div class="body">
+      <h2 class="title display"><span class="thin">Scenario 4 |</span> Scoring to Awards</h2>
+      <div class="flow" style="margin-top:1.4cqw">
+        <div class="lane">
+          <div class="who mono">Judging<em>per submission</em></div>
+          <div class="chain" style="flex:1">
+            <div class="step"><span class="idx mono">01</span><b>Assignment</b><span>Judge bound to round / track / group</span></div>
+            <span class="arrow">→</span>
+            <div class="step"><span class="idx mono">02</span><b>Conflict check</b><span>Mentored teams are filtered out</span></div>
+            <span class="arrow">→</span>
+            <div class="step"><span class="idx mono">03</span><b>Score criteria</b><span>Comment required at the extremes</span></div>
+            <span class="arrow">→</span>
+            <div class="step"><span class="idx mono">04</span><b>Deviation flagged</b><span>Spread ≥ 25 opens a review</span></div>
+            <span class="arrow">→</span>
+            <div class="step"><span class="idx mono">05</span><b>Coordinator resolves</b><span>Resolve or ignore, both audited</span></div>
+          </div>
+        </div>
+        <div class="lane">
+          <div class="who mono">Results<em>per round</em></div>
+          <div class="chain" style="flex:1">
+            <div class="step alt"><span class="idx mono">06</span><b>Scores locked</b><span>Window closes for the round</span></div>
+            <span class="arrow">→</span>
+            <div class="step alt"><span class="idx mono">07</span><b>Aggregation</b><span>Weighted mean across judges</span></div>
+            <span class="arrow">→</span>
+            <div class="step alt"><span class="idx mono">08</span><b>Finalists</b><span>Top-N per track, ties typed</span></div>
+            <span class="arrow">→</span>
+            <div class="step alt"><span class="idx mono">09</span><b>Publish</b><span>Results released, teams notified</span></div>
+            <span class="arrow">→</span>
+            <div class="step alt"><span class="idx mono">10</span><b>Awards</b><span>First, second, third, consolation</span></div>
+          </div>
+        </div>
+      </div>
+      <p class="note">Any score change re-triggers aggregation through a domain event, so the ranking is never stale relative to the scores behind it. Teams may open a dispute after publication.</p>
+    </div>
+  </section>
+
+  <!-- 19 · FLOW 5 -->
+  <section class="slide">
+    <div class="rail mono"><span class="tick"></span><span>4 · Flows</span><span class="no">19</span></div>
+    <div class="body">
+      <h2 class="title display"><span class="thin">Scenario 5 |</span> Notifications &amp; Audit</h2>
+      <p class="sub">Cross-cutting concerns are not called from business code — they subscribe to it.</p>
+      <div class="cols c23" style="min-height:0">
+        <div class="flow">
+          <div class="chain">
+            <div class="step"><span class="idx mono">01</span><b>Service commits</b><span>A team is confirmed, a score is saved, an account is approved</span></div>
+            <span class="arrow">→</span>
+            <div class="step"><span class="idx mono">02</span><b>Domain event</b><span>Published inside the transaction — 42 event types</span></div>
+          </div>
+          <div class="chain">
+            <div class="step alt"><span class="idx mono">03a</span><b>Audit listener</b><span>Universal sink — writes an append-only log row</span></div>
+            <div class="step alt"><span class="idx mono">03b</span><b>Notification listener</b><span>Selective sink — in-app entry plus SMTP mail</span></div>
+            <div class="step alt"><span class="idx mono">03c</span><b>Ranking listener</b><span>Recomputes aggregation when scores move</span></div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:1.3cqw">
+          <div class="card">
+            <div class="kicker mono">Audit</div>
+            <p>The audit repository deliberately extends the bare <code class="k">Repository</code> interface — there is no update or delete method to call. Export is admin-only and the export itself is logged.</p>
+          </div>
+          <div class="card steel">
+            <div class="kicker mono">Scheduled work</div>
+            <p>Two background schedulers run outside user requests: event maintenance (phase upkeep) and team progress evaluation, which raises <code class="k">AT_RISK</code> and <code class="k">CRITICAL</code> flags for mentors.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 20 · LIMITATIONS -->
+  <section class="slide">
+    <div class="rail mono"><span class="tick"></span><span>5 · Limitations</span><span class="no">20</span></div>
+    <div class="body">
+      <h2 class="title display">Limitations</h2>
+      <p class="sub">What the system does not do, stated from the state of the repository rather than from intent.</p>
+      <div class="cols c2" style="align-content:start">
+        <div>
+          <div class="kicker mono" style="margin-bottom:1cqw">Technical</div>
+          <ul class="pts tight">
+            <li><b>No deployment artefacts.</b><small>There is no Dockerfile or compose file in the repository; the deployment guide still describes a PostgreSQL setup while the application runs on SQL Server with Flyway.</small></li>
+            <li><b>Local disk storage.</b><small>Uploads are written under <code class="k">backend/uploads</code> — no object storage, no CDN, and nothing shared between instances.</small></li>
+            <li><b>Single deployable, single database.</b><small>The modular monolith gives clean boundaries but no independent scaling per module.</small></li>
+            <li><b>Real time is limited to mentor chat.</b><small>WebSocket is used for the mentor conversation only; the live scoreboard is not pushed.</small></li>
+          </ul>
+        </div>
+        <div>
+          <div class="kicker mono" style="margin-bottom:1cqw">Product &amp; scope</div>
+          <ul class="pts tight">
+            <li><b>English only.</b><small>There is no internationalisation layer in the frontend, although parts of the internal documentation are written in Vietnamese.</small></li>
+            <li><b>Judging remains human.</b><small>The system detects disagreement between judges; it does not evaluate submissions, and there is no AI or automated scoring anywhere in the codebase.</small></li>
+            <li><b>Thin end-to-end coverage.</b><small>471 backend tests against three Playwright specs — the browser-level suite is far behind the API-level one.</small></li>
+            <li><b>Built for one competition format.</b><small>Track draw, milestone gates and finalist rules are specific to <code class="k">SEAL_RAG_2026</code>; generic events fall back to a simpler path.</small></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 21 · Q&A -->
+  <section class="slide">
+    <div class="body closing">
+      <div class="eyebrow mono" style="font-size:1.2cqw;letter-spacing:.28em;text-transform:uppercase;color:var(--accent);margin-bottom:1.6cqw">SWP391 · Summer 2026</div>
+      <h1 class="display">Q &amp; A</h1>
+      <p class="line">Questions on architecture, business rules, or anything in the demo.</p>
+      <div class="foot mono">
+        <div>Repository<b>seal-hackathon-fpt</b></div>
+        <div>API docs<b>/swagger-ui.html</b></div>
+        <div>Institution<b>FPT University</b></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 22 · THANK YOU -->
+  <section class="slide">
+    <div class="body closing">
+      <h1 class="display">THANK<br>YOU<span style="color:var(--accent)">.</span></h1>
+      <p class="line">For your attention.</p>
+      <div class="foot mono">
+        <div>Backend<b>Spring Boot 3.5 · Spring Modulith · SQL Server</b></div>
+        <div>Frontend<b>Next.js 16 · React 19 · TypeScript</b></div>
+        <div>Team<b>5 contributors</b></div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<div class="hud" id="hud">1 / 22</div>
+
+<script>
+  (function () {
+    var slides = Array.prototype.slice.call(document.querySelectorAll(".slide"));
+    var hud = document.getElementById("hud");
+    var idx = 0;
+
+    slides.forEach(function (s, i) { s.id = "slide-" + (i + 1); });
+
+    function presenting() { return document.body.classList.contains("presenting"); }
+
+    function show(i) {
+      idx = Math.max(0, Math.min(slides.length - 1, i));
+      slides.forEach(function (s, n) { s.classList.toggle("current", n === idx); });
+      hud.textContent = (idx + 1) + " / " + slides.length;
+      if (!presenting()) {
+        slides[idx].scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }
+
+    function togglePresent() {
+      document.body.classList.toggle("presenting");
+      if (presenting()) {
+        show(idx);
+      } else {
+        slides.forEach(function (s) { s.classList.remove("current"); });
+        slides[idx].scrollIntoView({ block: "center" });
+      }
+    }
+
+    document.getElementById("present").addEventListener("click", togglePresent);
+    document.getElementById("next").addEventListener("click", function () { show(idx + 1); });
+    document.getElementById("prev").addEventListener("click", function () { show(idx - 1); });
+
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "ArrowRight" || e.key === "PageDown") { show(idx + 1); e.preventDefault(); }
+      else if (e.key === "ArrowLeft" || e.key === "PageUp") { show(idx - 1); e.preventDefault(); }
+      else if (e.key === "Escape" && presenting()) { togglePresent(); }
+      else if (e.key === "p" || e.key === "P") { togglePresent(); }
+    });
+  })();
+</script>

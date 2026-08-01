@@ -1,8 +1,10 @@
 package com.sealhackathon.team.repository;
 
 import com.sealhackathon.team.domain.TeamMember;
+import com.sealhackathon.team.domain.enums.TeamMemberRole;
 import com.sealhackathon.team.domain.enums.TeamStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -15,6 +17,16 @@ import java.util.UUID;
 public interface TeamMemberRepository extends JpaRepository<TeamMember, UUID> {
 
     List<TeamMember> findByTeamId(UUID teamId);
+
+    /**
+     * Bulk demote so SQL Server filtered unique {@code uq_team_members_one_leader}
+     * releases before a new LEADER row is written. Entity-level dirty flush can still
+     * promote first when both role changes are pending in one persistence context.
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE TeamMember tm SET tm.role = com.sealhackathon.team.domain.enums.TeamMemberRole.MEMBER "
+            + "WHERE tm.team.id = :teamId AND tm.role = com.sealhackathon.team.domain.enums.TeamMemberRole.LEADER")
+    int demoteLeaders(@Param("teamId") UUID teamId);
 
     int countByTeamId(UUID teamId);
 

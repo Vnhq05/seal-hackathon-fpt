@@ -51,7 +51,7 @@ public class Track extends BaseEntity {
     @Column(name = "topic", length = 1000)
     private String topic;
 
-    /** Deprecated capacity field; no longer enforced. Kept nullable for schema compatibility. */
+    /** Deprecated capacity field; no longer enforced. Kept nullable for schema compatibility (see V18). */
     @Column(name = "max_teams")
     private Integer maxTeams;
 

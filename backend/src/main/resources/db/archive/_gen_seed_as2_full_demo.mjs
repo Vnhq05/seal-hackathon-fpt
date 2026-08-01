@@ -337,21 +337,21 @@ function emitStaff(meta) {
     const slug = t.name.toLowerCase();
     subRows.push(`  ('${subId}', @now, NULL, '${meta.prelimId}', N'SUBMITTED', ${t.leaderVar}, '${t.id}', 0)`);
     if (kind === "STALLED") {
-      verRows.push(`  ('${verId}', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/${slug}', N'https://docs.google.com/presentation/d/${slug}', DATEADD(HOUR,-30,@now), 1, '${subId}')`);
+      verRows.push(`  ('${verId}', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/${slug}', N'https://docs.google.com/presentation/d/${slug}', N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', DATEADD(HOUR,-30,@now), 1, '${subId}')`);
       attRows.push(`  (NEWID(), @now, N'pitch.pdf', 102400, N'/uploads/demo/${slug}.pdf', 2, '${verId}')`);
       alertRows.push(`  (NEWID(), '${t.id}', '${meta.prelimId}', N'AT_RISK', N'STALLED', @now, @now, @now)`);
       notifTeams.push({ t, msg: `Team ${esc(t.name)} stalled (STALLED).` });
       upd.push(`UPDATE submissions SET current_version_id='${verId}' WHERE id='${subId}';`);
     } else if (kind === "LAST_MINUTE") {
-      verRows.push(`  ('${verId}', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/${slug}', N'https://docs.google.com/presentation/d/${slug}', DATEADD(MINUTE,-40,@now), 1, '${subId}')`);
+      verRows.push(`  ('${verId}', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/${slug}', N'https://docs.google.com/presentation/d/${slug}', N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', DATEADD(MINUTE,-40,@now), 1, '${subId}')`);
       attRows.push(`  (NEWID(), @now, N'pitch.pdf', 102400, N'/uploads/demo/${slug}.pdf', 2, '${verId}')`);
       alertRows.push(`  (NEWID(), '${t.id}', '${meta.prelimId}', N'AT_RISK', N'SINGLE_VERSION_LAST_MINUTE', @now, @now, @now)`);
       notifTeams.push({ t, msg: `Team ${esc(t.name)} last-minute single version.` });
       upd.push(`UPDATE submissions SET current_version_id='${verId}' WHERE id='${subId}';`);
     } else {
       const ver2 = uid(0xe, meta.n, verSeq++);
-      verRows.push(`  ('${verId}', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/${slug}', N'https://docs.google.com/presentation/d/${slug}-v1', DATEADD(HOUR,-40,@now), 1, '${subId}')`);
-      verRows.push(`  ('${ver2}', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/${slug}', N'https://docs.google.com/presentation/d/${slug}-v2', DATEADD(HOUR,-2,@now), 2, '${subId}')`);
+      verRows.push(`  ('${verId}', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/${slug}', N'https://docs.google.com/presentation/d/${slug}-v1', N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', DATEADD(HOUR,-40,@now), 1, '${subId}')`);
+      verRows.push(`  ('${ver2}', @now, N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', N'https://github.com/seal-fpt/${slug}', N'https://docs.google.com/presentation/d/${slug}-v2', N'https://www.youtube.com/watch?v=dQw4w9WgXcQ', DATEADD(HOUR,-2,@now), 2, '${subId}')`);
       attRows.push(`  (NEWID(), @now, N'pitch-v2.pdf', 204800, N'/uploads/demo/${slug}-v2.pdf', 2, '${ver2}')`);
       upd.push(`UPDATE submissions SET current_version_id='${ver2}' WHERE id='${subId}';`);
     }
@@ -360,7 +360,7 @@ function emitStaff(meta) {
   if (subRows.length) {
     L(`INSERT INTO submissions (id, created_at, current_version_id, round_id, status, submitted_by, team_id, opt_lock) VALUES`);
     L(subRows.map((r, i) => `${r}${i < subRows.length - 1 ? "," : ";"}`).join("\n"));
-    L(`INSERT INTO submission_versions (id, created_at, demo_url, github_url, slide_url, submitted_at, version_number, submission_id) VALUES`);
+    L(`INSERT INTO submission_versions (id, created_at, demo_url, github_url, slide_url, other_url, submitted_at, version_number, submission_id) VALUES`);
     L(verRows.map((r, i) => `${r}${i < verRows.length - 1 ? "," : ";"}`).join("\n"));
     L(`INSERT INTO submission_attachments (id, created_at, file_name, file_size, file_url, page_count, submission_version_id) VALUES`);
     L(attRows.map((r, i) => `${r}${i < attRows.length - 1 ? "," : ";"}`).join("\n"));
@@ -485,7 +485,7 @@ function emitScoredEvent(
       )
       .join("\n")
   );
-  L(`INSERT INTO submission_versions (id, created_at, demo_url, github_url, slide_url, submitted_at, version_number, submission_id) VALUES`);
+  L(`INSERT INTO submission_versions (id, created_at, demo_url, github_url, slide_url, other_url, submitted_at, version_number, submission_id) VALUES`);
   L(
     subMeta
       .map((s, i) => {

@@ -111,6 +111,48 @@ class CompetitionGroupServiceTest {
         verify(groupRepository, never()).delete(any());
     }
 
+    @Test
+    void generateGroups_shouldFlushDeletes_beforeRecreatingSameNames() {
+        when(eventRepository.findById(eventId)).thenReturn(Optional.of(HackathonEvent.builder().build()));
+
+        HackathonEvent event = HackathonEvent.builder().build();
+        event.setId(eventId);
+        Track track = Track.builder().hackathonEvent(event).name("Track Alpha").maxTeams(20).build();
+        track.setId(trackId);
+        when(trackRepository.findByHackathonEventId(eventId)).thenReturn(List.of(track));
+
+        Team team = buildTeam(groupId);
+        team.setTrackId(trackId);
+        team.setStatus(TeamStatus.CONFIRMED);
+        when(teamRepository.findByEventIdAndStatus(eventId, TeamStatus.CONFIRMED)).thenReturn(List.of(team));
+
+        CompetitionGroup existing = buildGroup();
+        existing.setName("Track Alpha G1");
+        when(groupRepository.findByTrackIdOrderByNameAsc(trackId)).thenReturn(List.of(existing));
+        when(groupRepository.save(any(CompetitionGroup.class))).thenAnswer(inv -> {
+            CompetitionGroup g = inv.getArgument(0);
+            if (g.getId() == null) {
+                g.setId(UUID.randomUUID());
+            }
+            return g;
+        });
+
+        var request = com.sealhackathon.event.dto.request.GenerateCompetitionGroupsRequest.builder()
+                .teamsPerGroup(4)
+                .build();
+
+        competitionGroupService.generateGroups(eventId, request, IP);
+
+        InOrder inOrder = inOrder(teamRepository, judgeAssignmentService, groupRepository);
+        inOrder.verify(teamRepository).saveAll(any());
+        inOrder.verify(teamRepository).flush();
+        inOrder.verify(judgeAssignmentService).deactivateAssignmentsForDeletedGroup(groupId, IP);
+        inOrder.verify(groupRepository).delete(existing);
+        inOrder.verify(groupRepository).flush();
+        inOrder.verify(groupRepository).save(any(CompetitionGroup.class));
+        inOrder.verify(teamRepository).saveAll(any());
+    }
+
     private void stubTrack() {
         HackathonEvent event = HackathonEvent.builder().build();
         event.setId(eventId);

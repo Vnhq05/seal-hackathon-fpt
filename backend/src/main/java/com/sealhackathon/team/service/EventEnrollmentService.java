@@ -378,9 +378,11 @@ public class EventEnrollmentService {
         }
 
         if (wasLeader) {
+            // Leaving leader row is already deleted; promote with flush so
+            // uq_team_members_one_leader never sees a conflicting LEADER write.
             TeamMember newLeader = remaining.getFirst();
             newLeader.setRole(TeamMemberRole.LEADER);
-            teamMemberRepository.save(newLeader);
+            teamMemberRepository.saveAndFlush(newLeader);
             team.setLeaderId(newLeader.getUserId());
         }
 

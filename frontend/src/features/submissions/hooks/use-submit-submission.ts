@@ -10,7 +10,7 @@ import { SUBMISSION_DETAIL_KEY } from "@/features/submissions/hooks/use-submissi
 export interface SubmitSubmissionPayload {
   roundId: string;
   request: CreateSubmissionRequest;
-  /** Other-section file (any type, max 25MB) */
+  /** Other-section file (any type, max 5MB) */
   file?: File | null;
   teamId?: string;
 }

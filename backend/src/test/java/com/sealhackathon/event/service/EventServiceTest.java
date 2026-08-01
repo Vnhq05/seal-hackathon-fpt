@@ -64,6 +64,7 @@ class EventServiceTest {
     @Mock private EventScheduleService eventScheduleService;
     @Mock private AllowedEmailDomainService allowedEmailDomainService;
     @Mock private TrackDrawSessionService trackDrawSessionService;
+    @Mock private com.sealhackathon.judging.service.JudgingPublicService judgingPublicService;
     @Spy private EventStatusResolver eventStatusResolver = new EventStatusResolver();
 
     @InjectMocks private EventService eventService;
@@ -86,6 +87,7 @@ class EventServiceTest {
         when(teamRepository.countByEventId(any())).thenReturn(0L);
         when(eventMentorAssignmentRepository.findByHackathonEventId(any())).thenReturn(List.of());
         when(userPublicService.findAllByIds(any())).thenReturn(List.of());
+        when(judgingPublicService.hasActiveScoreReviews(any())).thenReturn(false);
     }
 
     private static final LocalDate REG_OPEN = LocalDate.now().minusDays(1);
@@ -158,12 +160,34 @@ class EventServiceTest {
                 .isInstanceOf(DuplicateResourceException.class);
     }
 
-    // ── BR-08: No edits after Active ──
+    // ── BR-08: No edits after Completed / Cancelled ──
 
     @Test
-    void updateEvent_shouldThrow_whenEventIsActive() {
+    void updateEvent_shouldSucceed_whenEventIsActive() {
         UUID eventId = UUID.randomUUID();
         HackathonEvent event = buildActiveEvent(eventId);
+        when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
+        when(eventRepository.existsByNameAndIdNot(anyString(), any())).thenReturn(false);
+        when(eventRepository.save(any(HackathonEvent.class))).thenAnswer(i -> i.getArgument(0));
+
+        UpdateEventRequest request = UpdateEventRequest.builder()
+                .name("Updated Active")
+                .season("Winter")
+                .year(LocalDate.now().getYear())
+                .startDate(LocalDate.now().minusDays(7))
+                .endDate(LocalDate.now().plusDays(60))
+                .registrationOpenDate(LocalDate.now().minusDays(30))
+                .registrationDeadline(LocalDate.now().minusDays(14))
+                .build();
+
+        EventResponse result = eventService.updateEvent(eventId, request, "127.0.0.1");
+        assertThat(result.getName()).isEqualTo("Updated Active");
+    }
+
+    @Test
+    void updateEvent_shouldThrow_whenEventIsCompleted() {
+        UUID eventId = UUID.randomUUID();
+        HackathonEvent event = buildEvent(eventId, EventStatus.COMPLETED);
         when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
 
         UpdateEventRequest request = UpdateEventRequest.builder()
@@ -178,7 +202,7 @@ class EventServiceTest {
 
         assertThatThrownBy(() -> eventService.updateEvent(eventId, request, "127.0.0.1"))
                 .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("Cannot modify event during or after the competition period");
+                .hasMessageContaining("Cannot modify a completed or cancelled event");
     }
 
     @Test

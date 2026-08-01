@@ -254,6 +254,108 @@ class JudgeAssignmentServiceTest {
     }
 
     @Test
+    void assignJudge_shouldReject_whenFinalJudgeAlreadyAssignedInPriorRound() {
+        UUID eventId = UUID.randomUUID();
+        UUID finalRoundId = UUID.randomUUID();
+        UUID judgeUserId = UUID.randomUUID();
+        Round finalRound = finalRound(finalRoundId, eventId);
+        Team team = Team.builder().eventId(eventId).name("Finalist").groupId(UUID.randomUUID()).build();
+        team.setId(UUID.randomUUID());
+
+        when(roundService.getRound(finalRoundId)).thenReturn(finalRound);
+        when(publishedResultRepository.existsByRoundId(finalRoundId)).thenReturn(false);
+        when(userPublicService.findById(judgeUserId)).thenReturn(Optional.of(
+                UserSnapshot.builder().userType(UserType.LECTURER).email("judge@fpt.edu.vn").build()));
+        when(eventJudgeService.isEventJudge(eventId, judgeUserId)).thenReturn(true);
+        when(teamRepository.findByEventId(eventId)).thenReturn(List.of(team));
+        when(judgeAssignmentRepository.existsPriorAssignmentInEvent(judgeUserId, eventId, finalRoundId))
+                .thenReturn(true);
+
+        AssignJudgeRequest request = AssignJudgeRequest.builder()
+                .judgeUserId(judgeUserId)
+                .scope(AssignmentScope.ROUND)
+                .build();
+
+        assertThatThrownBy(() -> judgeAssignmentService.assignJudge(eventId, finalRoundId, request, "127.0.0.1"))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("must not have judged any track, group, or round earlier");
+        verify(judgeAssignmentRepository, never()).save(any());
+    }
+
+    @Test
+    void assignJudge_shouldReject_whenFinalJudgeAlreadyScoredInPriorRound() {
+        UUID eventId = UUID.randomUUID();
+        UUID finalRoundId = UUID.randomUUID();
+        UUID judgeUserId = UUID.randomUUID();
+        Round finalRound = finalRound(finalRoundId, eventId);
+        Team team = Team.builder().eventId(eventId).name("Finalist").groupId(UUID.randomUUID()).build();
+        team.setId(UUID.randomUUID());
+
+        when(roundService.getRound(finalRoundId)).thenReturn(finalRound);
+        when(publishedResultRepository.existsByRoundId(finalRoundId)).thenReturn(false);
+        when(userPublicService.findById(judgeUserId)).thenReturn(Optional.of(
+                UserSnapshot.builder().userType(UserType.LECTURER).email("judge@fpt.edu.vn").build()));
+        when(eventJudgeService.isEventJudge(eventId, judgeUserId)).thenReturn(true);
+        when(teamRepository.findByEventId(eventId)).thenReturn(List.of(team));
+        when(judgeAssignmentRepository.existsPriorAssignmentInEvent(judgeUserId, eventId, finalRoundId))
+                .thenReturn(false);
+        when(judgeScoreRepository.existsPriorScoreInEvent(judgeUserId, eventId, finalRoundId))
+                .thenReturn(true);
+
+        AssignJudgeRequest request = AssignJudgeRequest.builder()
+                .judgeUserId(judgeUserId)
+                .scope(AssignmentScope.ROUND)
+                .build();
+
+        assertThatThrownBy(() -> judgeAssignmentService.assignJudge(eventId, finalRoundId, request, "127.0.0.1"))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("must not have judged any track, group, or round earlier");
+        verify(judgeAssignmentRepository, never()).save(any());
+    }
+
+    @Test
+    void assignJudge_shouldAllow_whenFinalJudgeHasNoPriorRoundHistory() {
+        UUID eventId = UUID.randomUUID();
+        UUID finalRoundId = UUID.randomUUID();
+        UUID judgeUserId = UUID.randomUUID();
+        Round finalRound = finalRound(finalRoundId, eventId);
+        Team team = Team.builder().eventId(eventId).name("Finalist").groupId(UUID.randomUUID()).build();
+        team.setId(UUID.randomUUID());
+
+        when(roundService.getRound(finalRoundId)).thenReturn(finalRound);
+        when(publishedResultRepository.existsByRoundId(finalRoundId)).thenReturn(false);
+        when(userPublicService.findById(judgeUserId)).thenReturn(Optional.of(
+                UserSnapshot.builder().userType(UserType.LECTURER).email("fresh@fpt.edu.vn").build()));
+        when(eventJudgeService.isEventJudge(eventId, judgeUserId)).thenReturn(true);
+        when(teamRepository.findByEventId(eventId)).thenReturn(List.of(team));
+        when(judgeAssignmentRepository.existsPriorAssignmentInEvent(judgeUserId, eventId, finalRoundId))
+                .thenReturn(false);
+        when(judgeScoreRepository.existsPriorScoreInEvent(judgeUserId, eventId, finalRoundId))
+                .thenReturn(false);
+        when(judgeAssignmentRepository.findByRoundIdAndJudgeUserIdAndActiveTrue(finalRoundId, judgeUserId))
+                .thenReturn(List.of());
+        when(mentorAssignmentRepository.findByHackathonEventId(eventId)).thenReturn(List.of());
+        when(teamMemberRepository.existsByTeamIdAndUserId(team.getId(), judgeUserId)).thenReturn(false);
+        when(judgeAssignmentRepository.save(any(JudgeAssignment.class))).thenAnswer(invocation -> {
+            JudgeAssignment saved = invocation.getArgument(0);
+            saved.setId(UUID.randomUUID());
+            return saved;
+        });
+        when(authPublicService.getCurrentUserId()).thenReturn(UUID.randomUUID());
+
+        AssignJudgeRequest request = AssignJudgeRequest.builder()
+                .judgeUserId(judgeUserId)
+                .scope(AssignmentScope.ROUND)
+                .build();
+
+        JudgeAssignmentResponse response =
+                judgeAssignmentService.assignJudge(eventId, finalRoundId, request, "127.0.0.1");
+
+        assertThat(response.getJudgeUserId()).isEqualTo(judgeUserId);
+        verify(judgeAssignmentRepository).save(any(JudgeAssignment.class));
+    }
+
+    @Test
     void computeIncompleteScopes_shouldUseEffectiveJudgeCountPerTeam() {
         UUID eventId = UUID.randomUUID();
         UUID roundId = UUID.randomUUID();
@@ -441,6 +543,20 @@ class JudgeAssignmentServiceTest {
                 .roundType(RoundType.PRELIMINARY)
                 .startDate(LocalDateTime.now().plusDays(1))
                 .scoringDeadline(LocalDateTime.now().plusDays(7))
+                .hackathonEvent(event)
+                .build();
+        round.setId(roundId);
+        return round;
+    }
+
+    private Round finalRound(UUID roundId, UUID eventId) {
+        HackathonEvent event = HackathonEvent.builder().name("SEAL 2026").build();
+        event.setId(eventId);
+        Round round = Round.builder()
+                .name("Final")
+                .roundType(RoundType.FINAL)
+                .startDate(LocalDateTime.now().plusDays(8))
+                .scoringDeadline(LocalDateTime.now().plusDays(14))
                 .hackathonEvent(event)
                 .build();
         round.setId(roundId);

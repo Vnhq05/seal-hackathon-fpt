@@ -24,6 +24,18 @@ public interface ScoreReviewRequestRepository extends JpaRepository<ScoreReviewR
             @Param("submissionId") UUID submissionId,
             @Param("statuses") List<ScoreReviewStatus> statuses);
 
+    @Query("SELECT CASE WHEN COUNT(r) > 0 THEN true ELSE false END FROM ScoreReviewRequest r "
+            + "WHERE r.eventId = :eventId AND r.status IN :statuses")
+    boolean existsByEventIdAndStatusIn(
+            @Param("eventId") UUID eventId,
+            @Param("statuses") List<ScoreReviewStatus> statuses);
+
+    @Query("SELECT CASE WHEN COUNT(r) > 0 THEN true ELSE false END FROM ScoreReviewRequest r "
+            + "WHERE r.roundId = :roundId AND r.status IN :statuses")
+    boolean existsByRoundIdAndStatusIn(
+            @Param("roundId") UUID roundId,
+            @Param("statuses") List<ScoreReviewStatus> statuses);
+
     @Query("SELECT r FROM ScoreReviewRequest r WHERE r.eventId = :eventId "
             + "AND (:roundId IS NULL OR r.roundId = :roundId) "
             + "AND (:status IS NULL OR r.status = :status) "

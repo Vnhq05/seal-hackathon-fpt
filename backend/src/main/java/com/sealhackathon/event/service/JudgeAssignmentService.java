@@ -102,6 +102,8 @@ public class JudgeAssignmentService {
         }
 
         validateScopeHierarchy(resolvedEventId, round, scope);
+        validateTeamsAssignedToGroups(resolvedEventId, scope);
+        validateFreshJudgeForFinal(resolvedEventId, round, request.getJudgeUserId());
         validateScopeOverlap(roundId, request.getJudgeUserId(), scope, null);
         validateNoConflictInScope(resolvedEventId, scope, request.getJudgeUserId());
         validateFinalJudgeIsFresh(resolvedEventId, round, request.getJudgeUserId());
@@ -550,6 +552,22 @@ public class JudgeAssignmentService {
         };
     }
 
+    /**
+     * Final-round judges must be fresh: they must not have been assigned to (or scored in)
+     * any other round of this event under ROUND / TRACK / GROUP scope.
+     */
+    private void validateFreshJudgeForFinal(UUID eventId, Round round, UUID judgeUserId) {
+        if (round.getRoundType() != RoundType.FINAL) {
+            return;
+        }
+        if (judgeAssignmentRepository.existsPriorAssignmentInEvent(judgeUserId, eventId, round.getId())
+                || judgeScoreRepository.existsPriorScoreInEvent(judgeUserId, eventId, round.getId())) {
+            throw new BusinessException(
+                    "Final round judges must not have judged any track, group, or round earlier in this event",
+                    HttpStatus.CONFLICT) {};
+        }
+    }
+
     private void validateScopeHierarchy(UUID eventId, Round round, ResolvedScope scope) {
         if (round.getRoundType() == RoundType.FINAL && scope.scope() != AssignmentScope.ROUND) {
             throw new BusinessException(
@@ -636,6 +654,31 @@ public class JudgeAssignmentService {
                         HttpStatus.CONFLICT) {};
             }
         }
+    }
+
+    private void validateTeamsAssignedToGroups(UUID eventId, ResolvedScope scope) {
+        List<Team> candidateTeams = switch (scope.scope()) {
+            case ROUND -> teamRepository.findByEventId(eventId);
+            case TRACK, GROUP -> teamRepository.findByEventIdAndTrackId(eventId, scope.trackId());
+        };
+        List<Team> missingGroups = candidateTeams.stream()
+                .filter(team -> team.getStatus() != TeamStatus.DISBANDED)
+                .filter(team -> team.getGroupId() == null)
+                .toList();
+        if (missingGroups.isEmpty()) {
+            return;
+        }
+        String teamNames = missingGroups.stream()
+                .map(Team::getName)
+                .limit(5)
+                .collect(Collectors.joining(", "));
+        if (missingGroups.size() > 5) {
+            teamNames += " (+" + (missingGroups.size() - 5) + " more)";
+        }
+        throw new BusinessException(
+                "Assign every team to a competition group before assigning judges. Missing: "
+                        + teamNames,
+                HttpStatus.CONFLICT) {};
     }
 
     /**

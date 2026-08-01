@@ -78,6 +78,7 @@ const ICON_MAP: Partial<Record<NotificationType, React.ComponentType<IconProps>>
   TEAM_CONFIRMED: TeamIcon,
   INVITATION_RECEIVED: TeamIcon,
   INVITATION_ACCEPTED: TeamIcon,
+  INVITATION_EXPIRED: TeamIcon,
   MENTOR_TEAM_ASSIGNED: AssignmentIcon,
   SUBMISSION_CREATED: SubmissionIcon,
   JUDGE_ASSIGNED: AssignmentIcon,
@@ -120,6 +121,7 @@ const UNREAD_COLORS: Partial<Record<NotificationType, { bg: string; color: strin
   LEAVE_REQUEST_APPROVED: { bg: "#dcfce7", color: "#0ea5e9" },
   LEAVE_REQUEST_REJECTED: { bg: "#fcdeb5", color: "#dc2626" },
   INVITATION_ACCEPTED: { bg: "#dcfce7", color: "#0ea5e9" },
+  INVITATION_EXPIRED: { bg: "#fcdeb5", color: "#dc2626" },
   MEMBER_KICKED: { bg: "#fcdeb5", color: "#dc2626" },
   TEAM_PROGRESS_ALERT: { bg: "#fcdeb5", color: "#b45309" },
 };

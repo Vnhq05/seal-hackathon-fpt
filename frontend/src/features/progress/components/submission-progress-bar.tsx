@@ -1,25 +1,48 @@
 "use client";
 
-const PART_LABELS = ["Slide", "GitHub", "Demo", "PDF"] as const;
+/** Mirrors SubmissionProgressCalculator on the backend: Slide, GitHub/source, Other. */
+export const REQUIRED_SUBMISSION_PARTS = 3;
+
+const PART_LABELS = ["Slide", "GitHub", "Other"] as const;
 
 export interface SubmissionPartStatus {
   slide: boolean;
   source: boolean;
-  demo: boolean;
-  pdf: boolean;
+  other: boolean;
 }
 
-export function submissionPartsFromCounts(submittedParts: number, requiredParts = 4): SubmissionPartStatus {
+/** Per-input state of the submit form; Other URL and Other file both feed the single "Other" part. */
+export interface SubmissionFieldStatus extends SubmissionPartStatus {
+  otherLink: boolean;
+  otherFile: boolean;
+}
+
+export function percentForParts(submittedParts: number): number {
+  switch (submittedParts) {
+    case 0:
+      return 0;
+    case 1:
+      return 33.33;
+    case 2:
+      return 66.66;
+    default:
+      return 100;
+  }
+}
+
+export function submissionPartsFromCounts(
+  submittedParts: number,
+  requiredParts = REQUIRED_SUBMISSION_PARTS,
+): SubmissionPartStatus {
   return {
     slide: submittedParts >= 1,
     source: submittedParts >= 2,
-    demo: submittedParts >= 3,
-    pdf: submittedParts >= requiredParts,
+    other: submittedParts >= requiredParts,
   };
 }
 
 export function countSubmissionParts(status: SubmissionPartStatus): number {
-  return [status.slide, status.source, status.demo, status.pdf].filter(Boolean).length;
+  return [status.slide, status.source, status.other].filter(Boolean).length;
 }
 
 export function submissionPartsFromVersion(
@@ -27,19 +50,23 @@ export function submissionPartsFromVersion(
     slideUrl?: string | null;
     sourceCodeUrl?: string | null;
     githubUrl?: string | null;
+    otherUrl?: string | null;
     demoUrl?: string | null;
     attachments?: unknown[] | null;
   } | null | undefined,
-): SubmissionPartStatus {
+): SubmissionFieldStatus {
   if (!version) {
-    return { slide: false, source: false, demo: false, pdf: false };
+    return { slide: false, source: false, other: false, otherLink: false, otherFile: false };
   }
   const source = version.sourceCodeUrl ?? version.githubUrl;
+  const otherLink = Boolean((version.otherUrl ?? version.demoUrl)?.trim());
+  const otherFile = Boolean(version.attachments && version.attachments.length > 0);
   return {
     slide: Boolean(version.slideUrl?.trim()),
     source: Boolean(source?.trim()),
-    demo: Boolean(version.demoUrl?.trim()),
-    pdf: Boolean(version.attachments && version.attachments.length > 0),
+    otherLink,
+    otherFile,
+    other: otherLink || otherFile,
   };
 }
 
@@ -55,7 +82,7 @@ interface SubmissionProgressBarProps {
 export function SubmissionProgressBar({
   percent,
   submittedParts,
-  requiredParts = 4,
+  requiredParts = REQUIRED_SUBMISSION_PARTS,
   partStatus,
   showPartLabels = false,
   size = "md",
@@ -65,15 +92,14 @@ export function SubmissionProgressBar({
   const barHeight = size === "sm" ? "h-1.5" : "h-2";
   const filesLabel =
     submittedParts != null
-      ? `${submittedParts}/${requiredParts} files`
+      ? `${submittedParts}/${requiredParts} parts`
       : `${clampedPercent}%`;
 
   const labels = partStatus
     ? [
         { label: PART_LABELS[0], done: partStatus.slide },
         { label: PART_LABELS[1], done: partStatus.source },
-        { label: PART_LABELS[2], done: partStatus.demo },
-        { label: PART_LABELS[3], done: partStatus.pdf },
+        { label: PART_LABELS[2], done: partStatus.other },
       ]
     : null;
 

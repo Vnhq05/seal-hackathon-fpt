@@ -80,6 +80,7 @@ class ScoreReviewIntegrationTest extends BaseIntegrationTest {
                 .endDate(LocalDate.of(2026, 12, 31))
                 .registrationDeadline(LocalDate.of(2026, 6, 1))
                 .status(EventStatus.SCORING)
+                .scoreScaleMax(5)
                 .build());
         eventId = event.getId();
 
@@ -178,7 +179,14 @@ class ScoreReviewIntegrationTest extends BaseIntegrationTest {
                         .header("Authorization", "Bearer " + tokenFor(coordinator)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.judgeScores", hasSize(3)))
-                .andExpect(jsonPath("$.data.deviationValue").value(org.hamcrest.Matchers.greaterThanOrEqualTo(25.0)));
+                .andExpect(jsonPath("$.data.scoreScaleMax").value(5))
+                .andExpect(jsonPath("$.data.deviationValue").value(80.0))
+                .andExpect(jsonPath("$.data.consensusIndex").value(org.hamcrest.Matchers.closeTo(0.6667, 0.001)))
+                .andExpect(jsonPath("$.data.judgeScores[0].flagged").value(false))
+                .andExpect(jsonPath("$.data.judgeScores[1].flagged").value(false))
+                .andExpect(jsonPath("$.data.judgeScores[2].flagged").value(true))
+                .andExpect(jsonPath("$.data.judgeScores[2].percentScore").value(20.0))
+                .andExpect(jsonPath("$.data.judgeScores[2].gapFromMaxPct").value(80.0));
     }
 
     @Test

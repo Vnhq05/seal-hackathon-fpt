@@ -13,7 +13,8 @@ import { scoreReviewNoteLabel } from "@/lib/api/score-review.api";
 
 const headerCell: React.CSSProperties = {
   fontSize: 12, fontWeight: 600, color: "#8891a5",
-  letterSpacing: "0.24px", lineHeight: "12px", padding: "12px 16px", textAlign: "left",
+  letterSpacing: "0.24px", lineHeight: "16px", padding: "12px 16px", textAlign: "left",
+  whiteSpace: "nowrap",
 };
 const bodyCell: React.CSSProperties = {
   fontSize: 14, color: "#0e1528", lineHeight: "20px", padding: "14px 16px",
@@ -141,7 +142,7 @@ function ReviewDetailModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto border-2 border-navy bg-white shadow-[8px_8px_0_0_#0c1228]">
+      <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto border-2 border-navy bg-white shadow-[8px_8px_0_0_#0c1228]">
         <div className="flex items-center justify-between border-b border-seal-border p-4">
           <h2 className="text-lg font-bold text-seal-text">Score Adjustment Request</h2>
           <button type="button" onClick={onClose} className="text-sm text-seal-text-muted hover:text-seal-text">
@@ -156,34 +157,75 @@ function ReviewDetailModal({
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div><span className="text-seal-text-muted">Team:</span> {review.teamName}</div>
               <div><span className="text-seal-text-muted">Round:</span> {review.roundType ?? review.roundId}</div>
-              <div><span className="text-seal-text-muted">Deviation:</span> {review.deviationValue.toFixed(1)} pts</div>
-              <div><span className="text-seal-text-muted">Range:</span> {review.minJudgeScore.toFixed(1)} – {review.maxJudgeScore.toFixed(1)}</div>
+              <div><span className="text-seal-text-muted">Deviation:</span> {review.deviationValue.toFixed(1)}%</div>
+              {review.scoreScaleMax != null && (
+                <div><span className="text-seal-text-muted">Scale:</span> 0–{review.scoreScaleMax}</div>
+              )}
             </div>
 
             <table className="w-full" style={{ borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ backgroundColor: "#eef0f6" }}>
                   <th style={headerCell}>Judge</th>
-                  <th style={{ ...headerCell, width: 120 }}>Weighted (0–5)</th>
-                  <th style={{ ...headerCell, width: 100 }}>Score (%)</th>
+                  <th style={{ ...headerCell, width: 110 }}>
+                    {review.scoreScaleMax != null
+                      ? `Weighted (0–${review.scoreScaleMax})`
+                      : "Weighted"}
+                  </th>
+                  <th style={{ ...headerCell, width: 90 }}>Score (%)</th>
+                  <th style={{ ...headerCell, width: 80 }}>Gap</th>
                   <th style={{ ...headerCell, width: 100 }}>Status</th>
                 </tr>
               </thead>
               <tbody>
-                {(review.judgeScores ?? []).map((j) => (
-                  <tr key={j.judgeUserId} style={{ borderTop: "1px solid rgba(198,198,205,0.3)" }}>
-                    <td style={{ ...bodyCell, fontWeight: 600 }}>{j.judgeFullName ?? j.judgeUserId}</td>
-                    <td style={bodyCell}>{j.weightedScore.toFixed(2)}</td>
-                    <td style={bodyCell}>{j.percentScore.toFixed(1)}</td>
-                    <td style={bodyCell}>{j.status}</td>
-                  </tr>
-                ))}
+                {(review.judgeScores ?? []).map((j) => {
+                  const maxPct = Math.max(
+                    ...(review.judgeScores ?? []).map((x) => x.percentScore),
+                    0,
+                  );
+                  const gap =
+                    j.gapFromMaxPct != null
+                      ? j.gapFromMaxPct
+                      : maxPct - j.percentScore;
+                  const isFlagged = j.flagged === true || gap > 25;
+                  return (
+                    <tr
+                      key={j.judgeUserId}
+                      style={{
+                        borderTop: "1px solid rgba(198,198,205,0.3)",
+                        backgroundColor: isFlagged ? "rgba(254, 226, 226, 0.65)" : undefined,
+                      }}
+                    >
+                      <td style={{ ...bodyCell, fontWeight: 600 }}>
+                        {j.judgeFullName ?? j.judgeUserId}
+                        {isFlagged ? (
+                          <span className="ml-2 inline-block rounded bg-red-100 px-1.5 py-0.5 text-xs font-semibold text-red-700">
+                            deviation
+                          </span>
+                        ) : null}
+                      </td>
+                      <td style={bodyCell}>{j.weightedScore.toFixed(2)}</td>
+                      <td style={{
+                        ...bodyCell,
+                        fontWeight: isFlagged ? 700 : undefined,
+                        color: isFlagged ? "#b91c1c" : bodyCell.color,
+                      }}>
+                        {j.percentScore.toFixed(1)}%
+                      </td>
+                      <td style={bodyCell}>{`${gap.toFixed(1)}%`}</td>
+                      <td style={bodyCell}>{j.status}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
               <tfoot>
                 <tr style={{ borderTop: "2px solid rgba(198,198,205,0.5)", backgroundColor: "#f8f9fc" }}>
-                  <td colSpan={4} style={{ ...bodyCell, fontWeight: 600 }}>
+                  <td colSpan={5} style={{ ...bodyCell, fontWeight: 600 }}>
                     Min: {review.minJudgeScore.toFixed(1)}% · Max: {review.maxJudgeScore.toFixed(1)}%
-                    {" · "}Deviation: {review.deviationValue.toFixed(1)} pts
+                    {" · "}Deviation: {review.deviationValue.toFixed(1)}%
+                    {(review.judgeScores ?? []).some((j) => j.flagged || (j.gapFromMaxPct != null && j.gapFromMaxPct > 25))
+                      ? " · Red rows = judges outside majority consensus"
+                      : ""}
                   </td>
                 </tr>
               </tfoot>

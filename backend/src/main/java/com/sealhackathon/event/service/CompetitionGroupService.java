@@ -78,6 +78,7 @@ public class CompetitionGroupService {
     /**
      * After track assignment: BTC enters target teams/group (K). For each track with N teams,
      * create G = ceil(N/K) groups and assign teams so group sizes differ by at most 1.
+     * Safe to re-run: clears previous groups first (and flushes) so unique (track, name) can be reused.
      */
     @Transactional
     public GenerateCompetitionGroupsResponse generateGroups(
@@ -106,6 +107,10 @@ public class CompetitionGroupService {
                 deleteGroupInternal(group, ipAddress);
             }
         }
+        // Flush the deletes before re-creating: otherwise Hibernate orders the new inserts
+        // first and unique (track_id, name) blocks reusing group names on a re-run.
+        teamRepository.flush();
+        groupRepository.flush();
 
         List<GenerateCompetitionGroupsResponse.TrackGroupPlan> plans = new ArrayList<>();
         int totalGroups = 0;

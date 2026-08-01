@@ -55,7 +55,7 @@ class TrackAssignmentServiceTest {
     void assignOneInternal_shouldThrowConflict_whenNonManualAndTeamAlreadyHasTrack() {
         Team team = buildTeam();
         team.setTrackId(UUID.randomUUID());
-        when(teamRepository.findById(teamId)).thenReturn(Optional.of(team));
+        stubHappyPath(team);
 
         assertThatThrownBy(() -> trackAssignmentService.assignOneInternal(
                 eventId, assignedBy, teamId, trackId, TrackAssignmentMethod.RANDOM))

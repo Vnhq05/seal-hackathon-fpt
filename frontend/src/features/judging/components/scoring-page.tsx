@@ -420,7 +420,7 @@ function ScoringPageContent({
       {submission.pdfFileUrl && (
         <div className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-4">
           <div className="mb-2 text-xs font-medium text-seal-text-muted">
-            PDF: {submission.pdfFileName ?? "Submission"}
+            File: {submission.pdfFileName ?? "Submission"}
           </div>
           <SubmissionPdfViewer fileUrl={submission.pdfFileUrl} fileName={submission.pdfFileName} />
         </div>
@@ -573,8 +573,12 @@ function ScoringPageContent({
         <div className="flex flex-col gap-3 border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-4">
           {adjustmentContext && adjustmentContext.deviationValue >= adjustmentContext.deviationThreshold && (
             <p className="text-sm text-amber-800">
-              Score deviation: <strong>{adjustmentContext.deviationValue.toFixed(1)}</strong> pts
-              (threshold {adjustmentContext.deviationThreshold})
+              Score deviation: <strong>{adjustmentContext.deviationValue.toFixed(1)}%</strong>
+              {" "}(threshold {adjustmentContext.deviationThreshold}%
+              {adjustmentContext.scoreScaleMax != null
+                ? `, scale 1–${adjustmentContext.scoreScaleMax}`
+                : ""}
+              )
             </p>
           )}
 

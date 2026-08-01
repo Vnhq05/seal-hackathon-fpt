@@ -101,7 +101,7 @@ export function JudgeScoringListPage() {
                 <th className="px-4 py-3">Team</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Deviation</th>
-                <th className="px-4 py-3 w-28" />
+                <th className="px-4 py-3 w-32">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -138,7 +138,7 @@ export function JudgeScoringListPage() {
                             onClick={() => setReviewModal({ eventId: a.eventId!, reviewId: a.openScoreReviewId! })}
                             className="text-left text-xs font-semibold text-royal hover:underline"
                           >
-                            View details
+                            View deviation
                           </button>
                         )}
                       </div>
@@ -152,7 +152,9 @@ export function JudgeScoringListPage() {
                         href={`${portalBase}/scoring/${a.teamId}/${a.roundId}`}
                         className="text-xs font-semibold text-royal hover:underline"
                       >
-                        {a.scoringStatus === "COMPLETED" || a.scoringStatus === "LOCKED" ? "View" : "Score"}
+                        {a.scoringStatus === "COMPLETED" || a.scoringStatus === "LOCKED"
+                          ? "Open scores"
+                          : "Score"}
                       </Link>
                     ) : a.conflictOfInterest ? (
                       <span className="text-xs text-red-600">Cannot score</span>

@@ -160,6 +160,14 @@ public class EventPublicServiceImpl implements EventPublicService {
 
     @Override
     @Transactional(readOnly = true)
+    public boolean isStaffCompleted(UUID eventId) {
+        return eventRepository.findById(eventId)
+                .map(e -> e.getStatus() == EventStatus.COMPLETED)
+                .orElse(false);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public UUID getEventIdByRoundId(UUID roundId) {
         return roundRepository.findById(roundId)
                 .map(r -> r.getHackathonEvent().getId())
@@ -200,6 +208,7 @@ public class EventPublicServiceImpl implements EventPublicService {
                 .semesterMax(event.getSemesterMax())
                 .leaderboardPublic(event.isLeaderboardPublic())
                 .scoringTemplateId(event.getScoringTemplateId())
+                .scoreScaleMax(event.getScoreScaleMax() != null ? event.getScoreScaleMax() : 100)
                 .tiebreakerCriteria(event.getTiebreakerCriteria())
                 .tiebreakerCriterionIds(List.copyOf(event.getTiebreakerCriterionIds()))
                 .build();

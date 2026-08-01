@@ -32,6 +32,11 @@ public class ScoreReviewResponse {
     private BigDecimal deviationValue;
     private BigDecimal minJudgeScore;
     private BigDecimal maxJudgeScore;
+    /** Event score scale max used for percent normalization (5, 10, or 100). */
+    private Integer scoreScaleMax;
+    /** 1 − (flagged judges / scored judges); null when no breakdown. */
+    private BigDecimal consensusIndex;
+    private double cohenDThreshold;
     private ScoreReviewStatus status;
     private ScoreAdjustmentType adjustmentType;
     private UUID requestedBy;

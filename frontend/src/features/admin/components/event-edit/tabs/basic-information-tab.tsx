@@ -95,7 +95,7 @@ export function BasicInformationTab({ event }: { event: EventResponse }) {
     >
       {!editable && (
         <div style={bannerErrorStyle}>
-          Event cannot be edited while active or after completion.
+          Event cannot be edited after completion or cancellation.
         </div>
       )}
 

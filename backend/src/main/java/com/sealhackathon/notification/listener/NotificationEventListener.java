@@ -15,6 +15,7 @@ import com.sealhackathon.ranking.event.ResultsPublishedEvent;
 import com.sealhackathon.submission.event.SubmissionCreatedEvent;
 import com.sealhackathon.team.event.InvitationAcceptedEvent;
 import com.sealhackathon.team.event.InvitationSentEvent;
+import com.sealhackathon.team.event.InvitationsExpiredDueToTeamFullEvent;
 import com.sealhackathon.team.event.JoinRequestCreatedEvent;
 import com.sealhackathon.team.event.JoinRequestResolvedEvent;
 import com.sealhackathon.team.event.LeaveRequestCreatedEvent;
@@ -28,6 +29,7 @@ import com.sealhackathon.team.service.TeamPublicService;
 import com.sealhackathon.user.event.AccountApprovedEvent;
 import com.sealhackathon.user.event.AccountRejectedEvent;
 import com.sealhackathon.user.event.InternalAccountCreatedEvent;
+import com.sealhackathon.user.dto.snapshot.UserSnapshot;
 import com.sealhackathon.user.service.UserPublicService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -128,6 +130,23 @@ public class NotificationEventListener {
                 event.memberName() + " has joined team " + event.teamName(),
                 event.teamId(), "Team",
                 List.of(event.leaderId()));
+    }
+
+    @TransactionalEventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void onInvitationsExpiredDueToTeamFull(InvitationsExpiredDueToTeamFullEvent event) {
+        List<UUID> recipients = event.inviteeEmails().stream()
+                .map(userPublicService::findByEmail)
+                .flatMap(Optional::stream)
+                .map(UserSnapshot::getId)
+                .distinct()
+                .toList();
+
+        notify(NotificationType.INVITATION_EXPIRED,
+                "Invitation Expired",
+                "Team '" + event.teamName() + "' is now full. Your invitation has expired.",
+                event.teamId(), "Team",
+                recipients);
     }
 
     @TransactionalEventListener

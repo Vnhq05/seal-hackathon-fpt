@@ -263,6 +263,66 @@ class TeamServiceTest {
         assertThat(response.getName()).isEqualTo("OnTime");
     }
 
+    // ── BR-20: Transfer leadership ──
+
+    @Test
+    void transferLeadership_shouldDemoteLeadersThenPromote() {
+        UUID currentLeaderId = UUID.randomUUID();
+        UUID newLeaderId = UUID.randomUUID();
+        UUID teamId = UUID.randomUUID();
+        UUID eventId = UUID.randomUUID();
+
+        Team team = buildTeam(teamId, eventId);
+        team.setLeaderId(currentLeaderId);
+        when(teamRepository.findById(teamId)).thenReturn(Optional.of(team));
+        when(eventPublicService.getRegistrationDeadline(eventId))
+                .thenReturn(LocalDateTime.now().plusDays(7));
+
+        TeamMember currentLeader = TeamMember.builder()
+                .userId(currentLeaderId)
+                .role(TeamMemberRole.MEMBER)
+                .build();
+        TeamMember newLeader = TeamMember.builder()
+                .userId(newLeaderId)
+                .role(TeamMemberRole.MEMBER)
+                .build();
+        when(teamMemberRepository.existsByTeamIdAndUserId(teamId, newLeaderId)).thenReturn(true);
+        when(teamMemberRepository.demoteLeaders(teamId)).thenReturn(1);
+        when(teamMemberRepository.findByTeamIdAndUserId(teamId, newLeaderId))
+                .thenReturn(Optional.of(newLeader));
+        when(teamMemberRepository.saveAndFlush(any(TeamMember.class))).thenAnswer(i -> i.getArgument(0));
+        when(teamRepository.save(any(Team.class))).thenAnswer(i -> i.getArgument(0));
+        when(teamMemberRepository.findByTeamId(teamId)).thenReturn(List.of(currentLeader, newLeader));
+        when(userPublicService.findAllByIds(any())).thenReturn(List.of());
+        stubTeamSizeConfig();
+
+        TeamResponse response = teamService.transferLeadership(currentLeaderId, teamId, newLeaderId);
+
+        assertThat(response.getLeaderId()).isEqualTo(newLeaderId);
+        assertThat(newLeader.getRole()).isEqualTo(TeamMemberRole.LEADER);
+
+        var inOrder = org.mockito.Mockito.inOrder(teamMemberRepository);
+        inOrder.verify(teamMemberRepository).demoteLeaders(teamId);
+        inOrder.verify(teamMemberRepository).saveAndFlush(newLeader);
+    }
+
+    @Test
+    void transferLeadership_shouldThrow_whenTransferringToSelf() {
+        UUID leaderId = UUID.randomUUID();
+        UUID teamId = UUID.randomUUID();
+        UUID eventId = UUID.randomUUID();
+
+        Team team = buildTeam(teamId, eventId);
+        team.setLeaderId(leaderId);
+        when(teamRepository.findById(teamId)).thenReturn(Optional.of(team));
+        when(eventPublicService.getRegistrationDeadline(eventId))
+                .thenReturn(LocalDateTime.now().plusDays(7));
+
+        assertThatThrownBy(() -> teamService.transferLeadership(leaderId, teamId, leaderId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("Cannot transfer leadership to yourself");
+    }
+
     // ── BR-20: Leader cannot remove self ──
 
     @Test

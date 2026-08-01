@@ -4,12 +4,12 @@ spring:
   main:
     allow-circular-references: false
 
-  # Must be >= app.submission.pdf.max-size-bytes (5 MB). Spring Boot default is only 1 MB,
+  # Must be >= app.submission.file.max-size-bytes (5 MB). Spring Boot default is only 1 MB,
   # which surfaces as MaxUploadSizeExceededException → "Uploaded file is too large."
   servlet:
     multipart:
-      max-file-size: ${SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE:25MB}
-      max-request-size: ${SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE:26MB}
+      max-file-size: ${SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE:5MB}
+      max-request-size: ${SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE:6MB}
 
   datasource:
     url: ${DB_URL:jdbc:sqlserver://localhost:1433;databaseName=SEAL;encrypt=true;trustServerCertificate=true;sendStringParametersAsUnicode=true}
@@ -76,12 +76,12 @@ app:
     pdf:
       max-size-bytes: ${APP_SUBMISSION_PDF_MAX_SIZE_BYTES:5242880}
     file:
-      max-size-bytes: ${APP_SUBMISSION_FILE_MAX_SIZE_BYTES:26214400}
+      max-size-bytes: ${APP_SUBMISSION_FILE_MAX_SIZE_BYTES:5242880}
   hackathon:
     judging:
       judge-trim-threshold: 5
       deviation-threshold: 25
-      percent-scale: 20
+      cohen-d-threshold: 0.8
     team:
       invitation-expiry-days: 7
       max-skill-roles: 5

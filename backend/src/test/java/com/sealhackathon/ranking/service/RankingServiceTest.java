@@ -40,6 +40,7 @@ class RankingServiceTest {
     @Mock private AdvancementService advancementService;
     @Mock private TeamPublicService teamPublicService;
     @Mock private ApplicationEventPublisher eventPublisher;
+    @Mock private com.sealhackathon.judging.service.JudgingPublicService judgingPublicService;
 
     @InjectMocks private RankingService rankingService;
 
@@ -51,6 +52,7 @@ class RankingServiceTest {
         UUID publisherId = UUID.randomUUID();
 
         when(publishedResultRepository.existsByRoundId(roundId)).thenReturn(false);
+        when(judgingPublicService.hasActiveScoreReviewsForRound(roundId)).thenReturn(false);
         when(rankingRepository.findMaxVersionByRoundId(roundId)).thenReturn(1);
         Round round = org.mockito.Mockito.mock(Round.class);
         when(round.getRoundType()).thenReturn(RoundType.PRELIMINARY);
@@ -90,11 +92,23 @@ class RankingServiceTest {
     void publishResults_shouldThrow_whenNoRankings() {
         UUID roundId = UUID.randomUUID();
         when(publishedResultRepository.existsByRoundId(roundId)).thenReturn(false);
+        when(judgingPublicService.hasActiveScoreReviewsForRound(roundId)).thenReturn(false);
         when(rankingRepository.findMaxVersionByRoundId(roundId)).thenReturn(0);
 
         assertThatThrownBy(() -> rankingService.publishResults(roundId, UUID.randomUUID()))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("No rankings");
+    }
+
+    @Test
+    void publishResults_shouldThrow_whenActiveScoreReviews() {
+        UUID roundId = UUID.randomUUID();
+        when(publishedResultRepository.existsByRoundId(roundId)).thenReturn(false);
+        when(judgingPublicService.hasActiveScoreReviewsForRound(roundId)).thenReturn(true);
+
+        assertThatThrownBy(() -> rankingService.publishResults(roundId, UUID.randomUUID()))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("score deviation");
     }
 
     // ── Rankings ──

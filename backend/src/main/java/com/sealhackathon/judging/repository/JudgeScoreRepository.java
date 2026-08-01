@@ -34,6 +34,22 @@ public interface JudgeScoreRepository extends JpaRepository<JudgeScore, UUID> {
 
     long countByRoundIdAndJudgeUserId(UUID roundId, UUID judgeUserId);
 
+    /**
+     * True if the judge has submitted/started any score in another round of this event.
+     */
+    @Query("""
+            SELECT CASE WHEN COUNT(js) > 0 THEN true ELSE false END
+            FROM JudgeScore js, com.sealhackathon.event.domain.Round r
+            WHERE js.roundId = r.id
+              AND js.judgeUserId = :judgeUserId
+              AND r.hackathonEvent.id = :eventId
+              AND js.roundId <> :excludeRoundId
+            """)
+    boolean existsPriorScoreInEvent(
+            @Param("judgeUserId") UUID judgeUserId,
+            @Param("eventId") UUID eventId,
+            @Param("excludeRoundId") UUID excludeRoundId);
+
     @Query("SELECT CASE WHEN COUNT(js) > 0 THEN true ELSE false END FROM JudgeScore js, "
             + "com.sealhackathon.submission.domain.Submission s "
             + "WHERE js.submissionId = s.id AND js.judgeUserId = :judgeUserId "

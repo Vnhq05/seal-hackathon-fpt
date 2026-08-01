@@ -68,7 +68,7 @@ export function StudentSubmissionPage() {
       <div>
         <h1 className="text-[28px] font-bold tracking-tight text-seal-text">Submit</h1>
         <p className="mt-1 text-sm text-seal-text-secondary">
-          Save each part when ready — Slide, GitHub, Demo, and PDF.
+          Save each part when ready — Slide, GitHub, and Other (any link or file under 5MB).
         </p>
       </div>
 

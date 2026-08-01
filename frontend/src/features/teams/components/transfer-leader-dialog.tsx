@@ -23,6 +23,8 @@ export function TransferLeaderDialog({ eventId, team, onClose }: TransferLeaderD
       teamApi.transferLeadership(eventId, team.id, newLeaderId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["my-teams-all-events"] });
+      qc.invalidateQueries({ queryKey: ["my-team", eventId] });
+      qc.invalidateQueries({ queryKey: ["team-detail", eventId, team.id] });
       onClose();
     },
   });

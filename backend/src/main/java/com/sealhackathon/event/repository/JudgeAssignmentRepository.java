@@ -34,6 +34,22 @@ public interface JudgeAssignmentRepository extends JpaRepository<JudgeAssignment
 
     long countByJudgeUserId(UUID judgeUserId);
 
+    /**
+     * True if the judge was assigned to any other round of this event (any scope:
+     * ROUND / TRACK / GROUP), including deactivated assignments.
+     */
+    @Query("""
+            SELECT CASE WHEN COUNT(ja) > 0 THEN true ELSE false END
+            FROM JudgeAssignment ja
+            WHERE ja.judgeUserId = :judgeUserId
+              AND ja.round.hackathonEvent.id = :eventId
+              AND ja.round.id <> :excludeRoundId
+            """)
+    boolean existsPriorAssignmentInEvent(
+            @Param("judgeUserId") UUID judgeUserId,
+            @Param("eventId") UUID eventId,
+            @Param("excludeRoundId") UUID excludeRoundId);
+
     /** Active assignment on any non-Final round of the event (used to keep Final panel fresh). */
     @Query("""
             SELECT CASE WHEN COUNT(a) > 0 THEN true ELSE false END

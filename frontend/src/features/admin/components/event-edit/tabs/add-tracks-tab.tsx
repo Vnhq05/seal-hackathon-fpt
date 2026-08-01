@@ -29,7 +29,10 @@ export function AddTracksTab({ event }: { event: EventResponse }) {
   const [actionError, setActionError] = useState<string | null>(null);
 
   const handleAddTrack = () => {
-    if (!trackName.trim()) return;
+    if (!trackName.trim()) {
+      setTrackError("Track name is required");
+      return;
+    }
     setTrackError(null);
     setActionError(null);
     createTrack(

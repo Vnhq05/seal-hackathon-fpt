@@ -16,6 +16,7 @@ import {
 import { useTeamAwards, useAssignAwards } from "@/features/coordinator/hooks/use-awards";
 import { useAdminEvent } from "@/features/admin/hooks/use-admin-hackathons";
 import { formatPrizeAmount, getPrizeLabel, orderManualPrizes, orderRankBasedPrizes } from "@/lib/prize.utils";
+import { formatPrizeAmount, getPrizeLabel } from "@/lib/prize.utils";
 import type { LiveScoreEntry, LiveScoreBoard, RankingEvent, LiveScoreStatus, TrackInfo } from "@/lib/api/livescore.api";
 import type { RoundType } from "@/lib/api/types";
 import type { AdvancementSelectionPreviewResponse } from "@/lib/api/ranking.api";
@@ -904,6 +905,14 @@ function AwardsPanel({ eventId, rankings }: { eventId: string; rankings: LiveSco
               <span style={{ fontWeight: 500, color: "#0e1528", flex: 1 }}>{a.teamName}</span>
               <span style={{ color: "#0e1528", whiteSpace: "nowrap" }}>
                 {a.prizeValue ? formatPrizeAmount(a.prizeValue) : "—"}
+
+                {getPrizeLabel(a.prizeRank, a.prizeLabel)}
+              </span>
+              <span style={{ fontWeight: 500, color: "#0e1528", flex: 1 }}>
+                {a.teamName ?? "Unknown team"}
+              </span>
+              <span style={{ color: "#0e1528", textAlign: "right" }}>
+                {formatPrizeAmount(a.prizeValue)}
               </span>
             </div>
           ))}

@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useQuery, useQueries, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   assignmentApi,
@@ -94,6 +95,33 @@ export function useJudgeAssignments(
       }),
     enabled: !!eventId && !!roundId && (!requiresTrackId || !!trackId),
   });
+}
+
+/** Judge user IDs already assigned in other rounds of the same event (for Final freshness). */
+export function usePriorRoundJudgeUserIds(
+  eventId: string,
+  priorRoundIds: string[],
+  enabled = true,
+) {
+  const queries = useQueries({
+    queries: priorRoundIds.map((roundId) => ({
+      queryKey: [JUDGE_ASSIGNMENTS_KEY, eventId, roundId, "prior-freshness"],
+      queryFn: () => assignmentApi.listJudges(eventId, roundId),
+      enabled: !!eventId && !!roundId && enabled,
+    })),
+  });
+
+  const judgeUserIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const q of queries) {
+      for (const a of q.data ?? []) {
+        if (a.judgeUserId) ids.add(a.judgeUserId);
+      }
+    }
+    return ids;
+  }, [queries]);
+
+  return judgeUserIds;
 }
 
 export function useJudgeWorkloadPreview(

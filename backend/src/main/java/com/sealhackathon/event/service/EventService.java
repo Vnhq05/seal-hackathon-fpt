@@ -89,6 +89,7 @@ public class EventService {
     private final EventStatusResolver eventStatusResolver;
     private final EventFinder eventFinder;
     private final EventOwnershipGuard eventOwnershipGuard;
+    private final com.sealhackathon.judging.service.JudgingPublicService judgingPublicService;
 
     @Transactional
     public EventResponse createEvent(CreateEventRequest request) {
@@ -196,9 +197,9 @@ public class EventService {
         enforceOwnership(event);
 
         EventStatus liveStatus = resolveStatus(event);
-        if (liveStatus == EventStatus.ACTIVE || liveStatus == EventStatus.COMPLETED) {
+        if (liveStatus == EventStatus.COMPLETED || liveStatus == EventStatus.CANCELLED) {
             throw new BusinessException(
-                    "Cannot modify event during or after the competition period.",
+                    "Cannot modify a completed or cancelled event.",
                     HttpStatus.BAD_REQUEST) {};
         }
 
@@ -374,6 +375,13 @@ public class EventService {
         if (target == EventStatus.SCORING) {
             judgeAssignmentService.assertEventReadyForScoring(eventId);
         }
+        if (target == EventStatus.COMPLETED
+                && judgingPublicService.hasActiveScoreReviews(eventId)) {
+            throw new BusinessException(
+                    "Cannot complete the event while score deviation reviews are still open or approved. "
+                            + "Resolve all score reviews first so the judging panel reaches consensus.",
+                    HttpStatus.BAD_REQUEST);
+        }
 
         String oldStatus = event.getStatus().name();
         event.setStatus(target);
@@ -537,9 +545,9 @@ public class EventService {
 
     private void assertEventMutable(HackathonEvent event) {
         EventStatus liveStatus = resolveStatus(event);
-        if (liveStatus == EventStatus.ACTIVE || liveStatus == EventStatus.COMPLETED) {
+        if (liveStatus == EventStatus.COMPLETED || liveStatus == EventStatus.CANCELLED) {
             throw new BusinessException(
-                    "Cannot modify event during or after the competition period.",
+                    "Cannot modify a completed or cancelled event.",
                     HttpStatus.BAD_REQUEST) {};
         }
     }
@@ -597,6 +605,16 @@ public class EventService {
      */
     public EventStatus resolveStatus(HackathonEvent event) {
         return eventStatusResolver.resolveStatus(event);
+    }
+
+    /**
+     * Students see Results & Awards only after staff complete the event, make results
+     * public, and all score-deviation reviews are closed (judging consensus).
+     */
+    boolean isStudentResultsVisible(HackathonEvent event, boolean hasActiveScoreReviews) {
+        return event.getStatus() == EventStatus.COMPLETED
+                && event.isLeaderboardPublic()
+                && !hasActiveScoreReviews;
     }
 
     private void enforceOwnership(HackathonEvent event) {
@@ -818,6 +836,9 @@ public class EventService {
                 ? 0
                 : (int) teamRepository.countByEventIdAndStatusNot(
                         eventId, com.sealhackathon.team.domain.enums.TeamStatus.DISBANDED);
+        boolean hasActiveScoreReviews = eventId != null
+                && judgingPublicService.hasActiveScoreReviews(eventId);
+        boolean studentResultsVisible = isStudentResultsVisible(event, hasActiveScoreReviews);
 
         return EventResponse.builder()
                 .id(event.getId())
@@ -829,6 +850,10 @@ public class EventService {
                 .registrationDeadline(event.getRegistrationDeadline())
                 .registrationOpenDate(event.getRegistrationOpenDate())
                 .status(resolveStatus(event))
+                .staffCompleted(event.getStatus() == EventStatus.COMPLETED)
+                .leaderboardPublic(event.isLeaderboardPublic())
+                .hasActiveScoreReviews(hasActiveScoreReviews)
+                .studentResultsVisible(studentResultsVisible)
                 .description(event.getDescription())
                 .location(event.getLocation())
                 .format(event.getFormat())

@@ -266,7 +266,6 @@ export function ProfileHeader({ profile, activeTab, onTabChange }: ProfileHeader
                   letterSpacing: "0.24px",
                   lineHeight: "12px",
                   padding: "16px 0 18px 0",
-                  borderBottom: isActive ? "2px solid #38bdf8" : "2px solid transparent",
                   background: "none",
                   border: "none",
                   borderBottomWidth: 2,

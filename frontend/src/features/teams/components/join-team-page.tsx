@@ -43,10 +43,11 @@ export function JoinTeamPage({ invitationId }: JoinTeamPageProps) {
     | InvitationResponse
     | null
     | undefined;
-  const { respond, isPending } = useRespondInvitation(invitationId);
+  const { respond, isPending, error, reset } = useRespondInvitation(invitationId);
   const { data: activeEnrollment } = useMyActiveEnrollment();
   const { data: event } = useHackathonPage(activeEnrollment?.eventId ?? "");
   const { canModifyMembers, registrationClosedReason } = useInvitationParticipationGate(event);
+  const actionError = error instanceof Error ? error.message : null;
 
   if (isLoading) {
     return (
@@ -125,11 +126,28 @@ export function JoinTeamPage({ invitationId }: JoinTeamPageProps) {
               <ParticipationBlockBanner reason={registrationClosedReason} />
             )}
 
+            {actionError && (
+              <p
+                style={{
+                  fontSize: 14,
+                  color: "#dc2626",
+                  lineHeight: "19.25px",
+                  margin: 0,
+                  textAlign: "center",
+                }}
+              >
+                {actionError}
+              </p>
+            )}
+
             <div className="flex flex-col gap-2 pt-2">
               <button
                 type="button"
                 disabled={isPending || !canModifyMembers}
-                onClick={() => respond("accept")}
+                onClick={() => {
+                  reset();
+                  respond("accept");
+                }}
                 style={{
                   ...acceptBtnStyle,
                   opacity: isPending ? 0.7 : 1,
@@ -142,7 +160,10 @@ export function JoinTeamPage({ invitationId }: JoinTeamPageProps) {
               <button
                 type="button"
                 disabled={isPending}
-                onClick={() => respond("decline")}
+                onClick={() => {
+                  reset();
+                  respond("decline");
+                }}
                 style={{
                   ...declineBtnStyle,
                   opacity: isPending ? 0.7 : 1,

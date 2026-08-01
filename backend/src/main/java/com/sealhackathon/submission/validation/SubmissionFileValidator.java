@@ -12,7 +12,7 @@ import org.springframework.web.multipart.MultipartFile;
 @Component
 public class SubmissionFileValidator {
 
-    @Value("${app.submission.file.max-size-bytes:26214400}")
+    @Value("${app.submission.file.max-size-bytes:5242880}")
     private long maxFileSizeBytes;
 
     public void validateOptional(MultipartFile file) {

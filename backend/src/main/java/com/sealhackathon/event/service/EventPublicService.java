@@ -41,6 +41,9 @@ public interface EventPublicService {
 
     EventStatus getResolvedEventStatus(UUID eventId);
 
+    /** Persisted sticky COMPLETED set by admin/coordinator (not date-derived). */
+    boolean isStaffCompleted(UUID eventId);
+
     UUID getEventIdByRoundId(UUID roundId);
 
     boolean isRoundScoringOpen(UUID roundId);

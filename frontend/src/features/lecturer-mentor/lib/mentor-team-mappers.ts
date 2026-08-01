@@ -83,7 +83,7 @@ function mapSubmissionLinks(submission: SubmissionResponse | null): MentorRoundS
     const resolved = resolveFileUrl(attachment.fileUrl);
     if (resolved) {
       links.push({
-        label: "Document",
+        label: "File",
         url: resolved,
         type: "document",
       });

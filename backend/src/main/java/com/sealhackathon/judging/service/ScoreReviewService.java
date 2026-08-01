@@ -60,6 +60,8 @@ public class ScoreReviewService {
             "A score adjustment request is already active for this submission.";
     public static final String DEVIATION_TOO_LOW_MESSAGE =
             "Score deviation is below the threshold required for an adjustment request.";
+    public static final String EVENT_COMPLETED_MESSAGE =
+            "This competition has ended. Score adjustment requests are no longer accepted.";
 
     private static final List<ScoreReviewStatus> ACTIVE_STATUSES =
             List.of(ScoreReviewStatus.OPEN, ScoreReviewStatus.APPROVED);
@@ -70,16 +72,14 @@ public class ScoreReviewService {
     @Value("${app.hackathon.judging.deviation-threshold:25}")
     private int deviationThresholdValue;
 
-    @Value("${app.hackathon.judging.percent-scale:20}")
-    private int percentScaleValue;
+    @Value("${app.hackathon.judging.cohen-d-threshold:0.8}")
+    private double cohenDThresholdValue;
 
     private BigDecimal deviationThreshold;
-    private BigDecimal percentScale;
 
     @PostConstruct
     private void initScoreConstants() {
         deviationThreshold = BigDecimal.valueOf(deviationThresholdValue);
-        percentScale = BigDecimal.valueOf(percentScaleValue);
     }
 
     private final ScoreReviewRequestRepository scoreReviewRequestRepository;
@@ -104,6 +104,14 @@ public class ScoreReviewService {
         Submission submission = submissionRepository.findById(submissionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Submission", "id", submissionId));
 
+        RoundSnapshot round = eventPublicService.getRound(submission.getRoundId()).orElse(null);
+        if (round != null && eventPublicService.isStaffCompleted(round.getEventId())) {
+            return;
+        }
+        if (publishedResultRepository.existsByRoundId(submission.getRoundId())) {
+            return;
+        }
+
         Optional<DeviationStats> stats = computeDeviationStats(submission);
         if (stats.isEmpty() || stats.get().deviation().compareTo(deviationThreshold) < 0) {
             return;
@@ -126,6 +134,7 @@ public class ScoreReviewService {
         }
 
         assertNotPublished(submission.getRoundId());
+        assertEventNotCompleted(eventId);
 
         if (!isJudgeInPoolForTeam(submission.getTeamId(), submission.getRoundId(), judgeId)) {
             throw new BusinessException(
@@ -308,6 +317,7 @@ public class ScoreReviewService {
                 && judgeCompleted
                 && deviationHigh
                 && !publishedResultRepository.existsByRoundId(submission.getRoundId())
+                && !eventPublicService.isStaffCompleted(eventId)
                 && (review == null
                         || !ACTIVE_STATUSES.contains(status)
                         || (status == ScoreReviewStatus.OPEN
@@ -322,6 +332,10 @@ public class ScoreReviewService {
                 ? userPublicService.findById(noteAuthorId).orElse(null)
                 : null;
 
+        int scoreScaleMax = resolveScoreScaleMax(submission.getRoundId());
+        List<ScoreReviewJudgeScoreResponse> breakdown = buildJudgeScoreBreakdown(
+                submissionId, submission.getRoundId());
+
         return ScoreReviewContextResponse.builder()
                 .reviewId(review != null ? review.getId() : null)
                 .submissionId(submissionId)
@@ -329,6 +343,9 @@ public class ScoreReviewService {
                 .adjustmentType(review != null ? review.getAdjustmentType() : null)
                 .deviationValue(deviation)
                 .deviationThreshold(deviationThresholdValue)
+                .scoreScaleMax(scoreScaleMax)
+                .consensusIndex(computeConsensusIndex(breakdown))
+                .cohenDThreshold(cohenDThresholdValue)
                 .canRequestAdjustment(canRequest)
                 .canEditForAdjustment(approved && requesterRole == UserType.LECTURER)
                 .requestNote(review != null ? review.getRequestNote() : null)
@@ -517,6 +534,12 @@ public class ScoreReviewService {
         }
     }
 
+    private void assertEventNotCompleted(UUID eventId) {
+        if (eventPublicService.isStaffCompleted(eventId)) {
+            throw new BusinessException(EVENT_COMPLETED_MESSAGE, HttpStatus.BAD_REQUEST) {};
+        }
+    }
+
     private void assertReviewReadAccess(ScoreReviewRequest review, UUID requesterId,
                                         UserType requesterRole) {
         if (requesterRole == UserType.SYSTEM_ADMIN || requesterRole == UserType.EVENT_COORDINATOR) {
@@ -576,9 +599,10 @@ public class ScoreReviewService {
         List<CriteriaSnapshot> criteria = eventPublicService.getCriteriaByRound(submission.getRoundId());
         Map<UUID, Integer> weightMap = criteria.stream()
                 .collect(Collectors.toMap(CriteriaSnapshot::getId, CriteriaSnapshot::getWeight));
+        int scoreScaleMax = resolveScoreScaleMax(submission.getRoundId());
 
         List<BigDecimal> percentScores = finishedScores.stream()
-                .map(score -> toPercentScore(score, criteria, weightMap))
+                .map(score -> toPercentScore(score, criteria, weightMap, scoreScaleMax))
                 .sorted()
                 .toList();
 
@@ -590,8 +614,19 @@ public class ScoreReviewService {
 
     private record DeviationStats(BigDecimal min, BigDecimal max, BigDecimal deviation) {}
 
+    private int resolveScoreScaleMax(UUID roundId) {
+        return eventPublicService.getRound(roundId)
+                .flatMap(round -> eventPublicService.getEvent(round.getEventId()))
+                .map(event -> event.getScoreScaleMax() != null ? event.getScoreScaleMax() : 100)
+                .orElse(100);
+    }
+
+    /**
+     * Percent of event score scale: weightedScore / scoreScaleMax × 100.
+     * Scale 10 → 10 = 100%; scale 5 → 5 = 100%.
+     */
     private BigDecimal toPercentScore(JudgeScore score, List<CriteriaSnapshot> criteria,
-                                      Map<UUID, Integer> weightMap) {
+                                      Map<UUID, Integer> weightMap, int scoreScaleMax) {
         JudgeScoreSnapshot snapshot = JudgeScoreSnapshot.builder()
                 .id(score.getId())
                 .judgeUserId(score.getJudgeUserId())
@@ -606,7 +641,7 @@ public class ScoreReviewService {
                         .toList())
                 .build();
         BigDecimal weighted = aggregationService.computeWeightedJudgeScore(snapshot, weightMap, criteria);
-        return weighted.multiply(percentScale).setScale(2, RoundingMode.HALF_UP);
+        return ScoreDeviationMath.toPercent(weighted, scoreScaleMax);
     }
 
     private ScoreReviewResponse toSummaryResponse(ScoreReviewRequest review) {
@@ -630,6 +665,8 @@ public class ScoreReviewService {
                 .deviationValue(review.getDeviationValue())
                 .minJudgeScore(review.getMinJudgeScore())
                 .maxJudgeScore(review.getMaxJudgeScore())
+                .scoreScaleMax(resolveScoreScaleMax(review.getRoundId()))
+                .cohenDThreshold(cohenDThresholdValue)
                 .status(review.getStatus())
                 .adjustmentType(review.getAdjustmentType())
                 .requestedBy(review.getRequestedBy())
@@ -648,7 +685,10 @@ public class ScoreReviewService {
 
     private ScoreReviewResponse toDetailResponse(ScoreReviewRequest review) {
         ScoreReviewResponse response = toSummaryResponse(review);
-        response.setJudgeScores(buildJudgeScoreBreakdown(review.getSubmissionId(), review.getRoundId()));
+        List<ScoreReviewJudgeScoreResponse> judges =
+                buildJudgeScoreBreakdown(review.getSubmissionId(), review.getRoundId());
+        response.setJudgeScores(judges);
+        response.setConsensusIndex(computeConsensusIndex(judges));
         return response;
     }
 
@@ -656,23 +696,71 @@ public class ScoreReviewService {
         List<CriteriaSnapshot> criteria = eventPublicService.getCriteriaByRound(roundId);
         Map<UUID, Integer> weightMap = criteria.stream()
                 .collect(Collectors.toMap(CriteriaSnapshot::getId, CriteriaSnapshot::getWeight));
+        int scoreScaleMax = resolveScoreScaleMax(roundId);
 
-        return judgeScoreRepository.findBySubmissionId(submissionId).stream()
+        record ScoredJudge(JudgeScore score, BigDecimal weighted, BigDecimal percent) {}
+
+        List<ScoredJudge> scored = judgeScoreRepository.findBySubmissionId(submissionId).stream()
                 .filter(s -> s.getStatus() == ScoreStatus.COMPLETED || s.getStatus() == ScoreStatus.LOCKED)
                 .map(score -> {
-                    BigDecimal percent = toPercentScore(score, criteria, weightMap);
-                    BigDecimal weighted = percent.divide(percentScale, 4, RoundingMode.HALF_UP);
-                    UserSnapshot judge = userPublicService.findById(score.getJudgeUserId()).orElse(null);
-                    return ScoreReviewJudgeScoreResponse.builder()
+                    JudgeScoreSnapshot snapshot = JudgeScoreSnapshot.builder()
+                            .id(score.getId())
                             .judgeUserId(score.getJudgeUserId())
-                            .judgeFullName(judge != null ? judge.getFullName() : null)
-                            .weightedScore(weighted)
-                            .percentScore(percent)
+                            .submissionId(score.getSubmissionId())
+                            .roundId(score.getRoundId())
                             .status(score.getStatus())
+                            .details(score.getDetails().stream()
+                                    .map(d -> com.sealhackathon.judging.dto.snapshot.ScoreDetailSnapshot.builder()
+                                            .criteriaId(d.getCriteriaId())
+                                            .score(d.getScore())
+                                            .build())
+                                    .toList())
                             .build();
+                    BigDecimal weighted = aggregationService.computeWeightedJudgeScore(
+                            snapshot, weightMap, criteria);
+                    BigDecimal percent = ScoreDeviationMath.toPercent(weighted, scoreScaleMax);
+                    return new ScoredJudge(score, weighted, percent);
                 })
-                .sorted(Comparator.comparing(ScoreReviewJudgeScoreResponse::getPercentScore).reversed())
                 .toList();
+
+        if (scored.isEmpty()) {
+            return List.of();
+        }
+
+        List<BigDecimal> allPercents = scored.stream().map(ScoredJudge::percent).toList();
+        BigDecimal maxPct = allPercents.stream().max(BigDecimal::compareTo).orElse(BigDecimal.ZERO);
+
+        List<ScoreReviewJudgeScoreResponse> result = new java.util.ArrayList<>();
+        for (int i = 0; i < scored.size(); i++) {
+            ScoredJudge sj = scored.get(i);
+            BigDecimal gapFromMaxPct = maxPct.subtract(sj.percent()).setScale(2, RoundingMode.HALF_UP);
+            BigDecimal cohenD = ScoreDeviationMath.cohenDVsMajority(
+                    allPercents, i, maxPct, deviationThreshold);
+            // Flag by percent gap vs max (scale-normalized). Cohen's d is diagnostic for UI.
+            boolean flagged = ScoreDeviationMath.isFlaggedByGap(gapFromMaxPct, deviationThreshold);
+            UserSnapshot judge = userPublicService.findById(sj.score().getJudgeUserId()).orElse(null);
+            result.add(ScoreReviewJudgeScoreResponse.builder()
+                    .judgeUserId(sj.score().getJudgeUserId())
+                    .judgeFullName(judge != null ? judge.getFullName() : null)
+                    .weightedScore(sj.weighted().setScale(4, RoundingMode.HALF_UP))
+                    .percentScore(sj.percent())
+                    .gapFromMaxPct(gapFromMaxPct)
+                    .cohenD(cohenD)
+                    .flagged(flagged)
+                    .status(sj.score().getStatus())
+                    .build());
+        }
+
+        result.sort(Comparator.comparing(ScoreReviewJudgeScoreResponse::getPercentScore).reversed());
+        return result;
+    }
+
+    private BigDecimal computeConsensusIndex(List<ScoreReviewJudgeScoreResponse> judges) {
+        if (judges == null || judges.isEmpty()) {
+            return null;
+        }
+        long flagged = judges.stream().filter(ScoreReviewJudgeScoreResponse::isFlagged).count();
+        return ScoreDeviationMath.consensusIndex((int) flagged, judges.size());
     }
 
     private RoundType resolveRoundType(UUID roundId) {

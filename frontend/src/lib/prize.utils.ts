@@ -31,6 +31,10 @@ export function resolveAssignmentMode(
 export function getPrizeLabel(rank: PrizeRank, label?: string | null): string {
   if (label?.trim() && label.trim() !== FREE_TEXT_PRIZE_LABEL) return label.trim();
   return PRIZE_RANK_LABELS[rank];
+export function getPrizeLabel(rank?: PrizeRank | null, label?: string | null): string {
+  if (label?.trim()) return label.trim();
+  if (!rank) return "Team Award";
+  return PRIZE_RANK_LABELS[rank] ?? "Team Award";
 }
 
 /** Strip non-digits and parse prize amount (mirrors backend PrizeAmountUtils). */
@@ -82,6 +86,31 @@ export function orderManualPrizes<T extends AwardOrderPrize>(prizes: T[]): T[] {
 /** Combined preview order: rank-based first, then manual. */
 export function orderPrizesForAward<T extends AwardOrderPrize>(prizes: T[]): T[] {
   return [...orderRankBasedPrizes(prizes), ...orderManualPrizes(prizes)];
+/** Leading cash amount + optional currency token, e.g. "10,000,000 VND + Trophy". */
+const LEADING_AMOUNT_PATTERN = /^(\d[\d.,\s]*\d|\d)\s*(vn[dđ]|đ|₫)?\s*/i;
+
+/**
+ * Prize values are free-form text in the DB ("7000000", "10,000,000 VND + Trophy",
+ * "Trip to Singapore"), so never coerce them with Number(). Formats the leading cash
+ * amount when there is one and keeps the rest of the description intact.
+ */
+export function formatPrizeAmount(value: string | null | undefined): string {
+  const raw = value?.trim() ?? "";
+  if (!raw) return "";
+
+  const match = LEADING_AMOUNT_PATTERN.exec(raw);
+  if (!match) return raw;
+
+  const amount = parsePrizeAmount(match[1]);
+  if (amount == null) return raw;
+
+  const hasCurrencyToken = Boolean(match[2]);
+  const rest = raw.slice(match[0].length).trim();
+  // "2 laptops" is a quantity, not a cash prize.
+  if (rest && !hasCurrencyToken && amount < 1000) return raw;
+
+  const money = `${new Intl.NumberFormat("en-US").format(amount)} ₫`;
+  return rest ? `${money} ${rest}` : money;
 }
 
 export function validatePrizeOrdering(prizes: PrizeOrderingInput[]): string | null {
