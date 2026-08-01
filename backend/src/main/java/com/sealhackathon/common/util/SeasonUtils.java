@@ -5,7 +5,6 @@ import java.time.LocalDate;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-
 import org.springframework.http.HttpStatus;
 
 public final class SeasonUtils {
@@ -22,8 +21,6 @@ public final class SeasonUtils {
 
     private SeasonUtils() {
     }
-
-    /** Spring: Jan–Apr · Summer: May–Aug · Fall: Sep–Dec (no Winter). */
 
     /**
      * FPT academic seasons: Spring (Feb–May), Summer (Jun–Sep), Fall (Oct–Jan).
@@ -67,6 +64,7 @@ public final class SeasonUtils {
             return false;
         }
         return VALID_SEASONS.contains(normalize(season));
+    }
 
     public static boolean isValidSeason(String season) {
         return season != null && VALID_SEASONS.contains(normalize(season));

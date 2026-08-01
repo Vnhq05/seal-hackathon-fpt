@@ -29,24 +29,10 @@ export function resolveAssignmentMode(
   return mode === "MANUAL" ? "MANUAL" : "RANK_BASED";
 }
 
-export function getPrizeLabel(rank: PrizeRank, label?: string | null): string {
-  if (label?.trim() && label.trim() !== FREE_TEXT_PRIZE_LABEL) return label.trim();
-  return PRIZE_RANK_LABELS[rank];
 export function getPrizeLabel(rank?: PrizeRank | null, label?: string | null): string {
-  if (label?.trim()) return label.trim();
+  if (label?.trim() && label.trim() !== FREE_TEXT_PRIZE_LABEL) return label.trim();
   if (!rank) return "Team Award";
   return PRIZE_RANK_LABELS[rank] ?? "Team Award";
-}
-
-export function resolveAssignmentMode(
-  rank: PrizeRank,
-  mode?: PrizeAssignmentMode | null,
-): PrizeAssignmentMode {
-  if (rank === "OTHER") return "MANUAL";
-  if (rank === "FIRST" || rank === "SECOND" || rank === "THIRD" || rank === "CONSOLATION") {
-    return "RANK_BASED";
-  }
-  return mode ?? "RANK_BASED";
 }
 
 /** Strip non-digits and parse prize amount (mirrors backend PrizeAmountUtils). */
@@ -55,12 +41,6 @@ export function parsePrizeAmount(value: string): number | null {
   if (!digits) return null;
   const n = parseInt(digits, 10);
   return Number.isFinite(n) ? n : null;
-}
-
-export function formatPrizeAmount(value: string): string {
-  const amount = parsePrizeAmount(value);
-  if (amount == null) return value;
-  return `${new Intl.NumberFormat("en-US").format(amount)} VND`;
 }
 
 type AwardOrderPrize = {
@@ -98,6 +78,8 @@ export function orderManualPrizes<T extends AwardOrderPrize>(prizes: T[]): T[] {
 /** Combined preview order: rank-based first, then manual. */
 export function orderPrizesForAward<T extends AwardOrderPrize>(prizes: T[]): T[] {
   return [...orderRankBasedPrizes(prizes), ...orderManualPrizes(prizes)];
+}
+
 /** Leading cash amount + optional currency token, e.g. "10,000,000 VND + Trophy". */
 const LEADING_AMOUNT_PATTERN = /^(\d[\d.,\s]*\d|\d)\s*(vn[dđ]|đ|₫)?\s*/i;
 

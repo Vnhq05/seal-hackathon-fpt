@@ -18,7 +18,6 @@ import com.sealhackathon.event.domain.enums.PrizeAssignmentMode;
 import com.sealhackathon.event.domain.enums.PrizeRank;
 import com.sealhackathon.event.domain.enums.RoundType;
 import com.sealhackathon.ranking.dto.request.AssignAwardsRequest;
-import com.sealhackathon.ranking.dto.request.ManualPrizeAssignmentRequest;
 import com.sealhackathon.event.repository.HackathonEventRepository;
 import com.sealhackathon.event.repository.PrizeRepository;
 import com.sealhackathon.event.repository.RoundRepository;
@@ -77,21 +76,12 @@ public class AwardService {
     private final TeamRepository teamRepository;
     private final TeamPublicService teamPublicService;
     private final TeamMemberRepository teamMemberRepository;
-    private final TeamRepository teamRepository;
     private final UserPublicService userPublicService;
     private final JudgingPublicService judgingPublicService;
     private final AuthPublicService authPublicService;
 
     @Transactional
     public AwardAssignmentResultResponse assignAwardsFromFinalRanking(UUID eventId, AssignAwardsRequest request) {
-
-    public AwardAssignmentResultResponse assignAwardsFromFinalRanking(UUID eventId) {
-        return assignAwardsFromFinalRanking(eventId, AssignAwardsRequest.builder().build());
-    }
-
-    @Transactional
-    public AwardAssignmentResultResponse assignAwardsFromFinalRanking(
-            UUID eventId, AssignAwardsRequest request) {
         eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Event", "id", eventId));
 
@@ -132,59 +122,12 @@ public class AwardService {
         }
 
         Map<UUID, UUID> manualTeamByPrize = resolveManualAssignments(eventId, manualPrizes, request);
-        List<Prize> rankBasedPrizes = prizes.stream()
-                .filter(p -> resolveMode(p) == PrizeAssignmentMode.RANK_BASED)
-                .sorted(Comparator.comparingInt(p -> rankBasedOrderIndex(p.getRank())))
-                .toList();
-
-        List<Prize> manualPrizes = prizes.stream()
-                .filter(p -> resolveMode(p) == PrizeAssignmentMode.MANUAL)
-                .toList();
-
-        List<ManualPrizeAssignmentRequest> manualAssignments =
-                request != null && request.getManualAssignments() != null
-                        ? request.getManualAssignments()
-                        : List.of();
-        Map<UUID, UUID> manualTeamByPrize = new HashMap<>();
-        for (ManualPrizeAssignmentRequest assignment : manualAssignments) {
-            if (assignment.getPrizeId() == null || assignment.getTeamId() == null) {
-                throw new BusinessException(
-                        "Each manual assignment requires prizeId and teamId",
-                        HttpStatus.BAD_REQUEST) {};
-            }
-            if (manualTeamByPrize.put(assignment.getPrizeId(), assignment.getTeamId()) != null) {
-                throw new BusinessException(
-                        "Duplicate manual assignment for the same prize",
-                        HttpStatus.BAD_REQUEST) {};
-            }
-        }
-        for (Prize manualPrize : manualPrizes) {
-            if (!manualTeamByPrize.containsKey(manualPrize.getId())) {
-                throw new BusinessException(
-                        "Manual prize \"" + prizeTitle(manualPrize)
-                                + "\" requires a team assignment",
-                        HttpStatus.BAD_REQUEST) {};
-            }
-        }
-        for (UUID prizeId : manualTeamByPrize.keySet()) {
-            boolean known = manualPrizes.stream().anyMatch(p -> p.getId().equals(prizeId));
-            if (!known) {
-                throw new BusinessException(
-                        "manualAssignments contains a prize that is not MANUAL for this event",
-                        HttpStatus.BAD_REQUEST) {};
-            }
-        }
-
-        Set<UUID> eventTeamIds = teamRepository.findByEventId(eventId).stream()
-                .map(Team::getId)
-                .collect(Collectors.toCollection(HashSet::new));
 
         teamAwardRepository.deleteByEventId(eventId);
         teamAwardRepository.flush();
 
         List<TeamAwardResponse> teamAwards = new ArrayList<>();
         LocalDateTime now = LocalDateTime.now();
-        Set<UUID> usedRankBasedTeams = new HashSet<>();
 
         for (int i = 0; i < Math.min(rankBasedPrizes.size(), rankings.size()); i++) {
             Prize prize = rankBasedPrizes.get(i);
@@ -196,36 +139,6 @@ public class AwardService {
             UUID teamId = manualTeamByPrize.get(prize.getId());
             if (teamId == null) continue;
             teamAwards.add(saveAward(eventId, teamId, prize, now));
-
-        for (int i = 0; i < rankBasedPrizes.size() && i < rankings.size(); i++) {
-            Prize prize = rankBasedPrizes.get(i);
-            UUID teamId = rankings.get(i).getTeamId();
-            if (!usedRankBasedTeams.add(teamId)) {
-                continue;
-            }
-            TeamAward award = teamAwardRepository.save(TeamAward.builder()
-                    .eventId(eventId)
-                    .teamId(teamId)
-                    .prizeId(prize.getId())
-                    .awardedAt(now)
-                    .build());
-            teamAwards.add(toTeamAwardResponse(award, prize));
-        }
-
-        for (Prize manualPrize : manualPrizes) {
-            UUID teamId = manualTeamByPrize.get(manualPrize.getId());
-            if (!eventTeamIds.contains(teamId)) {
-                throw new BusinessException(
-                        "Team does not belong to this event",
-                        HttpStatus.BAD_REQUEST) {};
-            }
-            TeamAward award = teamAwardRepository.save(TeamAward.builder()
-                    .eventId(eventId)
-                    .teamId(teamId)
-                    .prizeId(manualPrize.getId())
-                    .awardedAt(now)
-                    .build());
-            teamAwards.add(toTeamAwardResponse(award, manualPrize));
         }
 
         List<ParticipationCertificateResponse> participationCertificates =
@@ -307,22 +220,6 @@ public class AwardService {
                     HttpStatus.BAD_REQUEST) {};
         }
         return result;
-
-    private static PrizeAssignmentMode resolveMode(Prize prize) {
-        if (prize.getAssignmentMode() != null) {
-            return prize.getAssignmentMode();
-        }
-        return prize.getRank() == PrizeRank.OTHER
-                ? PrizeAssignmentMode.MANUAL
-                : PrizeAssignmentMode.RANK_BASED;
-    }
-
-    private static int rankBasedOrderIndex(PrizeRank rank) {
-        if (rank == null) {
-            return 99;
-        }
-        int idx = RANK_BASED_ORDER.indexOf(rank);
-        return idx >= 0 ? idx : 98;
     }
 
     @Transactional(readOnly = true)

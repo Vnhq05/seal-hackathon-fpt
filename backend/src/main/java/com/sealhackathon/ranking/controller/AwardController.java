@@ -40,8 +40,6 @@ public class AwardController {
     public ResponseEntity<ApiResponse<AwardAssignmentResultResponse>> assignAwards(
             @PathVariable UUID eventId,
             @Valid @RequestBody(required = false) AssignAwardsRequest request) {
-
-            @RequestBody(required = false) @Valid AssignAwardsRequest request) {
         AwardAssignmentResultResponse result = awardService.assignAwardsFromFinalRanking(
                 eventId, request != null ? request : AssignAwardsRequest.builder().build());
         return ResponseEntity.ok(ApiResponse.success("Awards assigned", result));

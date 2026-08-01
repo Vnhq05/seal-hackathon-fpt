@@ -16,10 +16,6 @@ import {
 import { useTeamAwards, useAssignAwards } from "@/features/coordinator/hooks/use-awards";
 import { useAdminEvent } from "@/features/admin/hooks/use-admin-hackathons";
 import { formatPrizeAmount, getPrizeLabel, orderManualPrizes, orderRankBasedPrizes } from "@/lib/prize.utils";
-import { formatPrizeAmount, getPrizeLabel } from "@/lib/prize.utils";
-
-import { formatPrizeAmount, getPrizeLabel, resolveAssignmentMode } from "@/lib/prize.utils";
-import type { PrizeResponse } from "@/lib/api/event.api";
 import type { LiveScoreEntry, LiveScoreBoard, RankingEvent, LiveScoreStatus, TrackInfo } from "@/lib/api/livescore.api";
 import type { RoundType } from "@/lib/api/types";
 import type { AdvancementSelectionPreviewResponse } from "@/lib/api/ranking.api";
@@ -293,18 +289,6 @@ function CompetitionProgressOverview({ board }: { board: LiveScoreBoard }) {
 }
 
 type StepStatus = "pending" | "active" | "done";
-
-const RANK_BASED_ORDER: PrizeResponse["rank"][] = ["FIRST", "SECOND", "THIRD", "CONSOLATION"];
-
-function sortRankBasedPrizes(prizes: PrizeResponse[]): PrizeResponse[] {
-  return prizes
-    .filter((p) => resolveAssignmentMode(p.rank, p.assignmentMode) === "RANK_BASED")
-    .sort((a, b) => {
-      const ai = RANK_BASED_ORDER.indexOf(a.rank);
-      const bi = RANK_BASED_ORDER.indexOf(b.rank);
-      return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi);
-    });
-}
 
 function panelBtnStyle(bg: string, disabled: boolean): React.CSSProperties {
   return {
@@ -760,7 +744,6 @@ function AwardsPanel({ eventId, rankings }: { eventId: string; rankings: LiveSco
   const { data: awards = [] } = useTeamAwards(eventId);
   const { data: event } = useAdminEvent(eventId);
   const { data: teamsPage } = useTeams(eventId, { size: 100 });
-
   const assignMutation = useAssignAwards(eventId);
   const [manualTeamByPrize, setManualTeamByPrize] = useState<Record<string, string>>({});
 
@@ -771,16 +754,6 @@ function AwardsPanel({ eventId, rankings }: { eventId: string; rankings: LiveSco
   const canAssignRank = rankPrizes.length > 0;
   const allManualSelected = manualPrizes.every((p) => !!manualTeamByPrize[p.id]);
   const canAssign = canAssignRank && allManualSelected;
-  const prizes = event?.prizes ?? [];
-  const rankBasedPrizes = sortRankBasedPrizes(prizes);
-  const manualPrizes = prizes.filter(
-    (p) => resolveAssignmentMode(p.rank, p.assignmentMode) === "MANUAL",
-  );
-  const teamOptions = rankings.map((r) => ({ id: r.teamId, name: r.teamName }));
-
-  const allManualSelected =
-    manualPrizes.length === 0 ||
-    manualPrizes.every((p) => Boolean(manualTeamByPrize[p.id]));
 
   const handleAssign = () => {
     assignMutation.mutate({
@@ -818,22 +791,6 @@ function AwardsPanel({ eventId, rankings }: { eventId: string; rankings: LiveSco
                         <span style={{ display: "block", fontSize: 10, color: "#a1a8b8" }}>
                           By ranking
                         </span>
-
-          {prizes.length === 0 ? (
-            <p style={{ fontSize: 12, color: "#dc2626", marginBottom: 8 }}>
-              Configure First / Second / Third prizes on the event before assigning awards.
-            </p>
-          ) : (
-            <>
-              <p style={{ fontSize: 12, color: "#8891a5", marginBottom: 8 }}>
-                Auto from final rankings (RANK_BASED):
-              </p>
-              <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 8, fontSize: 11 }}>
-                <tbody>
-                  {rankBasedPrizes.map((prize, idx) => (
-                    <tr key={prize.id} style={{ borderBottom: "1px solid rgba(198,198,205,0.3)" }}>
-                      <td style={{ padding: "4px 0", color: "#8891a5", width: "40%" }}>
-                        {getPrizeLabel(prize.rank, prize.label)}
                       </td>
                       <td style={{ padding: "4px 4px", fontWeight: 500, color: "#0e1528" }}>
                         {rankings[idx]?.teamName ?? "TBD"}
@@ -870,20 +827,6 @@ function AwardsPanel({ eventId, rankings }: { eventId: string; rankings: LiveSco
                         <span style={{ fontSize: 11, color: "#0e1528" }}>
                           {formatPrizeAmount(prize.value)}
                         </span>
-
-                  <p style={{ fontSize: 12, color: "#8891a5", marginBottom: 6 }}>
-                    Manual prizes (pick a team):
-                  </p>
-                  {manualPrizes.map((prize) => (
-                    <div key={prize.id} style={{ marginBottom: 8 }}>
-                      <div
-                        className="flex items-center justify-between"
-                        style={{ fontSize: 11, marginBottom: 4, gap: 4 }}
-                      >
-                        <span style={{ color: "#8891a5" }}>
-                          {getPrizeLabel(prize.rank, prize.label)}
-                        </span>
-                        <span style={{ color: "#0e1528" }}>{formatPrizeAmount(prize.value)}</span>
                       </div>
                       <select
                         value={manualTeamByPrize[prize.id] ?? ""}
@@ -906,18 +849,6 @@ function AwardsPanel({ eventId, rankings }: { eventId: string; rankings: LiveSco
                         {teams.map((team) => (
                           <option key={team.id} value={team.id}>
                             {team.name}
-
-                          padding: "6px 8px",
-                          fontSize: 12,
-                          border: "1px solid rgba(198,198,205,0.7)",
-                          borderRadius: 6,
-                          backgroundColor: "#fff",
-                        }}
-                      >
-                        <option value="">Select team…</option>
-                        {teamOptions.map((t) => (
-                          <option key={t.id} value={t.id}>
-                            {t.name}
                           </option>
                         ))}
                       </select>
@@ -931,16 +862,6 @@ function AwardsPanel({ eventId, rankings }: { eventId: string; rankings: LiveSco
             onClick={handleAssign}
             disabled={assignMutation.isPending || !canAssign}
             style={panelBtnStyle("#16a34a", assignMutation.isPending || !canAssign)}
-
-            disabled={
-              assignMutation.isPending ||
-              prizes.length === 0 ||
-              !allManualSelected
-            }
-            style={panelBtnStyle(
-              "#16a34a",
-              assignMutation.isPending || prizes.length === 0 || !allManualSelected,
-            )}
           >
             {assignMutation.isPending ? "Assigning..." : "Assign Awards"}
           </button>
@@ -952,9 +873,6 @@ function AwardsPanel({ eventId, rankings }: { eventId: string; rankings: LiveSco
           {assignMutation.isError && (
             <p style={{ fontSize: 11, color: "#dc2626", marginTop: 6 }}>
               Failed to assign. Ensure rankings are recalculated and prizes are configured.
-
-              {(assignMutation.error as Error)?.message ||
-                "Failed to assign. Ensure rankings are recalculated and prizes are configured."}
             </p>
           )}
         </>

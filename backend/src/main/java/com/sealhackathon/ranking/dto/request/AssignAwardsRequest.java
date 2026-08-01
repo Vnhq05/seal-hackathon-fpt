@@ -32,7 +32,4 @@ public class AssignAwardsRequest {
         @NotNull
         private UUID teamId;
     }
-    @Valid
-    @Builder.Default
-    private List<ManualPrizeAssignmentRequest> manualAssignments = new ArrayList<>();
 }

@@ -12,8 +12,6 @@ import {
 import type { EventResponse, EventStatus } from "@/lib/api";
 import { SEASONS, normalizeSeason } from "@/lib/season.utils";
 import { useStaffPortalBase } from "@/shared/hooks/use-staff-portal-base";
-import { SEASONS } from "@/shared/lib/season";
-
 
 
 const headerCell: React.CSSProperties = {
