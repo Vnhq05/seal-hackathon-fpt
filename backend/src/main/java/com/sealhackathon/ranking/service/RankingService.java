@@ -111,8 +111,14 @@ public class RankingService {
                     HttpStatus.BAD_REQUEST) {};
         }
 
-        // Determine advancements
-        List<AdvancementResponse> advancements = advancementService.determineAdvancements(roundId);
+        List<AdvancementResponse> advancements = advancementService.getAdvancements(roundId);
+        Round round = roundRepository.findById(roundId)
+                .orElseThrow(() -> new ResourceNotFoundException("Round", "id", roundId));
+        if (round.getRoundType() != RoundType.FINAL && advancements.isEmpty()) {
+            throw new BusinessException(
+                    "Confirm advancement selection (Top N or manual) before publishing results",
+                    HttpStatus.BAD_REQUEST);
+        }
 
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime disputeDeadline = now.plusHours(DISPUTE_WINDOW_HOURS);

@@ -54,7 +54,15 @@ class RankingServiceTest {
         when(publishedResultRepository.existsByRoundId(roundId)).thenReturn(false);
         when(judgingPublicService.hasActiveScoreReviewsForRound(roundId)).thenReturn(false);
         when(rankingRepository.findMaxVersionByRoundId(roundId)).thenReturn(1);
-        when(advancementService.determineAdvancements(roundId)).thenReturn(List.of());
+        Round round = org.mockito.Mockito.mock(Round.class);
+        when(round.getRoundType()).thenReturn(RoundType.PRELIMINARY);
+        when(roundRepository.findById(roundId)).thenReturn(Optional.of(round));
+        when(advancementService.getAdvancements(roundId)).thenReturn(List.of(
+                com.sealhackathon.ranking.dto.response.AdvancementResponse.builder()
+                        .teamId(UUID.randomUUID())
+                        .roundId(roundId)
+                        .status(com.sealhackathon.ranking.domain.enums.AdvancementStatus.ADVANCED)
+                        .build()));
         when(publishedResultRepository.save(any(PublishedResult.class))).thenAnswer(i -> {
             PublishedResult pr = i.getArgument(0);
             pr.setId(UUID.randomUUID());

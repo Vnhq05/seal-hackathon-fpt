@@ -44,11 +44,8 @@ export interface AssignAwardsRequest {
 }
 
 export const awardApi = {
-  assign(
-    eventId: string,
-    body: AssignAwardsRequest = { manualAssignments: [] },
-  ): Promise<AwardAssignmentResultResponse> {
-    return api.post<AwardAssignmentResultResponse>(`/events/${eventId}/awards/assign`, body);
+  assign(eventId: string, body?: AssignAwardsRequest): Promise<AwardAssignmentResultResponse> {
+    return api.post<AwardAssignmentResultResponse>(`/events/${eventId}/awards/assign`, body ?? {});
   },
 
   list(eventId: string): Promise<TeamAwardResponse[]> {

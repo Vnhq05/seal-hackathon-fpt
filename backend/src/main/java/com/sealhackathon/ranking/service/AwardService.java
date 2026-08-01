@@ -2,6 +2,12 @@ package com.sealhackathon.ranking.service;
 
 import com.sealhackathon.common.exception.BusinessException;
 import com.sealhackathon.common.exception.ResourceNotFoundException;
+import com.sealhackathon.common.util.PrizeAmountUtils;
+import com.sealhackathon.event.domain.HackathonEvent;
+import com.sealhackathon.event.domain.Prize;
+import com.sealhackathon.event.domain.Round;
+import com.sealhackathon.event.domain.enums.PrizeAssignmentMode;
+
 import com.sealhackathon.common.enums.UserType;
 import com.sealhackathon.auth.service.AuthPublicService;
 import com.sealhackathon.event.domain.HackathonEvent;
@@ -12,7 +18,6 @@ import com.sealhackathon.event.domain.enums.PrizeAssignmentMode;
 import com.sealhackathon.event.domain.enums.PrizeRank;
 import com.sealhackathon.event.domain.enums.RoundType;
 import com.sealhackathon.ranking.dto.request.AssignAwardsRequest;
-import com.sealhackathon.ranking.dto.request.ManualPrizeAssignmentRequest;
 import com.sealhackathon.event.repository.HackathonEventRepository;
 import com.sealhackathon.event.repository.PrizeRepository;
 import com.sealhackathon.event.repository.RoundRepository;
@@ -20,6 +25,7 @@ import com.sealhackathon.judging.service.JudgingPublicService;
 import com.sealhackathon.ranking.domain.ParticipationCertificate;
 import com.sealhackathon.ranking.domain.Ranking;
 import com.sealhackathon.ranking.domain.TeamAward;
+import com.sealhackathon.ranking.dto.request.AssignAwardsRequest;
 import com.sealhackathon.ranking.dto.response.AwardAssignmentResultResponse;
 import com.sealhackathon.ranking.dto.response.ParticipationCertificateResponse;
 import com.sealhackathon.ranking.dto.response.ParticipationCertificateSummaryResponse;
@@ -67,21 +73,15 @@ public class AwardService {
     private final RoundRepository roundRepository;
     private final HackathonEventRepository eventRepository;
     private final PrizeRepository prizeRepository;
+    private final TeamRepository teamRepository;
     private final TeamPublicService teamPublicService;
     private final TeamMemberRepository teamMemberRepository;
-    private final TeamRepository teamRepository;
     private final UserPublicService userPublicService;
     private final JudgingPublicService judgingPublicService;
     private final AuthPublicService authPublicService;
 
     @Transactional
-    public AwardAssignmentResultResponse assignAwardsFromFinalRanking(UUID eventId) {
-        return assignAwardsFromFinalRanking(eventId, AssignAwardsRequest.builder().build());
-    }
-
-    @Transactional
-    public AwardAssignmentResultResponse assignAwardsFromFinalRanking(
-            UUID eventId, AssignAwardsRequest request) {
+    public AwardAssignmentResultResponse assignAwardsFromFinalRanking(UUID eventId, AssignAwardsRequest request) {
         eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Event", "id", eventId));
 
@@ -111,89 +111,34 @@ public class AwardService {
         List<Ranking> rankings = rankingRepository
                 .findByRoundIdAndVersionOrderByRankAsc(finalRound.getId(), latestVersion);
 
-        List<Prize> rankBasedPrizes = prizes.stream()
-                .filter(p -> resolveMode(p) == PrizeAssignmentMode.RANK_BASED)
-                .sorted(Comparator.comparingInt(p -> rankBasedOrderIndex(p.getRank())))
-                .toList();
+        List<Prize> allPrizes = prizeRepository.findByHackathonEventId(eventId);
+        List<Prize> rankBasedPrizes = orderRankBasedPrizes(allPrizes);
+        List<Prize> manualPrizes = orderManualPrizes(allPrizes);
 
-        List<Prize> manualPrizes = prizes.stream()
-                .filter(p -> resolveMode(p) == PrizeAssignmentMode.MANUAL)
-                .toList();
-
-        List<ManualPrizeAssignmentRequest> manualAssignments =
-                request != null && request.getManualAssignments() != null
-                        ? request.getManualAssignments()
-                        : List.of();
-        Map<UUID, UUID> manualTeamByPrize = new HashMap<>();
-        for (ManualPrizeAssignmentRequest assignment : manualAssignments) {
-            if (assignment.getPrizeId() == null || assignment.getTeamId() == null) {
-                throw new BusinessException(
-                        "Each manual assignment requires prizeId and teamId",
-                        HttpStatus.BAD_REQUEST) {};
-            }
-            if (manualTeamByPrize.put(assignment.getPrizeId(), assignment.getTeamId()) != null) {
-                throw new BusinessException(
-                        "Duplicate manual assignment for the same prize",
-                        HttpStatus.BAD_REQUEST) {};
-            }
-        }
-        for (Prize manualPrize : manualPrizes) {
-            if (!manualTeamByPrize.containsKey(manualPrize.getId())) {
-                throw new BusinessException(
-                        "Manual prize \"" + prizeTitle(manualPrize)
-                                + "\" requires a team assignment",
-                        HttpStatus.BAD_REQUEST) {};
-            }
-        }
-        for (UUID prizeId : manualTeamByPrize.keySet()) {
-            boolean known = manualPrizes.stream().anyMatch(p -> p.getId().equals(prizeId));
-            if (!known) {
-                throw new BusinessException(
-                        "manualAssignments contains a prize that is not MANUAL for this event",
-                        HttpStatus.BAD_REQUEST) {};
-            }
+        if (rankBasedPrizes.isEmpty() && manualPrizes.isEmpty()) {
+            throw new BusinessException(
+                    "No prizes configured for this event. Add First/Second/Third Prize amounts first.",
+                    HttpStatus.BAD_REQUEST) {};
         }
 
-        Set<UUID> eventTeamIds = teamRepository.findByEventId(eventId).stream()
-                .map(Team::getId)
-                .collect(Collectors.toCollection(HashSet::new));
+        Map<UUID, UUID> manualTeamByPrize = resolveManualAssignments(eventId, manualPrizes, request);
 
         teamAwardRepository.deleteByEventId(eventId);
         teamAwardRepository.flush();
 
         List<TeamAwardResponse> teamAwards = new ArrayList<>();
         LocalDateTime now = LocalDateTime.now();
-        Set<UUID> usedRankBasedTeams = new HashSet<>();
 
-        for (int i = 0; i < rankBasedPrizes.size() && i < rankings.size(); i++) {
+        for (int i = 0; i < Math.min(rankBasedPrizes.size(), rankings.size()); i++) {
             Prize prize = rankBasedPrizes.get(i);
-            UUID teamId = rankings.get(i).getTeamId();
-            if (!usedRankBasedTeams.add(teamId)) {
-                continue;
-            }
-            TeamAward award = teamAwardRepository.save(TeamAward.builder()
-                    .eventId(eventId)
-                    .teamId(teamId)
-                    .prizeId(prize.getId())
-                    .awardedAt(now)
-                    .build());
-            teamAwards.add(toTeamAwardResponse(award, prize));
+            Ranking ranking = rankings.get(i);
+            teamAwards.add(saveAward(eventId, ranking.getTeamId(), prize, now));
         }
 
-        for (Prize manualPrize : manualPrizes) {
-            UUID teamId = manualTeamByPrize.get(manualPrize.getId());
-            if (!eventTeamIds.contains(teamId)) {
-                throw new BusinessException(
-                        "Team does not belong to this event",
-                        HttpStatus.BAD_REQUEST) {};
-            }
-            TeamAward award = teamAwardRepository.save(TeamAward.builder()
-                    .eventId(eventId)
-                    .teamId(teamId)
-                    .prizeId(manualPrize.getId())
-                    .awardedAt(now)
-                    .build());
-            teamAwards.add(toTeamAwardResponse(award, manualPrize));
+        for (Prize prize : manualPrizes) {
+            UUID teamId = manualTeamByPrize.get(prize.getId());
+            if (teamId == null) continue;
+            teamAwards.add(saveAward(eventId, teamId, prize, now));
         }
 
         List<ParticipationCertificateResponse> participationCertificates =
@@ -206,21 +151,75 @@ public class AwardService {
                 .build();
     }
 
-    private static PrizeAssignmentMode resolveMode(Prize prize) {
-        if (prize.getAssignmentMode() != null) {
-            return prize.getAssignmentMode();
-        }
-        return prize.getRank() == PrizeRank.OTHER
-                ? PrizeAssignmentMode.MANUAL
-                : PrizeAssignmentMode.RANK_BASED;
+    private TeamAwardResponse saveAward(UUID eventId, UUID teamId, Prize prize, LocalDateTime now) {
+        TeamAward award = teamAwardRepository.save(TeamAward.builder()
+                .eventId(eventId)
+                .teamId(teamId)
+                .prizeId(prize.getId())
+                .awardedAt(now)
+                .build());
+        return toTeamAwardResponse(award, prize);
     }
 
-    private static int rankBasedOrderIndex(PrizeRank rank) {
-        if (rank == null) {
-            return 99;
+    private Map<UUID, UUID> resolveManualAssignments(
+            UUID eventId,
+            List<Prize> manualPrizes,
+            AssignAwardsRequest request) {
+        Map<UUID, UUID> result = new HashMap<>();
+        if (manualPrizes.isEmpty()) {
+            return result;
         }
-        int idx = RANK_BASED_ORDER.indexOf(rank);
-        return idx >= 0 ? idx : 98;
+
+        List<AssignAwardsRequest.ManualPrizeAssignment> assignments =
+                request != null && request.getManualAssignments() != null
+                        ? request.getManualAssignments()
+                        : List.of();
+
+        Map<UUID, Prize> manualById = manualPrizes.stream()
+                .collect(Collectors.toMap(Prize::getId, Function.identity()));
+
+        Set<UUID> seenPrizeIds = new HashSet<>();
+        for (AssignAwardsRequest.ManualPrizeAssignment assignment : assignments) {
+            if (assignment.getPrizeId() == null || assignment.getTeamId() == null) {
+                throw new BusinessException(
+                        "Manual prize assignments require prizeId and teamId.",
+                        HttpStatus.BAD_REQUEST) {};
+            }
+            if (!manualById.containsKey(assignment.getPrizeId())) {
+                throw new BusinessException(
+                        "Prize is not a manual (special) award for this event: " + assignment.getPrizeId(),
+                        HttpStatus.BAD_REQUEST) {};
+            }
+            if (!seenPrizeIds.add(assignment.getPrizeId())) {
+                throw new BusinessException(
+                        "Duplicate manual assignment for prize: " + assignment.getPrizeId(),
+                        HttpStatus.BAD_REQUEST) {};
+            }
+            Team team = teamRepository.findById(assignment.getTeamId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Team", "id", assignment.getTeamId()));
+            if (!eventId.equals(team.getEventId())) {
+                throw new BusinessException(
+                        "Team does not belong to this event.",
+                        HttpStatus.BAD_REQUEST) {};
+            }
+            if (team.getStatus() == TeamStatus.DISBANDED) {
+                throw new BusinessException(
+                        "Cannot assign award to a disbanded team.",
+                        HttpStatus.BAD_REQUEST) {};
+            }
+            result.put(assignment.getPrizeId(), assignment.getTeamId());
+        }
+
+        List<String> missing = manualPrizes.stream()
+                .filter(p -> !result.containsKey(p.getId()))
+                .map(this::prizeTitle)
+                .toList();
+        if (!missing.isEmpty()) {
+            throw new BusinessException(
+                    "Select a team for each special prize: " + String.join(", ", missing),
+                    HttpStatus.BAD_REQUEST) {};
+        }
+        return result;
     }
 
     @Transactional(readOnly = true)
@@ -438,6 +437,54 @@ public class AwardService {
         return results;
     }
 
+    private static final String LEGACY_FREE_TEXT_PRIZE_LABEL = "Prizes";
+
+    private List<Prize> orderRankBasedPrizes(List<Prize> prizes) {
+        List<Prize> ordered = new ArrayList<>();
+        for (PrizeRank rank : List.of(PrizeRank.FIRST, PrizeRank.SECOND, PrizeRank.THIRD)) {
+            prizes.stream()
+                    .filter(p -> p.getRank() == rank)
+                    .filter(this::hasPositivePrizeAmount)
+                    .findFirst()
+                    .ifPresent(ordered::add);
+        }
+        prizes.stream()
+                .filter(p -> p.getRank() == PrizeRank.CONSOLATION)
+                .filter(p -> !isLegacyFreeTextPrize(p))
+                .filter(this::isRankBased)
+                .filter(this::hasPositivePrizeAmount)
+                .forEach(ordered::add);
+        return ordered;
+    }
+
+    private List<Prize> orderManualPrizes(List<Prize> prizes) {
+        return prizes.stream()
+                .filter(p -> p.getRank() == PrizeRank.CONSOLATION)
+                .filter(p -> !isLegacyFreeTextPrize(p))
+                .filter(p -> !isRankBased(p))
+                .filter(this::hasPositivePrizeAmount)
+                .toList();
+    }
+
+    private boolean isRankBased(Prize prize) {
+        if (prize.getRank() == PrizeRank.FIRST
+                || prize.getRank() == PrizeRank.SECOND
+                || prize.getRank() == PrizeRank.THIRD) {
+            return true;
+        }
+        return prize.getAssignmentMode() == null
+                || prize.getAssignmentMode() == PrizeAssignmentMode.RANK_BASED;
+    }
+
+    private boolean isLegacyFreeTextPrize(Prize prize) {
+        return LEGACY_FREE_TEXT_PRIZE_LABEL.equals(prize.getLabel());
+    }
+
+    private boolean hasPositivePrizeAmount(Prize prize) {
+        Long amount = PrizeAmountUtils.parsePrizeAmount(prize.getValue());
+        return amount != null && amount > 0;
+    }
+
     private int rankOrder(PrizeRank rank) {
         if (rank == null) return 99;
         if (rank == PrizeRank.OTHER) return 50;
@@ -447,7 +494,10 @@ public class AwardService {
 
     private String prizeTitle(Prize prize) {
         if (prize == null) return "Team Award";
-        if (prize.getLabel() != null && !prize.getLabel().isBlank()) return prize.getLabel();
+        if (prize.getLabel() != null && !prize.getLabel().isBlank()
+                && !LEGACY_FREE_TEXT_PRIZE_LABEL.equals(prize.getLabel())) {
+            return prize.getLabel();
+        }
         if (prize.getRank() == null) return "Team Award";
         return switch (prize.getRank()) {
             case FIRST -> "First Prize";
@@ -469,7 +519,7 @@ public class AwardService {
                 .teamName(teamName)
                 .prizeId(award.getPrizeId())
                 .prizeRank(prize != null ? prize.getRank() : null)
-                .prizeLabel(prize != null ? prize.getLabel() : null)
+                .prizeLabel(prizeTitle(prize))
                 .prizeValue(prize != null ? prize.getValue() : null)
                 .awardedAt(award.getAwardedAt())
                 .build();

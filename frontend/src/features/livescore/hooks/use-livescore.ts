@@ -40,7 +40,18 @@ export function useLiveScoreWebSocket(eventId: string | undefined) {
     const unsub2 = subscribe(`/topic/events/${eventId}/ranking-events`, (data) => {
       const event = data as RankingEvent;
       if (event.type !== "LEADERBOARD_UPDATED") {
-        setRankingEvents((prev) => [event, ...prev].slice(0, 20));
+        setRankingEvents((prev) => {
+          // Dedupe identical publish/rank events (e.g. double STOMP delivery)
+          const dup = prev.some(
+            (e) =>
+              e.type === event.type &&
+              e.roundId === event.roundId &&
+              e.teamId === event.teamId &&
+              e.timestamp === event.timestamp,
+          );
+          if (dup) return prev;
+          return [event, ...prev].slice(0, 20);
+        });
       }
       queryClient.invalidateQueries({ queryKey: ["livescore", eventId] });
     });

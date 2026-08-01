@@ -41,6 +41,50 @@ export interface AdvancementResponse {
   finalScore: number | null;
 }
 
+export type AdvancementSelectionMode = "AUTO" | "MANUAL";
+
+export interface AdvancementSelectionRequest {
+  mode: AdvancementSelectionMode;
+  topN?: number;
+  teamIds?: string[];
+}
+
+export interface AdvancementSelectedTeam {
+  teamId: string;
+  teamName: string | null;
+  trackId: string | null;
+  trackName: string | null;
+  groupId: string | null;
+  groupName: string | null;
+  rank: number | null;
+  finalScore: number | null;
+  reason: string | null;
+}
+
+export interface AdvancementContestedBucket {
+  trackId: string | null;
+  trackName: string | null;
+  groupId: string | null;
+  groupName: string | null;
+  teams: AdvancementSelectedTeam[];
+}
+
+export interface AdvancementSelectionPreviewResponse {
+  roundId: string;
+  roundName: string | null;
+  nextRoundId: string;
+  nextRoundName: string | null;
+  nextRoundType: string | null;
+  nextIsFinal: boolean;
+  scope: "GROUP" | "TRACK" | "GLOBAL";
+  topN: number | null;
+  mode: AdvancementSelectionMode;
+  selected: AdvancementSelectedTeam[];
+  contested: AdvancementContestedBucket[];
+  eliminatedCount: number;
+  confirmed: boolean;
+}
+
 export interface PublishedResultResponse {
   id: string;
   roundId: string;
@@ -79,6 +123,26 @@ export const rankingApi = {
 
   getAdvancements(roundId: string): Promise<AdvancementResponse[]> {
     return api.get<AdvancementResponse[]>(`/rounds/${roundId}/rankings/advancements`);
+  },
+
+  previewAdvancement(
+    roundId: string,
+    body: AdvancementSelectionRequest,
+  ): Promise<AdvancementSelectionPreviewResponse> {
+    return api.post<AdvancementSelectionPreviewResponse>(
+      `/rounds/${roundId}/advancement/preview`,
+      body,
+    );
+  },
+
+  confirmAdvancement(
+    roundId: string,
+    body: AdvancementSelectionRequest,
+  ): Promise<AdvancementSelectionPreviewResponse> {
+    return api.post<AdvancementSelectionPreviewResponse>(
+      `/rounds/${roundId}/advancement/confirm`,
+      body,
+    );
   },
 
   getPublishedResults(roundId: string): Promise<PublishedResultResponse> {

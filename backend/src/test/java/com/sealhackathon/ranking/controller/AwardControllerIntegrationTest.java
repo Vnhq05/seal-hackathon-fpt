@@ -182,7 +182,7 @@ class AwardControllerIntegrationTest extends BaseIntegrationTest {
                     })
                     .quantity(1)
                     .label(rank.name())
-                    .assignmentMode(PrizeAssignmentMode.RANK_BASED)
+                    .assignmentMode(com.sealhackathon.event.domain.enums.PrizeAssignmentMode.RANK_BASED)
                     .build());
         }
     }

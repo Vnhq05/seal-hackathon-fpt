@@ -24,8 +24,12 @@ import {
   mergeEventUpdate,
   toDateInput,
 } from "@/features/admin/components/event-edit/event-edit.utils";
+import { SEASONS, isValidSeason, normalizeSeason, type Season } from "@/lib/season.utils";
 
-import { SEASONS, normalizeSeason } from "@/lib/season.utils";
+/** EventResponse.season is free-form text; the form only accepts canonical seasons. */
+function toFormSeason(season: string | null | undefined): Season {
+  return isValidSeason(season) ? (normalizeSeason(season) as Season) : SEASONS[0];
+}
 
 const readOnlyStyle: React.CSSProperties = {
   ...inputStyle,
@@ -52,7 +56,7 @@ export function BasicInformationTab({ event }: { event: EventResponse }) {
     resolver: zodResolver(basicInformationSchema),
     values: {
       name: event.name,
-      season: normalizeSeason(event.season) || event.season,
+      season: toFormSeason(event.season),
       year: event.year,
       startDate: toDateInput(event.startDate),
       endDate: toDateInput(event.endDate),

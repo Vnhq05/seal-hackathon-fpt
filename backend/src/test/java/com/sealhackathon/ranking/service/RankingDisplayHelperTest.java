@@ -40,7 +40,8 @@ class RankingDisplayHelperTest {
 
         List<RankingResponse> reRanked = RankingDisplayHelper.reRankWithinTrack(globalRankings);
 
-        assertThat(reRanked).extracting(RankingResponse::getRank).containsExactly(1, 1, 3);
+        // Same score but distinct stored ranks (full tiebreak) → dense 1,2,3 within track
+        assertThat(reRanked).extracting(RankingResponse::getRank).containsExactly(1, 2, 3);
     }
 
     private static RankingResponse ranking(UUID teamId, UUID roundId, UUID trackId,

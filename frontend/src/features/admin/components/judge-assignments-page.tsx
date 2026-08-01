@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "@/features/auth/store/auth.store";
 import { StaffAssignmentNav } from "@/shared/components/staff-assignment-nav";
+import { AssignmentWorkflowBanner } from "@/shared/components/assignment-workflow-banner";
 import { useStaffPortalBase } from "@/shared/hooks/use-staff-portal-base";
 import {
   eventApi,
@@ -17,6 +18,8 @@ import {
   type RoundResponse,
   type TrackResponse,
 } from "@/lib/api";
+import { assignmentApi } from "@/lib/api/assignment.api";
+import { SEASONS, deriveCurrentSeason, deriveCurrentYear, type Season } from "@/shared/lib/season";
 import {
   useAssignJudge,
   useAllTrackMentorAssignments,
@@ -31,7 +34,6 @@ import {
   useUpdateTeamGroup,
 } from "@/features/admin/hooks/use-admin-assignments";
 import type { AssignmentScope, JudgeAssignmentResponse } from "@/lib/api/assignment.api";
-import { SEASONS } from "@/lib/season.utils";
 
 const STATUS_STYLES: Record<EventStatus, { backgroundColor: string; color: string }> = {
   UPCOMING: { backgroundColor: "#f0f9ff", color: "#0369a1" },
@@ -52,14 +54,6 @@ const STATUS_LABELS: Record<EventStatus, string> = {
   COMPLETED: "Closed",
   CANCELLED: "Cancelled",
 };
-
-/** FPT seasons: Spring Feb–May, Summer Jun–Sep, Fall Oct–Jan. getMonth() is 0-based. */
-function getCurrentSeason(): string {
-  const month = new Date().getMonth();
-  if (month === 0 || month >= 9) return "Fall";
-  if (month <= 4) return "Spring";
-  return "Summer";
-}
 
 function EventStatusBadge({ status }: { status: EventStatus }) {
   const style = STATUS_STYLES[status];
@@ -143,7 +137,7 @@ function JudgePoolRow({
 
   const handleRemove = () => {
     const label = assignment.judgeFullName ?? assignment.judgeEmail ?? "this judge";
-    if (!window.confirm(`Remove ${label} from the judge pool?`)) return;
+    if (!window.confirm(`Remove ${label} from assigned judges?`)) return;
     setRemoveError(null);
     remove(assignment.id, {
       onError: (err: Error) => setRemoveError(err.message),
@@ -301,7 +295,7 @@ function JudgePoolSection({
   return (
     <div className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] p-4">
       <div className="flex flex-wrap items-center gap-2">
-        <h3 className="text-sm font-bold text-seal-text">Judge pool</h3>
+        <h3 className="text-sm font-bold text-seal-text">Assigned judges</h3>
         {activeJudgeCount < minJudgesRequired && (
           <span className="rounded-md bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">
             Not enough judges (minimum {minJudgesRequired})
@@ -443,7 +437,7 @@ function JudgePoolSection({
               {poolJudges.length === 0 && (
                 <tr>
                   <td colSpan={8} className="px-4 py-8 text-center text-sm text-seal-text-muted">
-                    No judges in the pool for this scope yet.
+                    No judges assigned for this scope yet.
                   </td>
                 </tr>
               )}
@@ -482,7 +476,8 @@ function EventAssignmentPanel({
   const selectedRound = rounds.find((r) => r.id === selectedRoundId);
   const roundType = selectedRound?.roundType ?? undefined;
   const isPreliminary = roundType === "PRELIMINARY";
-  const showPool = !!selectedRoundId;
+  const isFinal = roundType === "FINAL";
+  const showPool = !!selectedRoundId && (!isPreliminary || !!selectedTrackId);
   const needsTrackForPool = !!selectedRoundId && isPreliminary && !selectedTrackId;
   const priorRoundIds = rounds
     .filter((r) => r.id !== selectedRoundId)
@@ -495,26 +490,17 @@ function EventAssignmentPanel({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap gap-3">
-        {tracks.length > 0 && (
-          <select
-            value={selectedTrackId}
-            onChange={(e) => {
-              setShowTeamDetails(false);
-              onTrackChange(e.target.value);
-            }}
-            className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] px-3 py-2 text-sm"
-          >
-            <option value="">All tracks</option>
-            {tracks.map((t) => (
-              <option key={t.id} value={t.id}>{t.name}</option>
-            ))}
-          </select>
-        )}
         <select
           value={selectedRoundId}
           onChange={(e) => {
+            const nextRoundId = e.target.value;
+            const nextRound = rounds.find((r) => r.id === nextRoundId);
             setShowTeamDetails(false);
-            onRoundChange(e.target.value);
+            onRoundChange(nextRoundId);
+            // Final is whole-round only — clear track filter
+            if (!nextRoundId || nextRound?.roundType === "FINAL") {
+              onTrackChange("");
+            }
           }}
           className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] px-3 py-2 text-sm"
         >
@@ -523,15 +509,39 @@ function EventAssignmentPanel({
             <option key={r.id} value={r.id}>{r.name}</option>
           ))}
         </select>
+        {!isFinal && tracks.length > 0 && (
+          <select
+            value={selectedTrackId}
+            onChange={(e) => {
+              setShowTeamDetails(false);
+              onTrackChange(e.target.value);
+            }}
+            disabled={!selectedRoundId}
+            className="border-2 border-navy bg-white shadow-[4px_4px_0_0_#0c1228] px-3 py-2 text-sm disabled:opacity-50"
+          >
+            <option value="">
+              {selectedRoundId ? "Select track..." : "Select round first"}
+            </option>
+            {tracks.map((t) => (
+              <option key={t.id} value={t.id}>{t.name}</option>
+            ))}
+          </select>
+        )}
       </div>
 
       {!selectedRoundId && (
-        <p className="text-sm text-seal-text-muted">Select a round to manage the judge pool.</p>
+        <p className="text-sm text-seal-text-muted">Select a round to manage assigned judges.</p>
       )}
 
       {needsTrackForPool && (
         <p className="text-sm text-seal-text-muted">
-          Select a specific track to manage the judge pool.
+          Select a track to manage assigned judges for this round.
+        </p>
+      )}
+
+      {isFinal && selectedRoundId && (
+        <p className="text-sm text-seal-text-muted">
+          Final uses whole-round judges — no track filter.
         </p>
       )}
 
@@ -573,7 +583,7 @@ function EventAssignmentPanel({
                       <th className="px-4 py-3">Track</th>
                       <th className="px-4 py-3">Group</th>
                       <th className="px-4 py-3">Submission</th>
-                      <th className="px-4 py-3">Judges (pool)</th>
+                      <th className="px-4 py-3">Judges</th>
                       <th className="px-4 py-3">Mentor</th>
                     </tr>
                   </thead>
@@ -605,7 +615,7 @@ function EventAssignmentPanel({
                           </td>
                           <td className="px-4 py-3 text-sm text-seal-text-secondary">
                             {team.judgeCount === 0 ? (
-                              <span className="text-seal-text-muted">No judges in pool</span>
+                              <span className="text-seal-text-muted">No judges assigned</span>
                             ) : (
                               <>
                                 <span className="font-medium">{team.judgeCount}</span>
@@ -627,7 +637,7 @@ function EventAssignmentPanel({
                                 </span>
                                 {mentorInJudgePool && (
                                   <div className="mt-0.5 text-[10px] font-medium text-red-600">
-                                    Also in judge pool
+                                    Also assigned as judge
                                   </div>
                                 )}
                               </div>
@@ -689,8 +699,8 @@ export function JudgeAssignmentsPage() {
   const portalBase = useStaffPortalBase();
   const searchParams = useSearchParams();
   const urlEventId = searchParams.get("eventId");
-  const [season, setSeason] = useState(getCurrentSeason());
-  const [year, setYear] = useState(new Date().getFullYear());
+  const [season, setSeason] = useState<Season>(deriveCurrentSeason());
+  const [year, setYear] = useState(deriveCurrentYear());
   const [manualExpandedEventId, setManualExpandedEventId] = useState<string | null | false>(false);
   const [selectedTrackId, setSelectedTrackId] = useState("");
   const [selectedRoundId, setSelectedRoundId] = useState("");
@@ -716,7 +726,8 @@ export function JudgeAssignmentsPage() {
   };
 
   const handleSeasonChange = (value: string) => {
-    setSeason(value);
+    if (!SEASONS.includes(value as Season)) return;
+    setSeason(value as Season);
     resetAssignment();
   };
 
@@ -747,19 +758,24 @@ export function JudgeAssignmentsPage() {
     enabled: !!expandedEventId,
   });
 
+  const selectedRoundType = rounds.find((r) => r.id === selectedRoundId)?.roundType;
+  const overviewTrackId =
+    selectedRoundType === "FINAL" ? undefined : selectedTrackId || undefined;
+
   const { data: overview, isLoading: overviewLoading } = useTeamAssignmentsOverview(
     expandedEventId ?? "",
     {
       roundId: selectedRoundId,
       season,
       year,
-      trackId: selectedTrackId || undefined,
+      trackId: overviewTrackId,
     },
   );
 
   return (
     <div className="flex flex-col gap-6">
       <StaffAssignmentNav />
+      <AssignmentWorkflowBanner step="judges" />
 
       <div>
         <h1 className="text-[28px] font-bold tracking-tight text-seal-text">Judge assignments</h1>

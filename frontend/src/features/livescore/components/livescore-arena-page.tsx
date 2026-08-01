@@ -8,18 +8,22 @@ import {
   usePublishResults,
   useToggleLeaderboardPublic,
 } from "../hooks/use-livescore";
-import { useRecalculateRankings } from "@/features/rankings/hooks/use-ranking";
+import { useRecalculateRankings, usePreviewAdvancement, useConfirmAdvancement, useAdvancements } from "@/features/rankings/hooks/use-ranking";
 import {
   useFinalists,
   useContestedFinalistSlots,
-  useSelectFinalists,
 } from "@/features/coordinator/hooks/use-finalists";
 import { useTeamAwards, useAssignAwards } from "@/features/coordinator/hooks/use-awards";
 import { useAdminEvent } from "@/features/admin/hooks/use-admin-hackathons";
-import { formatPrizeAmount, getPrizeLabel, resolveAssignmentMode } from "@/lib/prize.utils";
-import type { PrizeResponse } from "@/lib/api/event.api";
+import { formatPrizeAmount, getPrizeLabel, orderManualPrizes, orderRankBasedPrizes } from "@/lib/prize.utils";
 import type { LiveScoreEntry, LiveScoreBoard, RankingEvent, LiveScoreStatus, TrackInfo } from "@/lib/api/livescore.api";
 import type { RoundType } from "@/lib/api/types";
+import type { AdvancementSelectionPreviewResponse } from "@/lib/api/ranking.api";
+import {
+  RequiredDigitsInput,
+  parseRequiredPositiveInt,
+} from "@/shared/ui/required-digits-input";
+import { useTeams } from "@/features/teams/hooks/use-teams";
 
 const MEDAL_COLORS: Record<number, string> = { 1: "#f59e0b", 2: "#8891a5", 3: "#cd7f32" };
 
@@ -106,20 +110,23 @@ function EventNotification({ event }: { event: RankingEvent }) {
   else if (event.type === "RANK_CHANGED") {
     const dir = (event.oldRank ?? 0) > (event.newRank ?? 0) ? "climbed to" : "dropped to";
     message = `${event.teamName} ${dir} #${event.newRank}`;
-  } else if (event.type === "FINAL_RESULTS_PUBLISHED") message = "Final results published!";
-  else message = "Leaderboard updated";
+  } else if (event.type === "FINAL_RESULTS_PUBLISHED" || event.type === "RESULTS_PUBLISHED") {
+    message = "Results published";
+  } else message = "Leaderboard updated";
 
   const bgColors: Record<string, string> = {
     NEW_LEADER: "#fef3c7",
     RANK_CHANGED: "#dbeafe",
     LEADERBOARD_UPDATED: "#f1f5f9",
     FINAL_RESULTS_PUBLISHED: "#d1fae5",
+    RESULTS_PUBLISHED: "#d1fae5",
   };
   const borderColors: Record<string, string> = {
     NEW_LEADER: "#f59e0b",
     RANK_CHANGED: "#3b82f6",
     LEADERBOARD_UPDATED: "#8891a5",
     FINAL_RESULTS_PUBLISHED: "#16a34a",
+    RESULTS_PUBLISHED: "#16a34a",
   };
 
   return (
@@ -283,18 +290,6 @@ function CompetitionProgressOverview({ board }: { board: LiveScoreBoard }) {
 
 type StepStatus = "pending" | "active" | "done";
 
-const RANK_BASED_ORDER: PrizeResponse["rank"][] = ["FIRST", "SECOND", "THIRD", "CONSOLATION"];
-
-function sortRankBasedPrizes(prizes: PrizeResponse[]): PrizeResponse[] {
-  return prizes
-    .filter((p) => resolveAssignmentMode(p.rank, p.assignmentMode) === "RANK_BASED")
-    .sort((a, b) => {
-      const ai = RANK_BASED_ORDER.indexOf(a.rank);
-      const bi = RANK_BASED_ORDER.indexOf(b.rank);
-      return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi);
-    });
-}
-
 function panelBtnStyle(bg: string, disabled: boolean): React.CSSProperties {
   return {
     width: "100%",
@@ -402,107 +397,343 @@ function PublishResultsBlock({
           Results published
         </span>
       )}
-      <div className="flex items-center justify-between" style={{ marginTop: 4 }}>
-        <span style={{ fontSize: 12, color: "#0e1528" }}>Leaderboard public</span>
-        <button
-          onClick={onTogglePublic}
-          disabled={publicPending}
-          style={{
-            ...panelBtnStyle("#1e40af", publicPending),
-            width: "auto",
-            padding: "4px 10px",
-            fontSize: 11,
-          }}
-        >
-          {board.leaderboardPublic ? "Disable" : "Enable"}
-        </button>
+      <div className="flex flex-col gap-1" style={{ marginTop: 4 }}>
+        <div className="flex items-center justify-between">
+          <span style={{ fontSize: 12, color: "#0e1528" }}>Public leaderboard</span>
+          <button
+            onClick={onTogglePublic}
+            disabled={publicPending}
+            style={{
+              ...panelBtnStyle("#1e40af", publicPending),
+              width: "auto",
+              padding: "4px 10px",
+              fontSize: 11,
+            }}
+          >
+            {board.leaderboardPublic ? "Hide from public" : "Show to public"}
+          </button>
+        </div>
+        <p style={{ fontSize: 11, color: "#8891a5", lineHeight: 1.35, margin: 0 }}>
+          When on, students/guests can view this event&apos;s live ranking without staff login.
+        </p>
       </div>
     </div>
   );
 }
 
-function FinalistsPanel({ eventId }: { eventId: string }) {
+function AdvancementPanel({
+  eventId,
+  roundId,
+  rankings,
+}: {
+  eventId: string;
+  roundId: string;
+  rankings: LiveScoreEntry[];
+}) {
+  const [mode, setMode] = useState<"AUTO" | "MANUAL">("AUTO");
+  const [topNInput, setTopNInput] = useState("");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [preview, setPreview] = useState<AdvancementSelectionPreviewResponse | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  /** Selection key last successfully confirmed — survives Preview so Confirm stays locked. */
+  const [confirmedSelectionKey, setConfirmedSelectionKey] = useState<string | null>(null);
+  const confirmInFlight = useRef(false);
+  const syncedServerConfirm = useRef(false);
+
+  const { data: advancements = [] } = useAdvancements(roundId);
   const { data: finalists = [] } = useFinalists(eventId);
   const { data: contested = [] } = useContestedFinalistSlots(eventId);
-  const selectMutation = useSelectFinalists(eventId);
+  const { data: teamsPage } = useTeams(eventId, { size: 200 });
+  const previewMutation = usePreviewAdvancement(roundId);
+  const confirmMutation = useConfirmAdvancement(eventId, roundId);
 
-  const hasFinalists = finalists.length > 0;
-  const byTrack = finalists.reduce<Record<string, typeof finalists>>((acc, f) => {
-    const key = f.trackName ?? "Unknown";
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(f);
-    return acc;
-  }, {});
+  const advancedCount = advancements.filter((a) => a.status === "ADVANCED").length;
+  const hasConfirmed = advancedCount > 0 || finalists.length > 0;
+
+  const selectionKey =
+    mode === "AUTO"
+      ? `AUTO:${topNInput}`
+      : `MANUAL:${Array.from(selectedIds).sort().join(",")}`;
+  const isSelectionConfirmed =
+    confirmedSelectionKey === selectionKey || confirmedSelectionKey === "__server__";
+
+  useEffect(() => {
+    if (hasConfirmed && !syncedServerConfirm.current) {
+      syncedServerConfirm.current = true;
+      setConfirmedSelectionKey("__server__");
+    }
+  }, [hasConfirmed]);
+
+  const markSelectionDirty = () => {
+    setConfirmedSelectionKey(null);
+    setPreview(null);
+    setActionError(null);
+  };
+
+  // Mirror BE: groups win over tracks when any ranked team is in a group
+  const rankedTeamIds = new Set(rankings.map((r) => r.teamId));
+  const rankedTeams = (teamsPage?.content ?? []).filter((t) => rankedTeamIds.has(t.id));
+  const hasGroups = rankedTeams.some((t) => !!t.groupId);
+  const hasTracks = rankings.some((r) => !!r.trackId);
+  const inferredScope = hasGroups ? "GROUP" : hasTracks ? "TRACK" : "GLOBAL";
+  const activeScope = preview?.scope ?? inferredScope;
+  const topNBucketLabel =
+    activeScope === "GROUP" ? "per group" : activeScope === "TRACK" ? "per track" : "overall";
+
+  const toggleTeam = (teamId: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(teamId)) next.delete(teamId);
+      else next.add(teamId);
+      return next;
+    });
+    markSelectionDirty();
+  };
+
+  const buildBody = () => {
+    if (mode === "MANUAL") {
+      return { mode: "MANUAL" as const, teamIds: Array.from(selectedIds) };
+    }
+    const topN = parseRequiredPositiveInt(topNInput);
+    if (topN == null) {
+      setActionError("Top N is required and must be at least 1");
+      return null;
+    }
+    setActionError(null);
+    return { mode: "AUTO" as const, topN };
+  };
+
+  const runPreview = async () => {
+    if (previewMutation.isPending || confirmMutation.isPending) return;
+    const body = buildBody();
+    if (!body) return;
+    try {
+      const result = await previewMutation.mutateAsync(body);
+      setActionError(null);
+      // Keep confirmedSelectionKey — Preview must not re-enable Confirm for same selection
+      setPreview(result);
+    } catch (err) {
+      setPreview(null);
+      setActionError(err instanceof Error ? err.message : "Preview failed");
+    }
+  };
+
+  const runConfirm = async () => {
+    if (confirmInFlight.current || confirmMutation.isPending || previewMutation.isPending) return;
+    if (!preview || isSelectionConfirmed) return;
+    if (preview.contested.length > 0 && mode === "AUTO") return;
+    const body = buildBody();
+    if (!body) return;
+    confirmInFlight.current = true;
+    try {
+      const result = await confirmMutation.mutateAsync(body);
+      setActionError(null);
+      setConfirmedSelectionKey(selectionKey);
+      setPreview(result);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Confirm failed");
+    } finally {
+      confirmInFlight.current = false;
+    }
+  };
+
+  const scopeLabel =
+    activeScope === "GROUP"
+      ? "per competition group"
+      : activeScope === "TRACK"
+        ? "per track"
+        : "overall";
 
   return (
-    <StepBlock number={2} title="Select Finalists" status={hasFinalists ? "done" : "active"}>
-      {!hasFinalists ? (
-        <>
-          <p style={{ fontSize: 12, color: "#8891a5", marginBottom: 8, lineHeight: 1.4 }}>
-            Auto-proposes top 2 per track → 6 finalists total. Ties create a contested slot.
-          </p>
-          <button
-            onClick={() => selectMutation.mutate()}
-            disabled={selectMutation.isPending}
-            style={panelBtnStyle("#0e7490", selectMutation.isPending)}
-          >
-            {selectMutation.isPending ? "Selecting..." : "Auto-Select Finalists"}
-          </button>
-        </>
+    <StepBlock number={2} title="Advance Teams" status={hasConfirmed ? "done" : "active"}>
+      <p style={{ fontSize: 12, color: "#8891a5", marginBottom: 8, lineHeight: 1.4 }}>
+        Choose Top N (auto) or pick teams manually, then Preview → Confirm. Next round FINAL also syncs finalists.
+      </p>
+
+      <div className="flex gap-2" style={{ marginBottom: 8 }}>
+        <button
+          type="button"
+          onClick={() => {
+            setMode("AUTO");
+            markSelectionDirty();
+          }}
+          style={{
+            ...panelBtnStyle(mode === "AUTO" ? "#0e7490" : "#8891a5", false),
+            width: "auto",
+            padding: "4px 10px",
+            fontSize: 11,
+          }}
+        >
+          Auto Top N
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setMode("MANUAL");
+            markSelectionDirty();
+          }}
+          style={{
+            ...panelBtnStyle(mode === "MANUAL" ? "#0e7490" : "#8891a5", false),
+            width: "auto",
+            padding: "4px 10px",
+            fontSize: 11,
+          }}
+        >
+          Manual
+        </button>
+      </div>
+
+      {mode === "AUTO" ? (
+        <div style={{ marginBottom: 8 }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
+            <span style={{ color: "#0e1528" }}>Top N</span>
+            <RequiredDigitsInput
+              value={topNInput}
+              onValueChange={(v) => {
+                setTopNInput(v);
+                markSelectionDirty();
+              }}
+              emptyMessage="Top N cannot be empty"
+              placeholder="e.g. 2"
+              style={{
+                width: 72,
+                padding: "4px 8px",
+                border: "1px solid #d1d5db",
+                borderRadius: 6,
+                fontSize: 12,
+              }}
+            />
+            <span style={{ color: "#8891a5" }}>{topNBucketLabel}</span>
+          </label>
+        </div>
       ) : (
-        <>
-          {Object.entries(byTrack).map(([trackName, teams]) => (
-            <div key={trackName} style={{ marginBottom: 8 }}>
-              <p style={{ fontSize: 11, fontWeight: 600, color: "#8891a5", marginBottom: 4 }}>{trackName}</p>
-              {teams.map((f) => (
-                <div key={f.id} className="flex items-center gap-2" style={{ fontSize: 12, marginBottom: 2 }}>
-                  <span style={{ color: "#8891a5", minWidth: 20 }}>#{f.preliminaryRank}</span>
-                  <span style={{ fontWeight: 500, color: "#0e1528" }}>{f.teamName}</span>
-                  {f.selectionMethod === "OVERFLOW_FILL" && (
-                    <span
-                      style={{
-                        fontSize: 10,
-                        fontWeight: 600,
-                        color: "#92400e",
-                        backgroundColor: "#fef3c7",
-                        padding: "1px 6px",
-                        borderRadius: 4,
-                      }}
-                    >
-                      Wildcard
-                    </span>
-                  )}
-                </div>
-              ))}
+        <div style={{ maxHeight: 160, overflowY: "auto", marginBottom: 8 }}>
+          {rankings.map((r) => (
+            <label
+              key={r.teamId}
+              className="flex items-center gap-2"
+              style={{ fontSize: 12, marginBottom: 4, cursor: "pointer" }}
+            >
+              <input
+                type="checkbox"
+                checked={selectedIds.has(r.teamId)}
+                onChange={() => toggleTeam(r.teamId)}
+              />
+              <span style={{ color: "#8891a5", minWidth: 28 }}>#{r.rank}</span>
+              <span style={{ fontWeight: 500, color: "#0e1528" }}>{r.teamName}</span>
+            </label>
+          ))}
+        </div>
+      )}
+
+      {actionError && (
+        <p style={{ fontSize: 11, fontWeight: 600, color: "#92400e", marginBottom: 8 }}>{actionError}</p>
+      )}
+
+      <div className="flex flex-col gap-2" style={{ marginBottom: 8 }}>
+        <button
+          type="button"
+          onClick={() => void runPreview()}
+          disabled={
+            previewMutation.isPending ||
+            confirmMutation.isPending ||
+            (mode === "AUTO" && !parseRequiredPositiveInt(topNInput)) ||
+            (mode === "MANUAL" && selectedIds.size === 0)
+          }
+          style={panelBtnStyle(
+            "#1e40af",
+            previewMutation.isPending ||
+              confirmMutation.isPending ||
+              (mode === "AUTO" && !parseRequiredPositiveInt(topNInput)) ||
+              (mode === "MANUAL" && selectedIds.size === 0),
+          )}
+        >
+          {previewMutation.isPending ? "Previewing..." : "Preview"}
+        </button>
+        <button
+          type="button"
+          onClick={() => void runConfirm()}
+          disabled={
+            confirmMutation.isPending ||
+            previewMutation.isPending ||
+            !preview ||
+            isSelectionConfirmed ||
+            (preview.contested.length > 0 && mode === "AUTO") ||
+            (mode === "AUTO" && !parseRequiredPositiveInt(topNInput))
+          }
+          style={panelBtnStyle(
+            "#0e7490",
+            confirmMutation.isPending ||
+              previewMutation.isPending ||
+              !preview ||
+              isSelectionConfirmed,
+          )}
+        >
+          {confirmMutation.isPending
+            ? "Confirming..."
+            : isSelectionConfirmed
+              ? "Advancement confirmed"
+              : "Confirm Advancement"}
+        </button>
+      </div>
+
+      {preview && (
+        <div style={{ marginBottom: 8 }}>
+          <p style={{ fontSize: 11, color: "#8891a5", marginBottom: 4 }}>
+            {preview.selected.length} selected ({scopeLabel})
+            {preview.nextRoundName ? ` → ${preview.nextRoundName}` : ""}
+            {isSelectionConfirmed ? " · confirmed" : ""}
+          </p>
+          {preview.selected.slice(0, 12).map((t) => (
+            <div key={t.teamId} className="flex items-center gap-2" style={{ fontSize: 12, marginBottom: 2 }}>
+              <span style={{ color: "#8891a5", minWidth: 28 }}>#{t.rank}</span>
+              <span style={{ fontWeight: 500, color: "#0e1528" }}>{t.teamName}</span>
             </div>
           ))}
-          {contested.length > 0 && (
+          {preview.selected.length > 12 && (
+            <p style={{ fontSize: 11, color: "#8891a5" }}>+{preview.selected.length - 12} more</p>
+          )}
+          {preview.contested.length > 0 && (
             <div
               style={{
                 backgroundColor: "#fef3c7",
                 border: "1px solid #f59e0b",
                 borderRadius: 6,
                 padding: "8px 10px",
-                marginBottom: 8,
+                marginTop: 8,
               }}
             >
               <p style={{ fontSize: 12, fontWeight: 600, color: "#92400e", marginBottom: 4 }}>
-                {contested.length} contested slot(s) — tie-break needed
+                Contested at cutoff — switch to Manual to pick winners
               </p>
-              {contested.map((slot) => (
-                <p key={slot.id} style={{ fontSize: 11, color: "#92400e", marginBottom: 2 }}>
-                  {slot.trackName ?? "Track"}: {slot.teams.map((t) => t.teamName).join(" vs ")}
+              {preview.contested.map((slot, idx) => (
+                <p key={idx} style={{ fontSize: 11, color: "#92400e", marginBottom: 2 }}>
+                  {(slot.groupName ?? slot.trackName ?? "Bucket")}:{" "}
+                  {slot.teams.map((t) => t.teamName).join(" vs ")}
                 </p>
               ))}
             </div>
           )}
-          <button
-            onClick={() => selectMutation.mutate()}
-            disabled={selectMutation.isPending}
-            style={panelBtnStyle("#0e7490", selectMutation.isPending)}
-          >
-            {selectMutation.isPending ? "Selecting..." : "Re-select Finalists"}
-          </button>
+        </div>
+      )}
+
+      {hasConfirmed && !preview && (
+        <>
+          {finalists.length > 0 ? (
+            finalists.map((f) => (
+              <div key={f.id} className="flex items-center gap-2" style={{ fontSize: 12, marginBottom: 2 }}>
+                <span style={{ color: "#8891a5", minWidth: 20 }}>#{f.preliminaryRank}</span>
+                <span style={{ fontWeight: 500, color: "#0e1528" }}>{f.teamName}</span>
+              </div>
+            ))
+          ) : (
+            <p style={{ fontSize: 12, color: "#065f46" }}>{advancedCount} team(s) advanced</p>
+          )}
+          {contested.length > 0 && (
+            <p style={{ fontSize: 11, color: "#92400e", marginTop: 4 }}>
+              {contested.length} contested slot(s) still open
+            </p>
+          )}
         </>
       )}
     </StepBlock>
@@ -512,20 +743,17 @@ function FinalistsPanel({ eventId }: { eventId: string }) {
 function AwardsPanel({ eventId, rankings }: { eventId: string; rankings: LiveScoreEntry[] }) {
   const { data: awards = [] } = useTeamAwards(eventId);
   const { data: event } = useAdminEvent(eventId);
+  const { data: teamsPage } = useTeams(eventId, { size: 100 });
   const assignMutation = useAssignAwards(eventId);
   const [manualTeamByPrize, setManualTeamByPrize] = useState<Record<string, string>>({});
 
   const hasAwards = awards.length > 0;
-  const prizes = event?.prizes ?? [];
-  const rankBasedPrizes = sortRankBasedPrizes(prizes);
-  const manualPrizes = prizes.filter(
-    (p) => resolveAssignmentMode(p.rank, p.assignmentMode) === "MANUAL",
-  );
-  const teamOptions = rankings.map((r) => ({ id: r.teamId, name: r.teamName }));
-
-  const allManualSelected =
-    manualPrizes.length === 0 ||
-    manualPrizes.every((p) => Boolean(manualTeamByPrize[p.id]));
+  const rankPrizes = orderRankBasedPrizes(event?.prizes ?? []);
+  const manualPrizes = orderManualPrizes(event?.prizes ?? []);
+  const teams = (teamsPage?.content ?? []).filter((t) => t.status !== "DISBANDED");
+  const canAssignRank = rankPrizes.length > 0;
+  const allManualSelected = manualPrizes.every((p) => !!manualTeamByPrize[p.id]);
+  const canAssign = canAssignRank && allManualSelected;
 
   const handleAssign = () => {
     assignMutation.mutate({
@@ -537,24 +765,32 @@ function AwardsPanel({ eventId, rankings }: { eventId: string; rankings: LiveSco
   };
 
   return (
-    <StepBlock number={3} title="Assign Awards" status={hasAwards ? "done" : "active"}>
+    <StepBlock number={3} title="Assign Awards (winners)" status={hasAwards ? "done" : "active"}>
       {!hasAwards ? (
         <>
-          {prizes.length === 0 ? (
-            <p style={{ fontSize: 12, color: "#dc2626", marginBottom: 8 }}>
-              Configure First / Second / Third prizes on the event before assigning awards.
+          <p style={{ fontSize: 12, color: "#8891a5", marginBottom: 8, lineHeight: 1.4 }}>
+            Final round has no Advance. Rank-based prizes follow Final rankings; special prizes need a
+            team pick.
+          </p>
+          {!canAssignRank ? (
+            <p style={{ fontSize: 11, color: "#92400e", marginBottom: 8, lineHeight: 1.4 }}>
+              No structured prizes found. Configure First, Second, and Third Prize amounts on the
+              event Prizes tab first.
             </p>
           ) : (
             <>
-              <p style={{ fontSize: 12, color: "#8891a5", marginBottom: 8 }}>
-                Auto from final rankings (RANK_BASED):
-              </p>
               <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 8, fontSize: 11 }}>
                 <tbody>
-                  {rankBasedPrizes.map((prize, idx) => (
-                    <tr key={prize.id} style={{ borderBottom: "1px solid rgba(198,198,205,0.3)" }}>
+                  {rankPrizes.map((prize, idx) => (
+                    <tr
+                      key={prize.id ?? `${prize.rank}-${idx}`}
+                      style={{ borderBottom: "1px solid rgba(198,198,205,0.3)" }}
+                    >
                       <td style={{ padding: "4px 0", color: "#8891a5", width: "40%" }}>
                         {getPrizeLabel(prize.rank, prize.label)}
+                        <span style={{ display: "block", fontSize: 10, color: "#a1a8b8" }}>
+                          By ranking
+                        </span>
                       </td>
                       <td style={{ padding: "4px 4px", fontWeight: 500, color: "#0e1528" }}>
                         {rankings[idx]?.teamName ?? "TBD"}
@@ -569,19 +805,28 @@ function AwardsPanel({ eventId, rankings }: { eventId: string; rankings: LiveSco
 
               {manualPrizes.length > 0 && (
                 <div style={{ marginBottom: 8 }}>
-                  <p style={{ fontSize: 12, color: "#8891a5", marginBottom: 6 }}>
-                    Manual prizes (pick a team):
+                  <p style={{ fontSize: 11, fontWeight: 600, color: "#0e1528", marginBottom: 6 }}>
+                    Special prizes (pick team)
                   </p>
                   {manualPrizes.map((prize) => (
-                    <div key={prize.id} style={{ marginBottom: 8 }}>
-                      <div
-                        className="flex items-center justify-between"
-                        style={{ fontSize: 11, marginBottom: 4, gap: 4 }}
-                      >
-                        <span style={{ color: "#8891a5" }}>
+                    <div
+                      key={prize.id}
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 4,
+                        marginBottom: 8,
+                        paddingBottom: 8,
+                        borderBottom: "1px solid rgba(198,198,205,0.3)",
+                      }}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span style={{ fontSize: 11, color: "#8891a5" }}>
                           {getPrizeLabel(prize.rank, prize.label)}
                         </span>
-                        <span style={{ color: "#0e1528" }}>{formatPrizeAmount(prize.value)}</span>
+                        <span style={{ fontSize: 11, color: "#0e1528" }}>
+                          {formatPrizeAmount(prize.value)}
+                        </span>
                       </div>
                       <select
                         value={manualTeamByPrize[prize.id] ?? ""}
@@ -593,17 +838,17 @@ function AwardsPanel({ eventId, rankings }: { eventId: string; rankings: LiveSco
                         }
                         style={{
                           width: "100%",
-                          padding: "6px 8px",
                           fontSize: 12,
-                          border: "1px solid rgba(198,198,205,0.7)",
+                          padding: "6px 8px",
                           borderRadius: 6,
-                          backgroundColor: "#fff",
+                          border: "1px solid #d1d5db",
+                          background: "#fff",
                         }}
                       >
                         <option value="">Select team…</option>
-                        {teamOptions.map((t) => (
-                          <option key={t.id} value={t.id}>
-                            {t.name}
+                        {teams.map((team) => (
+                          <option key={team.id} value={team.id}>
+                            {team.name}
                           </option>
                         ))}
                       </select>
@@ -615,22 +860,19 @@ function AwardsPanel({ eventId, rankings }: { eventId: string; rankings: LiveSco
           )}
           <button
             onClick={handleAssign}
-            disabled={
-              assignMutation.isPending ||
-              prizes.length === 0 ||
-              !allManualSelected
-            }
-            style={panelBtnStyle(
-              "#16a34a",
-              assignMutation.isPending || prizes.length === 0 || !allManualSelected,
-            )}
+            disabled={assignMutation.isPending || !canAssign}
+            style={panelBtnStyle("#16a34a", assignMutation.isPending || !canAssign)}
           >
             {assignMutation.isPending ? "Assigning..." : "Assign Awards"}
           </button>
+          {manualPrizes.length > 0 && !allManualSelected && canAssignRank && (
+            <p style={{ fontSize: 11, color: "#92400e", marginTop: 6 }}>
+              Select a team for each special prize before assigning.
+            </p>
+          )}
           {assignMutation.isError && (
             <p style={{ fontSize: 11, color: "#dc2626", marginTop: 6 }}>
-              {(assignMutation.error as Error)?.message ||
-                "Failed to assign. Ensure rankings are recalculated and prizes are configured."}
+              Failed to assign. Ensure rankings are recalculated and prizes are configured.
             </p>
           )}
         </>
@@ -657,6 +899,12 @@ function AwardsPanel({ eventId, rankings }: { eventId: string; rankings: LiveSco
               style={{ fontSize: 12, marginBottom: 4, gap: 4 }}
             >
               <span style={{ color: "#8891a5", flex: 1 }}>
+                {a.prizeLabel || (a.prizeRank ? getPrizeLabel(a.prizeRank) : "Prize")}
+              </span>
+              <span style={{ fontWeight: 500, color: "#0e1528", flex: 1 }}>{a.teamName}</span>
+              <span style={{ color: "#0e1528", whiteSpace: "nowrap" }}>
+                {a.prizeValue ? formatPrizeAmount(a.prizeValue) : "—"}
+
                 {getPrizeLabel(a.prizeRank, a.prizeLabel)}
               </span>
               <span style={{ fontWeight: 500, color: "#0e1528", flex: 1 }}>
@@ -687,8 +935,10 @@ function PublishFlowPanel({
   const publicMutation = useToggleLeaderboardPublic(eventId);
   const recalculateMutation = useRecalculateRankings(eventId);
 
-  const isPreliminary = board.roundType === "PRELIMINARY";
-  const publishStepNumber = isPreliminary ? 3 : 2;
+  const isFinal = board.roundType === "FINAL";
+  const canAdvance = !isFinal && !!board.roundId;
+  const publishStepNumber = canAdvance ? 3 : 2;
+  const awardsStepNumber = canAdvance ? 4 : 3;
   const publishStepStatus: StepStatus = board.resultsPublished
     ? "done"
     : board.scoresLocked
@@ -762,26 +1012,33 @@ function PublishFlowPanel({
     >
       <div className="flex items-center justify-between" style={{ marginBottom: 12 }}>
         <h3 style={{ fontSize: 14, fontWeight: 600, color: "#0e1528" }}>Publish Flow</h3>
-        <span style={{ fontSize: 11, color: "#8891a5" }}>{board.roundName}</span>
+        <span style={{ fontSize: 11, color: "#8891a5" }}>
+          {board.roundName}
+          {isFinal ? " · no Advance" : ""}
+        </span>
       </div>
 
       {lockStep}
 
-      {isPreliminary ? (
+      {canAdvance ? (
         board.scoresLocked ? (
-          <FinalistsPanel eventId={eventId} />
+          <AdvancementPanel eventId={eventId} roundId={board.roundId!} rankings={fullRankings} />
         ) : (
-          <StepBlock number={2} title="Select Finalists" status="pending" />
+          <StepBlock number={2} title="Advance Teams" status="pending" />
         )
       ) : null}
 
       {publishStep}
 
-      {!isPreliminary ? (
+      {isFinal ? (
         board.resultsPublished ? (
           <AwardsPanel eventId={eventId} rankings={fullRankings} />
         ) : (
-          <StepBlock number={3} title="Assign Awards" status="pending" />
+          <StepBlock number={awardsStepNumber} title="Assign Awards (winners)" status="pending">
+            <p style={{ fontSize: 12, color: "#8891a5", lineHeight: 1.4 }}>
+              After publish: assign prizes from Final rankings (replaces Advance on the last round).
+            </p>
+          </StepBlock>
         )
       ) : null}
     </div>

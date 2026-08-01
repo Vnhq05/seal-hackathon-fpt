@@ -39,7 +39,7 @@ public class AwardController {
     @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<ApiResponse<AwardAssignmentResultResponse>> assignAwards(
             @PathVariable UUID eventId,
-            @RequestBody(required = false) @Valid AssignAwardsRequest request) {
+            @Valid @RequestBody(required = false) AssignAwardsRequest request) {
         AwardAssignmentResultResponse result = awardService.assignAwardsFromFinalRanking(
                 eventId, request != null ? request : AssignAwardsRequest.builder().build());
         return ResponseEntity.ok(ApiResponse.success("Awards assigned", result));

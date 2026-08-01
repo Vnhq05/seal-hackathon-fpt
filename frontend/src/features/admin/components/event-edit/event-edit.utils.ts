@@ -66,6 +66,7 @@ export function mergeEventUpdate(
             value: p.value,
             quantity: p.quantity,
             label: p.label ?? undefined,
+            assignmentMode: p.assignmentMode ?? undefined,
           })),
     honoredGuests:
       patch.honoredGuests !== undefined

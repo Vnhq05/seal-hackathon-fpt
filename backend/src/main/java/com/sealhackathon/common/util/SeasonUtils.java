@@ -59,6 +59,13 @@ public final class SeasonUtils {
                 + trimmed.substring(1).toLowerCase(Locale.ROOT);
     }
 
+    public static boolean isValid(String season) {
+        if (season == null || season.isBlank()) {
+            return false;
+        }
+        return VALID_SEASONS.contains(normalize(season));
+    }
+
     public static boolean isValidSeason(String season) {
         return season != null && VALID_SEASONS.contains(normalize(season));
     }

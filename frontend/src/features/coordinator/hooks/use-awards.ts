@@ -52,8 +52,7 @@ export function useAssignAwards(eventId: string | undefined) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (body: AssignAwardsRequest = { manualAssignments: [] }) =>
-      awardApi.assign(eventId!, body),
+    mutationFn: (body?: AssignAwardsRequest) => awardApi.assign(eventId!, body),
     onSuccess: () => {
       if (!eventId) return;
       queryClient.invalidateQueries({ queryKey: [AWARDS_KEY, eventId] });

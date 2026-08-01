@@ -230,6 +230,7 @@ class AggregationServiceTest {
         assertThat(rankings.get(0).getTeamId()).isEqualTo(teamA);
         assertThat(rankings.get(0).getRank()).isEqualTo(1);
         assertThat(rankings.get(1).getTeamId()).isEqualTo(teamB);
-        assertThat(rankings.get(1).getRank()).isEqualTo(1);
+        // Earlier submission wins tiebreak → distinct ranks after full comparator
+        assertThat(rankings.get(1).getRank()).isEqualTo(2);
     }
 }

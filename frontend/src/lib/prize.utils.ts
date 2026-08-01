@@ -12,23 +12,27 @@ export const PRIZE_RANK_LABELS: Record<PrizeRank, string> = {
 
 export const DEFAULT_CONSOLATION_LABEL = PRIZE_RANK_LABELS.CONSOLATION;
 
+/** Legacy admin textarea blob stored as a single CONSOLATION row. */
+export const FREE_TEXT_PRIZE_LABEL = "Prizes";
+
 const PRIZE_RANK_ORDER: PrizeRank[] = ["FIRST", "SECOND", "THIRD"];
 
-export function getPrizeLabel(rank?: PrizeRank | null, label?: string | null): string {
-  if (label?.trim()) return label.trim();
-  if (!rank) return "Team Award";
-  return PRIZE_RANK_LABELS[rank] ?? "Team Award";
+export function isLegacyFreeTextPrize(p: Pick<PrizeOrderingInput, "rank"> & { label?: string | null }): boolean {
+  return p.rank === "CONSOLATION" && p.label === FREE_TEXT_PRIZE_LABEL;
 }
 
 export function resolveAssignmentMode(
   rank: PrizeRank,
   mode?: PrizeAssignmentMode | null,
 ): PrizeAssignmentMode {
-  if (rank === "OTHER") return "MANUAL";
-  if (rank === "FIRST" || rank === "SECOND" || rank === "THIRD" || rank === "CONSOLATION") {
-    return "RANK_BASED";
-  }
-  return mode ?? "RANK_BASED";
+  if (rank === "FIRST" || rank === "SECOND" || rank === "THIRD") return "RANK_BASED";
+  return mode === "MANUAL" ? "MANUAL" : "RANK_BASED";
+}
+
+export function getPrizeLabel(rank?: PrizeRank | null, label?: string | null): string {
+  if (label?.trim() && label.trim() !== FREE_TEXT_PRIZE_LABEL) return label.trim();
+  if (!rank) return "Team Award";
+  return PRIZE_RANK_LABELS[rank] ?? "Team Award";
 }
 
 /** Strip non-digits and parse prize amount (mirrors backend PrizeAmountUtils). */
@@ -37,6 +41,43 @@ export function parsePrizeAmount(value: string): number | null {
   if (!digits) return null;
   const n = parseInt(digits, 10);
   return Number.isFinite(n) ? n : null;
+}
+
+type AwardOrderPrize = {
+  rank: PrizeRank;
+  label?: string | null;
+  value: string;
+  assignmentMode?: PrizeAssignmentMode | null;
+};
+
+/** Rank-based prizes only (First/Second/Third + Encouragement). */
+export function orderRankBasedPrizes<T extends AwardOrderPrize>(prizes: T[]): T[] {
+  const ordered: T[] = [];
+  for (const rank of PRIZE_RANK_ORDER) {
+    const match = prizes.find((p) => p.rank === rank);
+    if (match && parsePrizeAmount(match.value) != null) ordered.push(match);
+  }
+  for (const prize of prizes) {
+    if (prize.rank !== "CONSOLATION" || isLegacyFreeTextPrize(prize)) continue;
+    if (resolveAssignmentMode(prize.rank, prize.assignmentMode) !== "RANK_BASED") continue;
+    if (parsePrizeAmount(prize.value) == null) continue;
+    ordered.push(prize);
+  }
+  return ordered;
+}
+
+/** Special prizes that require manual team selection. */
+export function orderManualPrizes<T extends AwardOrderPrize>(prizes: T[]): T[] {
+  return prizes.filter((prize) => {
+    if (prize.rank !== "CONSOLATION" || isLegacyFreeTextPrize(prize)) return false;
+    if (resolveAssignmentMode(prize.rank, prize.assignmentMode) !== "MANUAL") return false;
+    return parsePrizeAmount(prize.value) != null;
+  });
+}
+
+/** Combined preview order: rank-based first, then manual. */
+export function orderPrizesForAward<T extends AwardOrderPrize>(prizes: T[]): T[] {
+  return [...orderRankBasedPrizes(prizes), ...orderManualPrizes(prizes)];
 }
 
 /** Leading cash amount + optional currency token, e.g. "10,000,000 VND + Trophy". */

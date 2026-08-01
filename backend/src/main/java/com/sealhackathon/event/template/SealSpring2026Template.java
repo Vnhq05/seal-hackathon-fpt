@@ -450,7 +450,7 @@ public final class SealSpring2026Template {
 
                     .label(prizeLabels().get(pd.rank()))
 
-                    .assignmentMode(PrizeAssignmentMode.RANK_BASED)
+                    .assignmentMode(com.sealhackathon.event.domain.enums.PrizeAssignmentMode.RANK_BASED)
 
                     .build());
 

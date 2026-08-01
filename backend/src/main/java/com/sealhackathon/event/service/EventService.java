@@ -215,7 +215,8 @@ public class EventService {
         String oldName = event.getName();
 
         event.setName(request.getName());
-        event.setSeason(SeasonUtils.requireValidSeason(request.getSeason()));
+        validateSeason(request.getSeason());
+        event.setSeason(SeasonUtils.normalize(request.getSeason()));
         event.setYear(request.getYear());
         event.setStartDate(request.getStartDate());
         event.setEndDate(request.getEndDate());
@@ -679,6 +680,14 @@ public class EventService {
         }
     }
 
+    private void validateSeason(String season) {
+        if (!SeasonUtils.isValid(season)) {
+            throw new BusinessException(
+                    "Season must be Spring, Summer, or Fall",
+                    HttpStatus.BAD_REQUEST) {};
+        }
+    }
+
     private void validateRegistrationDates(LocalDate open, LocalDate close, LocalDate start) {
         if (open == null) {
             throw new BusinessException("Registration open date is required", HttpStatus.BAD_REQUEST) {};
@@ -703,46 +712,33 @@ public class EventService {
             return;
         }
 
-        boolean hasFirst = false;
-        boolean hasSecond = false;
-        boolean hasThird = false;
         Map<String, Map<PrizeRank, Long>> grouped = new HashMap<>();
 
         for (PrizeRequest prize : prizes) {
-            if (prize.getRank() == null) {
-                throw new BusinessException("Prize rank is required", HttpStatus.BAD_REQUEST) {};
+            // Legacy free-text blob from old admin UI — skip structured amount checks
+            if (prize.getRank() == PrizeRank.CONSOLATION
+                    && "Prizes".equals(prize.getLabel())) {
+                continue;
             }
+
             Long amount = PrizeAmountUtils.parsePrizeAmount(prize.getValue());
             if (amount == null || amount <= 0) {
                 throw new BusinessException(
-                        "Prize amount must be a positive number (VND)",
+                        "Prize amounts must be positive numbers (VND).",
                         HttpStatus.BAD_REQUEST) {};
             }
-            if (prize.getRank() == PrizeRank.OTHER
-                    && (prize.getLabel() == null || prize.getLabel().isBlank())) {
-                throw new BusinessException(
-                        "Other (manual) prizes require a name/label",
-                        HttpStatus.BAD_REQUEST) {};
+            if (prize.getRank() == PrizeRank.CONSOLATION) {
+                if (prize.getLabel() == null || prize.getLabel().isBlank()) {
+                    throw new BusinessException(
+                            "Additional prizes require a name.",
+                            HttpStatus.BAD_REQUEST) {};
+                }
+                continue;
             }
-
-            if (prize.getRank() == PrizeRank.FIRST) hasFirst = true;
-            if (prize.getRank() == PrizeRank.SECOND) hasSecond = true;
-            if (prize.getRank() == PrizeRank.THIRD) hasThird = true;
-
-            if (prize.getRank() == PrizeRank.FIRST
-                    || prize.getRank() == PrizeRank.SECOND
-                    || prize.getRank() == PrizeRank.THIRD) {
-                String groupKey = prize.getTrackIndex() != null
-                        ? "track-" + prize.getTrackIndex()
-                        : "shared";
-                grouped.computeIfAbsent(groupKey, k -> new HashMap<>()).put(prize.getRank(), amount);
-            }
-        }
-
-        if (!hasFirst || !hasSecond || !hasThird) {
-            throw new BusinessException(
-                    "First, Second, and Third prizes are required",
-                    HttpStatus.BAD_REQUEST) {};
+            String groupKey = prize.getTrackIndex() != null
+                    ? "track-" + prize.getTrackIndex()
+                    : "shared";
+            grouped.computeIfAbsent(groupKey, k -> new HashMap<>()).put(prize.getRank(), amount);
         }
 
         for (Map.Entry<String, Map<PrizeRank, Long>> entry : grouped.entrySet()) {
@@ -777,18 +773,15 @@ public class EventService {
     }
 
     private PrizeAssignmentMode resolveAssignmentMode(PrizeRequest request) {
-        if (request.getRank() == PrizeRank.OTHER) {
-            return PrizeAssignmentMode.MANUAL;
-        }
         if (request.getRank() == PrizeRank.FIRST
                 || request.getRank() == PrizeRank.SECOND
-                || request.getRank() == PrizeRank.THIRD
-                || request.getRank() == PrizeRank.CONSOLATION) {
+                || request.getRank() == PrizeRank.THIRD) {
             return PrizeAssignmentMode.RANK_BASED;
         }
-        return request.getAssignmentMode() != null
-                ? request.getAssignmentMode()
-                : PrizeAssignmentMode.RANK_BASED;
+        if (request.getAssignmentMode() == PrizeAssignmentMode.MANUAL) {
+            return PrizeAssignmentMode.MANUAL;
+        }
+        return PrizeAssignmentMode.RANK_BASED;
     }
 
     private String normalizePrizeLabel(PrizeRequest request) {

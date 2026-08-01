@@ -37,5 +37,6 @@ public class PrizeRequest {
 
     private Integer trackIndex;
 
+    /** Only meaningful for CONSOLATION / additional prizes. Defaults to RANK_BASED. */
     private PrizeAssignmentMode assignmentMode;
 }
