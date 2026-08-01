@@ -172,7 +172,7 @@ class EventServiceTest {
 
         UpdateEventRequest request = UpdateEventRequest.builder()
                 .name("Updated Active")
-                .season("Winter")
+                .season("Fall")
                 .year(LocalDate.now().getYear())
                 .startDate(LocalDate.now().minusDays(7))
                 .endDate(LocalDate.now().plusDays(60))
@@ -192,7 +192,7 @@ class EventServiceTest {
 
         UpdateEventRequest request = UpdateEventRequest.builder()
                 .name("Updated")
-                .season("Winter")
+                .season("Fall")
                 .year(2026)
                 .startDate(EVENT_START)
                 .endDate(EVENT_END)
@@ -239,7 +239,8 @@ class EventServiceTest {
                 .registrationDeadline(REG_CLOSE)
                 .prizes(List.of(
                         PrizeRequest.builder().rank(PrizeRank.FIRST).value("1,000,000 VND").quantity(1).build(),
-                        PrizeRequest.builder().rank(PrizeRank.SECOND).value("5,000,000 VND").quantity(1).build()
+                        PrizeRequest.builder().rank(PrizeRank.SECOND).value("5,000,000 VND").quantity(1).build(),
+                        PrizeRequest.builder().rank(PrizeRank.THIRD).value("500,000 VND").quantity(1).build()
                 ))
                 .build();
 

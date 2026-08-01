@@ -7,6 +7,7 @@ import com.sealhackathon.event.domain.HackathonEvent;
 import com.sealhackathon.event.domain.Prize;
 import com.sealhackathon.event.domain.Round;
 import com.sealhackathon.event.domain.enums.EventStatus;
+import com.sealhackathon.event.domain.enums.PrizeAssignmentMode;
 import com.sealhackathon.event.domain.enums.PrizeRank;
 import com.sealhackathon.event.domain.enums.RoundType;
 import com.sealhackathon.event.repository.HackathonEventRepository;
@@ -177,9 +178,11 @@ class AwardControllerIntegrationTest extends BaseIntegrationTest {
                         case SECOND -> "5000000";
                         case THIRD -> "3000000";
                         case CONSOLATION -> "1500000";
+                        case OTHER -> "1000000";
                     })
                     .quantity(1)
                     .label(rank.name())
+                    .assignmentMode(PrizeAssignmentMode.RANK_BASED)
                     .build());
         }
     }

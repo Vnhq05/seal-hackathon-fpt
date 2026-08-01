@@ -1,6 +1,7 @@
 package com.sealhackathon.event.service;
 
 import com.sealhackathon.common.exception.ResourceNotFoundException;
+import com.sealhackathon.common.util.SeasonUtils;
 import com.sealhackathon.event.domain.HackathonEvent;
 import com.sealhackathon.event.domain.Round;
 import com.sealhackathon.event.domain.enums.EventStatus;
@@ -196,7 +197,7 @@ public class EventPublicServiceImpl implements EventPublicService {
         return EventSnapshot.builder()
                 .id(event.getId())
                 .name(event.getName())
-                .season(event.getSeason())
+                .season(SeasonUtils.normalize(event.getSeason()))
                 .year(event.getYear())
                 .startDate(event.getStartDate())
                 .endDate(event.getEndDate())

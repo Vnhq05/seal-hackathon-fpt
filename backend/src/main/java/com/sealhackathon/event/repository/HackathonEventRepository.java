@@ -37,13 +37,15 @@ public interface HackathonEventRepository extends JpaRepository<HackathonEvent, 
 
     @Query("SELECT e FROM HackathonEvent e WHERE "
             + "(:status IS NULL OR e.status = :status) "
-            + "AND (:season IS NULL OR UPPER(e.season) = UPPER(:season)) "
+            + "AND (:season IS NULL OR UPPER(e.season) = UPPER(:season) "
+            + "OR (UPPER(:season) = 'FALL' AND UPPER(e.season) IN ('WINTER', 'AUTUMN'))) "
             + "AND (:year IS NULL OR e.year = :year)")
     Page<HackathonEvent> findByFilters(EventStatus status, String season, Integer year, Pageable pageable);
 
     @Query("SELECT e FROM HackathonEvent e WHERE e.ownerUserId = :ownerUserId "
             + "AND (:status IS NULL OR e.status = :status) "
-            + "AND (:season IS NULL OR UPPER(e.season) = UPPER(:season)) "
+            + "AND (:season IS NULL OR UPPER(e.season) = UPPER(:season) "
+            + "OR (UPPER(:season) = 'FALL' AND UPPER(e.season) IN ('WINTER', 'AUTUMN'))) "
             + "AND (:year IS NULL OR e.year = :year)")
     Page<HackathonEvent> findByOwnerUserIdAndFilters(UUID ownerUserId, EventStatus status, String season, Integer year, Pageable pageable);
 

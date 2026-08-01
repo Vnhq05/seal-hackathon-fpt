@@ -1,5 +1,6 @@
 package com.sealhackathon.event.dto.request;
 
+import com.sealhackathon.event.domain.enums.PrizeAssignmentMode;
 import com.sealhackathon.event.domain.enums.PrizeRank;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -35,4 +36,6 @@ public class PrizeRequest {
     private String label;
 
     private Integer trackIndex;
+
+    private PrizeAssignmentMode assignmentMode;
 }

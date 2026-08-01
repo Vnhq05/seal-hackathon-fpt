@@ -1,6 +1,7 @@
 package com.sealhackathon.event.domain;
 
 import com.sealhackathon.common.entity.BaseEntity;
+import com.sealhackathon.event.domain.enums.PrizeAssignmentMode;
 import com.sealhackathon.event.domain.enums.PrizeRank;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -57,4 +58,10 @@ public class Prize extends BaseEntity {
     @Size(max = 100)
     @Column(name = "label", length = 100)
     private String label;
+
+    @NotNull
+    @Enumerated(EnumType.STRING)
+    @Column(name = "assignment_mode", nullable = false, length = 20)
+    @Builder.Default
+    private PrizeAssignmentMode assignmentMode = PrizeAssignmentMode.RANK_BASED;
 }

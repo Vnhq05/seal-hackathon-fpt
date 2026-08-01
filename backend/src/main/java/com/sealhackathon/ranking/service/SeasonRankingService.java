@@ -1,6 +1,7 @@
 package com.sealhackathon.ranking.service;
 
 import com.sealhackathon.common.enums.UserType;
+import com.sealhackathon.common.util.SeasonUtils;
 import com.sealhackathon.event.domain.HackathonEvent;
 import com.sealhackathon.event.domain.Round;
 import com.sealhackathon.event.domain.enums.EventStatus;
@@ -42,9 +43,12 @@ public class SeasonRankingService {
                                                      String roundType) {
         RoundType resolvedRoundType = parseRoundType(roundType);
         boolean privilegedViewer = isPrivilegedViewer();
+        String normalizedSeason = season == null || season.isBlank()
+                ? null
+                : SeasonUtils.normalize(season);
 
         List<HackathonEvent> events = eventRepository
-                .findByFilters(null, season, year, Pageable.unpaged())
+                .findByFilters(null, normalizedSeason, year, Pageable.unpaged())
                 .getContent()
                 .stream()
                 .map(e -> eventRepository.findByIdWithDetails(e.getId()).orElse(e))
@@ -57,7 +61,7 @@ public class SeasonRankingService {
                             || resolved == EventStatus.SCORING
                             || resolved == EventStatus.COMPLETED;
                 })
-                .map(entity -> buildBoard(entity, entity.getSeason(), entity.getYear(),
+                .map(entity -> buildBoard(entity, SeasonUtils.normalize(entity.getSeason()), entity.getYear(),
                         trackId, resolvedRoundType, privilegedViewer))
                 .filter(board -> board != null && !board.getRankings().isEmpty())
                 .sorted(Comparator.comparing(EventRankingBoard::getYear).reversed()

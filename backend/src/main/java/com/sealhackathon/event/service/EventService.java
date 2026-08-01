@@ -17,6 +17,7 @@ import com.sealhackathon.event.domain.ScoringTemplateCriterion;
 import com.sealhackathon.event.domain.Track;
 import com.sealhackathon.event.domain.enums.CompetitionFormat;
 import com.sealhackathon.event.domain.enums.EventStatus;
+import com.sealhackathon.event.domain.enums.PrizeAssignmentMode;
 import com.sealhackathon.event.domain.enums.PrizeRank;
 import com.sealhackathon.event.dto.request.CreateEventRequest;
 import com.sealhackathon.event.dto.request.PrizeRequest;
@@ -214,7 +215,7 @@ public class EventService {
         String oldName = event.getName();
 
         event.setName(request.getName());
-        event.setSeason(SeasonUtils.normalize(request.getSeason()));
+        event.setSeason(SeasonUtils.requireValidSeason(request.getSeason()));
         event.setYear(request.getYear());
         event.setStartDate(request.getStartDate());
         event.setEndDate(request.getEndDate());
@@ -552,8 +553,9 @@ public class EventService {
 
     @Transactional(readOnly = true)
     public Page<EventResponse> listEvents(List<EventStatus> statuses, String season, Integer year, Pageable pageable) {
+        String normalizedSeason = normalizeSeasonFilter(season);
         if (statuses != null && !statuses.isEmpty()) {
-            return listEventsByResolvedStatuses(statuses, season, year, pageable);
+            return listEventsByResolvedStatuses(statuses, normalizedSeason, year, pageable);
         }
 
         UserType role = authPublicService.getCurrentUserRole();
@@ -561,9 +563,9 @@ public class EventService {
 
         if (role == UserType.EVENT_COORDINATOR) {
             page = eventRepository.findByOwnerUserIdAndFilters(
-                    authPublicService.getCurrentUserId(), null, season, year, pageable);
+                    authPublicService.getCurrentUserId(), null, normalizedSeason, year, pageable);
         } else {
-            page = eventRepository.findByFilters(null, season, year, pageable);
+            page = eventRepository.findByFilters(null, normalizedSeason, year, pageable);
         }
 
         return page.map(this::toResponse);
@@ -656,6 +658,13 @@ public class EventService {
         }
     }
 
+    private static String normalizeSeasonFilter(String season) {
+        if (season == null || season.isBlank()) {
+            return null;
+        }
+        return SeasonUtils.normalize(season);
+    }
+
     private void validateDateRange(java.time.LocalDate start, java.time.LocalDate end) {
         if (end.isBefore(start)) {
             throw new BusinessException("End date must be on or after start date", HttpStatus.BAD_REQUEST) {};
@@ -690,17 +699,50 @@ public class EventService {
     }
 
     private void validatePrizes(List<PrizeRequest> prizes) {
+        if (prizes == null || prizes.isEmpty()) {
+            return;
+        }
+
+        boolean hasFirst = false;
+        boolean hasSecond = false;
+        boolean hasThird = false;
         Map<String, Map<PrizeRank, Long>> grouped = new HashMap<>();
 
         for (PrizeRequest prize : prizes) {
-            String groupKey = prize.getTrackIndex() != null
-                    ? "track-" + prize.getTrackIndex()
-                    : "shared";
-            Long amount = PrizeAmountUtils.parsePrizeAmount(prize.getValue());
-            if (amount == null || prize.getRank() == PrizeRank.CONSOLATION) {
-                continue;
+            if (prize.getRank() == null) {
+                throw new BusinessException("Prize rank is required", HttpStatus.BAD_REQUEST) {};
             }
-            grouped.computeIfAbsent(groupKey, k -> new HashMap<>()).put(prize.getRank(), amount);
+            Long amount = PrizeAmountUtils.parsePrizeAmount(prize.getValue());
+            if (amount == null || amount <= 0) {
+                throw new BusinessException(
+                        "Prize amount must be a positive number (VND)",
+                        HttpStatus.BAD_REQUEST) {};
+            }
+            if (prize.getRank() == PrizeRank.OTHER
+                    && (prize.getLabel() == null || prize.getLabel().isBlank())) {
+                throw new BusinessException(
+                        "Other (manual) prizes require a name/label",
+                        HttpStatus.BAD_REQUEST) {};
+            }
+
+            if (prize.getRank() == PrizeRank.FIRST) hasFirst = true;
+            if (prize.getRank() == PrizeRank.SECOND) hasSecond = true;
+            if (prize.getRank() == PrizeRank.THIRD) hasThird = true;
+
+            if (prize.getRank() == PrizeRank.FIRST
+                    || prize.getRank() == PrizeRank.SECOND
+                    || prize.getRank() == PrizeRank.THIRD) {
+                String groupKey = prize.getTrackIndex() != null
+                        ? "track-" + prize.getTrackIndex()
+                        : "shared";
+                grouped.computeIfAbsent(groupKey, k -> new HashMap<>()).put(prize.getRank(), amount);
+            }
+        }
+
+        if (!hasFirst || !hasSecond || !hasThird) {
+            throw new BusinessException(
+                    "First, Second, and Third prizes are required",
+                    HttpStatus.BAD_REQUEST) {};
         }
 
         for (Map.Entry<String, Map<PrizeRank, Long>> entry : grouped.entrySet()) {
@@ -730,7 +772,23 @@ public class EventService {
                 .value(request.getValue())
                 .quantity(request.getQuantity())
                 .label(normalizePrizeLabel(request))
+                .assignmentMode(resolveAssignmentMode(request))
                 .build();
+    }
+
+    private PrizeAssignmentMode resolveAssignmentMode(PrizeRequest request) {
+        if (request.getRank() == PrizeRank.OTHER) {
+            return PrizeAssignmentMode.MANUAL;
+        }
+        if (request.getRank() == PrizeRank.FIRST
+                || request.getRank() == PrizeRank.SECOND
+                || request.getRank() == PrizeRank.THIRD
+                || request.getRank() == PrizeRank.CONSOLATION) {
+            return PrizeAssignmentMode.RANK_BASED;
+        }
+        return request.getAssignmentMode() != null
+                ? request.getAssignmentMode()
+                : PrizeAssignmentMode.RANK_BASED;
     }
 
     private String normalizePrizeLabel(PrizeRequest request) {
@@ -853,6 +911,9 @@ public class EventService {
                                 .value(p.getValue())
                                 .quantity(p.getQuantity())
                                 .label(p.getLabel())
+                                .assignmentMode(p.getAssignmentMode() != null
+                                        ? p.getAssignmentMode()
+                                        : PrizeAssignmentMode.RANK_BASED)
                                 .build())
                         .toList())
                 .honoredGuests(event.getHonoredGuests().stream()

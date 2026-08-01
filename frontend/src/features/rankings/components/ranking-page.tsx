@@ -10,6 +10,7 @@ import {
 } from "@/features/rankings/hooks/use-season-leaderboard";
 import { useMyTeamsAllEvents } from "@/features/teams/hooks/use-my-teams-all-events";
 import { findMyTeamSummary } from "@/features/rankings/utils/leaderboard.mapper";
+import { normalizeSeason, uniqueCanonicalSeasons } from "@/lib/season.utils";
 
 export function RankingPage() {
   const [season, setSeason] = useState<string>("");
@@ -43,8 +44,20 @@ export function RankingPage() {
   );
 
   const seasons = useMemo(
-    () => [...new Set(optionBoards.map((b) => b.season))].sort(),
+    () => uniqueCanonicalSeasons(optionBoards.map((b) => b.season)),
     [optionBoards],
+  );
+
+  const displayBoards = useMemo(
+    () =>
+      enrichedBoards.map(({ board, teams }) => ({
+        board: {
+          ...board,
+          season: normalizeSeason(board.season) || board.season,
+        },
+        teams,
+      })),
+    [enrichedBoards],
   );
 
   const years = useMemo(
@@ -139,7 +152,7 @@ export function RankingPage() {
         </div>
       ) : (
         <div className="flex flex-col gap-6">
-          {enrichedBoards.map(({ board, teams }) => {
+          {displayBoards.map(({ board, teams }) => {
             const myTeam = findMyTeamSummary(teams);
             return (
               <div key={board.eventId} className="flex flex-col gap-4">

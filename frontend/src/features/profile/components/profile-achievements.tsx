@@ -19,7 +19,8 @@ const RANKING_LABELS = {
   FIRST: "1st Place",
   SECOND: "2nd Place",
   THIRD: "3rd Place",
-  CONSOLATION: "Consolation",
+  CONSOLATION: "Encouragement",
+  OTHER: "Special",
 } as const;
 
 const STATUS_BADGE: Record<EventStatus, { bg: string; color: string }> = {

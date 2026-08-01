@@ -3,12 +3,13 @@ import type { UserProfile } from "@/lib/api/user.api";
 import { formatPrizeAmount, PRIZE_RANK_LABELS } from "@/lib/prize.utils";
 import type { CertificateTemplateData } from "@/features/profile/types/certificate.types";
 
-const PRIZE_CODE = {
+const PRIZE_CODE: Record<string, string> = {
   FIRST: "WIN",
   SECOND: "SIL",
   THIRD: "BRZ",
-  CONSOLATION: "CON",
-} as const;
+  CONSOLATION: "ENC",
+  OTHER: "SPC",
+};
 
 /** Known Vietnamese prize titles → English display. */
 const VI_TO_EN_PRIZE: Record<string, string> = {
@@ -18,8 +19,10 @@ const VI_TO_EN_PRIZE: Record<string, string> = {
   "giai nhi": "Second Prize",
   "giải ba": "Third Prize",
   "giai ba": "Third Prize",
-  "giải khuyến khích": "Consolation Prize",
-  "giai khuyen khich": "Consolation Prize",
+  "giải khuyến khích": "Encouragement Prize",
+  "giai khuyen khich": "Encouragement Prize",
+  "encouragement prize": "Encouragement Prize",
+  "consolation prize": "Encouragement Prize",
   "giải thưởng": "Team Award",
   "giai thuong": "Team Award",
   "chứng nhận tham gia": "Participation Certificate",

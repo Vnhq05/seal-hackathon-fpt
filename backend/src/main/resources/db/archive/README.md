@@ -56,7 +56,8 @@ legacy DB at dump time.
 | `seed_as2_full_demo.sql` | Full AS2 demo: (1) progress 9 teams, (2) LiveScore 9 teams not published, (3) completed + published results. Password `12345678`. Regenerate: `node _gen_seed_as2_full_demo.mjs`. |
 | `seed_assignment_demo.sql` | **Assignment QA:** 1 event `CLOSED_REGISTRATION` + **10 CONFIRMED teams** (no track / judge / mentor yet). Password `12345678`. Regenerate: `node _gen_seed_assignment_demo.mjs`. |
 | `seed_final_advancement_qa.sql` | **Final advancement QA**: prelim fully scored + rankings, 2 groups, **no Final submissions**. Select Finalists → carry-over → score Final. See `FINAL_ADVANCEMENT_CHANGES.md`. |
-| `seed_feature_demo_pack.sql` | **7 feature demos** (OPEN → Assignment → Submission → Scoring deviation → Final → Feedback). Password `Demo@123456`. Regenerate: `node _gen_seed_feature_demo_pack.mjs`. |
+| `seed_feature_demo_pack.sql` | **8 feature demos** (OPEN → Assignment → Submission → Scoring deviation → Final → Feedback). Default **Add Lecture** pool: **7 judges** (`test.judge1..7`) + **7 mentors** (`test.mentor1..7`) on every Test event. Password `Demo@123456`. Regenerate: `node _gen_seed_feature_demo_pack.mjs`. |
+| `seed_default_lectures.sql` | Idempotent apply of the default 7+7 lecture pool to existing pack events (without full reseed). |
 | `seed_summer_track_relation_mock.sql` | One **Summer 2026** event + **2 tracks** + **2 teams** (already on tracks). Demo: kì on event, tracks via `event_id`. |
 
 ### AS2 full demo cheat sheet (`seed_as2_full_demo.sql`)

@@ -147,7 +147,7 @@ const EVENTS = [
   {
     n: 2,
     name: "Vinh Showcase 2 - Multi-hop Arena",
-    season: "Winter",
+    season: "Fall",
     year: 2025,
     track: "Arena Track",
     offsetStart: -80,

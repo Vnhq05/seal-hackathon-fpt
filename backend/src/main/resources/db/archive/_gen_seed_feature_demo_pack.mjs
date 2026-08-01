@@ -126,12 +126,33 @@ L(`DELETE FROM event_enrollments WHERE event_id IN (SELECT id FROM @packEvents);
 L(`DELETE FROM hackathon_events WHERE id IN (SELECT id FROM @packEvents);`);
 L(``);
 
-// Staff
+// Staff — default Add Lecture pool: 7 mentors + 7 judges (+ 2 final-only judges)
 upsertUserSafe(uid(0, 0, 1), COORD, "Test Coord", "EVENT_COORDINATOR", null, null);
-upsertUserSafe(uid(0, 0, 2), "test.mentor1@fpt.edu.vn", "Test Mentor One", "LECTURER", null, null);
-upsertUserSafe(uid(0, 0, 3), "test.judge1@fpt.edu.vn", "Test Judge One", "LECTURER", null, null);
-upsertUserSafe(uid(0, 0, 4), "test.judge2@fpt.edu.vn", "Test Judge Two", "LECTURER", null, null);
-upsertUserSafe(uid(0, 0, 5), "test.judge3@fpt.edu.vn", "Test Judge Three (Pending)", "LECTURER", null, null);
+const MENTOR_ORDINALS = ["One", "Two", "Three", "Four", "Five", "Six", "Seven"];
+const JUDGE_ORDINALS = ["One", "Two", "Three (Pending)", "Four", "Five", "Six", "Seven"];
+// Stable demo UUIDs (seq): mentors 2,8-13 | judges 3-5,14-17 | final judges 6-7
+const MENTOR_SEQS = [2, 8, 9, 10, 11, 12, 13];
+const JUDGE_SEQS = [3, 4, 5, 14, 15, 16, 17];
+for (let i = 0; i < 7; i++) {
+  upsertUserSafe(
+    uid(0, 0, MENTOR_SEQS[i]),
+    `test.mentor${i + 1}@fpt.edu.vn`,
+    `Test Mentor ${MENTOR_ORDINALS[i]}`,
+    "LECTURER",
+    null,
+    null,
+  );
+}
+for (let i = 0; i < 7; i++) {
+  upsertUserSafe(
+    uid(0, 0, JUDGE_SEQS[i]),
+    `test.judge${i + 1}@fpt.edu.vn`,
+    `Test Judge ${JUDGE_ORDINALS[i]}`,
+    "LECTURER",
+    null,
+    null,
+  );
+}
 upsertUserSafe(uid(0, 0, 6), "test.final.judge1@fpt.edu.vn", "Test Final Judge One", "LECTURER", null, null);
 upsertUserSafe(uid(0, 0, 7), "test.final.judge2@fpt.edu.vn", "Test Final Judge Two", "LECTURER", null, null);
 
@@ -166,6 +187,26 @@ L(`DECLARE @j3 UNIQUEIDENTIFIER = (SELECT id FROM users WHERE email=N'test.judge
 L(`DECLARE @fj1 UNIQUEIDENTIFIER = (SELECT id FROM users WHERE email=N'test.final.judge1@fpt.edu.vn');`);
 L(`DECLARE @fj2 UNIQUEIDENTIFIER = (SELECT id FROM users WHERE email=N'test.final.judge2@fpt.edu.vn');`);
 L(``);
+
+/** Default Add Lecture roster — 7 judges + 7 mentors (idempotent). */
+const addLecturePool = (eventId) => {
+  L(`INSERT INTO event_judge_assignments (id, created_at, assigned_at, judge_user_id, event_id, created_by)`);
+  L(`SELECT NEWID(), @now, @now, j.id, '${eventId}', N'${COORD}'`);
+  L(`FROM (VALUES`);
+  for (let i = 1; i <= 7; i++) {
+    L(`  (N'test.judge${i}@fpt.edu.vn')${i < 7 ? "," : ""}`);
+  }
+  L(`) v(email) INNER JOIN users j ON j.email = v.email`);
+  L(`WHERE NOT EXISTS (SELECT 1 FROM event_judge_assignments x WHERE x.event_id = '${eventId}' AND x.judge_user_id = j.id);`);
+  L(`INSERT INTO event_mentor_assignments (id, event_id, mentor_user_id, assigned_at, created_at, created_by)`);
+  L(`SELECT NEWID(), '${eventId}', m.id, @now, @now, N'${COORD}'`);
+  L(`FROM (VALUES`);
+  for (let i = 1; i <= 7; i++) {
+    L(`  (N'test.mentor${i}@fpt.edu.vn')${i < 7 ? "," : ""}`);
+  }
+  L(`) v(email) INNER JOIN users m ON m.email = v.email`);
+  L(`WHERE NOT EXISTS (SELECT 1 FROM event_mentor_assignments x WHERE x.event_id = '${eventId}' AND x.mentor_user_id = m.id);`);
+};
 L(`IF NOT EXISTS (SELECT 1 FROM allowed_email_domains WHERE domain = N'fpt.edu.vn')`);
 L(`  INSERT INTO allowed_email_domains (id, event_id, domain, university_label, created_at, updated_at)`);
 L(`  VALUES (NEWID(), NULL, N'fpt.edu.vn', N'FPT University', @now, @now);`);
@@ -281,8 +322,6 @@ addTrack(uid(3, 4, 2), uid(3, 1, 1), "Agent Orchestration");
 addRounds(uid(3, 1, 1), uid(3, 3, 1), uid(3, 3, 2), "DATEADD(DAY,7,@now)", "DATEADD(DAY,7,@now)", "DATEADD(DAY,8,@now)", "DATEADD(DAY,8,@now)", "DATEADD(DAY,8,@now)", "DATEADD(DAY,9,@now)");
 addCriteria3(uid(3, 6, 1), uid(3, 6, 2), uid(3, 6, 3), uid(3, 3, 1));
 addCriteria3(uid(3, 6, 4), uid(3, 6, 5), uid(3, 6, 6), uid(3, 3, 2));
-L(`INSERT INTO event_mentor_assignments (id, event_id, mentor_user_id, assigned_at, created_at, created_by)`);
-L(`VALUES (NEWID(), '${uid(3, 1, 1)}', @mentor1Id, @now, @now, N'${COORD}');`);
 L(`INSERT INTO mentor_assignments (id, created_at, created_by, assigned_at, mentor_user_id, track_id, event_id)`);
 L(`VALUES (NEWID(), @now, N'${COORD}', @now, @mentor1Id, '${uid(3, 4, 1)}', '${uid(3, 1, 1)}');`);
 enroll(uid(3, 1, 1), "test.assign.s%@fpt.edu.vn");
@@ -318,8 +357,6 @@ for (let i = 0; i < 10; i++) {
   const emails = [a, a + 1, a + 2].map((n) => `test.sub.s${String(n).padStart(2, "0")}@fpt.edu.vn`);
   team3(uid(4, 2, i + 1), uid(4, 1, 1), uid(4, 4, 1), `Submit ${TEAM_NAMES[i]}`, emails, true);
 }
-L(`INSERT INTO event_mentor_assignments (id, event_id, mentor_user_id, assigned_at, created_at, created_by)`);
-L(`VALUES (NEWID(), '${uid(4, 1, 1)}', @mentor1Id, @now, @now, N'${COORD}');`);
 for (let t = 1; t <= SUBMITTED_TEAMS; t++) {
   const emails = [(t - 1) * 3 + 1, (t - 1) * 3 + 2, (t - 1) * 3 + 3].map(
     (n) => `test.sub.s${String(n).padStart(2, "0")}@fpt.edu.vn`,
@@ -361,8 +398,6 @@ for (let i = 0; i < 10; i++) {
   const emails = [a, a + 1, a + 2].map((n) => `test.alert.s${String(n).padStart(2, "0")}@fpt.edu.vn`);
   team3(uid(5, 2, i + 1), uid(5, 1, 1), uid(5, 4, 1), `Alert ${TEAM_NAMES[i]}`, emails, true);
 }
-L(`INSERT INTO event_mentor_assignments (id, event_id, mentor_user_id, assigned_at, created_at, created_by)`);
-L(`VALUES (NEWID(), '${uid(5, 1, 1)}', @mentor1Id, @now, @now, N'${COORD}');`);
 L(`INSERT INTO mentor_teams (id, created_at, created_by, assigned_at, mentor_user_id, team_id)`);
 L(`VALUES (NEWID(), @now, N'${COORD}', @now, @mentor1Id, '${uid(5, 2, 7)}');`); // Alert Eta (not submitted + alert)
 for (let t = 1; t <= SUBMITTED_TEAMS; t++) {
@@ -410,10 +445,6 @@ addRounds(
 );
 addCriteria3(uid(6, 6, 1), uid(6, 6, 2), uid(6, 6, 3), uid(6, 3, 1));
 addCriteria3(uid(6, 6, 4), uid(6, 6, 5), uid(6, 6, 6), uid(6, 3, 2));
-L(`INSERT INTO event_judge_assignments (id, created_at, assigned_at, judge_user_id, event_id, created_by) VALUES`);
-L(`  (NEWID(), @now, @now, @j1, '${uid(6, 1, 1)}', N'${COORD}'),`);
-L(`  (NEWID(), @now, @now, @j2, '${uid(6, 1, 1)}', N'${COORD}'),`);
-L(`  (NEWID(), @now, @now, @j3, '${uid(6, 1, 1)}', N'${COORD}');`);
 L(`INSERT INTO judge_assignments (id, created_at, assigned_at, judge_user_id, round_id, scope, active, created_by) VALUES`);
 L(`  (NEWID(), @now, @now, @j1, '${uid(6, 3, 1)}', N'ROUND', 1, N'${COORD}'),`);
 L(`  (NEWID(), @now, @now, @j2, '${uid(6, 3, 1)}', N'ROUND', 1, N'${COORD}'),`);
@@ -470,11 +501,6 @@ addRounds(
 );
 addCriteria3(uid(7, 6, 1), uid(7, 6, 2), uid(7, 6, 3), uid(7, 3, 1));
 addCriteria3(uid(7, 6, 4), uid(7, 6, 5), uid(7, 6, 6), uid(7, 3, 2));
-L(`INSERT INTO event_judge_assignments (id, created_at, assigned_at, judge_user_id, event_id, created_by) VALUES`);
-L(`  (NEWID(), @now, @now, @j1, '${uid(7, 1, 1)}', N'${COORD}'),`);
-L(`  (NEWID(), @now, @now, @j2, '${uid(7, 1, 1)}', N'${COORD}'),`);
-L(`  (NEWID(), @now, @now, @fj1, '${uid(7, 1, 1)}', N'${COORD}'),`);
-L(`  (NEWID(), @now, @now, @fj2, '${uid(7, 1, 1)}', N'${COORD}');`);
 L(`INSERT INTO judge_assignments (id, created_at, assigned_at, judge_user_id, round_id, scope, active, created_by) VALUES`);
 L(`  (NEWID(), @now, @now, @j1, '${uid(7, 3, 1)}', N'ROUND', 1, N'${COORD}'),`);
 L(`  (NEWID(), @now, @now, @j2, '${uid(7, 3, 1)}', N'ROUND', 1, N'${COORD}'),`);
@@ -549,9 +575,6 @@ L(`INSERT INTO prizes (id, created_at, created_by, quantity, [rank], value, even
 L(`  ('${uid(8, 7, 1)}', @now, N'${COORD}', 1, N'FIRST', N'10,000,000 VND + Trophy', '${uid(8, 1, 1)}', N'First Prize', NULL),`);
 L(`  ('${uid(8, 7, 2)}', @now, N'${COORD}', 1, N'SECOND', N'5,000,000 VND', '${uid(8, 1, 1)}', N'Second Prize', NULL),`);
 L(`  ('${uid(8, 7, 3)}', @now, N'${COORD}', 1, N'THIRD', N'2,000,000 VND', '${uid(8, 1, 1)}', N'Third Prize', NULL);`);
-L(`INSERT INTO event_judge_assignments (id, created_at, assigned_at, judge_user_id, event_id, created_by) VALUES`);
-L(`  (NEWID(), @now, @now, @j1, '${uid(8, 1, 1)}', N'${COORD}'),`);
-L(`  (NEWID(), @now, @now, @j2, '${uid(8, 1, 1)}', N'${COORD}');`);
 L(`INSERT INTO judge_assignments (id, created_at, assigned_at, judge_user_id, round_id, scope, active, created_by) VALUES`);
 L(`  (NEWID(), @now, @now, @j1, '${uid(8, 3, 1)}', N'ROUND', 1, N'${COORD}'),`);
 L(`  (NEWID(), @now, @now, @j2, '${uid(8, 3, 1)}', N'ROUND', 1, N'${COORD}'),`);
@@ -651,14 +674,27 @@ L(`INSERT INTO participant_feedbacks (id, created_at, created_by, comment, event
 L(`VALUES ('${uid(8, 16, 1)}', @now, N'${COORD}', N'Clear rounds and fair judging — great for feedback QA.', '${uid(8, 1, 1)}', 5, DATEADD(DAY,-32,@now), '${uid(8, 2, 1)}', (SELECT id FROM users WHERE email=N'test.fb.s01@fpt.edu.vn'));`);
 L(``);
 
+L(`-- ========== Default Add Lecture pools (7 judges + 7 mentors on every pack event) ==========`);
+for (let e = 1; e <= 8; e++) {
+  addLecturePool(uid(e, 1, 1));
+}
+// Final guest judges stay available on Test 7 for Final round assignment
+L(`INSERT INTO event_judge_assignments (id, created_at, assigned_at, judge_user_id, event_id, created_by)`);
+L(`SELECT NEWID(), @now, @now, j.id, '${uid(7, 1, 1)}', N'${COORD}'`);
+L(`FROM (VALUES (N'test.final.judge1@fpt.edu.vn'), (N'test.final.judge2@fpt.edu.vn')) v(email)`);
+L(`INNER JOIN users j ON j.email = v.email`);
+L(`WHERE NOT EXISTS (SELECT 1 FROM event_judge_assignments x WHERE x.event_id = '${uid(7, 1, 1)}' AND x.judge_user_id = j.id);`);
+L(``);
+
 L(`COMMIT TRANSACTION;`);
 L(``);
 L(`PRINT '=== Feature demo pack ready (password Demo@123456) ===';`);
 L(`PRINT 'Admin:           admin@seal.com';`);
 L(`PRINT 'Coordinator:     test.coord@fpt.edu.vn';`);
+L(`PRINT 'Lecture pool:    test.judge1..7 + test.mentor1..7 on every Test event (Add Lecture default)';`);
 L(`PRINT '1 OPEN empty:    Test 1 - Open Registration (Join Me)';`);
 L(`PRINT '2 OPEN 5 students: test.open.s01..s05@fpt.edu.vn';`);
-L(`PRINT '3 Assignment:    test.assign.s01 (leader Alpha) | mentor test.mentor1@fpt.edu.vn';`);
+L(`PRINT '3 Assignment:    test.assign.s01 (leader Alpha) | mentor1 pre-linked to Team 01';`);
 L(`PRINT '4 Submission:    test.sub.s01@fpt.edu.vn (leader Submit Alpha) | 6/10 teams submitted';`);
 L(`PRINT '5 Near deadline: test.alert.s01@fpt.edu.vn | 6/10 submitted; alert on Eta';`);
 L(`PRINT '6 Scoring:       test.judge3 PENDING | test.judge1/2 HIGH done | 10 teams';`);
